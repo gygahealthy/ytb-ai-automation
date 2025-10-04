@@ -1,0 +1,47 @@
+# Cursor AI Rules for VEO3 Automation Project
+
+## Documentation Policy
+
+- **NEVER** automatically create markdown (.md) documentation files after completing tasks
+- Only create documentation files when explicitly requested by the user
+- Do not create files like: IMPLEMENTATION_COMPLETE.md, DATABASE_IMPLEMENTATION.md, CHANGES.md, etc.
+- If documentation is requested, ask for confirmation before creating new .md files
+
+## Code Quality
+
+- Follow existing code patterns and architecture in the project
+- Use TypeScript strict mode
+- Prefer repository pattern for data access
+- Use proper error handling with try-catch blocks
+- Log important operations using the Logger utility
+
+## Database
+
+- Always use the repository classes (profileRepository, automationRepository, veo3Repository, youtubeChannelRepository, videoAnalysisRepository)
+- Never bypass repositories to access the database directly
+- SQLite is the database engine with better-sqlite3 package
+
+## Service Layer
+
+- Services should only interact with repositories, not direct database access
+- Keep business logic in services, data access in repositories
+- Return ApiResponse<T> from service methods
+
+## Testing & Linting
+
+- Run linter after making code changes
+- Fix all linting errors before considering task complete
+- Ensure TypeScript compilation succeeds
+
+## Git & Version Control
+
+- Never commit code automatically unless explicitly requested
+- Never force push to main/master branches
+- Always explain changes before committing
+
+## Windows Environment
+
+- Remember this is a Windows environment
+- Use PowerShell-compatible commands
+- Avoid Unix-specific shell syntax (&&, ||)
+- Use semicolons or separate commands in PowerShell

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "./dist",
+    "jsx": "preserve",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": ["src/main/**/*", "src/domain/**/*", "src/services/**/*", "src/api/**/*", "src/common/**/*", "src/storage/**/*", "src/types/**/*", "src/utils/**/*"],
+  "exclude": ["node_modules", "dist", "src/renderer/**/*"]
+}
