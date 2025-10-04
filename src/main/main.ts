@@ -1,7 +1,7 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu } from "electron";
 import * as path from "path";
 import { database } from "../storage/database";
-import { registerIPCHandlers } from "./ipc-handlers";
+import { registerIPCHandlers } from "./handlers";
 
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;
@@ -37,6 +37,9 @@ class ElectronApp {
   }
 
   private createWindow(): void {
+    // Remove the application menu
+    Menu.setApplicationMenu(null);
+
     // Icon path - handle both dev and production
     const iconPath =
       process.env.NODE_ENV === "development"
@@ -61,10 +64,10 @@ class ElectronApp {
     // Load the app
     if (process.env.NODE_ENV === "development") {
       this.mainWindow.loadURL("http://localhost:5173");
-      // DevTools can be opened manually with F12 or Ctrl+Shift+I
-      // this.mainWindow.webContents.openDevTools();
+      // Open DevTools in development
+      this.mainWindow.webContents.openDevTools();
     } else {
-      this.mainWindow.loadFile(path.join(__dirname, "../index.html"));
+      this.mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
     }
   }
 }

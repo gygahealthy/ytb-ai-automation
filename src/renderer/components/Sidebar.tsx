@@ -1,7 +1,8 @@
 import clsx from "clsx";
-import { History, LayoutDashboard, PlayCircle, Settings, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, LayoutDashboard, PlayCircle, Settings, Users } from "lucide-react";
+import { useState } from "react";
 import { Page } from "../App";
-import logoImage from "../assets/logo.png";
+import iconImage from "../assets/icon.png";
 
 interface SidebarProps {
   currentPage: Page;
@@ -23,11 +24,35 @@ const navItems: NavItem[] = [
 ];
 
 export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+    <aside
+      className={clsx(
+        "bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300",
+        isCollapsed ? "w-20" : "w-64"
+      )}
+    >
       {/* Logo */}
-      <div className="h-20 flex items-center justify-center px-6 border-b border-gray-200 dark:border-gray-700">
-        <img src={logoImage} alt="VEO3 Logo" className="object-contain" />
+      <div
+        className={clsx(
+          "h-20 flex items-center border-b border-gray-200 dark:border-gray-700 relative",
+          isCollapsed ? "justify-center px-2" : "justify-between px-4"
+        )}
+      >
+        {!isCollapsed && <span className="text-xl font-bold text-gray-900 dark:text-white">VEO3 AUTO</span>}
+        <img src={iconImage} alt="VEO3 Icon" className="h-12 w-12 object-contain" />
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          )}
+        </button>
       </div>
 
       {/* Navigation */}
@@ -41,14 +66,16 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
               key={item.id}
               onClick={() => onPageChange(item.id)}
               className={clsx(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors",
+                "w-full flex items-center gap-3 rounded-lg font-medium transition-colors",
+                isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
                 isActive
                   ? "bg-primary-500 text-white"
                   : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               )}
+              title={isCollapsed ? item.label : undefined}
             >
               <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
+              {!isCollapsed && <span>{item.label}</span>}
             </button>
           );
         })}
@@ -58,10 +85,14 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
       <div className="p-3 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={onSettingsClick}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className={clsx(
+            "w-full flex items-center gap-3 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
+            isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5"
+          )}
+          title={isCollapsed ? "Settings" : undefined}
         >
           <Settings className="w-5 h-5" />
-          <span>Settings</span>
+          {!isCollapsed && <span>Settings</span>}
         </button>
       </div>
     </aside>

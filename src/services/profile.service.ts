@@ -1,3 +1,6 @@
+import { app } from "electron";
+import * as fs from "fs";
+import * as path from "path";
 import { profileRepository } from "../storage/database";
 import { ApiResponse, CreateProfileInput, Profile } from "../types";
 import { Logger } from "../utils/logger.util";
@@ -40,11 +43,34 @@ export class ProfileService {
    */
   async createProfile(input: CreateProfileInput): Promise<ApiResponse<Profile>> {
     try {
+      const profileId = StringUtil.generateId("profile");
+
+      // Sanitize profile name for use in folder name (replace spaces and special chars with underscore)
+      const sanitizedName = input.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
+      const folderName = `${sanitizedName}_${profileId}`;
+
+      // Determine profile directory path
+      let profileDir: string;
+      if (input.userDataDir) {
+        // User selected a path - append profile folder name
+        profileDir = path.join(input.userDataDir, folderName);
+      } else {
+        // Use default app profiles directory
+        profileDir = path.join(app.getPath("userData"), "profiles", folderName);
+      }
+
+      // Create profile directory if it doesn't exist
+      if (!fs.existsSync(profileDir)) {
+        fs.mkdirSync(profileDir, { recursive: true });
+        logger.info(`Created profile directory: ${profileDir}`);
+      }
+
       const profile: Profile = {
-        id: StringUtil.generateId("profile"),
+        id: profileId,
         name: input.name,
         browserPath: input.browserPath,
-        userDataDir: input.userDataDir,
+        userDataDir: profileDir,
+        userAgent: input.userAgent,
         proxy: input.proxy,
         creditRemaining: input.creditRemaining || 0,
         createdAt: new Date(),

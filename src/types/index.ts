@@ -7,8 +7,10 @@ export interface Profile {
   name: string;
   browserPath?: string;
   userDataDir: string;
+  userAgent?: string;
   proxy?: ProxyConfig;
   creditRemaining: number;
+  tags?: string[];
   cookies?: Record<string, string>;
   cookieExpires?: Date;
   createdAt: Date;
@@ -25,8 +27,10 @@ export interface CreateProfileInput {
   name: string;
   browserPath?: string;
   userDataDir: string;
+  userAgent?: string;
   proxy?: ProxyConfig;
   creditRemaining?: number;
+  tags?: string[];
 }
 
 // ============= Automation Types =============

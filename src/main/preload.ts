@@ -45,6 +45,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getVideosByChannel: (channelId: string) => ipcRenderer.invoke("youtube:getVideosByChannel", channelId),
     analyzeVideo: (videoId: string, channelId: string) => ipcRenderer.invoke("youtube:analyzeVideo", videoId, channelId),
   },
+
+  // Dialog APIs
+  dialog: {
+    selectFolder: (defaultPath?: string) => ipcRenderer.invoke("dialog:selectFolder", defaultPath),
+    getDefaultProfilePath: () => ipcRenderer.invoke("dialog:getDefaultProfilePath"),
+    generateUserAgent: () => ipcRenderer.invoke("dialog:generateUserAgent"),
+  },
 });
 
 // Type declaration for TypeScript
@@ -86,6 +93,11 @@ declare global {
         getAllVideos: () => Promise<any>;
         getVideosByChannel: (channelId: string) => Promise<any>;
         analyzeVideo: (videoId: string, channelId: string) => Promise<any>;
+      };
+      dialog: {
+        selectFolder: (defaultPath?: string) => Promise<any>;
+        getDefaultProfilePath: () => Promise<any>;
+        generateUserAgent: () => Promise<any>;
       };
     };
   }

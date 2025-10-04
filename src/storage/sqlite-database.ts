@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sqlite3 from "sqlite3";
 import { Logger } from "../utils/logger.util";
+import { runMigrations } from "./migrations";
 
 const logger = new Logger("SQLiteDatabase");
 
@@ -34,8 +35,8 @@ export class SQLiteDatabase {
 
       // Configure database
       this.configure()
-        .then(() => {
-          this.initializeSchema();
+        .then(async () => {
+          await this.initializeSchema();
         })
         .catch((error) => {
           logger.error("Failed to configure database", error);
@@ -73,22 +74,30 @@ export class SQLiteDatabase {
   /**
    * Initialize database schema from SQL file
    */
-  private initializeSchema(): void {
+  private async initializeSchema(): Promise<void> {
     try {
       const schemaPath = path.join(__dirname, "schema.sql");
       const schema = fs.readFileSync(schemaPath, "utf-8");
 
       // Execute schema
-      this.db.exec(schema, (err) => {
-        if (err) {
-          logger.error("Failed to initialize schema", err);
-          throw err;
-        }
-        this.isInitialized = true;
-        logger.info("Database schema initialized");
+      await new Promise<void>((resolve, reject) => {
+        this.db.exec(schema, (err) => {
+          if (err) {
+            logger.error("Failed to initialize schema", err);
+            reject(err);
+          } else {
+            logger.info("Database schema initialized");
+            resolve();
+          }
+        });
       });
+
+      // Run migrations to update existing tables
+      await runMigrations(this);
+
+      this.isInitialized = true;
     } catch (error) {
-      logger.error("Failed to read schema file", error);
+      logger.error("Failed to initialize database", error);
       throw error;
     }
   }

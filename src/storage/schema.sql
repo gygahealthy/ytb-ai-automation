@@ -6,10 +6,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   name TEXT NOT NULL,
   browser_path TEXT,
   user_data_dir TEXT NOT NULL,
+  user_agent TEXT,
   proxy_server TEXT,
   proxy_username TEXT,
   proxy_password TEXT,
   credit_remaining REAL DEFAULT 0,
+  tags TEXT, -- JSON array of tags
   cookies TEXT,
   cookie_expires TEXT,
   created_at TEXT NOT NULL,
