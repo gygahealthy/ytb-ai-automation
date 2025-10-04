@@ -9,6 +9,7 @@ interface Window {
       update: (id: string, updates: any) => Promise<any>;
       delete: (id: string) => Promise<any>;
       updateCredit: (id: string, amount: number) => Promise<any>;
+      login: (id: string) => Promise<any>;
     };
     automation: {
       getAll: () => Promise<any>;
@@ -42,6 +43,8 @@ interface Window {
       selectFolder: (defaultPath?: string) => Promise<any>;
       getDefaultProfilePath: () => Promise<any>;
       generateUserAgent: () => Promise<any>;
+      getDefaultChromePath: () => Promise<any>;
+      selectBrowserExecutable: () => Promise<any>;
     };
   };
 }

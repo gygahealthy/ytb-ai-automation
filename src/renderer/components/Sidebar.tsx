@@ -36,12 +36,12 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
       {/* Logo */}
       <div
         className={clsx(
-          "h-20 flex items-center border-b border-gray-200 dark:border-gray-700 relative",
-          isCollapsed ? "justify-center px-2" : "justify-between px-4"
+          "h-20 flex items-center border-b border-gray-200 dark:border-gray-700 relative justify-center",
+          isCollapsed ? " px-2" : " px-4"
         )}
       >
-        {!isCollapsed && <span className="text-xl font-bold text-gray-900 dark:text-white">VEO3 AUTO</span>}
         <img src={iconImage} alt="VEO3 Icon" className="h-12 w-12 object-contain" />
+        {!isCollapsed && <span className="text-xl font-bold text-gray-900 dark:text-white">VEO3 AUTO</span>}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"

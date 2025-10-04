@@ -1,4 +1,4 @@
-import { DollarSign, Folder, Globe, Plus, RefreshCw, Tag, User, X } from "lucide-react";
+import { Cookie, DollarSign, Folder, Globe, Plus, RefreshCw, Tag, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface Profile {
@@ -9,6 +9,7 @@ interface Profile {
   userAgent?: string;
   creditRemaining: number;
   tags?: string[];
+  cookies?: string;
   cookieExpires?: string;
   createdAt: string;
   updatedAt: string;
@@ -24,35 +25,43 @@ interface ProfileModalProps {
 
 export interface ProfileFormData {
   name: string;
+  browserPath?: string;
   userDataDir: string;
   userAgent: string;
   creditRemaining: number;
   tags: string[];
+  cookies?: string;
 }
 
 export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClose, onSave }: ProfileModalProps) {
   const [loading, setLoading] = useState(false);
   const [defaultProfilePath, setDefaultProfilePath] = useState("");
+  const [defaultChromePath, setDefaultChromePath] = useState("");
   const [formData, setFormData] = useState<ProfileFormData>({
     name: "",
+    browserPath: "",
     userDataDir: "",
     userAgent: "",
     creditRemaining: 0,
     tags: [],
+    cookies: "",
   });
   const [tagInput, setTagInput] = useState("");
 
-  // Get default profile path on mount
+  // Get default profile path and Chrome path on mount
   useEffect(() => {
-    const getDefaultPath = async () => {
+    const getDefaults = async () => {
       try {
-        const path = (await window.electronAPI.dialog.getDefaultProfilePath()) as string;
-        setDefaultProfilePath(path);
+        const profilePath = (await window.electronAPI.dialog.getDefaultProfilePath()) as string;
+        setDefaultProfilePath(profilePath);
+        
+        const chromePath = (await window.electronAPI.dialog.getDefaultChromePath()) as string;
+        setDefaultChromePath(chromePath);
       } catch (error) {
-        console.error("Failed to get default profile path:", error);
+        console.error("Failed to get default paths:", error);
       }
     };
-    getDefaultPath();
+    getDefaults();
   }, []);
 
   // Update form data when editingProfile changes or modal opens
@@ -61,36 +70,44 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
       if (editingProfile) {
         setFormData({
           name: editingProfile.name,
+          browserPath: editingProfile.browserPath || "",
           userDataDir: editingProfile.userDataDir,
           userAgent: editingProfile.userAgent || "",
           creditRemaining: editingProfile.creditRemaining,
           tags: editingProfile.tags || [],
+          cookies: editingProfile.cookies || "",
         });
       } else {
-        // Generate random user agent only for new profiles
-        const generateInitialUserAgent = async () => {
+        // Generate random user agent and set default Chrome path for new profiles
+        const generateInitialData = async () => {
           try {
             const generatedUA = (await window.electronAPI.dialog.generateUserAgent()) as string;
+            const chromePath = (await window.electronAPI.dialog.getDefaultChromePath()) as string;
             console.log("Auto-generated User Agent:", generatedUA);
+            console.log("Default Chrome Path:", chromePath);
             setFormData({
               name: "",
+              browserPath: chromePath,
               userDataDir: "",
               userAgent: generatedUA,
               creditRemaining: 0,
               tags: [],
+              cookies: "",
             });
           } catch (error) {
-            console.error("Failed to generate initial user agent:", error);
+            console.error("Failed to generate initial data:", error);
             setFormData({
               name: "",
+              browserPath: "",
               userDataDir: "",
               userAgent: "",
               creditRemaining: 0,
               tags: [],
+              cookies: "",
             });
           }
         };
-        generateInitialUserAgent();
+        generateInitialData();
       }
       setTagInput("");
     }
@@ -130,6 +147,20 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
     }
   };
 
+  const handleSelectBrowser = async () => {
+    try {
+      console.log("Opening browser executable dialog...");
+      const result = (await window.electronAPI.dialog.selectBrowserExecutable()) as { filePaths: string[] };
+      console.log("Dialog result:", result);
+      if (result && result.filePaths && result.filePaths.length > 0) {
+        setFormData((prev) => ({ ...prev, browserPath: result.filePaths[0] }));
+      }
+    } catch (error) {
+      console.error("Failed to select browser:", error);
+      alert("Failed to open browser selection dialog. Please check console for details.");
+    }
+  };
+
   const handleAddTag = () => {
     const tag = tagInput.trim();
     if (tag && !formData.tags.includes(tag)) {
@@ -165,10 +196,12 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
   const handleClose = () => {
     setFormData({
       name: "",
+      browserPath: "",
       userDataDir: "",
       userAgent: "",
       creditRemaining: 0,
       tags: [],
+      cookies: "",
     });
     setTagInput("");
     onClose();
@@ -195,7 +228,7 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <User className="w-4 h-4 text-primary-500" />
               Profile Name <span className="text-red-500">*</span>
             </label>
@@ -203,30 +236,60 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
               placeholder="My Profile"
               required
             />
           </div>
 
+          {/* Browser Path Field */}
+          <div>
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Globe className="w-4 h-4 text-primary-500" />
+              Browser Executable Path
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={formData.browserPath}
+                onChange={(e) => setFormData({ ...formData, browserPath: e.target.value })}
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all font-mono text-sm"
+                placeholder={defaultChromePath || "Chrome executable path"}
+              />
+              <button
+                type="button"
+                onClick={handleSelectBrowser}
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium whitespace-nowrap"
+                title="Browse for browser executable"
+              >
+                <Globe className="w-4 h-4" />
+                Browse
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              Auto-detected: {defaultChromePath || "Not found - please select manually"}
+            </p>
+          </div>
+
           {/* Profile Path Field */}
           <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Folder className="w-4 h-4 text-primary-500" />
-              Profile Path
+              Profile Data Path
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={formData.userDataDir}
                 onChange={(e) => setFormData({ ...formData, userDataDir: e.target.value })}
-                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all font-mono text-sm"
                 placeholder={defaultProfilePath || "Leave empty for default app folder"}
               />
               <button
                 type="button"
                 onClick={handleSelectFolder}
-                className="px-4 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium whitespace-nowrap"
                 title="Browse folder"
               >
                 <Folder className="w-4 h-4" />
@@ -241,8 +304,8 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
 
           {/* User Agent Field */}
           <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-primary-500" />
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <RefreshCw className="w-4 h-4 text-primary-500" />
               User Agent
             </label>
             <div className="flex gap-2 items-start">
@@ -250,13 +313,13 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
                 rows={2}
                 value={formData.userAgent}
                 onChange={(e) => setFormData({ ...formData, userAgent: e.target.value })}
-                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none"
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none font-mono text-xs"
                 placeholder="Leave empty for default browser user agent"
               />
               <button
                 type="button"
                 onClick={generateRandomUserAgent}
-                className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium whitespace-nowrap"
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium whitespace-nowrap"
                 title="Generate random user agent"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -270,7 +333,7 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
 
           {/* Credit Field */}
           <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <DollarSign className="w-4 h-4 text-green-500" />
               Credit Remaining
             </label>
@@ -280,7 +343,7 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
               min="0"
               value={formData.creditRemaining}
               onChange={(e) => setFormData({ ...formData, creditRemaining: parseFloat(e.target.value) || 0 })}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
               placeholder="0.00"
             />
             <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -289,9 +352,27 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
             </p>
           </div>
 
+          {/* Cookies Field */}
+          <div>
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Cookie className="w-4 h-4 text-orange-500" />
+              Cookies (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={formData.cookies}
+              onChange={(e) => setFormData({ ...formData, cookies: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none font-mono text-xs"
+              placeholder="name1=value1; name2=value2; name3=value3"
+            />
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              Cookie string in standard format. Usually auto-filled when logging in.
+            </p>
+          </div>
+
           {/* Tags Field */}
           <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Tag className="w-4 h-4 text-purple-500" />
               Tags
             </label>
@@ -306,13 +387,13 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
                     handleAddTag();
                   }
                 }}
-                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 placeholder="Enter a tag and press Enter"
               />
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
               >
                 <Plus className="w-4 h-4" />
                 Add

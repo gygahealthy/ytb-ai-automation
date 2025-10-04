@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     update: (id: string, updates: any) => ipcRenderer.invoke("profile:update", id, updates),
     delete: (id: string) => ipcRenderer.invoke("profile:delete", id),
     updateCredit: (id: string, amount: number) => ipcRenderer.invoke("profile:updateCredit", id, amount),
+    login: (id: string) => ipcRenderer.invoke("profile:login", id),
   },
 
   // Automation APIs
@@ -51,6 +52,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectFolder: (defaultPath?: string) => ipcRenderer.invoke("dialog:selectFolder", defaultPath),
     getDefaultProfilePath: () => ipcRenderer.invoke("dialog:getDefaultProfilePath"),
     generateUserAgent: () => ipcRenderer.invoke("dialog:generateUserAgent"),
+    getDefaultChromePath: () => ipcRenderer.invoke("dialog:getDefaultChromePath"),
+    selectBrowserExecutable: () => ipcRenderer.invoke("dialog:selectBrowserExecutable"),
   },
 });
 
@@ -65,6 +68,7 @@ declare global {
         update: (id: string, updates: any) => Promise<any>;
         delete: (id: string) => Promise<any>;
         updateCredit: (id: string, amount: number) => Promise<any>;
+        login: (id: string) => Promise<any>;
       };
       automation: {
         getAll: () => Promise<any>;
@@ -98,6 +102,8 @@ declare global {
         selectFolder: (defaultPath?: string) => Promise<any>;
         getDefaultProfilePath: () => Promise<any>;
         generateUserAgent: () => Promise<any>;
+        getDefaultChromePath: () => Promise<any>;
+        selectBrowserExecutable: () => Promise<any>;
       };
     };
   }

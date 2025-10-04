@@ -29,5 +29,9 @@ export function registerProfileHandlers(): void {
     return await profileService.updateCredit(id, amount);
   });
 
+  ipcMain.handle("profile:login", async (_, id: string) => {
+    return await profileService.loginProfile(id);
+  });
+
   console.log("✅ Profile handlers registered");
 }

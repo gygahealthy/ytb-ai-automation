@@ -1,24 +1,19 @@
 import {
-  Calendar,
   ChevronDown,
-  Cookie,
-  DollarSign,
-  Edit,
   Eye,
   Filter,
-  Folder,
-  Globe,
   Grid3x3,
   List,
   Plus,
   Search,
   Tag,
-  Trash2,
   User,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import ProfileModal, { ProfileFormData } from "../components/ProfileModal";
+import ProfileModal, { ProfileFormData } from "../components/profiles/ProfileModal";
+import ProfilesTable from "../components/profiles/ProfilesTable";
+import ProfilesGrid from "../components/profiles/ProfilesGrid";
 
 interface Profile {
   id: string;
@@ -29,6 +24,7 @@ interface Profile {
   creditRemaining: number;
   tags?: string[];
   cookieExpires?: string;
+  isLoggedIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,12 +38,14 @@ interface ApiResponse<T> {
 interface ColumnVisibility {
   id: boolean;
   name: boolean;
+  browser: boolean;
   path: boolean;
   userAgent: boolean;
   credit: boolean;
   tags: boolean;
   createdAt: boolean;
   cookie: boolean;
+  loginStatus: boolean;
 }
 
 export default function ProfilesPage() {
@@ -68,14 +66,16 @@ export default function ProfilesPage() {
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
-    id: true,
+    id: false,
     name: true,
-    path: true,
+    browser: true,
+    path: false,
     userAgent: true,
     credit: true,
     tags: true,
     createdAt: true,
     cookie: true,
+    loginStatus: true,
   });
 
   // Load profiles on mount
@@ -159,10 +159,12 @@ export default function ProfilesPage() {
       if (isEditMode && editingProfile) {
         const response = (await window.electronAPI.profile.update(editingProfile.id, {
           name: formData.name,
+          browserPath: formData.browserPath || undefined,
           userDataDir: formData.userDataDir || undefined,
           userAgent: formData.userAgent || undefined,
           creditRemaining: formData.creditRemaining,
           tags: formData.tags,
+          cookies: formData.cookies || undefined,
         })) as ApiResponse<Profile>;
 
         if (response.success) {
@@ -174,10 +176,12 @@ export default function ProfilesPage() {
       } else {
         const response = (await window.electronAPI.profile.create({
           name: formData.name,
+          browserPath: formData.browserPath || undefined,
           userDataDir: formData.userDataDir || undefined,
           userAgent: formData.userAgent || undefined,
           creditRemaining: formData.creditRemaining,
           tags: formData.tags,
+          cookies: formData.cookies || undefined,
         })) as ApiResponse<Profile>;
 
         if (response.success) {
@@ -211,28 +215,25 @@ export default function ProfilesPage() {
     }
   };
 
+  const handleLoginProfile = async (id: string) => {
+    try {
+      const response = (await window.electronAPI.profile.login(id)) as ApiResponse<Profile>;
+      if (response.success) {
+        await loadProfiles();
+      } else {
+        console.error("Login failed:", response.error);
+      }
+    } catch (error) {
+      console.error("Failed to login profile:", error);
+    }
+  };
+
   const toggleColumnVisibility = (column: keyof ColumnVisibility) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
   };
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const isCookieExpired = (expiryDate?: string) => {
-    if (!expiryDate) return true;
-    return new Date(expiryDate) < new Date();
   };
 
   return (
@@ -420,281 +421,25 @@ export default function ProfilesPage() {
 
       {/* Table View */}
       {viewMode === "table" && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 border-b border-gray-200 dark:border-gray-600">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                  {columnVisibility.id && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      ID
-                    </th>
-                  )}
-                  {columnVisibility.name && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Name
-                    </th>
-                  )}
-                  {columnVisibility.path && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Path
-                    </th>
-                  )}
-                  {columnVisibility.userAgent && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      User Agent
-                    </th>
-                  )}
-                  {columnVisibility.credit && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Credit
-                    </th>
-                  )}
-                  {columnVisibility.tags && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Tags
-                    </th>
-                  )}
-                  {columnVisibility.createdAt && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created At
-                    </th>
-                  )}
-                  {columnVisibility.cookie && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Cookie
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredProfiles.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                      {profiles.length === 0
-                        ? "No profiles yet. Create your first profile to get started."
-                        : "No profiles match your filters."}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredProfiles.map((profile) => (
-                    <tr key={profile.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditProfile(profile)}
-                            className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProfile(profile.id)}
-                            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </div>
-                      </td>
-                      {columnVisibility.id && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                            {profile.id}
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.name && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <User className="w-4 h-4 text-primary-500" />
-                            {profile.name}
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.path && (
-                        <td className="px-6 py-4 max-w-xs">
-                          <span className="text-sm text-gray-600 dark:text-gray-400 font-mono text-xs break-all flex items-center gap-2">
-                            <Folder className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate" title={profile.userDataDir}>
-                              {profile.userDataDir}
-                            </span>
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.userAgent && (
-                        <td className="px-6 py-4 max-w-xs">
-                          <span className="text-xs text-gray-600 dark:text-gray-400 font-mono break-all line-clamp-2 flex items-center gap-2">
-                            <Globe className="w-4 h-4 flex-shrink-0" />
-                            <span title={profile.userAgent}>{profile.userAgent || "Default"}</span>
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.credit && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-semibold">
-                            <DollarSign className="w-4 h-4" />
-                            {profile.creditRemaining.toFixed(2)}
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.tags && (
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {profile.tags && profile.tags.length > 0 ? (
-                              profile.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs"
-                                >
-                                  <Tag className="w-3 h-3" />
-                                  {tag}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-400">No tags</span>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                      {columnVisibility.createdAt && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(profile.createdAt)}
-                          </span>
-                        </td>
-                      )}
-                      {columnVisibility.cookie && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Cookie
-                              className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`}
-                            />
-                            {profile.cookieExpires ? (
-                              <span
-                                className={`text-xs ${
-                                  isCookieExpired(profile.cookieExpires)
-                                    ? "text-red-600 dark:text-red-400"
-                                    : "text-green-600 dark:text-green-400"
-                                }`}
-                              >
-                                {isCookieExpired(profile.cookieExpires) ? "Expired" : formatDate(profile.cookieExpires)}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">No cookie</span>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ProfilesTable
+          profiles={profiles}
+          filteredProfiles={filteredProfiles}
+          columnVisibility={columnVisibility}
+          onEditProfile={handleEditProfile}
+          onLoginProfile={handleLoginProfile}
+          onDeleteProfile={handleDeleteProfile}
+        />
       )}
 
       {/* Grid View */}
       {viewMode === "grid" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProfiles.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
-              {profiles.length === 0
-                ? "No profiles yet. Create your first profile to get started."
-                : "No profiles match your filters."}
-            </div>
-          ) : (
-            filteredProfiles.map((profile) => (
-              <div
-                key={profile.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-              >
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <User className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEditProfile(profile)}
-                      className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProfile(profile.id)}
-                      className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Profile Name */}
-                <h3 className="text-lg font-bold mb-2 truncate" title={profile.name}>
-                  {profile.name}
-                </h3>
-
-                {/* Profile ID */}
-                <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-4 truncate bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                  {profile.id}
-                </p>
-
-                {/* Credit */}
-                <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold">
-                  <DollarSign className="w-4 h-4" />
-                  {profile.creditRemaining.toFixed(2)} Credits
-                </div>
-
-                {/* Tags */}
-                {profile.tags && profile.tags.length > 0 && (
-                  <div className="mb-3 flex flex-wrap gap-1">
-                    {profile.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs"
-                      >
-                        <Tag className="w-3 h-3" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Cookie Status */}
-                <div className="mb-3 flex items-center gap-2">
-                  <Cookie className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`} />
-                  <span
-                    className={`text-xs ${
-                      isCookieExpired(profile.cookieExpires)
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-green-600 dark:text-green-400"
-                    }`}
-                  >
-                    {profile.cookieExpires
-                      ? isCookieExpired(profile.cookieExpires)
-                        ? "Cookie Expired"
-                        : "Cookie Valid"
-                      : "No Cookie"}
-                  </span>
-                </div>
-
-                {/* Created Date */}
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <Calendar className="w-4 h-4" />
-                  {formatDate(profile.createdAt)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <ProfilesGrid
+          profiles={profiles}
+          filteredProfiles={filteredProfiles}
+          onEditProfile={handleEditProfile}
+          onLoginProfile={handleLoginProfile}
+          onDeleteProfile={handleDeleteProfile}
+        />
       )}
 
       {/* Profile Modal */}

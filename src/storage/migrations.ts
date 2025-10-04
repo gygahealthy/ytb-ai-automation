@@ -18,9 +18,13 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
       await migration_001_add_user_agent_and_tags(db);
     }
 
+    if (version < 2) {
+      await migration_002_add_is_logged_in(db);
+    }
+
     // Add more migrations here as needed
-    // if (version < 2) {
-    //   await migration_002_something_else(db);
+    // if (version < 3) {
+    //   await migration_003_something_else(db);
     // }
 
     logger.info("All migrations completed successfully");
@@ -88,6 +92,32 @@ async function migration_001_add_user_agent_and_tags(db: SQLiteDatabase): Promis
     logger.info("Migration 001 completed successfully");
   } catch (error) {
     logger.error("Migration 001 failed", error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 002: Add is_logged_in column to profiles table
+ */
+async function migration_002_add_is_logged_in(db: SQLiteDatabase): Promise<void> {
+  logger.info("Running migration 002: Add is_logged_in column");
+
+  try {
+    // Check if is_logged_in column exists
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(profiles)");
+    const columns = tableInfo.map((col) => col.name);
+
+    // Add is_logged_in column if it doesn't exist
+    if (!columns.includes("is_logged_in")) {
+      await db.run("ALTER TABLE profiles ADD COLUMN is_logged_in INTEGER DEFAULT 0");
+      logger.info("Added is_logged_in column to profiles table");
+    }
+
+    // Record migration
+    await recordMigration(db, 2);
+    logger.info("Migration 002 completed successfully");
+  } catch (error) {
+    logger.error("Migration 002 failed", error);
     throw error;
   }
 }

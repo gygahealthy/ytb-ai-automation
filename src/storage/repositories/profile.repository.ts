@@ -15,6 +15,7 @@ interface ProfileRow {
   tags: string | null;
   cookies: string | null;
   cookie_expires: string | null;
+  is_logged_in: number;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +36,7 @@ export class ProfileRepository extends BaseRepository<Profile> {
       userDataDir: row.user_data_dir,
       userAgent: row.user_agent || undefined,
       creditRemaining: row.credit_remaining,
+      isLoggedIn: row.is_logged_in === 1,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -57,13 +59,9 @@ export class ProfileRepository extends BaseRepository<Profile> {
       }
     }
 
-    // Parse cookies if exists
+    // Parse cookies if exists (stored as plain string now)
     if (row.cookies) {
-      try {
-        profile.cookies = JSON.parse(row.cookies);
-      } catch (e) {
-        profile.cookies = undefined;
-      }
+      profile.cookies = row.cookies;
     }
 
     // Parse cookie expires
@@ -83,6 +81,7 @@ export class ProfileRepository extends BaseRepository<Profile> {
     if (entity.userDataDir) row.user_data_dir = entity.userDataDir;
     if (entity.userAgent !== undefined) row.user_agent = entity.userAgent || null;
     if (entity.creditRemaining !== undefined) row.credit_remaining = entity.creditRemaining;
+    if (entity.isLoggedIn !== undefined) row.is_logged_in = entity.isLoggedIn ? 1 : 0;
 
     // Serialize proxy
     if (entity.proxy) {
@@ -96,9 +95,9 @@ export class ProfileRepository extends BaseRepository<Profile> {
       row.tags = entity.tags && entity.tags.length > 0 ? JSON.stringify(entity.tags) : null;
     }
 
-    // Serialize cookies
+    // Store cookies as plain string (no serialization needed)
     if (entity.cookies !== undefined) {
-      row.cookies = entity.cookies ? JSON.stringify(entity.cookies) : null;
+      row.cookies = entity.cookies || null;
     }
 
     // Serialize cookie expires

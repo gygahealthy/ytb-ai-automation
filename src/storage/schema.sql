@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   tags TEXT, -- JSON array of tags
   cookies TEXT,
   cookie_expires TEXT,
+  is_logged_in INTEGER DEFAULT 0, -- 0 = false, 1 = true
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

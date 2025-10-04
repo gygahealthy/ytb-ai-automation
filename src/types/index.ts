@@ -11,8 +11,9 @@ export interface Profile {
   proxy?: ProxyConfig;
   creditRemaining: number;
   tags?: string[];
-  cookies?: Record<string, string>;
+  cookies?: string; // Cookie string in standard format: "name=value; name2=value2"
   cookieExpires?: Date;
+  isLoggedIn?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
