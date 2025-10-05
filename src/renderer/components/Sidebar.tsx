@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
 
 export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isAutomationOpen, setIsAutomationOpen] = useState(true);
 
   return (
     <aside
@@ -59,7 +60,49 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentPage === item.id;
+          const isActive = currentPage === item.id || currentPage?.toString().startsWith(`${item.id}` as any);
+
+          // Render Automation as a parent with dropdown
+          if (item.id === "automation") {
+            return (
+              <div key={item.id} className="w-full">
+                <button
+                  onClick={() => setIsAutomationOpen(!isAutomationOpen)}
+                  className={clsx(
+                    "w-full flex items-center gap-3 rounded-lg font-medium transition-colors",
+                    isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
+                    isActive
+                      ? "bg-primary-500 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  )}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <Icon className="w-5 h-5" />
+                  {!isCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                  {!isCollapsed && (
+                    <ChevronRight className={clsx("w-4 h-4 transition-transform", isAutomationOpen ? "rotate-90" : "rotate-0")} />
+                  )}
+                </button>
+
+                {/* Submenu */}
+                {isAutomationOpen && !isCollapsed && (
+                  <div className="mt-2 space-y-1 pl-8">
+                    <button
+                      onClick={() => onPageChange("automation.chat" as any)}
+                      className={clsx(
+                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
+                        currentPage === "automation.chat" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      <span>Chat Automation</span>
+                    </button>
+                    {/* Future submenu items can be added here */}
+                  </div>
+                )}
+              </div>
+            );
+          }
 
           return (
             <button

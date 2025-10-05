@@ -22,6 +22,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     stop: (id: string) => ipcRenderer.invoke("automation:stop", id),
   },
 
+  // Chat Automation APIs
+  chatAutomation: {
+    init: (profileId: string, provider: "chatgpt" | "gemini") => ipcRenderer.invoke("chatAutomation:init", profileId, provider),
+    sendMessage: (sessionId: string, message: string) => ipcRenderer.invoke("chatAutomation:sendMessage", sessionId, message),
+    closeSession: (sessionId: string) => ipcRenderer.invoke("chatAutomation:closeSession", sessionId),
+    getActiveSessions: () => ipcRenderer.invoke("chatAutomation:getActiveSessions"),
+  },
+
   // VEO3 APIs
   veo3: {
     getAll: () => ipcRenderer.invoke("veo3:getAll"),
@@ -76,6 +84,12 @@ declare global {
         create: (input: any) => Promise<any>;
         start: (id: string) => Promise<any>;
         stop: (id: string) => Promise<any>;
+      };
+      chatAutomation: {
+        init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;
+        sendMessage: (sessionId: string, message: string) => Promise<any>;
+        closeSession: (sessionId: string) => Promise<any>;
+        getActiveSessions: () => Promise<any>;
       };
       veo3: {
         getAll: () => Promise<any>;

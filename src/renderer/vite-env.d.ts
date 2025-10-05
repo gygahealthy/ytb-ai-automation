@@ -18,6 +18,12 @@ interface Window {
       start: (id: string) => Promise<any>;
       stop: (id: string) => Promise<any>;
     };
+    chatAutomation: {
+      init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;
+      sendMessage: (sessionId: string, message: string) => Promise<any>;
+      closeSession: (sessionId: string) => Promise<any>;
+      getActiveSessions: () => Promise<any>;
+    };
     veo3: {
       getAll: () => Promise<any>;
       getById: (id: string) => Promise<any>;

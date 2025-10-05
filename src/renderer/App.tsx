@@ -4,9 +4,10 @@ import Sidebar from "./components/Sidebar";
 import AutomationPage from "./pages/AutomationPage";
 import Dashboard from "./pages/Dashboard";
 import ProfilesPage from "./pages/ProfilesPage";
+import ChatAutomation from "./pages/automation/ChatAutomation";
 import { useSettingsStore } from "./store/settings.store";
 
-export type Page = "dashboard" | "automation" | "profiles" | "history";
+export type Page = "dashboard" | "automation" | "automation.chat" | "profiles" | "history";
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
@@ -21,6 +22,7 @@ function App() {
         <main className="flex-1 overflow-y-auto">
           {currentPage === "dashboard" && <Dashboard />}
           {currentPage === "automation" && <AutomationPage />}
+          {currentPage === "automation.chat" && <ChatAutomation />}
           {currentPage === "profiles" && <ProfilesPage />}
           {currentPage === "history" && (
             <div className="p-8">
