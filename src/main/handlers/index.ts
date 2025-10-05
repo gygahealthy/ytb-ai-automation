@@ -1,4 +1,5 @@
 import { registerAutomationHandlers } from "./automation.handlers";
+import { registerAutomationHandlers as registerAutomationMultiHandlers } from "./automation-multi.handlers";
 import { registerChatAutomationHandlers } from "./chat-automation.handlers";
 import { registerDialogHandlers } from "./dialog.handlers";
 import { registerProfileHandlers } from "./profile.handlers";
@@ -12,6 +13,7 @@ import { registerYoutubeHandlers } from "./youtube.handlers";
 export function registerIPCHandlers(): void {
   registerProfileHandlers();
   registerAutomationHandlers();
+  registerAutomationMultiHandlers();
   registerChatAutomationHandlers();
   registerVeo3Handlers();
   registerYoutubeHandlers();

@@ -1,11 +1,17 @@
-import { useState } from "react";
-import { Eye, EyeOff, Clipboard } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Eye, EyeOff, Clipboard, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ChatToolbar from "../../components/automation/ChatToolbar";
 import ChatUI, { Message } from "../../components/automation/ChatUI";
 import IPCLog from "../../components/automation/IPCLog";
-import { useEffect } from "react";
+import { InstanceState } from "../../../types/automation.types";
 
 export default function ChatAutomation() {
+  // Route parameters - if instanceId is present, we're in multi-instance mode
+  const { instanceId } = useParams<{ instanceId: string }>();
+  const navigate = useNavigate();
+
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(undefined);
   const [provider, setProvider] = useState<"chatgpt" | "gemini">("chatgpt");
@@ -16,36 +22,130 @@ export default function ChatAutomation() {
   const [logLines, setLogLines] = useState<string[]>(["IPC log initialized..."]);
   const [isBrowserReady, setIsBrowserReady] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [instanceState, setInstanceState] = useState<InstanceState | null>(null);
+
+  // Multi-instance mode: load instance state
+  useEffect(() => {
+    if (!instanceId) return;
+
+    // Load instance details
+    window.electronAPI.automation.get(instanceId).then((res: any) => {
+      if (res && res.success && res.data) {
+        const state: InstanceState = res.data;
+        setInstanceState(state);
+        setSelectedProfileId(state.profileId);
+        if (state.provider) {
+          setProvider(state.provider as "chatgpt" | "gemini");
+        }
+        setIsBrowserReady(state.status === "running");
+        // load persisted chat history if present
+        if (Array.isArray(state.chatHistory) && state.chatHistory.length > 0) {
+          setMessages(state.chatHistory.map((c: any, idx: number) => ({ id: idx + 1, from: c.from, text: c.text, ts: c.ts })));
+        }
+        setLogLines((s) => [...s, `Connected to instance ${instanceId} (Profile: ${state.profileId})`]);
+      } else {
+        setLogLines((s) => [...s, `Failed to load instance ${instanceId}: ${res?.error ?? "not found"}`]);
+      }
+    });
+
+    // Listen for instance updates
+    const unsubStatus = window.electronAPI.automation.onInstanceStatus((data: any) => {
+      if (data.instanceId === instanceId) {
+        setLogLines((s) => [...s, `Instance status: ${data.status}`]);
+        setIsBrowserReady(data.status === "running");
+        if (data.status === 'stopped' || data.status === 'stopping') {
+          // clear UI messages when instance is stopping or stopped
+          setMessages([]);
+        }
+      }
+    });
+
+    const unsubUpdated = window.electronAPI.automation.onInstanceUpdated((inst: InstanceState) => {
+      if (inst.instanceId === instanceId) {
+        // update chat history if present
+        if (Array.isArray(inst.chatHistory)) {
+          setMessages(inst.chatHistory.map((c: any, idx: number) => ({ id: idx + 1, from: c.from, text: c.text, ts: c.ts })));
+        }
+        setInstanceState(inst);
+      }
+    });
+
+    const unsubUnregistered = window.electronAPI.automation.onInstanceUnregistered((unregId: string) => {
+      if (unregId === instanceId) {
+        setMessages([]);
+      }
+    });
+
+    return () => {
+      try { unsubStatus(); } catch {};
+      try { unsubUpdated(); } catch {};
+      try { unsubUnregistered(); } catch {};
+    };
+  }, [instanceId]);
 
   const handleSend = (text: string) => {
-    if (!text.trim() || !sessionId) return;
-    const nextId = messages.length + 1;
-    setMessages((s) => [...s, { id: nextId, from: "user", text }]);
-    setLogLines((s) => [...s, `Sending message to ${provider}...`]);
-    setIsTyping(true);
+    if (!text.trim()) return;
 
-    // Send message via chat automation service
-    window.electronAPI.chatAutomation.sendMessage(sessionId, text).then((res: any) => {
-      if (!res || !res.success) {
-        setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
+    // Multi-instance mode vs single-instance mode
+    if (instanceId) {
+      // Multi-instance: send message to specific instance
+      const nextId = messages.length + 1;
+      setMessages((s) => [...s, { id: nextId, from: "user", text }]);
+      setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
+      setIsTyping(true);
+
+      window.electronAPI.automation.sendMessage(instanceId, text).then((res: any) => {
+        if (!res || !res.success) {
+          setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
+          setIsTyping(false);
+          return;
+        }
+
+        const response = res.data;
+        const botId = messages.length + 2;
+        setMessages((s) => [
+          ...s,
+          {
+            id: botId,
+            from: "bot",
+            text: response.content,
+            ts: new Date(response.timestamp).toLocaleTimeString(),
+          },
+        ]);
+        setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
         setIsTyping(false);
-        return;
-      }
+      });
+    } else {
+      // Single-instance mode (legacy)
+      if (!sessionId) return;
 
-      const response = res.data;
-      const botId = messages.length + 2;
-      setMessages((s) => [
-        ...s,
-        {
-          id: botId,
-          from: "bot",
-          text: response.content,
-          ts: new Date(response.timestamp).toLocaleTimeString(),
-        },
-      ]);
-      setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
-      setIsTyping(false);
-    });
+      const nextId = messages.length + 1;
+      setMessages((s) => [...s, { id: nextId, from: "user", text }]);
+      setLogLines((s) => [...s, `Sending message to ${provider}...`]);
+      setIsTyping(true);
+
+      window.electronAPI.chatAutomation.sendMessage(sessionId, text).then((res: any) => {
+        if (!res || !res.success) {
+          setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
+          setIsTyping(false);
+          return;
+        }
+
+        const response = res.data;
+        const botId = messages.length + 2;
+        setMessages((s) => [
+          ...s,
+          {
+            id: botId,
+            from: "bot",
+            text: response.content,
+            ts: new Date(response.timestamp).toLocaleTimeString(),
+          },
+        ]);
+        setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
+        setIsTyping(false);
+      });
+    }
   };
 
   const handleRun = () => {
@@ -94,19 +194,36 @@ export default function ChatAutomation() {
   return (
   <div className="p-8 h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">Chat Automation</h1>
-          <p className="text-gray-600 dark:text-gray-400">Test and run chat-based automations</p>
+        <div className="flex items-center gap-4">
+          {instanceId && (
+            <button
+              onClick={() => navigate('/automation/dashboard')}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-3xl font-bold mb-1">
+              {instanceId ? `Chat Instance: ${instanceState?.profileId || instanceId}` : 'Chat Automation'}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {instanceId ? 'Connected to running automation instance' : 'Test and run chat-based automations'}
+            </p>
+          </div>
         </div>
 
-        <ChatToolbar
-          profiles={profiles}
-          selectedProfileId={selectedProfileId}
-          onChangeProfile={(id: string) => setSelectedProfileId(id)}
-          provider={provider}
-          onChangeProvider={setProvider}
-          onRun={handleRun}
-        />
+        {!instanceId && (
+          <ChatToolbar
+            profiles={profiles}
+            selectedProfileId={selectedProfileId}
+            onChangeProfile={(id: string) => setSelectedProfileId(id)}
+            provider={provider}
+            onChangeProvider={setProvider}
+            onRun={handleRun}
+          />
+        )}
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">

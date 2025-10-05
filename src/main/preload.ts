@@ -19,7 +19,47 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getById: (id: string) => ipcRenderer.invoke("automation:getById", id),
     create: (input: any) => ipcRenderer.invoke("automation:create", input),
     start: (id: string) => ipcRenderer.invoke("automation:start", id),
-    stop: (id: string) => ipcRenderer.invoke("automation:stop", id),
+  stop: (id: string) => ipcRenderer.invoke("automation:stop", id),
+    // Multi-instance automation
+    launch: (request: any) => ipcRenderer.invoke("automation:launch", request),
+  stopInstance: (instanceId: string) => ipcRenderer.invoke("automation:stopInstance", instanceId),
+    stopAll: () => ipcRenderer.invoke("automation:stopAll"),
+    // Multi-instance getters
+    get: (instanceId: string) => ipcRenderer.invoke("automation:getInstance", instanceId),
+    getInstances: () => ipcRenderer.invoke("automation:getInstances"),
+    sendMessage: (instanceId: string, message: string) => ipcRenderer.invoke("automation:sendMessage", instanceId, message),
+    highlight: (instanceId: string) => ipcRenderer.invoke("automation:highlight", instanceId),
+    updateConfig: (config: any) => ipcRenderer.invoke("automation:updateConfig", config),
+    getConfig: () => ipcRenderer.invoke("automation:getConfig"),
+      applyPreset: (preset: string) => ipcRenderer.invoke('automation:applyPreset', preset),
+  repositionInstance: (instanceId: string) => ipcRenderer.invoke('automation:repositionInstance', instanceId),
+  repositionAll: () => ipcRenderer.invoke('automation:repositionAll'),
+  moveInstanceToSlot: (instanceId: string, slot: number) => ipcRenderer.invoke('automation:moveInstanceToSlot', instanceId, slot),
+    // Event listeners
+    onInstanceRegistered: (callback: (data: any) => void) => {
+      const channel = "automation:instance:registered";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onInstanceUpdated: (callback: (data: any) => void) => {
+      const channel = "automation:instance:updated";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onInstanceStatus: (callback: (data: any) => void) => {
+      const channel = "automation:instance:status";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onInstanceUnregistered: (callback: (data: any) => void) => {
+      const channel = "automation:instance:unregistered";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
   },
 
   // Chat Automation APIs
@@ -79,11 +119,14 @@ declare global {
         login: (id: string) => Promise<any>;
       };
       automation: {
-        getAll: () => Promise<any>;
-        getById: (id: string) => Promise<any>;
-        create: (input: any) => Promise<any>;
-        start: (id: string) => Promise<any>;
-        stop: (id: string) => Promise<any>;
+  repositionInstance: (instanceId: string) => Promise<any>;
+  repositionAll: () => Promise<any>;
+  applyPreset: (preset: string) => Promise<any>;
+  moveInstanceToSlot: (instanceId: string, slot: number) => Promise<any>;
+        onInstanceRegistered: (callback: (data: any) => void) => void;
+        onInstanceUpdated: (callback: (data: any) => void) => void;
+        onInstanceStatus: (callback: (data: any) => void) => void;
+        onInstanceUnregistered: (callback: (data: any) => void) => void;
       };
       chatAutomation: {
         init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;

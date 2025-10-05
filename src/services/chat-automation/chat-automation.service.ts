@@ -106,8 +106,11 @@ export class ChatAutomationService {
         createdAt: new Date(),
       };
 
-      this.activeSessions.set(sessionId, session);
-      browserManager.registerBrowser(sessionId, browser, debugPort!);
+  this.activeSessions.set(sessionId, session);
+  // If the browser manager returned the spawned process, register it so we can kill it on close
+  // @ts-ignore - some implementations include `process` in the return object
+  const spawnedProcess = (browserResult as any).process as any;
+  browserManager.registerBrowser(sessionId, browser, debugPort!, spawnedProcess);
 
       logger.info(`Chat session ${sessionId} initialized successfully`);
 

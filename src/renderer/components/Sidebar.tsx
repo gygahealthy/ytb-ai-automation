@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, History, LayoutDashboard, PlayCircle, Settings, Users } from "lucide-react";
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Page } from "../App";
 import iconImage from "../assets/icon.png";
 
@@ -26,6 +27,8 @@ const navItems: NavItem[] = [
 export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAutomationOpen, setIsAutomationOpen] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <aside
@@ -88,14 +91,30 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
                 {isAutomationOpen && !isCollapsed && (
                   <div className="mt-2 space-y-1 pl-8">
                     <button
-                      onClick={() => onPageChange("automation.chat" as any)}
+                      onClick={() => {
+                        navigate('/automation/dashboard');
+                        onPageChange("automation.dashboard" as any);
+                      }}
                       className={clsx(
                         "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
-                        currentPage === "automation.chat" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        location.pathname === "/automation/dashboard" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Dashboard</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/automation/chat');
+                        onPageChange("automation.chat" as any);
+                      }}
+                      className={clsx(
+                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
+                        location.pathname === "/automation/chat" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       )}
                     >
                       <PlayCircle className="w-4 h-4" />
-                      <span>Chat Automation</span>
+                      <span>Chat (Single)</span>
                     </button>
                     {/* Future submenu items can be added here */}
                   </div>

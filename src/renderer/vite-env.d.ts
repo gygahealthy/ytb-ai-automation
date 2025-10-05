@@ -17,6 +17,23 @@ interface Window {
       create: (input: any) => Promise<any>;
       start: (id: string) => Promise<any>;
       stop: (id: string) => Promise<any>;
+      // Multi-instance automation APIs
+      launch: (request: any) => Promise<any>;
+      stopInstance: (instanceId: string) => Promise<any>;
+      stopAll: () => Promise<any>;
+      get: (instanceId: string) => Promise<any>;
+      getInstances: () => Promise<any>;
+      sendMessage: (instanceId: string, message: string) => Promise<any>;
+      highlight: (instanceId: string) => Promise<any>;
+      updateConfig: (config: any) => Promise<any>;
+      getConfig: () => Promise<any>;
+  repositionInstance: (instanceId: string) => Promise<any>;
+  repositionAll: () => Promise<any>;
+  applyPreset: (preset: string) => Promise<any>;
+      onInstanceRegistered: (callback: (data: any) => void) => () => void;
+      onInstanceUpdated: (callback: (data: any) => void) => () => void;
+      onInstanceStatus: (callback: (data: any) => void) => () => void;
+      onInstanceUnregistered: (callback: (data: any) => void) => () => void;
     };
     chatAutomation: {
       init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;
