@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Settings, StopCircle, Loader2, MessageSquare } from 'lucide-react';
 import { InstanceState, LaunchInstanceRequest } from '../../../types/automation.types';
 
-export default function AutomationDashboard() {
+export default function InstanceDashboard() {
   const navigate = useNavigate();
   const [instances, setInstances] = useState<InstanceState[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
@@ -92,6 +92,15 @@ export default function AutomationDashboard() {
 
     setIsLaunching(true);
     try {
+      // If this is the first instance to be launched, force the layout to 1x2-vertical
+      const isFirstInstance = instances.length === 0;
+      if (isFirstInstance) {
+        try {
+          await applyPresetAndRefresh('1x2-vertical');
+        } catch (err) {
+          console.warn('Failed to apply default 1x2-vertical preset before first launch', err);
+        }
+      }
       const request: LaunchInstanceRequest = {
         profileId: selectedProfileId,
         automationType: 'chat',
@@ -101,6 +110,18 @@ export default function AutomationDashboard() {
       const res = await window.electronAPI.automation.launch(request);
       if (!res.success) {
         alert(res.error || 'Failed to launch instance');
+      }
+      // After launching the very first instance, ensure windows are repositioned/resized
+      if (isFirstInstance) {
+        try {
+          // repositionAll will instruct the main process to place windows according to the current grid
+          await window.electronAPI.automation.repositionAll();
+          // refresh config to ensure UI shows the active preset
+          const conf = await window.electronAPI.automation.getConfig();
+          if (conf?.success) setConfig(conf.data);
+        } catch (err) {
+          console.warn('Failed to reposition windows after first launch', err);
+        }
       }
     } catch (error) {
       console.error('Launch error:', error);
@@ -159,7 +180,7 @@ export default function AutomationDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Automation Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-1">Instance Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">
             Manage multiple automation instances
           </p>

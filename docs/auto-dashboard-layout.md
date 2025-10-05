@@ -91,7 +91,7 @@ export function moveWindowByPid(pid, x, y, width, height): boolean {
 
 ### 6. UI Components
 
-#### AutomationDashboard (`src/renderer/pages/automation/AutomationDashboard.tsx`)
+#### InstanceDashboard (`src/renderer/pages/automation/InstanceDashboard.tsx`)
 **Features:**
 - Visual preset picker with icons
 - Active preset highlighting
@@ -268,7 +268,7 @@ On stop:
 - `src/services/automation/automation-coordinator.ts` - Instance orchestrator
 - `src/services/automation/instance-manager.ts` - Instance registry
 - `src/main/handlers/automation-multi.handlers.ts` - IPC handlers
-- `src/renderer/pages/automation/AutomationDashboard.tsx` - Dashboard UI
+- `src/renderer/pages/automation/InstanceDashboard.tsx` - Dashboard UI
 - `src/utils/native-window.util.ts` - Native positioning utility
 - `src/utils/windows.util.ts` - PowerShell fallback utility
 - `docs/LAYOUT_SYSTEM.md` - This documentation

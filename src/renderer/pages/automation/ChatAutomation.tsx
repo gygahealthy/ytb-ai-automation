@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Eye, EyeOff, Clipboard, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ChatToolbar from "../../components/automation/ChatToolbar";
 import ChatUI, { Message } from "../../components/automation/ChatUI";
 import IPCLog from "../../components/automation/IPCLog";
 import { InstanceState } from "../../../types/automation.types";
@@ -12,16 +11,11 @@ export default function ChatAutomation() {
   const { instanceId } = useParams<{ instanceId: string }>();
   const navigate = useNavigate();
 
-  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(undefined);
-  const [provider, setProvider] = useState<"chatgpt" | "gemini">("chatgpt");
   const [isTyping, setIsTyping] = useState(false);
-  const [partialBotText] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(true);
   const [messages, setMessages] = useState<Message[]>([{ id: 1, from: "system", text: "Chat automation initialized." }]);
   const [logLines, setLogLines] = useState<string[]>(["IPC log initialized..."]);
   const [isBrowserReady, setIsBrowserReady] = useState(false);
-  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [instanceState, setInstanceState] = useState<InstanceState | null>(null);
 
   // Multi-instance mode: load instance state
@@ -33,10 +27,6 @@ export default function ChatAutomation() {
       if (res && res.success && res.data) {
         const state: InstanceState = res.data;
         setInstanceState(state);
-        setSelectedProfileId(state.profileId);
-        if (state.provider) {
-          setProvider(state.provider as "chatgpt" | "gemini");
-        }
         setIsBrowserReady(state.status === "running");
         // load persisted chat history if present
         if (Array.isArray(state.chatHistory) && state.chatHistory.length > 0) {
@@ -84,112 +74,38 @@ export default function ChatAutomation() {
   }, [instanceId]);
 
   const handleSend = (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !instanceId) return;
 
-    // Multi-instance mode vs single-instance mode
-    if (instanceId) {
-      // Multi-instance: send message to specific instance
-      const nextId = messages.length + 1;
-      setMessages((s) => [...s, { id: nextId, from: "user", text }]);
-      setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
-      setIsTyping(true);
+    // Multi-instance: send message to specific instance
+    const nextId = messages.length + 1;
+    setMessages((s) => [...s, { id: nextId, from: "user", text }]);
+    setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
+    setIsTyping(true);
 
-      window.electronAPI.automation.sendMessage(instanceId, text).then((res: any) => {
-        if (!res || !res.success) {
-          setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
-          setIsTyping(false);
-          return;
-        }
-
-        const response = res.data;
-        const botId = messages.length + 2;
-        setMessages((s) => [
-          ...s,
-          {
-            id: botId,
-            from: "bot",
-            text: response.content,
-            ts: new Date(response.timestamp).toLocaleTimeString(),
-          },
-        ]);
-        setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
-        setIsTyping(false);
-      });
-    } else {
-      // Single-instance mode (legacy)
-      if (!sessionId) return;
-
-      const nextId = messages.length + 1;
-      setMessages((s) => [...s, { id: nextId, from: "user", text }]);
-      setLogLines((s) => [...s, `Sending message to ${provider}...`]);
-      setIsTyping(true);
-
-      window.electronAPI.chatAutomation.sendMessage(sessionId, text).then((res: any) => {
-        if (!res || !res.success) {
-          setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
-          setIsTyping(false);
-          return;
-        }
-
-        const response = res.data;
-        const botId = messages.length + 2;
-        setMessages((s) => [
-          ...s,
-          {
-            id: botId,
-            from: "bot",
-            text: response.content,
-            ts: new Date(response.timestamp).toLocaleTimeString(),
-          },
-        ]);
-        setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
-        setIsTyping(false);
-      });
-    }
-  };
-
-  const handleRun = () => {
-    // Require a profile selection
-    if (!selectedProfileId) {
-      setLogLines((s) => [...s, "No profile selected. Please choose a profile first."]);
-      return;
-    }
-
-    setLogLines((s) => [...s, `Initializing ${provider} session with profile...`]);
-
-    // Initialize chat automation session
-    window.electronAPI.chatAutomation.init(selectedProfileId, provider).then((res: any) => {
+    window.electronAPI.automation.sendMessage(instanceId, text).then((res: any) => {
       if (!res || !res.success) {
-        setLogLines((s) => [...s, `Failed to initialize session: ${res?.error ?? "unknown"}`]);
+        setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
+        setIsTyping(false);
         return;
       }
 
-      const { sessionId: newSessionId, debugPort } = res.data;
-      setSessionId(newSessionId);
-      setIsBrowserReady(true);
-      setLogLines((s) => [...s, `Session ${newSessionId} started (debug port: ${debugPort})`]);
+      const response = res.data;
+      const botId = messages.length + 2;
+      setMessages((s) => [
+        ...s,
+        {
+          id: botId,
+          from: "bot",
+          text: response.content,
+          ts: new Date(response.timestamp).toLocaleTimeString(),
+        },
+      ]);
+      setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
+      setIsTyping(false);
     });
   };
 
-  useEffect(() => {
-    // Load profiles from main process
-    window.electronAPI.profile.getAll().then((res: any) => {
-      if (res && res.success && Array.isArray(res.data)) {
-        setProfiles(res.data.map((p: any) => ({ id: p.id, name: p.name })));
-        // auto-select first profile if available
-        if (res.data.length > 0) {
-          setSelectedProfileId(res.data[0].id);
-        }
-      } else {
-        setLogLines((s) => [...s, `Failed to load profiles: ${res?.error ?? 'unknown'}`]);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    // default provider to gemini
-    setProvider("gemini");
-  }, []);
+  // no-op: single-instance mode removed; component operates in multi-instance mode only
 
   return (
   <div className="p-8 h-full flex flex-col overflow-hidden">
@@ -197,7 +113,7 @@ export default function ChatAutomation() {
         <div className="flex items-center gap-4">
           {instanceId && (
             <button
-              onClick={() => navigate('/automation/dashboard')}
+              onClick={() => navigate('/automation/instance')}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Back to dashboard"
             >
@@ -213,23 +129,12 @@ export default function ChatAutomation() {
             </p>
           </div>
         </div>
-
-        {!instanceId && (
-          <ChatToolbar
-            profiles={profiles}
-            selectedProfileId={selectedProfileId}
-            onChangeProfile={(id: string) => setSelectedProfileId(id)}
-            provider={provider}
-            onChangeProvider={setProvider}
-            onRun={handleRun}
-          />
-        )}
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
         <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-0 min-w-0">
           {/* ChatUI will handle its own internal scrolling */}
-          <ChatUI messages={messages} onSend={handleSend} canSend={isBrowserReady} isTyping={isTyping} partialBotText={partialBotText} />
+          <ChatUI messages={messages} onSend={handleSend} canSend={isBrowserReady} isTyping={isTyping} partialBotText={null} />
         </div>
 
         {showLog && (

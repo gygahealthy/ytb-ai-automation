@@ -258,9 +258,12 @@ export class AutomationCoordinator {
       // Register instance
       instanceManager.registerInstance(initialState);
 
-      // Recalculate window bounds using activeCount (include this newly registered instance)
-      const activeCount = instanceManager.getAllInstances().length;
-      const recalculatedBounds = this.positioner.calculateWindowBounds(screenSlot, undefined, activeCount);
+  // Recalculate window bounds. For the very first instance, prefer full-grid calculation
+  // so that an explicitly applied preset (e.g., 1x2-vertical) is respected instead of
+  // collapsing to an active-count-based 1x1 layout.
+  const activeCount = instanceManager.getAllInstances().length;
+  const useActiveCount = activeCount > 1 ? activeCount : undefined;
+  const recalculatedBounds = this.positioner.calculateWindowBounds(screenSlot, undefined, useActiveCount);
       instanceManager.updateInstanceState(instanceId, { windowBounds: recalculatedBounds });
 
       // For now, use direct service calls instead of worker processes

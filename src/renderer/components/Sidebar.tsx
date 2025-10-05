@@ -18,9 +18,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "automation", label: "Automation", icon: PlayCircle },
   { id: "profiles", label: "Profiles", icon: Users },
+  { id: "automation", label: "Automation", icon: PlayCircle },
   { id: "history", label: "History", icon: History },
 ];
 
@@ -92,29 +91,16 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
                   <div className="mt-2 space-y-1 pl-8">
                     <button
                       onClick={() => {
-                        navigate('/automation/dashboard');
+                        navigate('/automation/instance');
                         onPageChange("automation.dashboard" as any);
                       }}
                       className={clsx(
                         "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
-                        location.pathname === "/automation/dashboard" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        location.pathname === "/automation/instance" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       )}
                     >
                       <LayoutDashboard className="w-4 h-4" />
-                      <span>Dashboard</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigate('/automation/chat');
-                        onPageChange("automation.chat" as any);
-                      }}
-                      className={clsx(
-                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
-                        location.pathname === "/automation/chat" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      )}
-                    >
-                      <PlayCircle className="w-4 h-4" />
-                      <span>Chat (Single)</span>
+                      <span>Browser Instance</span>
                     </button>
                     {/* Future submenu items can be added here */}
                   </div>
@@ -126,7 +112,11 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
           return (
             <button
               key={item.id}
-              onClick={() => onPageChange(item.id)}
+              onClick={() => {
+                // navigate to the corresponding route and update currentPage in parent
+                navigate(`/${item.id}`);
+                onPageChange(item.id);
+              }}
               className={clsx(
                 "w-full flex items-center gap-3 rounded-lg font-medium transition-colors",
                 isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
