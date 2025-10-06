@@ -37,7 +37,6 @@ declare global {
       };
       chatAutomation: {
         init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;
-        sendMessage: (sessionId: string, message: string) => Promise<any>;
         closeSession: (sessionId: string) => Promise<any>;
         getActiveSessions: () => Promise<any>;
       };

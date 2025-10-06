@@ -65,7 +65,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Chat Automation APIs
   chatAutomation: {
     init: (profileId: string, provider: "chatgpt" | "gemini") => ipcRenderer.invoke("chatAutomation:init", profileId, provider),
-    sendMessage: (sessionId: string, message: string) => ipcRenderer.invoke("chatAutomation:sendMessage", sessionId, message),
     closeSession: (sessionId: string) => ipcRenderer.invoke("chatAutomation:closeSession", sessionId),
     getActiveSessions: () => ipcRenderer.invoke("chatAutomation:getActiveSessions"),
   },

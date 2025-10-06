@@ -98,6 +98,7 @@ export interface LaunchInstanceResponse {
     instanceId: string;
     sessionId?: string;
     debugPort: number;
+    status?: InstanceStatus;
   };
   error?: string;
 }
