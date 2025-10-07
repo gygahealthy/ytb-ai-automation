@@ -1,11 +1,13 @@
 import { Browser, Page, CDPSession } from "puppeteer";
 import { profileService } from "../../profile-management/services/profile.service";
+import { randomUUID } from 'crypto';
 import { browserManager } from "../../instance-management/services/browser-manager";
 import { Logger } from "../../../../shared/utils/logger";
 import { ApiResponse } from "../../../../shared/types";
 import { StringUtil } from "../../../../shared/utils/string";
 import { attachChatGPTCDP } from "./providers/chatgpt.cdp";
 import { attachGeminiCDP } from "./providers/gemini.cdp";
+import { instanceManager } from "../../instance-management/services/instance-manager";
 
 const logger = new Logger("ChatAutomationService");
 
@@ -372,6 +374,42 @@ export class ChatAutomationService {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Send a message to an instance by instanceId (persists chat history)
+   */
+  async sendMessageToInstance(instanceId: string, message: string): Promise<ApiResponse<ChatMessage>> {
+    try {
+      const inst = instanceManager.getInstance(instanceId);
+      if (!inst) return { success: false, error: 'Instance not found' };
+      if (!inst.sessionId) return { success: false, error: 'Instance has no session' };
+
+      // Persist user message immediately
+  const existingHistory = inst.chatHistory || [];
+  const now = new Date().toISOString();
+  const userMessage = { id: randomUUID(), from: 'user' as const, text: message, ts: now };
+  const updatedHistory = [...existingHistory, userMessage];
+      instanceManager.updateInstanceState(instanceId, { chatHistory: updatedHistory });
+
+      const res = await this.sendMessage(inst.sessionId, message);
+
+      if (res.success && res.data) {
+        const botMessage = {
+          id: randomUUID(),
+          from: 'bot' as const,
+          text: res.data.content,
+          ts: res.data.timestamp.toISOString(),
+          messageId: res.data.messageId,
+          conversationId: res.data.conversationId,
+        };
+        instanceManager.updateInstanceState(instanceId, { chatHistory: [...updatedHistory, botMessage] });
+      }
+
+      return res;
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 }
 

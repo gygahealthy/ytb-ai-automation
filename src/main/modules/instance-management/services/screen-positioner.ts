@@ -37,6 +37,43 @@ export class ScreenPositioner {
   }
 
   /**
+   * Move an instance from its current slot to a target slot.
+   * Returns updated mapping for the moved instance and any displaced occupant.
+   */
+  moveInstanceToSlot(currentSlot: number, targetSlot: number, activeCount?: number): { moved: { slot: number; bounds: WindowBounds }; displaced?: { slot: number; bounds: WindowBounds } } {
+    const totalCells = this.config.grid.columns * this.config.grid.rows;
+    const normalizedTarget = ((targetSlot % totalCells) + totalCells) % totalCells;
+
+    // If target is same as current, just return its bounds
+    if (normalizedTarget === currentSlot) {
+      const bounds = this.calculateWindowBounds(currentSlot, undefined, activeCount);
+      return { moved: { slot: currentSlot, bounds } };
+    }
+
+    // If someone occupies the target slot, swap their slot with current
+    const wasOccupied = this.occupiedSlots.has(normalizedTarget);
+
+    // Update occupied set: free current, claim target
+    if (this.occupiedSlots.has(currentSlot)) this.occupiedSlots.delete(currentSlot);
+    this.occupiedSlots.add(normalizedTarget);
+
+    // Ensure the original slot is marked free (but caller should assign it if displaced)
+
+    const movedBounds = this.calculateWindowBounds(normalizedTarget, undefined, activeCount);
+    const result: any = { moved: { slot: normalizedTarget, bounds: movedBounds } };
+
+    if (wasOccupied) {
+      // If there was an occupant at target, mark their new slot as currentSlot
+      this.occupiedSlots.add(currentSlot);
+      const displacedBounds = this.calculateWindowBounds(currentSlot, undefined, activeCount);
+      result.displaced = { slot: currentSlot, bounds: displacedBounds };
+    }
+
+    logger.info(`moveInstanceToSlot: moved ${currentSlot} -> ${normalizedTarget}${wasOccupied ? ' (swapped)' : ''}`);
+    return result;
+  }
+
+  /**
    * Release a slot
    */
   releaseSlot(slot: number): void {

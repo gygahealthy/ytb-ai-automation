@@ -24,6 +24,47 @@ export class AutomationCoordinator {
   }
 
   /**
+   * Send a chat message to a running instance and persist chat history
+   */
+  // sendMessageToInstance moved to chatAutomationService
+
+  /**
+   * Move an instance to a slot and reposition affected instances
+   */
+  async moveInstanceToSlot(instanceId: string, slot: number): Promise<any> {
+    try {
+      const positioner = this.getPositioner();
+      const instance = instanceManager.getInstance(instanceId);
+      if (!instance) return { success: false, error: 'Instance not found' };
+
+      const activeCount = instanceManager.getAllInstances().length;
+      const moveResult = positioner.moveInstanceToSlot(instance.screenSlot, slot, activeCount > 1 ? activeCount : undefined);
+
+      // Update moved instance
+      instanceManager.updateInstanceState(instanceId, { screenSlot: moveResult.moved.slot, windowBounds: moveResult.moved.bounds });
+
+      // If someone was displaced, find which instance was at target and update it
+      if (moveResult.displaced) {
+        const displaced = moveResult.displaced;
+        const displacedInst = instanceManager.getAllInstances().find(i => i.instanceId !== instanceId && i.screenSlot === displaced.slot);
+        if (displacedInst) {
+          instanceManager.updateInstanceState(displacedInst.instanceId, { screenSlot: displaced.slot, windowBounds: displaced.bounds });
+          await Promise.all([
+            this.repositionInstance(instanceId),
+            this.repositionInstance(displacedInst.instanceId),
+          ]);
+          return { success: true };
+        }
+      }
+
+      await this.repositionInstance(instanceId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
    * Reposition a single instance window according to its assigned slot
    */
   async repositionInstance(instanceId: string): Promise<boolean> {

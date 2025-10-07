@@ -54,7 +54,15 @@ export default function ChatAutomation() {
       if (inst.instanceId === instanceId) {
         // update chat history if present
         if (Array.isArray(inst.chatHistory)) {
-          setMessages(inst.chatHistory.map((c: any, idx: number) => ({ id: idx + 1, from: c.from, text: c.text, ts: c.ts })));
+          const incoming = inst.chatHistory.map((c: any, idx: number) => ({ id: idx + 1, from: c.from, text: c.text, ts: c.ts }));
+          // Merge optimistic local user messages that may not yet be reflected in incoming history.
+          // Use a text-based key (from + trimmed text) to deduplicate, avoiding clock-skew problems.
+          setMessages((current) => {
+            const makeKey = (m: any) => `${m.from}|${(m.text || '').trim().slice(0, 200)}`;
+            const incomingKeys = new Set(incoming.map(makeKey));
+            const optimistic = current.filter(m => m.from === 'user' && !incomingKeys.has(makeKey(m)));
+            return [...incoming, ...optimistic];
+          });
         }
         setInstanceState(inst);
       }
@@ -75,15 +83,15 @@ export default function ChatAutomation() {
 
   const handleSend = (text: string) => {
     if (!text.trim() || !instanceId) return;
-
-    // Don't manually add messages here - let the backend update instance state
-    // and the onInstanceUpdated listener will refresh the UI automatically
+    // Optimistically show the user's message locally to provide immediate feedback.
+    const now = new Date().toISOString();
+    setMessages((m) => [...m, { id: Date.now(), from: 'user', text, ts: now }]);
     setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
     setIsTyping(true);
 
     window.electronAPI.automation.sendMessage(instanceId, text).then((res: any) => {
       setIsTyping(false);
-      
+
       if (!res || !res.success) {
         setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
         return;
@@ -91,7 +99,8 @@ export default function ChatAutomation() {
 
       const response = res.data;
       setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
-      // Note: Messages will be updated automatically via onInstanceUpdated listener
+      // Note: The backend will update instance state and the onInstanceUpdated listener
+      // will replace the messages array with the persisted chatHistory, avoiding duplication.
     });
   };
 
