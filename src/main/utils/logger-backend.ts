@@ -1,4 +1,4 @@
-import { Logger } from '../core/logging/types';
+import { Logger } from '../../core/logging/types';
 
 export const logger: Logger = {
   info: (message: string, ...args: any[]) => console.log('[INFO]', message, ...args),

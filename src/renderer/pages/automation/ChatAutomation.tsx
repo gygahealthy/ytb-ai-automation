@@ -4,7 +4,7 @@ import { Eye, EyeOff, Clipboard, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ChatUI, { Message } from "../../components/automation/ChatUI";
 import IPCLog from "../../components/automation/IPCLog";
-import { InstanceState } from "../../../shared/types/automation.types";
+import { InstanceState } from "../../../shared/types";
 
 export default function ChatAutomation() {
   // Route parameters - if instanceId is present, we're in multi-instance mode

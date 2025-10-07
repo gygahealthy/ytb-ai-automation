@@ -8,7 +8,7 @@ import { registerDialogHandlers as registerDialogModule } from "./dialog.handler
 
 // Core centralized IPC registry
 import { registerAll } from '../../core/ipc/registry';
-import { logger } from '../logger-backend';
+import { logger } from '../utils/logger-backend';
 
 /**
  * Register all IPC handlers

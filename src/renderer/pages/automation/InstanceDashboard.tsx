@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Settings } from 'lucide-react';
 import InstanceCard from '../../components/automation/InstanceCard';
 import InstanceToolbar from '../../components/automation/InstanceToolbar';
-import { InstanceState, LaunchInstanceRequest } from '../../../shared/types/automation.types';
+import { InstanceState, LaunchInstanceRequest } from '../../../shared/types';
 
 export default function InstanceDashboard() {
   const navigate = useNavigate();

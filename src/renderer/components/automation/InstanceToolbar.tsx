@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Play, Loader2, StopCircle } from 'lucide-react';
 
-import { InstanceState } from '../../../shared/types/automation.types';
+import { InstanceState } from '../../../shared/types';
 
 interface Props {
   profiles: { id: string; name: string }[];
