@@ -1,6 +1,7 @@
 import { collectModuleRegistrations } from './module-loader';
 import { registerAll } from '../../core/ipc/registry';
 import { logger } from '../utils/logger-backend';
+import { IpcRegistration } from '../../core/ipc/types';
 
 /**
  * Register all IPC handlers
@@ -10,9 +11,20 @@ export function registerIPCHandlers(): void {
   // Collect registrations from modules
   const allRegistrations = collectModuleRegistrations();
 
+  // Deduplicate registrations by channel to avoid "second handler" errors
+  const uniqueMap = new Map<string, IpcRegistration>();
+  for (const reg of allRegistrations) {
+    if (!uniqueMap.has(reg.channel)) {
+      uniqueMap.set(reg.channel, reg);
+    } else {
+      console.warn(`Duplicate IPC registration for channel '${reg.channel}' detected — ignoring subsequent registration`);
+    }
+  }
+
+  const uniqueRegistrations = Array.from(uniqueMap.values());
+
   // Register core ipc handlers via centralized registry
-  // All module registrations are collected and registered here
-  registerAll([...allRegistrations], logger);
+  registerAll(uniqueRegistrations, logger);
 
   console.log("✅ All IPC handlers registered");
 }

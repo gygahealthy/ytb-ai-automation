@@ -6,42 +6,84 @@ import {
   getDefaultChromePath,
   selectBrowserExecutable,
 } from '../../utils/dialog.service';
+import { IpcRegistration } from '../../../core/ipc/types';
 
-/**
- * Standard module registration entrypoint used by module-loader
- */
-export function registerModule(registrar: (registrations: any[]) => void): void {
-  ipcMain.handle('dialog:selectFolder', async (_, defaultPath?: string) => {
-    return selectFolder(defaultPath);
-  });
+export const dialogRegistrations: IpcRegistration[] = [
+  {
+    channel: 'dialog:selectFolder',
+    description: 'Open folder selection dialog',
+    handler: async (req: any) => {
+      const defaultPath = req as string | undefined;
+      try {
+        const res = await selectFolder(defaultPath);
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'dialog:getDefaultProfilePath',
+    description: 'Get default profile path',
+    handler: async () => {
+      try {
+        const res = getDefaultProfilePath();
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'dialog:generateUserAgent',
+    description: 'Generate a random user agent',
+    handler: async () => {
+      try {
+        const res = generateUserAgent();
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'dialog:getDefaultChromePath',
+    description: 'Get default Chrome path',
+    handler: async () => {
+      try {
+        const res = getDefaultChromePath();
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'dialog:selectBrowserExecutable',
+    description: 'Select browser executable',
+    handler: async () => {
+      try {
+        const res = await selectBrowserExecutable();
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+];
 
-  ipcMain.handle('dialog:getDefaultProfilePath', async () => {
-    return getDefaultProfilePath();
-  });
+export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
+  if (registrar) {
+    registrar(dialogRegistrations);
+    return;
+  }
 
-  ipcMain.handle('dialog:generateUserAgent', () => {
-    return generateUserAgent();
-  });
-
-  ipcMain.handle('dialog:getDefaultChromePath', () => {
-    return getDefaultChromePath();
-  });
-
-  ipcMain.handle('dialog:selectBrowserExecutable', async () => {
-    return selectBrowserExecutable();
-  });
-
-  // Optionally report the registered channels back to the registrar
-  try {
-    registrar([
-      { channel: 'dialog:selectFolder' },
-      { channel: 'dialog:getDefaultProfilePath' },
-      { channel: 'dialog:generateUserAgent' },
-      { channel: 'dialog:getDefaultChromePath' },
-      { channel: 'dialog:selectBrowserExecutable' },
-    ]);
-  } catch (e) {
-    // ignore if registrar is not used by consumer
+  // Register handlers directly when called without a registrar (fallback)
+  for (const reg of dialogRegistrations) {
+    ipcMain.handle(reg.channel, async (_event, ...args) => {
+      const req = args.length <= 1 ? args[0] : args;
+      return await reg.handler(req as any);
+    });
   }
 
   console.log('✅ Dialog module registered (src/main/modules/dialog/index.ts)');

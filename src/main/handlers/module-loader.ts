@@ -31,32 +31,102 @@ export function collectModuleRegistrations(): any[] {
     if (!d.isDirectory()) continue;
     const modulePath = path.join(modulesDir, d.name);
     const manifestPath = path.join(modulePath, 'manifest.json');
-    if (!fs.existsSync(manifestPath)) {
-      // skip folders without manifest
-      continue;
+    let hasManifest = false;
+    if (fs.existsSync(manifestPath)) {
+      hasManifest = true;
+      // read manifest to optionally allow disabling modules via manifest
+      try {
+        const manifestRaw = fs.readFileSync(manifestPath, 'utf8');
+        const manifest = JSON.parse(manifestRaw);
+        if (manifest && manifest.disabled) {
+          console.log(`Module loader: skipping disabled module ${d.name}`);
+          continue;
+        }
+      } catch (err) {
+        console.warn(`Module loader: failed to parse manifest for ${d.name}`, err);
+        // continue loading — non-fatal
+      }
     }
 
-    // read manifest to optionally allow disabling modules via manifest
-    try {
-      const manifestRaw = fs.readFileSync(manifestPath, 'utf8');
-      const manifest = JSON.parse(manifestRaw);
-      if (manifest && manifest.disabled) {
-        console.log(`Module loader: skipping disabled module ${d.name}`);
-        continue;
+    // First try: load a handlers/registrations file from the module which should
+    // export the IpcRegistration[] without initializing heavy services.
+    let loadedRegistrations: any[] | null = null;
+    const tryRequire = (p: string) => {
+      try {
+        if (!fs.existsSync(p) && !fs.existsSync(p + '.js') && !fs.existsSync(p + '.ts')) return null;
+        const exported = require(p);
+        // If the module directly exports an array (default export), return it
+        if (Array.isArray(exported)) return exported;
+        // Otherwise inspect named exports for an array of registrations
+        for (const val of Object.values(exported)) {
+          if (Array.isArray(val) && val.length > 0 && typeof val[0].channel === 'string') {
+            return val as any[];
+          }
+        }
+      } catch (e) {
+        return null;
       }
-    } catch (err) {
-      console.warn(`Module loader: failed to parse manifest for ${d.name}`, err);
-      // continue - non-fatal
+      return null;
+    };
+
+    // Candidate paths (prefer compiled dist when available)
+    const candidates = [] as string[];
+    // handlers/registrations under modulePath
+    candidates.push(path.join(modulePath, 'handlers', 'registrations'));
+    // compiled dist equivalent
+    const cwd = process.cwd();
+    const srcPrefix = path.join(cwd, 'src');
+    if (modulePath.startsWith(srcPrefix)) {
+      const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, 'dist'));
+      candidates.push(path.join(compiledPath, 'handlers', 'registrations'));
     }
 
-    try {
-      // require the module's index (node resolution will pick index.js / index.ts compiled output)
-      const mod = require(modulePath);
-      if (mod && typeof mod.registerModule === 'function') {
-        mod.registerModule((regs: any[]) => allRegistrations.push(...regs));
+    for (const cand of candidates) {
+      const regs = tryRequire(cand);
+      if (regs && regs.length > 0) {
+        allRegistrations.push(...regs);
+        console.log(`Module loader: loaded registrations for ${d.name} from ${path.relative(process.cwd(), cand)}`);
+        loadedRegistrations = regs;
+        break;
       }
-    } catch (err) {
-      console.warn(`Module loader: failed to load module ${d.name}`, err);
+    }
+
+    // CRITICAL: only try registerModule if we did NOT load registrations from handlers/registrations
+    // to avoid double-registration of the same channels
+    if (!loadedRegistrations) {
+      // Fallback: require module index and call registerModule if it exists. This is
+      // less safe because requiring the module may execute top-level code.
+      try {
+        let mod: any;
+        try {
+          mod = require(modulePath);
+        } catch (innerErr) {
+          if (modulePath.startsWith(srcPrefix)) {
+            const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, 'dist'));
+            const compiledIndex = path.join(compiledPath, 'index.js');
+            if (fs.existsSync(compiledIndex)) {
+              mod = require(compiledPath);
+            } else {
+              throw innerErr;
+            }
+          } else {
+            throw innerErr;
+          }
+        }
+
+        if (mod && typeof mod.registerModule === 'function') {
+          mod.registerModule((regs: any[]) => allRegistrations.push(...regs));
+          console.log(`Module loader: loaded module ${d.name} via registerModule${hasManifest ? '' : ' (no manifest)'}'`);
+        } else {
+          console.log(`Module loader: module ${d.name} did not export registerModule${hasManifest ? '' : ' (no manifest)'}'`);
+        }
+      } catch (err) {
+        if (!hasManifest) {
+          console.warn(`Module loader: failed to load module ${d.name} (no manifest). Trying next.`, err);
+        } else {
+          console.warn(`Module loader: failed to load module ${d.name}`, err);
+        }
+      }
     }
   }
 
