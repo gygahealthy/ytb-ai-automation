@@ -60,15 +60,7 @@ export function collectModuleRegistrations(): any[] {
     }
   }
 
-  // Also attempt to register dialog handlers if present in same folder
-  try {
-    const dialogHandlers = require(path.resolve(__dirname, './dialog.handlers'));
-    if (dialogHandlers && typeof dialogHandlers.registerDialogHandlers === 'function') {
-      dialogHandlers.registerDialogHandlers();
-    }
-  } catch (err) {
-    // non-fatal
-  }
+  // dialog handlers are now a first-class module under main/modules/dialog
 
   return allRegistrations;
 }

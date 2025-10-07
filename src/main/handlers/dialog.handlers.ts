@@ -1,32 +1,5 @@
-import { ipcMain } from "electron";
-import {
-  selectFolder,
-  getDefaultProfilePath,
-  generateUserAgent,
-  getDefaultChromePath,
-  selectBrowserExecutable,
-} from "../utils/dialog.service";
+// Shim for backwards compatibility while the dialog module is moved under
+// src/main/modules/dialog. The real registration is performed by the module's
+// `registerModule` which the module-loader will call.
+export { registerModule } from '../modules/dialog';
 
-export function registerDialogHandlers(): void {
-  ipcMain.handle("dialog:selectFolder", async (_, defaultPath?: string) => {
-    return selectFolder(defaultPath);
-  });
-
-  ipcMain.handle("dialog:getDefaultProfilePath", async () => {
-    return getDefaultProfilePath();
-  });
-
-  ipcMain.handle("dialog:generateUserAgent", () => {
-    return generateUserAgent();
-  });
-
-  ipcMain.handle("dialog:getDefaultChromePath", () => {
-    return getDefaultChromePath();
-  });
-
-  ipcMain.handle("dialog:selectBrowserExecutable", async () => {
-    return selectBrowserExecutable();
-  });
-
-  console.log("✅ Dialog handlers registered (via handlers/dialog.handlers.ts)");
-}
