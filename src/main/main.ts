@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu } from "electron";
 import * as path from "path";
-import { database } from "../storage/database";
+import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 
 class ElectronApp {

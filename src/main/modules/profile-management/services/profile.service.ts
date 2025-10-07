@@ -5,10 +5,10 @@ import * as path from "path";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { Browser, Page } from "puppeteer";
-import { profileRepository } from "../../../../storage/database";
-import { ApiResponse } from "../../../../types";
-import { Logger } from "../../../../utils/logger.util";
-import { StringUtil } from "../../../../utils/string.util";
+import { profileRepository } from "../../../storage/database";
+import { ApiResponse } from "../../../../shared/types";
+import { Logger } from "../../../../shared/utils/logger";
+import { StringUtil } from "../../../../shared/utils/string";
 import { CreateProfileInput, Profile } from "../profile.types";
 
 // Add stealth plugin to puppeteer

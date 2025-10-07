@@ -1,0 +1,16 @@
+{
+  "name": "youtube-analysis",
+  "description": "Analyze YouTube channels and videos for metrics and insights.",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "getAllChannels",
+    "getChannelById",
+    "createChannel",
+    "updateChannelMetrics",
+    "analyzeChannel",
+    "deleteChannel",
+    "getAllVideos",
+    "analyzeVideo"
+  ]
+}

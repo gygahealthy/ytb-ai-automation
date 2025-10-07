@@ -1,10 +1,10 @@
 // Removed unused child_process, path and app imports (workers not implemented yet)
-import { InstanceState, LaunchInstanceRequest, LaunchInstanceResponse } from '../../../../types/automation.types';
+import { InstanceState, LaunchInstanceRequest, LaunchInstanceResponse } from '../../../../shared/types/automation.types';
 import { instanceManager } from './instance-manager';
 import { ScreenPositioner, DEFAULT_WINDOW_CONFIG } from './screen-positioner';
 import { browserManager } from './browser-manager';
-import { moveWindowByPid } from '../../../../utils/windows.util';
-import { Logger } from '../../../../utils/logger.util';
+import { moveWindowByPid } from '../../../../platform/windows/windows.util';
+import { Logger } from '../../../../shared/utils/logger';
 
 const logger = new Logger('AutomationCoordinator');
 
@@ -68,6 +68,7 @@ export class AutomationCoordinator {
           try {
             const pid = browserInst.process && (browserInst.process.pid as number);
             if (pid && process.platform === 'win32') {
+              logger.info(`Attempting native fallback moveWindowByPid for pid=${pid} bounds=${JSON.stringify(bounds)}`);
               const ok = moveWindowByPid(pid, bounds.x, bounds.y, bounds.width, bounds.height);
               if (!ok) logger.warn('Windows fallback failed to move window');
               else logger.info(`Native moveWindowByPid succeeded for pid ${pid}`);
@@ -128,6 +129,12 @@ export class AutomationCoordinator {
    * Apply a named grid preset (e.g., "2x2", "4x4", "8x8") and reassign/reposition windows
    */
   async applyPreset(preset: string): Promise<void> {
+    // Guard: if preset is undefined/null/empty, log error and skip
+    if (!preset || typeof preset !== 'string' || preset.trim() === '') {
+      logger.error(`applyPreset called with invalid preset: ${JSON.stringify(preset)}`);
+      return;
+    }
+
     // handle presets (grid, fullscreen each, cascade, and 1x2)
     const current = this.positioner.getConfig();
 

@@ -1,5 +1,5 @@
-import { sqliteDatabase } from "../../../../storage/sqlite-database";
-import { BaseRepository } from "../../../../storage/repositories/base.repository";
+import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { BaseRepository } from "../../../storage/repositories/base.repository";
 import { VideoAnalysis, YoutubeChannel } from "../youtube.types";
 
 interface YoutubeChannelRow {

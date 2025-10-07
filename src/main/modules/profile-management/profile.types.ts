@@ -1,4 +1,4 @@
-import { ID } from "../../../types";
+import { ID } from "../../../shared/types";
 
 // ============= Profile Types =============
 export interface Profile {

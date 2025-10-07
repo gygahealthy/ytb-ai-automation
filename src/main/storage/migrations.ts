@@ -1,4 +1,4 @@
-import { Logger } from "../utils/logger.util";
+import { Logger } from "../../shared/utils/logger";
 import { SQLiteDatabase } from "./sqlite-database";
 
 const logger = new Logger("DatabaseMigrations");

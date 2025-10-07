@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
-import { InstanceState, InstanceStatus } from '../../../../types/automation.types';
-import { Logger } from '../../../../utils/logger.util';
-import { StringUtil } from '../../../../utils/string.util';
+import { InstanceState, InstanceStatus } from '../../../../shared/types/automation.types';
+import { Logger } from '../../../../shared/utils/logger';
+import { StringUtil } from '../../../../shared/utils/string';
 
 const logger = new Logger('AutomationInstanceManager');
 

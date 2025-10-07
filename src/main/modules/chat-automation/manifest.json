@@ -1,0 +1,12 @@
+{
+  "name": "chat-automation",
+  "description": "Automation utilities for starting and managing chat sessions across providers (chatgpt, gemini).",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "initSession",
+    "closeSession",
+    "getActiveSessions",
+    "sendMessage"
+  ]
+}

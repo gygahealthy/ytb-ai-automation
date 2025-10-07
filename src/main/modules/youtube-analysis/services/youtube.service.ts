@@ -1,7 +1,7 @@
-import { videoAnalysisRepository, youtubeChannelRepository } from "../../../../storage/database";
-import { ApiResponse,  } from "../../../../types";
-import { Logger } from "../../../../utils/logger.util";
-import { StringUtil } from "../../../../utils/string.util";
+import { videoAnalysisRepository, youtubeChannelRepository } from "../../../storage/database";
+import { ApiResponse } from "../../../../shared/types";
+import { Logger } from "../../../../shared/utils/logger";
+import { StringUtil } from "../../../../shared/utils/string";
 import { CreateChannelInput, VideoAnalysis, YoutubeChannel } from "../youtube.types";
 
 const logger = new Logger("YouTubeService");

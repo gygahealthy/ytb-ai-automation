@@ -1,0 +1,15 @@
+{
+  "name": "profile-management",
+  "description": "Create, update, and manage profiles used by automation instances.",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "getAllProfiles",
+    "getProfileById",
+    "createProfile",
+    "updateProfile",
+    "deleteProfile",
+    "loginProfile",
+    "updateCredit"
+  ]
+}

@@ -1,4 +1,4 @@
-import { ID } from "../../../types";
+import { ID } from "../../../shared/types";
 
 // ============= VEO3 Types =============
 export interface VEO3Project {

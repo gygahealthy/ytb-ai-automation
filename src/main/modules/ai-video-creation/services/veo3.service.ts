@@ -1,7 +1,7 @@
-import { veo3Repository } from "../../../../storage/database";
-import { ApiResponse,  } from "../../../../types";
-import { Logger } from "../../../../utils/logger.util";
-import { StringUtil } from "../../../../utils/string.util";
+import { veo3Repository } from "../../../storage/database";
+import { ApiResponse } from "../../../../shared/types";
+import { Logger } from "../../../../shared/utils/logger";
+import { StringUtil } from "../../../../shared/utils/string";
 import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
 
 const logger = new Logger("VEO3Service");
@@ -131,7 +131,7 @@ export class VEO3Service {
       }
 
       await veo3Repository.update(projectId, {
-        scenes: project.scenes.filter((s) => s.id !== sceneId),
+        scenes: project.scenes.filter((s: any) => s.id !== sceneId),
         updatedAt: new Date(),
       });
 

@@ -1,5 +1,5 @@
-import { Logger } from '../utils/logger.util';
-import { moveWindowByPid as psMove } from './windows.util';
+import { Logger } from '../../shared/utils/logger';
+import { moveWindowByPid as psMove } from '../../platform/windows/windows.util';
 
 const logger = new Logger('NativeWindow');
 

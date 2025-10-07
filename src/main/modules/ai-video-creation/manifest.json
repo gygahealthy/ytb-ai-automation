@@ -1,0 +1,16 @@
+{
+  "name": "ai-video-creation",
+  "description": "Create and manage VEO3 video projects: scenes, prompts, and status updates.",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "getAllProjects",
+    "getProjectById",
+    "createProject",
+    "updateStatus",
+    "addScene",
+    "removeScene",
+    "updatePrompt",
+    "deleteProject"
+  ]
+}

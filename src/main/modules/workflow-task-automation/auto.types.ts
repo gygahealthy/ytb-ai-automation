@@ -1,4 +1,4 @@
-import { ID } from "../../../types";
+import { ID } from "../../../shared/types";
 
 // ============= Automation Types =============
 export interface AutomationTask {

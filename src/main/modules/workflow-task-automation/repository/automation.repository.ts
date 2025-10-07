@@ -1,6 +1,6 @@
 import { AutomationAction, AutomationTask } from "../auto.types";
-import { sqliteDatabase } from "../../../../storage/sqlite-database";
-import { BaseRepository } from "../../../../storage/repositories/base.repository";
+import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { BaseRepository } from "../../../storage/repositories/base.repository";
 
 interface AutomationTaskRow {
   id: string;

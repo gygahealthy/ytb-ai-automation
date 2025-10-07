@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as sqlite3 from "sqlite3";
-import { Logger } from "../utils/logger.util";
+import { Logger } from "../../shared/utils/logger";
 import { runMigrations } from "./migrations";
 
 const logger = new Logger("SQLiteDatabase");

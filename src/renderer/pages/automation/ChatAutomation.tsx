@@ -4,7 +4,7 @@ import { Eye, EyeOff, Clipboard, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ChatUI, { Message } from "../../components/automation/ChatUI";
 import IPCLog from "../../components/automation/IPCLog";
-import { InstanceState } from "../../../types/automation.types";
+import { InstanceState } from "../../../shared/types/automation.types";
 
 export default function ChatAutomation() {
   // Route parameters - if instanceId is present, we're in multi-instance mode
@@ -76,32 +76,22 @@ export default function ChatAutomation() {
   const handleSend = (text: string) => {
     if (!text.trim() || !instanceId) return;
 
-    // Multi-instance: send message to specific instance
-    const nextId = messages.length + 1;
-    setMessages((s) => [...s, { id: nextId, from: "user", text }]);
+    // Don't manually add messages here - let the backend update instance state
+    // and the onInstanceUpdated listener will refresh the UI automatically
     setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
     setIsTyping(true);
 
     window.electronAPI.automation.sendMessage(instanceId, text).then((res: any) => {
+      setIsTyping(false);
+      
       if (!res || !res.success) {
         setLogLines((s) => [...s, `Failed to send message: ${res?.error ?? "unknown"}`]);
-        setIsTyping(false);
         return;
       }
 
       const response = res.data;
-      const botId = messages.length + 2;
-      setMessages((s) => [
-        ...s,
-        {
-          id: botId,
-          from: "bot",
-          text: response.content,
-          ts: new Date(response.timestamp).toLocaleTimeString(),
-        },
-      ]);
       setLogLines((s) => [...s, `Received response (${response.content.length} chars)`]);
-      setIsTyping(false);
+      // Note: Messages will be updated automatically via onInstanceUpdated listener
     });
   };
 

@@ -5,36 +5,36 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Profile APIs
   profile: {
     getAll: () => ipcRenderer.invoke("profile:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("profile:getById", id),
+    getById: (id: string) => ipcRenderer.invoke("profile:getById", { id }),
     create: (input: any) => ipcRenderer.invoke("profile:create", input),
-    update: (id: string, updates: any) => ipcRenderer.invoke("profile:update", id, updates),
-    delete: (id: string) => ipcRenderer.invoke("profile:delete", id),
-    updateCredit: (id: string, amount: number) => ipcRenderer.invoke("profile:updateCredit", id, amount),
-    login: (id: string) => ipcRenderer.invoke("profile:login", id),
+    update: (id: string, updates: any) => ipcRenderer.invoke("profile:update", { id, updates }),
+    delete: (id: string) => ipcRenderer.invoke("profile:delete", { id }),
+    updateCredit: (id: string, amount: number) => ipcRenderer.invoke("profile:updateCredit", { id, amount }),
+    login: (id: string) => ipcRenderer.invoke("profile:login", { id }),
   },
 
   // Automation APIs
   automation: {
     getAll: () => ipcRenderer.invoke("automation:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("automation:getById", id),
+    getById: (id: string) => ipcRenderer.invoke("automation:getById", { id }),
     create: (input: any) => ipcRenderer.invoke("automation:create", input),
-    start: (id: string) => ipcRenderer.invoke("automation:start", id),
-  stop: (id: string) => ipcRenderer.invoke("automation:stop", id),
+    start: (id: string) => ipcRenderer.invoke("automation:start", { id }),
+  stop: (id: string) => ipcRenderer.invoke("automation:stop", { id }),
     // Multi-instance automation
     launch: (request: any) => ipcRenderer.invoke("automation:launch", request),
-  stopInstance: (instanceId: string) => ipcRenderer.invoke("automation:stopInstance", instanceId),
+  stopInstance: (instanceId: string) => ipcRenderer.invoke("automation:stopInstance", { instanceId }),
     stopAll: () => ipcRenderer.invoke("automation:stopAll"),
     // Multi-instance getters
-    get: (instanceId: string) => ipcRenderer.invoke("automation:getInstance", instanceId),
+    get: (instanceId: string) => ipcRenderer.invoke("automation:getInstance", { instanceId }),
     getInstances: () => ipcRenderer.invoke("automation:getInstances"),
-    sendMessage: (instanceId: string, message: string) => ipcRenderer.invoke("automation:sendMessage", instanceId, message),
-    highlight: (instanceId: string) => ipcRenderer.invoke("automation:highlight", instanceId),
+    sendMessage: (instanceId: string, message: string) => ipcRenderer.invoke("automation:sendMessage", { instanceId, message }),
+    highlight: (instanceId: string) => ipcRenderer.invoke("automation:highlight", { instanceId }),
     updateConfig: (config: any) => ipcRenderer.invoke("automation:updateConfig", config),
     getConfig: () => ipcRenderer.invoke("automation:getConfig"),
-      applyPreset: (preset: string) => ipcRenderer.invoke('automation:applyPreset', preset),
-  repositionInstance: (instanceId: string) => ipcRenderer.invoke('automation:repositionInstance', instanceId),
+      applyPreset: (preset: string) => ipcRenderer.invoke('automation:applyPreset', { preset }),
+  repositionInstance: (instanceId: string) => ipcRenderer.invoke('automation:repositionInstance', { instanceId }),
   repositionAll: () => ipcRenderer.invoke('automation:repositionAll'),
-  moveInstanceToSlot: (instanceId: string, slot: number) => ipcRenderer.invoke('automation:moveInstanceToSlot', instanceId, slot),
+  moveInstanceToSlot: (instanceId: string, slot: number) => ipcRenderer.invoke('automation:moveInstanceToSlot', { instanceId, slot }),
     // Event listeners
     onInstanceRegistered: (callback: (data: any) => void) => {
       const channel = "automation:instance:registered";
@@ -64,34 +64,34 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Chat Automation APIs
   chatAutomation: {
-    init: (profileId: string, provider: "chatgpt" | "gemini") => ipcRenderer.invoke("chatAutomation:init", profileId, provider),
-    closeSession: (sessionId: string) => ipcRenderer.invoke("chatAutomation:closeSession", sessionId),
+    init: (profileId: string, provider: "chatgpt" | "gemini") => ipcRenderer.invoke("chatAutomation:init", { profileId, provider }),
+    closeSession: (sessionId: string) => ipcRenderer.invoke("chatAutomation:closeSession", { sessionId }),
     getActiveSessions: () => ipcRenderer.invoke("chatAutomation:getActiveSessions"),
   },
 
   // VEO3 APIs
   veo3: {
     getAll: () => ipcRenderer.invoke("veo3:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("veo3:getById", id),
+    getById: (id: string) => ipcRenderer.invoke("veo3:getById", { id }),
     create: (input: any) => ipcRenderer.invoke("veo3:create", input),
-    updateStatus: (id: string, status: string) => ipcRenderer.invoke("veo3:updateStatus", id, status),
-    addScene: (projectId: string, scene: any) => ipcRenderer.invoke("veo3:addScene", projectId, scene),
-    removeScene: (projectId: string, sceneId: string) => ipcRenderer.invoke("veo3:removeScene", projectId, sceneId),
-    updatePrompt: (projectId: string, jsonPrompt: any) => ipcRenderer.invoke("veo3:updatePrompt", projectId, jsonPrompt),
-    delete: (id: string) => ipcRenderer.invoke("veo3:delete", id),
+    updateStatus: (id: string, status: string) => ipcRenderer.invoke("veo3:updateStatus", { id, status }),
+    addScene: (projectId: string, scene: any) => ipcRenderer.invoke("veo3:addScene", { projectId, scene }),
+    removeScene: (projectId: string, sceneId: string) => ipcRenderer.invoke("veo3:removeScene", { projectId, sceneId }),
+    updatePrompt: (projectId: string, jsonPrompt: any) => ipcRenderer.invoke("veo3:updatePrompt", { projectId, jsonPrompt }),
+    delete: (id: string) => ipcRenderer.invoke("veo3:delete", { id }),
   },
 
   // YouTube APIs
   youtube: {
     getAllChannels: () => ipcRenderer.invoke("youtube:getAllChannels"),
-    getChannelById: (id: string) => ipcRenderer.invoke("youtube:getChannelById", id),
+    getChannelById: (id: string) => ipcRenderer.invoke("youtube:getChannelById", { id }),
     createChannel: (input: any) => ipcRenderer.invoke("youtube:createChannel", input),
-    updateChannelMetrics: (id: string, metrics: any) => ipcRenderer.invoke("youtube:updateChannelMetrics", id, metrics),
-    analyzeChannel: (id: string) => ipcRenderer.invoke("youtube:analyzeChannel", id),
-    deleteChannel: (id: string) => ipcRenderer.invoke("youtube:deleteChannel", id),
+    updateChannelMetrics: (id: string, metrics: any) => ipcRenderer.invoke("youtube:updateChannelMetrics", { id, metrics }),
+    analyzeChannel: (id: string) => ipcRenderer.invoke("youtube:analyzeChannel", { id }),
+    deleteChannel: (id: string) => ipcRenderer.invoke("youtube:deleteChannel", { id }),
     getAllVideos: () => ipcRenderer.invoke("youtube:getAllVideos"),
-    getVideosByChannel: (channelId: string) => ipcRenderer.invoke("youtube:getVideosByChannel", channelId),
-    analyzeVideo: (videoId: string, channelId: string) => ipcRenderer.invoke("youtube:analyzeVideo", videoId, channelId),
+    getVideosByChannel: (channelId: string) => ipcRenderer.invoke("youtube:getVideosByChannel", { channelId }),
+    analyzeVideo: (videoId: string, channelId: string) => ipcRenderer.invoke("youtube:analyzeVideo", { videoId, channelId }),
   },
 
   // Dialog APIs

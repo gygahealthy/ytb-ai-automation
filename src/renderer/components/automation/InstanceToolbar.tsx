@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Play, Loader2, StopCircle } from 'lucide-react';
 
-import { InstanceState } from '../../../types/automation.types';
+import { InstanceState } from '../../../shared/types/automation.types';
 
 interface Props {
   profiles: { id: string; name: string }[];
@@ -40,7 +40,9 @@ export default function InstanceToolbar({
   useEffect(() => {
     if (!overridePreset) return;
     try {
-      if (overridePreset === activePreset) setOverridePreset(null);
+      if (overridePreset === activePreset) {
+        setOverridePreset(null);
+      }
     } catch (e) {
       // ignore
     }

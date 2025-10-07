@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { Page, Protocol } from "puppeteer";
-import { Logger } from "../../../../../utils/logger.util";
+import { Logger } from "../../../../../shared/utils/logger";
 import { AutomationAction } from "../../auto.types";
 
 const logger = new Logger("CookieActions");

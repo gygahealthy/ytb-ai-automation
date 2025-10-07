@@ -1,0 +1,14 @@
+{
+  "name": "workflow-task-automation",
+  "description": "High-level automation tasks and action executors (HTTP, cookies, move window, etc).",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "getAllTasks",
+    "getTaskById",
+    "createTask",
+    "startTask",
+    "stopTask",
+    "launchTask"
+  ]
+}

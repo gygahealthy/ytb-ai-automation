@@ -1,4 +1,4 @@
-import { InstanceState } from '../../../types/automation.types';
+import { InstanceState } from '../../../shared/types/automation.types';
 import { MessageSquare, StopCircle } from 'lucide-react';
 
 interface Props {

@@ -5,7 +5,7 @@ import {
   generateUserAgent,
   getDefaultChromePath,
   selectBrowserExecutable,
-} from "../../utils/dialog.util";
+} from "../utils/dialog.service";
 
 export function registerDialogHandlers(): void {
   ipcMain.handle("dialog:selectFolder", async (_, defaultPath?: string) => {

@@ -1,4 +1,4 @@
-import { ID } from "../../../types";
+import { ID } from "../../../shared/types";
 
 // ============= YouTube Types =============
 export interface YoutubeChannel {

@@ -1,7 +1,8 @@
 import { spawn, ChildProcess } from 'child_process';
 import puppeteer, { Browser } from 'puppeteer';
-import { Logger } from '../../../../utils/logger.util';
+import { Logger } from '../../../../shared/utils/logger';
 import { Profile } from '../../profile-management/profile.types';
+import { instanceManager } from './instance-manager';
 
 const logger = new Logger('BrowserManager');
 
@@ -88,6 +89,37 @@ export class BrowserManager {
 
   registerBrowser(sessionId: string, browser: Browser, debugPort: number, process?: ChildProcess): void {
     this.activeBrowsers.set(sessionId, { browser, debugPort, process });
+    try {
+      // If the puppeteer Browser disconnects (CDP connection closed), unregister instance
+      try {
+        (browser as any).once?.('disconnected', () => {
+          logger.warn(`Browser for session ${sessionId} disconnected, unregistering instance`);
+          try { instanceManager.unregisterInstance(sessionId); } catch (e) { logger.error('Failed to unregister instance after browser disconnect', e); }
+        });
+      } catch (e) {
+        // ignore if browser event hook fails
+      }
+      if (process && (process as any).pid) {
+        logger.info(`Registered browser for session ${sessionId} (pid=${(process as any).pid})`);
+        try {
+          // attach a one-time exit/close listener so we clean up instances if the spawned process dies
+          (process as ChildProcess).once?.('exit', (code: number | null, signal: string | null) => {
+            logger.warn(`Spawned browser process for session ${sessionId} exited (code=${code} signal=${signal}), unregistering instance`);
+            try { instanceManager.unregisterInstance(sessionId); } catch (e) { logger.error('Failed to unregister instance after process exit', e); }
+          });
+          (process as ChildProcess).once?.('close', (code: number | null, signal: string | null) => {
+            logger.warn(`Spawned browser process for session ${sessionId} closed (code=${code} signal=${signal}), unregistering instance`);
+            try { instanceManager.unregisterInstance(sessionId); } catch (e) { logger.error('Failed to unregister instance after process close', e); }
+          });
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        logger.info(`Registered browser for session ${sessionId} (no spawned process)`);
+      }
+    } catch (e) {
+      // ignore logging issues
+    }
   }
 
   getBrowser(sessionId: string): BrowserInstance | undefined {

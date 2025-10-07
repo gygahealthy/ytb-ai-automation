@@ -1,6 +1,6 @@
 import { VEO3Project, VideoScene } from "../veo3.types";
-import { sqliteDatabase } from "../../../../storage/sqlite-database";
-import { BaseRepository } from "../../../../storage/repositories";
+import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { BaseRepository } from "../../../storage/repositories";
 
 interface VEO3ProjectRow {
   id: string;

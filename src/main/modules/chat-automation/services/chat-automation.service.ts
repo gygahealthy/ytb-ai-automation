@@ -1,9 +1,9 @@
 import { Browser, Page, CDPSession } from "puppeteer";
 import { profileService } from "../../profile-management/services/profile.service";
 import { browserManager } from "../../instance-management/services/browser-manager";
-import { Logger } from "../../../../utils/logger.util";
-import { ApiResponse } from "../../../../types";
-import { StringUtil } from "../../../../utils/string.util";
+import { Logger } from "../../../../shared/utils/logger";
+import { ApiResponse } from "../../../../shared/types";
+import { StringUtil } from "../../../../shared/utils/string";
 import { attachChatGPTCDP } from "./providers/chatgpt.cdp";
 import { attachGeminiCDP } from "./providers/gemini.cdp";
 

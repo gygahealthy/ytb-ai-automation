@@ -1,5 +1,5 @@
 import { Page } from "puppeteer";
-import { Logger } from "../../../../../utils/logger.util";
+import { Logger } from "../../../../../shared/utils/logger";
 import { AutomationAction } from "../../auto.types";
 
 const logger = new Logger("HttpActions");

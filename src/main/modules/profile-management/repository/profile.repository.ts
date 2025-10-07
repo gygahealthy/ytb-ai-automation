@@ -1,6 +1,6 @@
 import { Profile } from "../profile.types";
-import { sqliteDatabase } from "../../../../storage/sqlite-database";
-import { BaseRepository } from "../../../../storage/repositories/base.repository";
+import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { BaseRepository } from "../../../storage/repositories/base.repository";
 
 interface ProfileRow {
   id: string;

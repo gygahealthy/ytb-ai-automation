@@ -1,0 +1,15 @@
+{
+  "name": "instance-management",
+  "description": "Manage browser instances: launch, stop, reposition, and retrieve instance status.",
+  "process": "main",
+  "publicApi": "./index.ts",
+  "capabilities": [
+    "launchInstance",
+    "stopInstance",
+    "getInstance",
+    "getInstances",
+    "repositionInstance",
+    "repositionAll",
+    "moveInstanceToSlot"
+  ]
+}

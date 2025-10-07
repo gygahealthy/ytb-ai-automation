@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Settings } from 'lucide-react';
 import InstanceCard from '../../components/automation/InstanceCard';
 import InstanceToolbar from '../../components/automation/InstanceToolbar';
-import { InstanceState, LaunchInstanceRequest } from '../../../types/automation.types';
+import { InstanceState, LaunchInstanceRequest } from '../../../shared/types/automation.types';
 
 export default function InstanceDashboard() {
   const navigate = useNavigate();
@@ -158,6 +158,11 @@ export default function InstanceDashboard() {
   });
 
   const applyPresetAndRefresh = async (preset: string) => {
+    // Guard: reject undefined/empty preset values
+    if (!preset || typeof preset !== 'string' || preset.trim() === '') {
+      console.error('applyPresetAndRefresh called with invalid preset:', preset);
+      return;
+    }
     try {
       await window.electronAPI.automation.applyPreset(preset);
       const res = await window.electronAPI.automation.getConfig();

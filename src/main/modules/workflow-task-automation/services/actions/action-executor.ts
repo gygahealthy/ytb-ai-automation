@@ -1,5 +1,5 @@
 import { Page } from "puppeteer";
-import { Logger } from "../../../../../utils/logger.util";
+import { Logger } from "../../../../../shared/utils/logger";
 import { BasicActions } from "./basic.actions";
 import { CookieActions } from "./cookie.actions";
 import { HttpActions } from "./http.actions";
