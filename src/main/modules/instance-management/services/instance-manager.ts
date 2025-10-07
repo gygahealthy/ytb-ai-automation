@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { InstanceState, InstanceStatus } from '../../../../shared/types/automation.types';
+import { InstanceState, InstanceStatus } from '../../../../shared/types';
 import { Logger } from '../../../../shared/utils/logger';
 import { StringUtil } from '../../../../shared/utils/string';
 

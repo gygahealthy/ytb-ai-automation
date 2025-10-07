@@ -1,5 +1,5 @@
 // Removed unused child_process, path and app imports (workers not implemented yet)
-import { InstanceState, LaunchInstanceRequest, LaunchInstanceResponse } from '../../../../shared/types/automation.types';
+import { InstanceState, LaunchInstanceRequest, LaunchInstanceResponse } from '../../../../shared/types';
 import { instanceManager } from './instance-manager';
 import { ScreenPositioner, DEFAULT_WINDOW_CONFIG } from './screen-positioner';
 import { browserManager } from './browser-manager';

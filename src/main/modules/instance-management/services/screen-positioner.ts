@@ -1,5 +1,5 @@
 import { screen } from 'electron';
-import { WindowPositioningConfig, WindowBounds } from '../../../../shared/types/automation.types';
+import { WindowPositioningConfig, WindowBounds } from '../../../../shared/types';
 import { Logger } from '../../../../shared/utils/logger';
 
 const logger = new Logger('ScreenPositioner');
