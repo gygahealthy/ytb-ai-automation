@@ -1,4 +1,4 @@
-import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { database } from "../../../storage/database";
 import { BaseRepository } from "../../../storage/repositories/base.repository";
 import { VideoAnalysis, YoutubeChannel } from "../youtube.types";
 
@@ -35,7 +35,7 @@ interface VideoAnalysisRow {
  */
 export class YoutubeChannelRepository extends BaseRepository<YoutubeChannel> {
   constructor() {
-    super("youtube_channels", sqliteDatabase);
+    super("youtube_channels", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: YoutubeChannelRow): YoutubeChannel {
@@ -133,7 +133,7 @@ export class YoutubeChannelRepository extends BaseRepository<YoutubeChannel> {
  */
 export class VideoAnalysisRepository extends BaseRepository<VideoAnalysis> {
   constructor() {
-    super("youtube_video_analyses", sqliteDatabase);
+    super("youtube_video_analyses", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: VideoAnalysisRow): VideoAnalysis {

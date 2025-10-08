@@ -8,11 +8,15 @@ import { SQLiteDatabase } from "./sqlite-database";
  */
 export class Database {
   private sqliteDb: SQLiteDatabase;
+  private dbPath: string;
 
   constructor() {
-    // Store SQLite database in user's app data folder
-    const dbPath = path.join(app.getPath("userData"), "veo3-automation.db");
-    this.sqliteDb = new SQLiteDatabase(dbPath);
+    // Store SQLite database in a deterministic folder under the OS appData (use a single canonical folder)
+    // This prevents multiple Roaming folders like 'VEO3 AUTO' and 'veo3-automation' from being created
+    const APP_FOLDER_NAME = "veo3-automation"; // canonical folder name
+    const dbDir = path.join(app.getPath("appData"), APP_FOLDER_NAME);
+    this.dbPath = path.join(dbDir, "veo3-automation.db");
+    this.sqliteDb = new SQLiteDatabase(this.dbPath);
   }
 
   /**
@@ -20,7 +24,7 @@ export class Database {
    */
   async initialize(): Promise<void> {
     await this.sqliteDb.waitForInit();
-    console.log(`SQLite database initialized at: ${this.getBasePath()}`);
+    console.log(`SQLite database initialized at: ${this.dbPath}`);
   }
 
   /**
@@ -34,7 +38,7 @@ export class Database {
    * Get database file path
    */
   getBasePath(): string {
-    return path.join(app.getPath("userData"), "veo3-automation.db");
+    return this.dbPath;
   }
 
   /**

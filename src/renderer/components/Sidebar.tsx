@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, History, LayoutDashboard, PlayCircle, Settings, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, LayoutDashboard, PlayCircle, Settings, Users, Shield } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Page } from "../App";
@@ -20,6 +20,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "profiles", label: "Profiles", icon: Users },
   { id: "automation", label: "Automation", icon: PlayCircle },
+  { id: "admin", label: "Admin", icon: Shield },
   { id: "history", label: "History", icon: History },
 ];
 

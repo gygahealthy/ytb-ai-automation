@@ -1,5 +1,5 @@
 import { AutomationAction, AutomationTask } from "../auto.types";
-import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { database } from "../../../storage/database";
 import { BaseRepository } from "../../../storage/repositories/base.repository";
 
 interface AutomationTaskRow {
@@ -22,7 +22,7 @@ interface AutomationTaskRow {
  */
 export class AutomationRepository extends BaseRepository<AutomationTask> {
   constructor() {
-    super("automation_tasks", sqliteDatabase);
+    super("automation_tasks", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: AutomationTaskRow): AutomationTask {

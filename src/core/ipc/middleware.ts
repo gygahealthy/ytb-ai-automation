@@ -2,9 +2,14 @@ import { IpcRegistration, ApiResponse } from './types';
 import { Logger } from '../logging/types';
 
 export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
-  return async (_event: any, req: any) : Promise<any> => {
+  return async (_event: any, ...args: any[]) : Promise<any> => {
     const start = Date.now();
     logger.info(`IPC ${reg.channel} called`);
+
+    // If multiple args were passed via ipcRenderer.invoke(channel, a, b, c)
+    // forward them to the handler as an array so handlers can support
+    // either a single object or an array of positional args.
+    const req = args.length === 1 ? args[0] : args;
 
     // Simple auth placeholder - expand as needed
     // if (reg.requiresAuth && !_event.sender.isAuthorized) return { success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } };

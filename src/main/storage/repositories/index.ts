@@ -9,3 +9,4 @@ export {
   videoAnalysisRepository,
   youtubeChannelRepository,
 } from "../../modules/youtube-analysis/repository/youtube.repository";
+export { promptRepository } from "../../modules/prompt-management/repository/prompt.repository";

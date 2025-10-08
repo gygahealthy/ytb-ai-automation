@@ -34,6 +34,17 @@ export interface ProfileFormData {
 }
 
 export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClose, onSave }: ProfileModalProps) {
+  // Helper to unwrap IPC responses which might be { success, data } or plain string
+  const unwrap = (val: any): string => {
+    if (!val && val !== 0) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+      if ('data' in val) return typeof val.data === 'string' ? val.data : String(val.data ?? '');
+      if ('filePaths' in val && Array.isArray(val.filePaths)) return val.filePaths[0] ?? '';
+    }
+    return String(val);
+  };
+
   const [loading, setLoading] = useState(false);
   const [defaultProfilePath, setDefaultProfilePath] = useState("");
   const [defaultChromePath, setDefaultChromePath] = useState("");
@@ -52,11 +63,11 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
   useEffect(() => {
     const getDefaults = async () => {
       try {
-        const profilePath = (await window.electronAPI.dialog.getDefaultProfilePath()) as string;
-        setDefaultProfilePath(profilePath);
-        
-        const chromePath = (await window.electronAPI.dialog.getDefaultChromePath()) as string;
-        setDefaultChromePath(chromePath);
+        const profilePath = await window.electronAPI.dialog.getDefaultProfilePath();
+        setDefaultProfilePath(unwrap(profilePath));
+
+        const chromePath = await window.electronAPI.dialog.getDefaultChromePath();
+        setDefaultChromePath(unwrap(chromePath));
       } catch (error) {
         console.error("Failed to get default paths:", error);
       }
@@ -81,15 +92,17 @@ export default function ProfileModal({ isOpen, isEditMode, editingProfile, onClo
         // Generate random user agent and set default Chrome path for new profiles
         const generateInitialData = async () => {
           try {
-            const generatedUA = (await window.electronAPI.dialog.generateUserAgent()) as string;
-            const chromePath = (await window.electronAPI.dialog.getDefaultChromePath()) as string;
-            console.log("Auto-generated User Agent:", generatedUA);
-            console.log("Default Chrome Path:", chromePath);
+            const generatedUA = await window.electronAPI.dialog.generateUserAgent();
+            const chromePath = await window.electronAPI.dialog.getDefaultChromePath();
+            const ua = unwrap(generatedUA);
+            const chrome = unwrap(chromePath);
+            console.log("Auto-generated User Agent:", ua);
+            console.log("Default Chrome Path:", chrome);
             setFormData({
               name: "",
-              browserPath: chromePath,
+              browserPath: chrome,
               userDataDir: "",
-              userAgent: generatedUA,
+              userAgent: ua,
               creditRemaining: 0,
               tags: [],
               cookies: "",

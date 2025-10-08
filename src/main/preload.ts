@@ -102,6 +102,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getDefaultChromePath: () => ipcRenderer.invoke("dialog:getDefaultChromePath"),
     selectBrowserExecutable: () => ipcRenderer.invoke("dialog:selectBrowserExecutable"),
   },
+
+  // Master Prompts APIs
+  masterPrompts: {
+    getAll: () => ipcRenderer.invoke("master-prompts:getAll"),
+    getById: (id: number) => ipcRenderer.invoke("master-prompts:getById", id),
+    getByProvider: (provider: string) => ipcRenderer.invoke("master-prompts:getByProvider", provider),
+    getByKind: (kind: string) => ipcRenderer.invoke("master-prompts:getByKind", kind),
+    create: (prompt: any) => ipcRenderer.invoke("master-prompts:create", prompt),
+    update: (id: number, prompt: any) => ipcRenderer.invoke("master-prompts:update", id, prompt),
+    delete: (id: number) => ipcRenderer.invoke("master-prompts:delete", id),
+  },
+
+  // Generic invoke for other channels
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
 });
 
 // Type declaration for TypeScript
@@ -161,6 +175,16 @@ declare global {
         getDefaultChromePath: () => Promise<any>;
         selectBrowserExecutable: () => Promise<any>;
       };
+      masterPrompts: {
+        getAll: () => Promise<any>;
+        getById: (id: number) => Promise<any>;
+        getByProvider: (provider: string) => Promise<any>;
+        getByKind: (kind: string) => Promise<any>;
+        create: (prompt: any) => Promise<any>;
+        update: (id: number, prompt: any) => Promise<any>;
+        delete: (id: number) => Promise<any>;
+      };
+      invoke: (channel: string, ...args: any[]) => Promise<any>;
     };
   }
 }

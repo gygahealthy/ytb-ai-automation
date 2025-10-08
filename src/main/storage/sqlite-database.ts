@@ -219,4 +219,10 @@ export class SQLiteDatabase {
 }
 
 // Export singleton instance
-export const sqliteDatabase = new SQLiteDatabase();
+// Note: Do NOT create a global SQLiteDatabase singleton here. The application-level
+// Database manager (src/main/storage/database.ts) is responsible for creating the
+// canonical SQLiteDatabase instance so it can control the DB file location. Creating
+// a singleton in this module had the side-effect of opening a second DB at the
+// relative ./data path which produced two different DB files.
+
+// If a singleton instance is ever needed, create it via the Database class instead.

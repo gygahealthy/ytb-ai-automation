@@ -1,5 +1,5 @@
 import { Profile } from "../profile.types";
-import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { database } from "../../../storage/database";
 import { BaseRepository } from "../../../storage/repositories/base.repository";
 
 interface ProfileRow {
@@ -25,7 +25,8 @@ interface ProfileRow {
  */
 export class ProfileRepository extends BaseRepository<Profile> {
   constructor() {
-    super("profiles", sqliteDatabase);
+    // Use centralized Database singleton so all modules share the same DB file
+    super("profiles", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ProfileRow): Profile {

@@ -68,6 +68,16 @@ declare global {
         getDefaultChromePath: () => Promise<any>;
         selectBrowserExecutable: () => Promise<any>;
       };
+      masterPrompts: {
+        getAll: () => Promise<any>;
+        getById: (id: number) => Promise<any>;
+        getByProvider: (provider: string) => Promise<any>;
+        getByKind: (kind: string) => Promise<any>;
+        create: (prompt: any) => Promise<any>;
+        update: (id: number, prompt: any) => Promise<any>;
+        delete: (id: number) => Promise<any>;
+      };
+      invoke: (channel: string, ...args: any[]) => Promise<any>;
     };
   }
 }

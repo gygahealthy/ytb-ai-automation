@@ -6,9 +6,13 @@ import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
+import AdminPage from "./pages/AdminPage";
+import PlatformAnalysisPromptsPage from "./pages/admin/PlatformAnalysisPromptsPage";
+import ChannelAnalysisPromptsPage from "./pages/admin/ChannelAnalysisPromptsPage";
+import VideoCreationPromptsPage from "./pages/admin/VideoCreationPromptsPage";
 import { useSettingsStore } from "./store/settings.store";
 
-export type Page = "dashboard" | "automation" | "automation.chat" | "automation.dashboard" | "profiles" | "history";
+export type Page = "dashboard" | "automation" | "automation.chat" | "automation.dashboard" | "profiles" | "history" | "admin";
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
@@ -28,6 +32,10 @@ function App() {
               <Route path="/automation" element={<AutomationPage />} />
               <Route path="/automation/instance" element={<InstanceDashboard />} />
               <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
+              <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
+              <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
               <Route path="/history" element={
                 <div className="p-8"> 
                   <h1 className="text-3xl font-bold mb-6">History</h1>

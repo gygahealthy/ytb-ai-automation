@@ -177,3 +177,19 @@ CREATE INDEX IF NOT EXISTS idx_veo3_projects_profile_id ON veo3_projects(profile
 CREATE INDEX IF NOT EXISTS idx_veo3_projects_status ON veo3_projects(status);
 CREATE INDEX IF NOT EXISTS idx_youtube_video_analyses_channel_id ON youtube_video_analyses(channel_id);
 
+-- Master prompts table for AI configurations
+CREATE TABLE IF NOT EXISTS master_prompts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT NOT NULL, -- 'youtube', 'tiktok', 'veo3', 'openai', etc.
+  prompt_kind TEXT NOT NULL, -- 'video_analysis', 'channel_analysis', 'video_creation', etc.
+  prompt_template TEXT NOT NULL, -- The actual prompt with [VARIABLE] placeholders
+  description TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(provider, prompt_kind)
+);
+
+-- Create index for master prompts
+CREATE INDEX IF NOT EXISTS idx_master_prompts_provider ON master_prompts(provider);
+CREATE INDEX IF NOT EXISTS idx_master_prompts_kind ON master_prompts(prompt_kind);
+

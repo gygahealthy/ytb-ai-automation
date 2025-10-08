@@ -26,5 +26,7 @@ export function registerIPCHandlers(): void {
   // Register core ipc handlers via centralized registry
   registerAll(uniqueRegistrations, logger);
 
+  // master-prompts handlers are provided by the prompt-management module
+
   console.log("✅ All IPC handlers registered");
 }

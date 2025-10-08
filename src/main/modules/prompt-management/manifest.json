@@ -1,0 +1,6 @@
+{
+  "name": "prompt-management",
+  "version": "1.0.0",
+  "description": "Master prompt management (platform/channel/video prompts)",
+  "disabled": false
+}

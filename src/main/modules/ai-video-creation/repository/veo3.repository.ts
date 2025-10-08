@@ -1,5 +1,5 @@
 import { VEO3Project, VideoScene } from "../veo3.types";
-import { sqliteDatabase } from "../../../storage/sqlite-database";
+import { database } from "../../../storage/database";
 import { BaseRepository } from "../../../storage/repositories";
 
 interface VEO3ProjectRow {
@@ -19,7 +19,7 @@ interface VEO3ProjectRow {
  */
 export class VEO3Repository extends BaseRepository<VEO3Project> {
   constructor() {
-    super("veo3_projects", sqliteDatabase);
+    super("veo3_projects", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: VEO3ProjectRow): VEO3Project {
