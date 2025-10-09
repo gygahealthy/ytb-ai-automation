@@ -193,3 +193,25 @@ CREATE TABLE IF NOT EXISTS master_prompts (
 CREATE INDEX IF NOT EXISTS idx_master_prompts_provider ON master_prompts(provider);
 CREATE INDEX IF NOT EXISTS idx_master_prompts_kind ON master_prompts(prompt_kind);
 
+-- Prompt history table for version control and rollback
+CREATE TABLE IF NOT EXISTS prompt_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  prompt_id INTEGER NOT NULL,
+  provider TEXT NOT NULL,
+  prompt_kind TEXT NOT NULL,
+  prompt_template TEXT NOT NULL,
+  description TEXT,
+  tags TEXT, -- JSON array of tags
+  is_active INTEGER DEFAULT 1,
+  archived INTEGER DEFAULT 0,
+  change_note TEXT, -- Optional note about what changed
+  digest TEXT, -- SHA-256 digest of normalized content for duplicate detection
+  digest_short TEXT, -- short prefix of digest to speed indexed lookups
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE
+);
+
+-- Create index for prompt history
+CREATE INDEX IF NOT EXISTS idx_prompt_history_prompt_id ON prompt_history(prompt_id);
+CREATE INDEX IF NOT EXISTS idx_prompt_history_created_at ON prompt_history(created_at);
+

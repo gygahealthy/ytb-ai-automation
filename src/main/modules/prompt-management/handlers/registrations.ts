@@ -1,5 +1,6 @@
 import { IpcRegistration } from '../../../../core/ipc/types';
 import { promptService } from '../services/prompt.service';
+import { promptHistoryService } from '../services/prompt-history.service';
 
 export const promptRegistrations: IpcRegistration[] = [
   {
@@ -56,5 +57,31 @@ export const promptRegistrations: IpcRegistration[] = [
     channel: 'master-prompts:populateTemplate',
     description: 'Populate template with variables',
     handler: async (req: any) => await promptService.populateTemplate(req as any),
+  },
+  // Prompt history handlers
+  {
+    channel: 'prompt-history:getByPromptId',
+    description: 'Get prompt history by prompt ID',
+    handler: async (req: any) => await promptHistoryService.getByPromptId(req as any),
+  },
+  {
+    channel: 'prompt-history:getById',
+    description: 'Get prompt history entry by ID',
+    handler: async (req: any) => await promptHistoryService.getById(req as any),
+  },
+  {
+    channel: 'prompt-history:create',
+    description: 'Create prompt history entry',
+    handler: async (req: any) => await promptHistoryService.create(req as any),
+  },
+  {
+    channel: 'prompt-history:delete',
+    description: 'Delete prompt history entry',
+    handler: async (req: any) => await promptHistoryService.delete(req as any),
+  },
+  {
+    channel: 'prompt-history:deleteByPromptId',
+    description: 'Delete all prompt history for a prompt',
+    handler: async (req: any) => await promptHistoryService.deleteByPromptId(req as any),
   },
 ];

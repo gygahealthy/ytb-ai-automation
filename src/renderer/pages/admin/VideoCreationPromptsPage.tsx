@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import masterPromptsApi from '../../utils/masterPromptsApi';
+import electronApi from '../../utils/electronApi';
+import { useConfirm } from '../../hooks/useConfirm';
 import AdminPromptTable, { PromptRow } from '../../components/admin/AdminPromptTable';
 import PromptModal from '../../components/admin/PromptModal';
 import VariablesHint from '../../components/admin/VariablesHint';
@@ -30,7 +31,7 @@ const VideoCreationPromptsPage: React.FC = () => {
   const loadPrompts = async () => {
     setLoading(true);
     try {
-      const result = await masterPromptsApi.getByKind('video_creation');
+  const result = await electronApi.masterPrompts.getByKind('video_creation');
       if (result.success) {
         setPrompts(result.data);
       }
@@ -44,7 +45,9 @@ const VideoCreationPromptsPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this prompt?')) return;
     try {
-      const result = await masterPromptsApi.deletePrompt(id);
+  const confirmFn = useConfirm();
+  if (!(await confirmFn({ message: 'Are you sure you want to delete this prompt?' }))) return;
+  const result = await electronApi.masterPrompts.deletePrompt(id);
       if (result.success) {
         await loadPrompts();
       }
@@ -99,7 +102,7 @@ const VideoCreationPromptsPage: React.FC = () => {
               onDelete={async (id) => { await handleDelete(id); }}
               onToggleActive={async (id, active) => {
                 try {
-                  await masterPromptsApi.updatePrompt(id, { isActive: active } as any);
+                  await electronApi.masterPrompts.updatePrompt(id, { isActive: active } as any);
                   await loadPrompts();
                 } catch (err) { console.error(err); }
               }}
@@ -109,7 +112,7 @@ const VideoCreationPromptsPage: React.FC = () => {
                 const action = isArchived ? 'unarchive' : 'archive';
                 if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this prompt?`)) return;
                 try {
-                  await masterPromptsApi.updatePrompt(id, { archived: !isArchived } as any);
+                  await electronApi.masterPrompts.updatePrompt(id, { archived: !isArchived } as any);
                   await loadPrompts();
                 } catch (err) { console.error(err); }
               }}
@@ -123,9 +126,9 @@ const VideoCreationPromptsPage: React.FC = () => {
                 setModalOpen(false);
                 try {
                   if (p.id) {
-                    await masterPromptsApi.updatePrompt(p.id, p as any);
+                    await electronApi.masterPrompts.updatePrompt(p.id, p as any);
                   } else {
-                    await masterPromptsApi.createPrompt(p as any);
+                    await electronApi.masterPrompts.createPrompt(p as any);
                   }
                   await loadPrompts();
                 } catch (err) {

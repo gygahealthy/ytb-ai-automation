@@ -3,6 +3,7 @@ import { SQLiteDatabase } from "./sqlite-database";
 import * as fs from "fs";
 import * as path from "path";
 import * as sqlite3 from "sqlite3";
+import * as crypto from 'crypto';
 
 const logger = new Logger("DatabaseMigrations");
 
@@ -42,6 +43,22 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
       await migration_005_add_master_prompts_flags_and_tags(db);
     }
 
+    if (version < 6) {
+      await migration_006_add_prompt_history_table(db);
+    }
+
+    if (version < 7) {
+      await migration_007_add_prompt_history_digest(db);
+    }
+
+    if (version < 8) {
+      await migration_008_backfill_prompt_history_digest(db);
+    }
+
+    if (version < 9) {
+      await migration_009_add_prompt_history_digest_short(db);
+    }
+
     logger.info("All migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
@@ -75,6 +92,160 @@ async function migration_005_add_master_prompts_flags_and_tags(db: SQLiteDatabas
     loggerLocal.info('Migration 005 completed successfully');
   } catch (error) {
     loggerLocal.error('Migration 005 failed', error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 006: Add prompt_history table for version control
+ */
+async function migration_006_add_prompt_history_table(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info('Running migration 006: Add prompt_history table');
+  try {
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS prompt_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        prompt_id INTEGER NOT NULL,
+        provider TEXT NOT NULL,
+        prompt_kind TEXT NOT NULL,
+        prompt_template TEXT NOT NULL,
+        description TEXT,
+        tags TEXT,
+        is_active INTEGER DEFAULT 1,
+        archived INTEGER DEFAULT 0,
+        change_note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE
+      )
+    `);
+    loggerLocal.info('Created prompt_history table');
+
+    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_prompt_id ON prompt_history(prompt_id)');
+    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_created_at ON prompt_history(created_at)');
+    loggerLocal.info('Created indexes for prompt_history table');
+
+    await recordMigration(db, 6);
+    loggerLocal.info('Migration 006 completed successfully');
+  } catch (error) {
+    loggerLocal.error('Migration 006 failed', error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 007: Add digest column to prompt_history for duplicate detection
+ */
+async function migration_007_add_prompt_history_digest(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info('Running migration 007: Add digest column to prompt_history');
+  try {
+    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const columns = tableInfo.map((c) => c.name);
+    if (!columns.includes('digest')) {
+      await db.run('ALTER TABLE prompt_history ADD COLUMN digest TEXT');
+      loggerLocal.info('Added digest column to prompt_history');
+    }
+
+    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)');
+    loggerLocal.info('Created digest index for prompt_history');
+
+    await recordMigration(db, 7);
+    loggerLocal.info('Migration 007 completed successfully');
+  } catch (error) {
+    loggerLocal.error('Migration 007 failed', error);
+    throw error;
+  }
+}
+
+// helper to normalize tags and compute digest (same rules as repository)
+function normalizeTagsForDigest(tagsJson: string | null | undefined): string[] {
+  if (!tagsJson) return [];
+  try {
+    const tags = JSON.parse(tagsJson);
+    if (!Array.isArray(tags)) return [];
+    return (tags as any[])
+      .map((t) => (t || '').toString().trim().toLowerCase())
+      .filter((t) => t.length > 0)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function computeDigestForMigration(template: string | null | undefined, description: string | null | undefined, tagsJson: string | null | undefined) {
+  const t = (template || '').toString().trim();
+  const d = (description || '').toString().trim();
+  const tags = normalizeTagsForDigest(tagsJson);
+  const payload = JSON.stringify({ t, d, tags });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+/**
+ * Migration 008: Backfill digest values for existing prompt_history rows
+ */
+async function migration_008_backfill_prompt_history_digest(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info('Running migration 008: Backfill prompt_history.digest for existing rows');
+  try {
+    // Ensure digest column exists (some DBs may not have it yet)
+    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const columns = tableInfo.map((c) => c.name);
+    if (!columns.includes('digest')) {
+      loggerLocal.info('digest column missing, adding it now');
+      await db.run('ALTER TABLE prompt_history ADD COLUMN digest TEXT');
+      await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)');
+    }
+
+    const rows = await db.all<any>('SELECT id, prompt_template, description, tags FROM prompt_history');
+    let updated = 0;
+    for (const r of rows || []) {
+      // compute digest whether or not a digest value exists
+      const digest = computeDigestForMigration(r.prompt_template, r.description, r.tags);
+      // update only if different or null
+      await db.run('UPDATE prompt_history SET digest = ? WHERE id = ?', [digest, r.id]);
+      updated += 1;
+    }
+    loggerLocal.info(`Backfilled digest for ${updated} prompt_history rows`);
+
+    await recordMigration(db, 8);
+    loggerLocal.info('Migration 008 completed successfully');
+  } catch (error) {
+    loggerLocal.error('Migration 008 failed', error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 009: Add digest_short column (indexed) and backfill from digest
+ */
+async function migration_009_add_prompt_history_digest_short(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info('Running migration 009: Add digest_short column to prompt_history');
+  try {
+    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const columns = tableInfo.map((c) => c.name);
+    if (!columns.includes('digest_short')) {
+      await db.run('ALTER TABLE prompt_history ADD COLUMN digest_short TEXT');
+      loggerLocal.info('Added digest_short column to prompt_history');
+    }
+
+    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest_short ON prompt_history(digest_short)');
+    loggerLocal.info('Created digest_short index');
+
+    // backfill digest_short from existing digest values
+    const rows = await db.all<any>('SELECT id, digest FROM prompt_history');
+    for (const r of rows || []) {
+      if (r.digest && (!r.digest_short || r.digest_short.length === 0)) {
+        const short = r.digest.substring(0, 12);
+        await db.run('UPDATE prompt_history SET digest_short = ? WHERE id = ?', [short, r.id]);
+      }
+    }
+
+    await recordMigration(db, 9);
+    loggerLocal.info('Migration 009 completed successfully');
+  } catch (error) {
+    loggerLocal.error('Migration 009 failed', error);
     throw error;
   }
 }

@@ -80,17 +80,24 @@ export class SQLiteDatabase {
       const schema = fs.readFileSync(schemaPath, "utf-8");
 
       // Execute schema
-      await new Promise<void>((resolve, reject) => {
-        this.db.exec(schema, (err) => {
-          if (err) {
-            logger.error("Failed to initialize schema", err);
-            reject(err);
-          } else {
-            logger.info("Database schema initialized");
-            resolve();
-          }
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.db.exec(schema, (err) => {
+            if (err) {
+              logger.error("Failed to initialize schema", err);
+              reject(err);
+            } else {
+              logger.info("Database schema initialized");
+              resolve();
+            }
+          });
         });
-      });
+      } catch (err) {
+        // Some schema files referencing later-added columns/indexes can cause exec to fail
+        // on older DBs. Don't abort initialization — log and continue to run migrations which
+        // will add missing columns/indexes in a safe, incremental way.
+        logger.warn('Schema exec failed, continuing with migrations', err);
+      }
 
       // Run migrations to update existing tables
       await runMigrations(this);

@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Settings } from 'lucide-react';
+import { useAlert } from '../../hooks/useAlert';
+import { useConfirm } from '../../hooks/useConfirm';
 import InstanceCard from '../../components/automation/InstanceCard';
 import InstanceToolbar from '../../components/automation/InstanceToolbar';
 import { InstanceState, LaunchInstanceRequest } from '../../../shared/types';
 
 export default function InstanceDashboard() {
+  const alertApi = useAlert();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [instances, setInstances] = useState<InstanceState[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
@@ -73,7 +77,7 @@ export default function InstanceDashboard() {
 
       const res = await window.electronAPI.automation.launch(request);
       if (!res.success) {
-        alert(res.error || 'Failed to launch instance');
+  alertApi.show({ message: res.error || 'Failed to launch instance', title: 'Launch Error' });
       } else {
         // If launch returned instance info (new or existing), refresh instances list.
         const returnedId = res.data?.instanceId;
@@ -99,7 +103,7 @@ export default function InstanceDashboard() {
       }
     } catch (error) {
       console.error('Launch error:', error);
-      alert('Failed to launch instance');
+  alertApi.show({ message: 'Failed to launch instance', title: 'Launch Error' });
     } finally {
       setIsLaunching(false);
     }
@@ -119,7 +123,7 @@ export default function InstanceDashboard() {
   };
 
   const handleStopAll = async () => {
-    if (confirm(`Stop all ${instances.length} running instances?`)) {
+  if (await confirm({ message: `Stop all ${instances.length} running instances?` })) {
       try {
         await window.electronAPI.automation.stopAll();
         // refresh instances list and config

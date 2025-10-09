@@ -11,9 +11,10 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import ProfileModal, { ProfileFormData } from "../components/profiles/ProfileModal";
+import ProfileForm, { ProfileFormData } from "../components/profiles/ProfileForm";
 import ProfilesTable from "../components/profiles/ProfilesTable";
 import ProfilesGrid from "../components/profiles/ProfilesGrid";
+import { useModal } from "../hooks/useModal";
 
 interface Profile {
   id: string;
@@ -48,10 +49,16 @@ interface ColumnVisibility {
   loginStatus: boolean;
 }
 
+import electronApi from "../utils/electronApi";
+import { useAlert } from '../hooks/useAlert';
+import { useConfirm } from '../hooks/useConfirm';
+
 export default function ProfilesPage() {
+  const modal = useModal();
+  const alertApi = useAlert();
+  const confirm = useConfirm();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -127,8 +134,8 @@ export default function ProfilesPage() {
 
   const loadProfiles = async () => {
     try {
-      const response = (await window.electronAPI.profile.getAll()) as ApiResponse<Profile[]>;
-      if (response.success && response.data) {
+      const response = (await electronApi.profile.getAll()) as ApiResponse<Profile[]>;
+      if (response && response.success && response.data) {
         setProfiles(response.data);
       }
     } catch (error) {
@@ -139,25 +146,49 @@ export default function ProfilesPage() {
   const handleOpenModal = () => {
     setIsEditMode(false);
     setEditingProfile(null);
-    setIsModalOpen(true);
+    
+    modal.openModal({
+      title: 'Create New Profile',
+      icon: <User className="w-6 h-6 text-indigo-500" />,
+      content: (
+        <ProfileForm
+          isEditMode={false}
+          editingProfile={null}
+          onSave={handleSaveProfile}
+          onCancel={() => modal.closeModal()}
+        />
+      ),
+      size: 'lg',
+      closeOnEscape: true,
+      closeOnOverlay: false, // Prevent accidental close during form editing
+    });
   };
 
   const handleEditProfile = (profile: Profile) => {
     setIsEditMode(true);
     setEditingProfile(profile);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setIsEditMode(false);
-    setEditingProfile(null);
+    
+    modal.openModal({
+      title: 'Edit Profile',
+      icon: <User className="w-6 h-6 text-indigo-500" />,
+      content: (
+        <ProfileForm
+          isEditMode={true}
+          editingProfile={profile}
+          onSave={handleSaveProfile}
+          onCancel={() => modal.closeModal()}
+        />
+      ),
+      size: 'lg',
+      closeOnEscape: true,
+      closeOnOverlay: false,
+    });
   };
 
   const handleSaveProfile = async (formData: ProfileFormData) => {
     try {
       if (isEditMode && editingProfile) {
-        const response = (await window.electronAPI.profile.update(editingProfile.id, {
+        const response = (await electronApi.profile.update(editingProfile.id, {
           name: formData.name,
           browserPath: formData.browserPath || undefined,
           userDataDir: formData.userDataDir || undefined,
@@ -170,11 +201,11 @@ export default function ProfilesPage() {
         if (response.success) {
           await loadProfiles();
         } else {
-          alert(`Failed to update profile: ${response.error}`);
+            alertApi.show({ message: `Failed to update profile: ${response.error}`, title: 'Profile Error' });
           throw new Error(response.error);
         }
       } else {
-        const response = (await window.electronAPI.profile.create({
+        const response = (await electronApi.profile.create({
           name: formData.name,
           browserPath: formData.browserPath || undefined,
           userDataDir: formData.userDataDir || undefined,
@@ -187,7 +218,7 @@ export default function ProfilesPage() {
         if (response.success) {
           await loadProfiles();
         } else {
-          alert(`Failed to create profile: ${response.error}`);
+          alertApi.show({ message: `Failed to create profile: ${response.error}`, title: 'Profile Error' });
           throw new Error(response.error);
         }
       }
@@ -198,26 +229,26 @@ export default function ProfilesPage() {
   };
 
   const handleDeleteProfile = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this profile?")) {
-      return;
-    }
+    if (!(await confirm({ message: "Are you sure you want to delete this profile?" }))) {
+        return;
+      }
 
     try {
-      const response = (await window.electronAPI.profile.delete(id)) as ApiResponse<boolean>;
+  const response = (await electronApi.profile.delete(id)) as ApiResponse<boolean>;
       if (response.success) {
         await loadProfiles();
       } else {
-        alert(`Failed to delete profile: ${response.error}`);
+  alertApi.show({ message: `Failed to delete profile: ${response.error}`, title: 'Profile Error' });
       }
     } catch (error) {
       console.error("Failed to delete profile:", error);
-      alert(`Failed to delete profile: ${error}`);
+  alertApi.show({ message: `Failed to delete profile: ${error}`, title: 'Profile Error' });
     }
   };
 
   const handleLoginProfile = async (id: string) => {
     try {
-      const response = (await window.electronAPI.profile.login(id)) as ApiResponse<Profile>;
+  const response = (await electronApi.profile.login(id)) as ApiResponse<Profile>;
       if (response.success) {
         await loadProfiles();
       } else {
@@ -441,15 +472,6 @@ export default function ProfilesPage() {
           onDeleteProfile={handleDeleteProfile}
         />
       )}
-
-      {/* Profile Modal */}
-      <ProfileModal
-        isOpen={isModalOpen}
-        isEditMode={isEditMode}
-        editingProfile={editingProfile}
-        onClose={handleCloseModal}
-        onSave={handleSaveProfile}
-      />
     </div>
   );
 }

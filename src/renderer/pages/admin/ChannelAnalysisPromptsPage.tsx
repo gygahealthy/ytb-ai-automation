@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Youtube } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import masterPromptsApi from '../../utils/masterPromptsApi';
+import electronApi from '../../utils/electronApi';
+import { useConfirm } from '../../hooks/useConfirm';
 import VariablesHint from '../../components/admin/VariablesHint';
 import AdminPromptTable, { PromptRow } from '../../components/admin/AdminPromptTable';
 import PromptModal from '../../components/admin/PromptModal';
@@ -30,7 +31,7 @@ const ChannelAnalysisPromptsPage: React.FC = () => {
   const loadPrompts = async () => {
     setLoading(true);
     try {
-      const result = await masterPromptsApi.getByKind('channel_analysis');
+  const result = await electronApi.masterPrompts.getByKind('channel_analysis');
       if (result.success) {
         setPrompts(result.data);
       }
@@ -44,10 +45,11 @@ const ChannelAnalysisPromptsPage: React.FC = () => {
   // create/update handled by modal
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this prompt?')) return;
+  const confirmFn = useConfirm();
+  if (!(await confirmFn({ message: 'Are you sure you want to delete this prompt?' }))) return;
     
     try {
-  const result = await masterPromptsApi.deletePrompt(id);
+  const result = await electronApi.masterPrompts.deletePrompt(id);
       if (result.success) {
         await loadPrompts();
       }
@@ -106,13 +108,13 @@ const ChannelAnalysisPromptsPage: React.FC = () => {
               prompts={prompts as PromptRow[]}
               onEdit={(row) => { setEditing(row); setModalOpen(true); }}
               onDelete={async (id) => { await handleDelete(id); }}
-              onToggleActive={async (id, active) => { try { await masterPromptsApi.updatePrompt(id, { isActive: active } as any); await loadPrompts(); } catch (e) { console.error(e); } }}
+              onToggleActive={async (id, active) => { try { await electronApi.masterPrompts.updatePrompt(id, { isActive: active } as any); await loadPrompts(); } catch (e) { console.error(e); } }}
               onArchive={async (id) => { 
                 const prompt = prompts.find(p => p.id === id);
                 const isArchived = (prompt as any)?.archived;
                 const action = isArchived ? 'unarchive' : 'archive';
                 if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this prompt?`)) return;
-                try { await masterPromptsApi.updatePrompt(id, { archived: !isArchived } as any); await loadPrompts(); } catch (e) { console.error(e); }
+                try { await electronApi.masterPrompts.updatePrompt(id, { archived: !isArchived } as any); await loadPrompts(); } catch (e) { console.error(e); }
               }}
             />
           </div>
@@ -126,9 +128,9 @@ const ChannelAnalysisPromptsPage: React.FC = () => {
             setModalOpen(false);
             try {
               if (p.id) {
-                await masterPromptsApi.updatePrompt(p.id, p as any);
+                await electronApi.masterPrompts.updatePrompt(p.id, p as any);
               } else {
-                await masterPromptsApi.createPrompt(p as any);
+                await electronApi.masterPrompts.createPrompt(p as any);
               }
               await loadPrompts();
             } catch (err) {

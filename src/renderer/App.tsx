@@ -1,53 +1,63 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import SettingsModal from "./components/SettingsModal";
+import { BrowserRouter } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import AutomationPage from "./pages/AutomationPage";
-import ProfilesPage from "./pages/ProfilesPage";
-import ChatAutomation from "./pages/automation/ChatAutomation";
-import InstanceDashboard from "./pages/automation/InstanceDashboard";
-import AdminPage from "./pages/AdminPage";
-import PlatformAnalysisPromptsPage from "./pages/admin/PlatformAnalysisPromptsPage";
-import ChannelAnalysisPromptsPage from "./pages/admin/ChannelAnalysisPromptsPage";
-import VideoCreationPromptsPage from "./pages/admin/VideoCreationPromptsPage";
+import SettingsForm from "./components/SettingsForm";
+// page components are now loaded via src/renderer/Routes.tsx
+import AppRoutes from './Routes';
 import { useSettingsStore } from "./store/settings.store";
+import { AlertProvider } from './hooks/useAlert';
+import { ConfirmProvider } from './hooks/useConfirm';
+import { ModalProvider, useModal } from './hooks/useModal';
+import { Settings } from 'lucide-react';
 
 export type Page = "dashboard" | "automation" | "automation.chat" | "automation.dashboard" | "profiles" | "history" | "admin";
 
-function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const modal = useModal();
+
+  const handleSettingsClick = () => {
+    modal.openModal({
+      title: 'Settings',
+      icon: <Settings className="w-6 h-6 text-indigo-500" />,
+      content: <SettingsForm />,
+      footer: (
+        <button
+          onClick={() => modal.closeModal()}
+          className="w-full px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg transition-colors"
+        >
+          Done
+        </button>
+      ),
+      size: 'lg',
+    });
+  };
+
+  return (
+    <BrowserRouter>
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={handleSettingsClick} />
+
+        <main className="flex-1 overflow-y-auto">
+          <AppRoutes />
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+function App() {
   const { theme } = useSettingsStore();
 
   return (
     <div className={theme}>
-      <BrowserRouter>
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={() => setIsSettingsOpen(true)} />
-
-          <main className="flex-1 overflow-y-auto">
-            <Routes>
-              <Route path="/" element={<Navigate to="/profiles" replace />} />
-              <Route path="/profiles" element={<ProfilesPage />} />
-              <Route path="/automation" element={<AutomationPage />} />
-              <Route path="/automation/instance" element={<InstanceDashboard />} />
-              <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
-              <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
-              <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
-              <Route path="/history" element={
-                <div className="p-8"> 
-                  <h1 className="text-3xl font-bold mb-6">History</h1>
-                  <p className="text-gray-600 dark:text-gray-400">History page coming soon...</p>
-                </div>
-              } />
-            </Routes>
-          </main>
-
-          <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-        </div>
-      </BrowserRouter>
+      <ModalProvider>
+      <AlertProvider>
+      <ConfirmProvider>
+        <AppContent />
+      </ConfirmProvider>
+      </AlertProvider>
+      </ModalProvider>
     </div>
   );
 }
