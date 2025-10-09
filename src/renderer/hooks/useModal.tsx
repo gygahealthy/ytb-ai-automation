@@ -7,6 +7,7 @@ interface ModalOptions {
   content: ReactNode;
   footer?: ReactNode;
   size?: ModalSize;
+  contentClassName?: string;
   closeOnEscape?: boolean;
   closeOnOverlay?: boolean;
 }
@@ -45,6 +46,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
           icon={modalOptions.icon}
           footer={modalOptions.footer}
           size={modalOptions.size}
+          contentClassName={modalOptions.contentClassName}
           closeOnEscape={modalOptions.closeOnEscape}
           closeOnOverlay={modalOptions.closeOnOverlay}
         >

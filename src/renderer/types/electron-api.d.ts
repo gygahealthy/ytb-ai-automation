@@ -67,7 +67,9 @@ declare global {
         generateUserAgent: () => Promise<any>;
         getDefaultChromePath: () => Promise<any>;
         selectBrowserExecutable: () => Promise<any>;
+        showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
       };
+      validateBrowserPath: (path: string) => Promise<{ valid: boolean; error?: string; detectedName?: string; version?: string }>;
       masterPrompts: {
         getAll: () => Promise<any>;
         getById: (id: number) => Promise<any>;

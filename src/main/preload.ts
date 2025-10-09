@@ -101,7 +101,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     generateUserAgent: () => ipcRenderer.invoke("dialog:generateUserAgent"),
     getDefaultChromePath: () => ipcRenderer.invoke("dialog:getDefaultChromePath"),
     selectBrowserExecutable: () => ipcRenderer.invoke("dialog:selectBrowserExecutable"),
+    showOpenDialog: (options: any) => ipcRenderer.invoke("dialog:showOpenDialog", options),
   },
+
+  // Browser validation API
+  validateBrowserPath: (path: string) => ipcRenderer.invoke("validateBrowserPath", path),
 
   // Master Prompts APIs
   masterPrompts: {
@@ -174,7 +178,9 @@ declare global {
         generateUserAgent: () => Promise<any>;
         getDefaultChromePath: () => Promise<any>;
         selectBrowserExecutable: () => Promise<any>;
+        showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
       };
+      validateBrowserPath: (path: string) => Promise<{ valid: boolean; error?: string; detectedName?: string; version?: string }>;
       masterPrompts: {
         getAll: () => Promise<any>;
         getById: (id: number) => Promise<any>;

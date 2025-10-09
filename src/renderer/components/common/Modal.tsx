@@ -11,6 +11,7 @@ export interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: ModalSize;
+  contentClassName?: string;
   closeOnEscape?: boolean;
   closeOnOverlay?: boolean;
 }
@@ -29,6 +30,7 @@ export default function Modal({
   children,
   footer,
   size = 'md',
+  contentClassName,
   closeOnEscape = true,
   closeOnOverlay = true,
 }: ModalProps) {
@@ -85,7 +87,7 @@ export default function Modal({
 
       <div
         ref={modalRef}
-        className={`relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh]`}
+        className={`relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] ${contentClassName ?? ''}`}
       >
         {/* Header */}
         {title && (
@@ -106,7 +108,7 @@ export default function Modal({
 
         {/* Body - Fixed height with scrollable content */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="p-6">{children}</div>
+          <div className={`p-6 ${contentClassName ?? ''}`}>{children}</div>
         </div>
 
         {/* Footer */}

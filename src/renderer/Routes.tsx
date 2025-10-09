@@ -8,7 +8,6 @@ import AdminPage from './pages/AdminPage';
 import PlatformAnalysisPromptsPage from './pages/admin/PlatformAnalysisPromptsPage';
 import ChannelAnalysisPromptsPage from './pages/admin/ChannelAnalysisPromptsPage';
 import VideoCreationPromptsPage from './pages/admin/VideoCreationPromptsPage';
-import ModalDemoPage from './pages/ModalDemoPage';
 
 export default function AppRoutes() {
   return (
@@ -22,7 +21,6 @@ export default function AppRoutes() {
       <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
       <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
       <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
-      <Route path="/modal-demo" element={<ModalDemoPage />} />
       <Route
         path="/history"
         element={

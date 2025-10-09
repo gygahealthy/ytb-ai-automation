@@ -5,6 +5,8 @@ import {
   generateUserAgent,
   getDefaultChromePath,
   selectBrowserExecutable,
+  showOpenDialog,
+  validateBrowserPath,
 } from '../../utils/dialog.service';
 import { IpcRegistration } from '../../../core/ipc/types';
 
@@ -64,6 +66,32 @@ export const dialogRegistrations: IpcRegistration[] = [
     handler: async () => {
       try {
         const res = await selectBrowserExecutable();
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'dialog:showOpenDialog',
+    description: 'Show generic open dialog',
+    handler: async (req: any) => {
+      try {
+        const options = req as Electron.OpenDialogOptions;
+        const res = await showOpenDialog(options);
+        return { success: true, data: res };
+      } catch (e) {
+        return { success: false, error: e };
+      }
+    },
+  },
+  {
+    channel: 'validateBrowserPath',
+    description: 'Validate browser executable path',
+    handler: async (req: any) => {
+      try {
+        const browserPath = req as string;
+        const res = await validateBrowserPath(browserPath);
         return { success: true, data: res };
       } catch (e) {
         return { success: false, error: e };

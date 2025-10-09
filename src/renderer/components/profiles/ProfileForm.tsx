@@ -1,5 +1,6 @@
 import { Cookie, DollarSign, Folder, Globe, Plus, RefreshCw, Tag, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSettingsStore, BrowserPath } from "../../store/settings.store";
 
 interface Profile {
   id: string;
@@ -43,6 +44,9 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
     }
     return String(val);
   };
+
+  // Get browser paths from settings store
+  const browserPaths = useSettingsStore((s) => s.browserPaths) as BrowserPath[];
 
   const [loading, setLoading] = useState(false);
   const [defaultProfilePath, setDefaultProfilePath] = useState("");
@@ -227,6 +231,33 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
         <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
           Auto-detected: {defaultChromePath || "Not found - please select manually"}
         </p>
+
+        {/* Small selectable browser tags (from settings store) */}
+        {browserPaths && browserPaths.length > 0 && (
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            {browserPaths.map((bp) => {
+              const isSelected = bp.path === formData.browserPath;
+              return (
+                <button
+                  type="button"
+                  key={bp.id}
+                  onClick={() => setFormData((prev) => ({ ...prev, browserPath: bp.path }))}
+                  title={bp.path}
+                  className={
+                    `inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs border transition-colors ${
+                      isSelected
+                        ? 'bg-primary-500 text-white border-primary-500'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`
+                  }
+                >
+                  <Globe className="w-3 h-3" />
+                  <span className="max-w-[12rem] truncate">{bp.name || bp.path}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Profile Path Field */}

@@ -4,23 +4,38 @@ export type Theme = "light" | "dark";
 export type ColorScheme = "blue" | "purple" | "green" | "orange" | "red" | "pink" | "teal" | "indigo";
 export type FontSize = "xs" | "sm" | "md" | "lg";
 
+export interface BrowserPath {
+  id: string;
+  name: string;
+  path: string;
+  isDefault: boolean;
+  note?: string;
+}
+
 interface SettingsState {
   theme: Theme;
   colorScheme: ColorScheme;
   compactMode: boolean;
   fontSize: FontSize;
+  browserPaths: BrowserPath[];
   setTheme: (theme: Theme) => void;
   setColorScheme: (scheme: ColorScheme) => void;
   setCompactMode: (compact: boolean) => void;
   setFontSize: (size: FontSize) => void;
+  addBrowserPath: (bp: Omit<BrowserPath, 'id'>) => void;
+  updateBrowserPath: (id: string, partial: Partial<BrowserPath>) => void;
+  removeBrowserPath: (id: string) => void;
+  setDefaultBrowserPath: (id: string) => void;
+  getDefaultBrowserPath: () => BrowserPath | undefined;
 }
 
 // Simple store without persist for now
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   theme: "light",
   colorScheme: "green",
   compactMode: false,
   fontSize: "md",
+  browserPaths: [],
   setTheme: (theme) => {
     set({ theme });
     // Apply theme immediately
@@ -57,6 +72,50 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     // Save to localStorage
     localStorage.setItem("veo3-font-size", fontSize);
   },
+  addBrowserPath: (bp) => {
+    const id = crypto.randomUUID();
+    const currentPaths = get().browserPaths;
+    const hasDefault = currentPaths.some(p => p.isDefault);
+    const newPath: BrowserPath = {
+      ...bp,
+      id,
+      isDefault: hasDefault ? false : true, // First one is default
+    };
+    const updated = [...currentPaths, newPath];
+    set({ browserPaths: updated });
+    localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
+  },
+  updateBrowserPath: (id, partial) => {
+    const updated = get().browserPaths.map(bp =>
+      bp.id === id ? { ...bp, ...partial } : bp
+    );
+    set({ browserPaths: updated });
+    localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
+  },
+  removeBrowserPath: (id) => {
+    const currentPaths = get().browserPaths;
+    const toRemove = currentPaths.find(bp => bp.id === id);
+    const updated = currentPaths.filter(bp => bp.id !== id);
+    
+    // If we removed the default, set first remaining as default
+    if (toRemove?.isDefault && updated.length > 0) {
+      updated[0].isDefault = true;
+    }
+    
+    set({ browserPaths: updated });
+    localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
+  },
+  setDefaultBrowserPath: (id) => {
+    const updated = get().browserPaths.map(bp => ({
+      ...bp,
+      isDefault: bp.id === id,
+    }));
+    set({ browserPaths: updated });
+    localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
+  },
+  getDefaultBrowserPath: () => {
+    return get().browserPaths.find(bp => bp.isDefault);
+  },
 }));
 
 // Initialize settings from localStorage
@@ -64,6 +123,7 @@ const savedTheme = localStorage.getItem("veo3-theme") as Theme | null;
 const savedColorScheme = localStorage.getItem("veo3-color-scheme") as ColorScheme | null;
 const savedCompactMode = localStorage.getItem("veo3-compact-mode");
 const savedFontSize = localStorage.getItem("veo3-font-size") as FontSize | null;
+const savedBrowserPaths = localStorage.getItem("veo3-browser-paths");
 
 if (savedTheme) {
   useSettingsStore.getState().setTheme(savedTheme);
@@ -76,4 +136,12 @@ if (savedCompactMode !== null) {
 }
 if (savedFontSize) {
   useSettingsStore.getState().setFontSize(savedFontSize);
+}
+if (savedBrowserPaths) {
+  try {
+    const parsed = JSON.parse(savedBrowserPaths) as BrowserPath[];
+    useSettingsStore.setState({ browserPaths: parsed });
+  } catch (e) {
+    console.error("Failed to parse saved browser paths", e);
+  }
 }

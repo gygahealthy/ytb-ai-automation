@@ -29,7 +29,9 @@ function AppContent() {
           Done
         </button>
       ),
-      size: 'lg',
+      size: 'xl',
+      // allow Settings to render a sidebar layout inside the modal
+      contentClassName: '',
     });
   };
 

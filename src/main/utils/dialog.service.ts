@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog } from "electron";
 import * as fs from "fs";
 import * as path from "path";
+import { spawn } from "child_process";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const UserAgent = require("user-agents");
 
@@ -107,4 +108,105 @@ export async function selectBrowserExecutable() {
   });
 
   return result;
+}
+
+export async function showOpenDialog(options: Electron.OpenDialogOptions) {
+  const mainWindow = BrowserWindow.getAllWindows()[0];
+  if (!mainWindow) {
+    return { canceled: true, filePaths: [] } as Electron.OpenDialogReturnValue;
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, options);
+  return result;
+}
+
+export async function validateBrowserPath(browserPath: string): Promise<{
+  valid: boolean;
+  error?: string;
+  detectedName?: string;
+  version?: string;
+}> {
+  try {
+    // Check if file exists
+    if (!fs.existsSync(browserPath)) {
+      return { valid: false, error: "File does not exist" };
+    }
+
+    // Check if it's a file (not a directory)
+    const stats = fs.statSync(browserPath);
+    if (!stats.isFile()) {
+      return { valid: false, error: "Path is not a file" };
+    }
+
+    // Try to detect browser name from path
+    const fileName = path.basename(browserPath).toLowerCase();
+    let detectedName = "Browser";
+    
+    if (fileName.includes("chrome")) detectedName = "Chrome";
+    else if (fileName.includes("brave")) detectedName = "Brave";
+    else if (fileName.includes("edge")) detectedName = "Edge";
+    else if (fileName.includes("chromium")) detectedName = "Chromium";
+    else if (fileName.includes("opera")) detectedName = "Opera";
+    else if (fileName.includes("vivaldi")) detectedName = "Vivaldi";
+
+    // Try to get version by spawning with --version flag
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        // If version check times out, still return valid
+        resolve({
+          valid: true,
+          detectedName,
+          version: undefined,
+        });
+      }, 3000);
+
+      try {
+        const proc = spawn(browserPath, ["--version"]);
+        let output = "";
+
+        proc.stdout.on("data", (data) => {
+          output += data.toString();
+        });
+
+        proc.on("close", (code) => {
+          clearTimeout(timeout);
+          if (code === 0 && output) {
+            // Extract version from output (e.g., "Google Chrome 120.0.6099.109")
+            const versionMatch = output.match(/(\d+\.\d+\.\d+\.\d+)/);
+            resolve({
+              valid: true,
+              detectedName,
+              version: versionMatch ? versionMatch[1] : output.trim(),
+            });
+          } else {
+            resolve({
+              valid: true,
+              detectedName,
+              version: undefined,
+            });
+          }
+        });
+
+        proc.on("error", () => {
+          clearTimeout(timeout);
+          resolve({
+            valid: false,
+            error: "Could not execute browser",
+          });
+        });
+      } catch (e) {
+        clearTimeout(timeout);
+        resolve({
+          valid: true,
+          detectedName,
+          version: undefined,
+        });
+      }
+    });
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
