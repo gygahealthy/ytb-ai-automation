@@ -1,15 +1,17 @@
 import clsx from "clsx";
-import { Palette, Globe } from "lucide-react";
+import { Palette, Globe, Keyboard } from "lucide-react";
 import { useState } from "react";
 import GeneralSettings from "./GeneralSettings";
 import BrowsersSettings from "./BrowsersSettings";
+import KeyboardShortcutsSettings from "./KeyboardShortcutsSettings";
 import { useSettingsStore } from "../../store/settings.store";
 
-type SettingsSection = "general" | "browsers";
+type SettingsSection = "general" | "browsers" | "keyboard";
 
 const menuItems: { id: SettingsSection; label: string; icon: any }[] = [
   { id: "general", label: "General", icon: Palette },
   { id: "browsers", label: "Browsers", icon: Globe },
+  { id: "keyboard", label: "Keyboard Shortcuts", icon: Keyboard },
 ];
 
 export default function SettingsForm() {
@@ -89,6 +91,7 @@ export default function SettingsForm() {
 
           {activeSection === "general" && <GeneralSettings />}
           {activeSection === "browsers" && <BrowsersSettings onAdd={handleAddBrowser} />}
+          {activeSection === "keyboard" && <KeyboardShortcutsSettings />}
         </div>
       </div>
     </div>

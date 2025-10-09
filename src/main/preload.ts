@@ -104,6 +104,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     showOpenDialog: (options: any) => ipcRenderer.invoke("dialog:showOpenDialog", options),
   },
 
+  // DevTools APIs
+  devtools: {
+    toggle: () => ipcRenderer.send("devtools:toggle"),
+    open: () => ipcRenderer.send("devtools:open"),
+    close: () => ipcRenderer.send("devtools:close"),
+  },
+
   // Browser validation API
   validateBrowserPath: (path: string) => ipcRenderer.invoke("validateBrowserPath", path),
 

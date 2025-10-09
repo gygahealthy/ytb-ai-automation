@@ -8,6 +8,7 @@ import { useSettingsStore } from "./store/settings.store";
 import { AlertProvider } from './hooks/useAlert';
 import { ConfirmProvider } from './hooks/useConfirm';
 import { ModalProvider, useModal } from './hooks/useModal';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Settings } from 'lucide-react';
 
 export type Page = "dashboard" | "automation" | "automation.chat" | "automation.dashboard" | "profiles" | "history" | "admin";
@@ -15,6 +16,9 @@ export type Page = "dashboard" | "automation" | "automation.chat" | "automation.
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const modal = useModal();
+
+  // Initialize keyboard shortcuts listener
+  useKeyboardShortcuts();
 
   const handleSettingsClick = () => {
     modal.openModal({

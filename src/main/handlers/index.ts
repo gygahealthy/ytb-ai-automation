@@ -2,6 +2,7 @@ import { collectModuleRegistrations } from './module-loader';
 import { registerAll } from '../../core/ipc/registry';
 import { logger } from '../utils/logger-backend';
 import { IpcRegistration } from '../../core/ipc/types';
+import { registerDevToolsHandlers } from './devtools';
 
 /**
  * Register all IPC handlers
@@ -25,6 +26,9 @@ export function registerIPCHandlers(): void {
 
   // Register core ipc handlers via centralized registry
   registerAll(uniqueRegistrations, logger);
+
+  // Register devtools handlers
+  registerDevToolsHandlers();
 
   // master-prompts handlers are provided by the prompt-management module
 
