@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Archive, History, RotateCcw, Trash2, Clock } from 'lucide-react';
-import electronApi from '../../utils/electronApi';
+import { Save, Archive, History, RotateCcw, Trash2, Clock, Plus } from 'lucide-react';
+import electronApi from '../../ipc';
 import { useAlert } from '../../hooks/useAlert';
 import { useConfirm } from '../../hooks/useConfirm';
 
@@ -123,6 +123,7 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
   };
 
   const alertApi = useAlert();
+  const confirm = useConfirm();
 
   // Archive current prompt template to history
   const archiveCurrentVersion = async (changeNote?: string) => {
@@ -161,8 +162,7 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
 
   // Restore from history
   const restoreFromHistory = async (historyItem: any) => {
-    const confirmFn = useConfirm();
-    if (!(await confirmFn({ message: 'Restore this version? Current changes will be replaced.' }))) return;
+    if (!(await confirm({ message: 'Restore this version? Current changes will be replaced.' }))) return;
     
     setPrompt({
       ...prompt,
@@ -179,8 +179,7 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
 
   // Delete history entry
   const deleteHistoryEntry = async (historyId: number) => {
-    const confirmFn = useConfirm();
-    if (!(await confirmFn({ message: 'Delete this history entry?' }))) return;
+    if (!(await confirm({ message: 'Delete this history entry?' }))) return;
     
     try {
       const result = await electronApi.promptHistory.delete(historyId);
@@ -298,7 +297,7 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
                 <div className="flex flex-wrap gap-2 items-center">
                   {tags.map((t) => (
                     <span key={t} className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-gray-100 dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200">
-                      <span className="font-medium">{t}</span>
+                      <span className="font-medium truncate max-w-[10rem]">{t}</span>
                       <button
                         type="button"
                         onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
@@ -309,33 +308,80 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
                       </button>
                     </span>
                   ))}
-                  <input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
+                  <div className="flex flex-col gap-2 w-full">
+                    <input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        const inputVal = (e.target as HTMLInputElement).value;
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          const raw = inputVal.trim();
+                          if (!raw) return;
+                          const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+                          setTags((prev) => {
+                            const lower = new Set(prev.map(p => p.toLowerCase()));
+                            const merged = [...prev];
+                            for (const p of parts) {
+                              if (!lower.has(p.toLowerCase())) {
+                                merged.push(p);
+                                lower.add(p.toLowerCase());
+                              }
+                            }
+                            return merged;
+                          });
+                          setTagInput('');
+                        } else if (e.key === 'Backspace' && inputVal === '') {
+                          // remove last tag on backspace when input empty
+                          setTags((prev) => prev.slice(0, -1));
+                        }
+                      }}
+                      onPaste={(e) => {
+                        const paste = e.clipboardData.getData('text');
+                        if (!paste) return;
                         e.preventDefault();
+                        const parts = paste.split(',').map(p => p.trim()).filter(Boolean);
+                        setTags((prev) => {
+                          const lower = new Set(prev.map(p => p.toLowerCase()));
+                          const merged = [...prev];
+                          for (const p of parts) {
+                            if (!lower.has(p.toLowerCase())) {
+                              merged.push(p);
+                              lower.add(p.toLowerCase());
+                            }
+                          }
+                          return merged;
+                        });
+                        setTagInput('');
+                      }}
+                      placeholder="Add a tag and press Enter"
+                      className="w-full px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
                         const raw = tagInput.trim();
                         if (!raw) return;
                         const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
-                        setTags((prev) => Array.from(new Set([...prev, ...parts])));
+                        setTags((prev) => {
+                          const lower = new Set(prev.map(p => p.toLowerCase()));
+                          const merged = [...prev];
+                          for (const p of parts) {
+                            if (!lower.has(p.toLowerCase())) {
+                              merged.push(p);
+                              lower.add(p.toLowerCase());
+                            }
+                          }
+                          return merged;
+                        });
                         setTagInput('');
-                      } else if (e.key === 'Backspace' && tagInput === '') {
-                        // remove last tag on backspace when input empty
-                        setTags((prev) => prev.slice(0, -1));
-                      }
-                    }}
-                    onPaste={(e) => {
-                      const paste = e.clipboardData.getData('text');
-                      if (!paste) return;
-                      e.preventDefault();
-                      const parts = paste.split(',').map(p => p.trim()).filter(Boolean);
-                      setTags((prev) => Array.from(new Set([...prev, ...parts])));
-                      setTagInput('');
-                    }}
-                    placeholder="Add a tag and press Enter"
-                    className="flex-1 min-w-[120px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                      }}
+                      className="w-full flex items-center justify-center px-3 py-2 rounded-md bg-slate-100 dark:bg-slate-700 text-sm text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600"
+                      aria-label="Add tag"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Press Enter or comma to add. Click × to remove.</p>
               </div>
@@ -534,9 +580,9 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {detectedVariables.map((v) => (
-                    <div key={v.name} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={v.name} className="h-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-2">
                         <div className="font-mono text-sm font-semibold text-slate-900 dark:text-white break-all">
                           {v.name}
@@ -584,14 +630,13 @@ const PromptModal: React.FC<Props> = ({ open, onClose, onSave, onArchive, initia
             <Save className="w-4 h-4" /> Save
           </button>
           <button 
-            onClick={async () => {
+              onClick={async () => {
               // Archive: prefer dedicated handler if provided
               if (prompt.id && typeof onArchive === 'function') {
                 onArchive(prompt.id);
                 return;
               }
-              const confirmFn = useConfirm();
-              if (!(await confirmFn({ message: 'Archive this prompt?' }))) return;
+              if (!(await confirm({ message: 'Archive this prompt?' }))) return;
               const currentText = textareaRef.current ? textareaRef.current.value : prompt.promptTemplate;
               const finalPrompt = { ...prompt, promptTemplate: currentText, tags, archived: true };
               onSave(finalPrompt);
