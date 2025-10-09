@@ -65,8 +65,8 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
         </label>
       </div>
 
-      {/* Prompt Cards */}
-      <div className="space-y-3">
+  {/* Prompt Cards - responsive 3-up grid */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPrompts.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
             No prompts found
@@ -75,14 +75,14 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
           filteredPrompts.map((p, idx) => (
             <div
               key={p.id ?? idx}
-              className={`group relative bg-white dark:bg-slate-800 rounded-lg border transition-all duration-200 hover:shadow-md ${
+              className={`group relative bg-white dark:bg-slate-800 rounded-lg border transition-all duration-200 hover:shadow-md h-full flex flex-col ${
                 p.archived 
                   ? 'border-slate-200 dark:border-slate-700 opacity-60' 
                   : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
               }`}
             >
               {/* Card Content */}
-              <div className="p-4">
+              <div className="p-4 flex flex-col h-full">
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -140,7 +140,7 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
                 </div>
 
                 {/* Footer Row */}
-                <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-slate-700 mt-auto">
                   {/* Tags */}
                   <div className="flex items-center gap-1.5 flex-wrap flex-1">
                     {(p.tags || []).length > 0 ? (

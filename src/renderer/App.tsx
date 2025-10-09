@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import SettingsForm from "./components/SettingsForm";
+import SettingsForm from "./components/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
 import AppRoutes from './Routes';
 import { useSettingsStore } from "./store/settings.store";

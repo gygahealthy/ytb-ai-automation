@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Play, StopCircle, Plus } from "lucide-react";
 import clsx from "clsx";
-import electronApi from "../utils/electronApi";
+import electronApi from "../ipc";
 
 interface AutomationTask {
   id: string;

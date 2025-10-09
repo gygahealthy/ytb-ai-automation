@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import electronApi from '../../utils/electronApi';
+import electronApi from '../../ipc';
 import { useConfirm } from '../../hooks/useConfirm';
 import AdminPromptTable, { PromptRow } from '../../components/admin/AdminPromptTable';
 import PromptModal from '../../components/admin/PromptModal';

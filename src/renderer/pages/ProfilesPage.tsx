@@ -49,7 +49,7 @@ interface ColumnVisibility {
   loginStatus: boolean;
 }
 
-import electronApi from "../utils/electronApi";
+import electronApi from "../ipc";
 import { useAlert } from '../hooks/useAlert';
 import { useConfirm } from '../hooks/useConfirm';
 
