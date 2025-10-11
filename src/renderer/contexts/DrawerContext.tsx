@@ -55,6 +55,20 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
       },
     };
 
+    // Expose a secondary API specifically for profile drawer toggling so keyboard handler
+    // can call it directly. We dispatch a custom event so the page component can
+    // provide the actual drawer content (avoids wiring UI into this context).
+    (window as any).__veo3_profile_drawer_api = {
+      toggle: () => {
+        try {
+          window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
+        } catch (err) {
+          console.warn("[Drawer API] Failed to dispatch profile toggle event", err);
+        }
+      },
+      isOpen: () => isCurrentlyOpen,
+    };
+
     console.log("[Drawer API] API created and attached to window");
   }, []); // Empty deps - create only once
 

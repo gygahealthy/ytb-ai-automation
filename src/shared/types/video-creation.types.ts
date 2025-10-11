@@ -5,6 +5,7 @@ export interface Prompt {
   selected?: boolean;
   showPreview?: boolean;
   profileId?: string; // Override global profile for this specific prompt
+  projectId?: string; // Optional per-prompt project selection
   showProfileSelect?: boolean; // Toggle visibility of profile selector in row
 }
 

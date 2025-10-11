@@ -35,6 +35,22 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
       console.error("[Keyboard] Error toggling drawer:", err);
     }
   },
+  "toggle-profile-select": () => {
+    console.log("[Keyboard] Toggle Profile Selection triggered");
+    // Prefer calling the profile drawer API if the page registered it, otherwise fallback to custom event
+    try {
+      const api = (window as any).__veo3_profile_drawer_api;
+      if (api && typeof api.toggle === "function") {
+        api.toggle();
+        return;
+      }
+    } catch (err) {
+      console.warn("[Keyboard] profile drawer api not available", err);
+    }
+
+    // Fallback: dispatch event
+    window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
+  },
 };
 
 /**

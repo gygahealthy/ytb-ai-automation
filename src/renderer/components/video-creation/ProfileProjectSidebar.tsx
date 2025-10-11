@@ -2,6 +2,7 @@ import { ChevronRight, FolderKanban, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
+import useVeo3Store from "../../store/veo3.store";
 
 interface Profile {
   id: string;
@@ -50,6 +51,15 @@ export default function ProfileProjectSidebar({
     }
   }, [selectedProfileId]);
 
+  const handleProfileSelect = async (profileId: string) => {
+    onProfileChange(profileId);
+    if (!profileId) {
+      setProjects([]);
+      return;
+    }
+    await fetchProjects(profileId);
+  };
+
   const fetchProfiles = async () => {
     setLoading(true);
     try {
@@ -73,17 +83,40 @@ export default function ProfileProjectSidebar({
     setLoading(true);
     try {
       console.log(`[ProfileProjectSidebar] Fetching projects for profile: ${profileId}`);
-      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
-      if (response.success && response.data) {
-        // Transform VEO3 API projects to our Project interface
-        const transformedProjects = response.data.map((p: any) => ({
+
+      // Try cached projects first
+      const cached = useVeo3Store.getState().getProjectsForProfile(profileId);
+      if (cached) {
+        console.log(`[ProfileProjectSidebar] Using cached projects for profile: ${profileId}`);
+        const transformedProjects = cached.map((p: any) => ({
           id: p.projectId || p.id,
-          name: p.title || p.projectTitle || p.name,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          description: p.description || "",
+        }));
+        setProjects(transformedProjects);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch via IPC (will use backend API client)
+      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
+      if (response && response.success) {
+        // response.data should be an array of projects (veo3Service returns projects[])
+        const projectsArr = Array.isArray(response.data)
+          ? response.data
+          : response.data?.projects || response.data?.result?.projects || [];
+
+        // Cache results
+        useVeo3Store.getState().setProjectsForProfile(profileId, projectsArr);
+
+        const transformedProjects = projectsArr.map((p: any) => ({
+          id: p.projectId || p.id,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
           description: p.description || "",
         }));
         setProjects(transformedProjects);
       } else {
-        console.error("[ProfileProjectSidebar] Failed to fetch projects:", response.error);
+        console.error("[ProfileProjectSidebar] Failed to fetch projects:", response?.error);
         setProjects([]);
       }
     } catch (error) {
@@ -120,7 +153,7 @@ export default function ProfileProjectSidebar({
           </label>
           <select
             value={selectedProfileId || ""}
-            onChange={(e) => onProfileChange(e.target.value)}
+            onChange={(e) => void handleProfileSelect(e.target.value)}
             disabled={loading}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >

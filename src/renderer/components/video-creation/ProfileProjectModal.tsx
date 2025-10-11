@@ -2,6 +2,7 @@ import { Check, FolderKanban, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
+import useVeo3Store from "../../store/veo3.store";
 
 interface Profile {
   id: string;
@@ -76,17 +77,37 @@ export default function ProfileProjectModal({
     setLoading(true);
     try {
       console.log(`[ProfileProjectModal] Fetching projects for profile: ${profileId}`);
-      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
-      if (response.success && response.data) {
-        // Transform VEO3 API projects to our Project interface
-        const transformedProjects = response.data.map((p: any) => ({
+
+      // Try cached projects first
+      const cached = useVeo3Store.getState().getProjectsForProfile(profileId);
+      if (cached) {
+        console.log(`[ProfileProjectModal] Using cached projects for profile: ${profileId}`);
+        const transformedProjects = cached.map((p: any) => ({
           id: p.projectId || p.id,
-          name: p.title || p.projectTitle || p.name,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          description: p.description || "",
+        }));
+        setProjects(transformedProjects);
+        setLoading(false);
+        return;
+      }
+
+      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
+      if (response && response.success) {
+        const projectsArr = Array.isArray(response.data)
+          ? response.data
+          : response.data?.projects || response.data?.result?.projects || [];
+        // Cache
+        useVeo3Store.getState().setProjectsForProfile(profileId, projectsArr);
+
+        const transformedProjects = projectsArr.map((p: any) => ({
+          id: p.projectId || p.id,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
           description: p.description || "",
         }));
         setProjects(transformedProjects);
       } else {
-        console.error("[ProfileProjectModal] Failed to fetch projects:", response.error);
+        console.error("[ProfileProjectModal] Failed to fetch projects:", response?.error);
         setProjects([]);
       }
     } catch (error) {

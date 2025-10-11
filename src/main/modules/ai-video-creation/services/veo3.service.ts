@@ -1,8 +1,7 @@
-import { veo3Repository } from "../../../storage/database";
-import { profileRepository } from "../../../storage/database";
 import { ApiResponse } from "../../../../shared/types";
 import { Logger } from "../../../../shared/utils/logger";
 import { StringUtil } from "../../../../shared/utils/string";
+import { profileRepository, veo3Repository } from "../../../storage/database";
 import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
 import { veo3ApiClient } from "./veo3-api.client";
 
@@ -214,14 +213,14 @@ export class VEO3Service {
 
       // Call VEO3 API to list projects
       const result = await veo3ApiClient.listProjects(profile.cookies);
-      
+
       if (!result.success) {
         return { success: false, error: result.error || "Failed to fetch projects from VEO3 API" };
       }
 
       // Extract projects array from response
       const projects = result.data?.projects || [];
-      
+
       logger.info(`Fetched ${projects.length} projects from VEO3 API`);
       return { success: true, data: projects };
     } catch (error) {
@@ -235,10 +234,7 @@ export class VEO3Service {
    * @param profileId - Profile ID to get cookies from
    * @param projectTitle - Title for the new project
    */
-  async createProjectViaAPI(
-    profileId: string,
-    projectTitle: string
-  ): Promise<ApiResponse<any>> {
+  async createProjectViaAPI(profileId: string, projectTitle: string): Promise<ApiResponse<any>> {
     try {
       // Get profile to retrieve cookies
       const profile = await profileRepository.findById(profileId);
@@ -263,7 +259,7 @@ export class VEO3Service {
 
       // Call VEO3 API to create project
       const result = await veo3ApiClient.createProject(profile.cookies, projectTitle);
-      
+
       if (!result.success) {
         return { success: false, error: result.error || "Failed to create project via VEO3 API" };
       }

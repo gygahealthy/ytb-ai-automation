@@ -1,12 +1,20 @@
 import { Archive, CheckCircle2, Eye, EyeOff, Info, Play, User, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import profileIPC from "../../ipc/profile";
+import veo3IPC from "../../ipc/veo3";
+import useVeo3Store from "../../store/veo3.store";
 import { Prompt, VideoCreationJob } from "../../types/video-creation.types";
 
 interface Profile {
   id: string;
   name: string;
   isLoggedIn?: boolean;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 interface PromptRowProps {
@@ -43,7 +51,9 @@ export default function PromptRow({
   onProfileChange,
 }: PromptRowProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
+  const veo3Store = useVeo3Store();
 
   const isValid = prompt.text.trim().length > 0;
   // Per-row preview: independent toggle even in global mode
@@ -61,6 +71,15 @@ export default function PromptRow({
     }
   }, [prompt.showProfileSelect]);
 
+  // Fetch projects when profile changes
+  useEffect(() => {
+    if (prompt.showProfileSelect && effectiveProfileId) {
+      fetchProjects(effectiveProfileId);
+    } else {
+      setProjects([]);
+    }
+  }, [prompt.showProfileSelect, effectiveProfileId]);
+
   const fetchProfiles = async () => {
     setLoading(true);
     try {
@@ -75,6 +94,43 @@ export default function PromptRow({
     } catch (error) {
       console.error("[PromptRow] Failed to fetch profiles", error);
       setProfiles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProjects = async (profileId: string) => {
+    setLoading(true);
+    try {
+      console.log(`[PromptRow] Fetching projects for profile: ${profileId}`);
+      // Check cache first
+      const cached = veo3Store.getProjectsForProfile(profileId);
+      if (cached) {
+        const transformedProjects = cached.map((p: any) => ({
+          id: p.projectId || p.id,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          description: p.description || "",
+        }));
+        setProjects(transformedProjects);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch from API
+      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
+      if (response && response.success) {
+        const projectsArr = Array.isArray(response.data) ? response.data : response.data?.projects || [];
+        veo3Store.setProjectsForProfile(profileId, projectsArr);
+        const transformedProjects = projectsArr.map((p: any) => ({
+          id: p.projectId || p.id,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          description: p.description || "",
+        }));
+        setProjects(transformedProjects);
+      }
+    } catch (error) {
+      console.error("[PromptRow] Failed to fetch projects", error);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -270,30 +326,61 @@ export default function PromptRow({
           {/* Header */}
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-300 dark:border-gray-600">
             <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Profile</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Profile & Project</h4>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto space-y-3">
-            {/* Profile Select */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Select Profile</label>
-              <select
-                value={prompt.profileId || ""}
-                onChange={(e) => onProfileChange(prompt.id, e.target.value)}
-                disabled={loading}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-              >
-                <option value="">-- Use Global Profile --</option>
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name} {profile.isLoggedIn ? "✓" : ""}
-                  </option>
-                ))}
-              </select>
-              {profiles.length === 0 && !loading && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">No profiles found.</p>
-              )}
+            {/* Compact Profile + Project Row */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <div className="relative">
+                  <select
+                    value={prompt.profileId || ""}
+                    onChange={(e) => onProfileChange(prompt.id, e.target.value)}
+                    disabled={loading}
+                    className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    title="Select profile (per-row)"
+                  >
+                    <option value="">Use Global Profile</option>
+                    {profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">{loading ? "..." : ""}</div>
+                </div>
+              </div>
+
+              <div className="w-1/2">
+                <div className="relative">
+                  <select
+                    value={prompt.projectId || ""}
+                    onChange={(e) => {
+                      const projectId = e.target.value;
+                      // update store per-row
+                      try {
+                        // import action at runtime
+                        const store = require("../../store/video-creation.store").useVideoCreationStore;
+                        store.getState().updatePromptProject(prompt.id, projectId);
+                      } catch (err) {
+                        console.error("Failed to update prompt project", err);
+                      }
+                    }}
+                    disabled={!effectiveProfileId || loading || projects.length === 0}
+                    className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    title="Select project (per-row)"
+                  >
+                    <option value="">Select Project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* Info Box */}
@@ -303,11 +390,11 @@ export default function PromptRow({
               </div>
             ) : effectiveProfileId ? (
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                <p className="text-xs text-blue-800 dark:text-blue-200">Using global profile from toolbar</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">Using global profile</p>
               </div>
             ) : (
               <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
-                <p className="text-xs text-yellow-800 dark:text-yellow-200">⚠ No profile selected</p>
+                <p className="text-xs text-yellow-800 dark:text-yellow-200">⚠ No profile selected. Use Ctrl+F</p>
               </div>
             )}
 

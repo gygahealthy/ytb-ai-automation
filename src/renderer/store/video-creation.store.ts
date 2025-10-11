@@ -137,6 +137,11 @@ export const useVideoCreationStore = create<VideoCreationStore>((set, get) => ({
       prompts: get().prompts.map((p) => (p.id === id ? { ...p, profileId: profileId || undefined } : p)),
     });
   },
+  updatePromptProject: (id: string, projectId: string) => {
+    set({
+      prompts: get().prompts.map((p) => (p.id === id ? { ...p, projectId: projectId || undefined } : p)),
+    });
+  },
 
   selectAllPrompts: () => {
     set({

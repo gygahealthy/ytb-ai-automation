@@ -1,14 +1,14 @@
-import { History, Plus, User, Video } from "lucide-react";
+import { FolderKanban, History, Plus, User, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
 import JobDetailsModal from "../../components/video-creation/JobDetailsModal";
 import JsonToolbar from "../../components/video-creation/JsonToolbar";
-import ProfileProjectModal from "../../components/video-creation/ProfileProjectModal";
-import ProfileProjectSidebar from "../../components/video-creation/ProfileProjectSidebar";
 import PromptRow from "../../components/video-creation/PromptRow";
 import { useDrawer } from "../../contexts/DrawerContext";
 import profileIPC from "../../ipc/profile";
+import veo3IPC from "../../ipc/veo3";
+import useVeo3Store from "../../store/veo3.store";
 import { useVideoCreationStore } from "../../store/video-creation.store";
 
 export default function SingleVideoCreationPage() {
@@ -17,13 +17,11 @@ export default function SingleVideoCreationPage() {
   const [draftName, setDraftName] = useState("");
   const [showSaveDraftDialog, setShowSaveDraftDialog] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [selectedProfileName, setSelectedProfileName] = useState<string>("");
 
-  const { openDrawer } = useDrawer();
+  const { openDrawer, closeDrawer } = useDrawer();
+  const veo3Store = useVeo3Store();
 
   const {
     prompts,
@@ -70,6 +68,16 @@ export default function SingleVideoCreationPage() {
     return job?.status === statusFilter;
   });
 
+  // Listen for custom event to toggle profile drawer
+  useEffect(() => {
+    const handleToggleProfileDrawer = () => {
+      handleOpenProfileDrawer();
+    };
+
+    window.addEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
+    return () => window.removeEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
+  }, [selectedProfileId, selectedProjectId]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,9 +88,6 @@ export default function SingleVideoCreationPage() {
         } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
           e.preventDefault();
           redo();
-        } else if (e.key === "d") {
-          e.preventDefault();
-          handleOpenHistory();
         }
       }
     };
@@ -106,6 +111,40 @@ export default function SingleVideoCreationPage() {
     const success = loadFromJson(jsonString, "add");
     return success;
   };
+
+  // Register a profile drawer API that uses the real ProfileDrawerContent so shortcuts can open it
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const api = (window as any).__veo3_drawer_api;
+    (window as any).__veo3_profile_drawer_api = {
+      toggle: () => {
+        try {
+          if (api && typeof api.toggle === "function") {
+            api.toggle({
+              title: "Profile & Project Selection",
+              icon: <User className="w-5 h-5" />,
+              children: <ProfileDrawerContent />,
+            });
+          } else {
+            // fallback to dispatch event
+            window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
+          }
+        } catch (err) {
+          console.error("[Profile API] Failed to toggle profile drawer", err);
+          window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
+        }
+      },
+      isOpen: () => (api && typeof api.isOpen === "function" ? api.isOpen() : false),
+    };
+
+    return () => {
+      try {
+        delete (window as any).__veo3_profile_drawer_api;
+      } catch (e) {
+        /* ignore */
+      }
+    };
+  }, [selectedProfileId, selectedProjectId]);
 
   const handleCreateMultiple = () => {
     const input = window.prompt("How many prompts would you like to create?", "5");
@@ -241,26 +280,151 @@ export default function SingleVideoCreationPage() {
     });
   };
 
-  const handleProfileSelect = async (profileId: string, projectId?: string) => {
-    setSelectedProfileId(profileId);
-    setSelectedProjectId(projectId || "");
+  const handleOpenProfileDrawer = () => {
+    openDrawer({
+      title: "Profile & Project Selection",
+      icon: <User className="w-5 h-5" />,
+      children: <ProfileDrawerContent />,
+    });
+  };
 
-    // Fetch profile name from IPC
-    try {
-      const response = await profileIPC.getAll();
-      if (response.success && response.data) {
-        const profile = response.data.find((p: any) => p.id === profileId);
-        if (profile) {
-          setSelectedProfileName(profile.name);
-          console.log(`[SingleVideoCreationPage] Selected profile: ${profile.name} (${profileId}), project: ${projectId}`);
-        } else {
-          setSelectedProfileName("Unknown Profile");
-        }
+  const ProfileDrawerContent = () => {
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [localProfileId, setLocalProfileId] = useState(selectedProfileId);
+    const [localProjectId, setLocalProjectId] = useState(selectedProjectId);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      fetchProfiles();
+    }, []);
+
+    useEffect(() => {
+      if (localProfileId) {
+        fetchProjects(localProfileId);
+      } else {
+        setProjects([]);
       }
-    } catch (error) {
-      console.error("[SingleVideoCreationPage] Failed to fetch profile name", error);
-      setSelectedProfileName("Profile " + profileId.substring(0, 8));
-    }
+    }, [localProfileId]);
+
+    const fetchProfiles = async () => {
+      setLoading(true);
+      try {
+        const response = await profileIPC.getAll();
+        if (response.success && response.data) {
+          setProfiles(response.data);
+        }
+      } catch (error) {
+        console.error("[ProfileDrawer] Failed to fetch profiles", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchProjects = async (profileId: string) => {
+      setLoading(true);
+      try {
+        // Check cache first
+        const cached = veo3Store.getProjectsForProfile(profileId);
+        if (cached) {
+          const transformedProjects = cached.map((p: any) => ({
+            id: p.projectId || p.id,
+            name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+            description: p.description || "",
+          }));
+          setProjects(transformedProjects);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch from API
+        const response = await veo3IPC.fetchProjectsFromAPI(profileId);
+        if (response && response.success) {
+          const projectsArr = Array.isArray(response.data) ? response.data : response.data?.projects || [];
+          veo3Store.setProjectsForProfile(profileId, projectsArr);
+          const transformedProjects = projectsArr.map((p: any) => ({
+            id: p.projectId || p.id,
+            name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+            description: p.description || "",
+          }));
+          setProjects(transformedProjects);
+        }
+      } catch (error) {
+        console.error("[ProfileDrawer] Failed to fetch projects", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleApply = () => {
+      setSelectedProfileId(localProfileId);
+      setSelectedProjectId(localProjectId);
+      closeDrawer();
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Profile Selection */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <User className="w-4 h-4" />
+            <span>Select Profile</span>
+          </label>
+          <select
+            value={localProfileId}
+            onChange={(e) => setLocalProfileId(e.target.value)}
+            disabled={loading}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+          >
+            <option value="">-- Select Profile --</option>
+            {profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} {profile.isLoggedIn ? "✓" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Project Selection */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <FolderKanban className="w-4 h-4" />
+            <span>Select Project</span>
+          </label>
+          <select
+            value={localProjectId}
+            onChange={(e) => setLocalProjectId(e.target.value)}
+            disabled={!localProfileId || loading}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+          >
+            <option value="">-- Select Project --</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          {!localProfileId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Select a profile first</p>}
+        </div>
+
+        {/* Info Box */}
+        {localProfileId && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-900 dark:text-blue-100">
+              This profile and project will be used globally for all video creation unless overridden per-row.
+            </p>
+          </div>
+        )}
+
+        {/* Apply Button */}
+        <button
+          onClick={handleApply}
+          className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium"
+        >
+          Apply Selection
+        </button>
+      </div>
+    );
   };
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
@@ -276,16 +440,15 @@ export default function SingleVideoCreationPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowProfileSidebar(!showProfileSidebar)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                showProfileSidebar
-                  ? "bg-primary-500 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+              onClick={handleOpenProfileDrawer}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${
+                selectedProfileId
+                  ? "bg-primary-50 text-primary-700 border-primary-200"
+                  : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
               }`}
-              title="Toggle profile & project sidebar"
+              title="Select profile & project (Ctrl+F)"
             >
               <User className="w-5 h-5" />
-              <span>Profile</span>
             </button>
             <button
               onClick={handleOpenHistory}
@@ -298,101 +461,79 @@ export default function SingleVideoCreationPage() {
         </div>
       </div>
 
-      {/* Main Content with optional sidebar */}
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Toolbar */}
-          <div className="mb-4">
-            <JsonToolbar
-              canUndo={canUndo()}
-              canRedo={canRedo()}
-              hasSelection={hasSelection}
-              allSelected={allSelected}
-              globalPreviewMode={globalPreviewMode}
-              statusFilter={statusFilter}
-              selectedProfileName={selectedProfileName}
-              onUndo={undo}
-              onRedo={redo}
-              onAddJson={() => setShowAddJsonModal(true)}
-              onToggleSelectAll={toggleAllSelections}
-              onRemoveSelected={removeSelectedPrompts}
-              onClearAll={clearAllPrompts}
-              onSaveDraft={handleSaveDraft}
-              onLoadDraft={() => setShowDraftManager(true)}
-              onExportJson={handleExportJson}
-              onCopyJson={handleCopyJson}
-              onToggleGlobalPreview={toggleGlobalPreview}
-              onStatusFilterChange={setStatusFilter}
-              onCreateMultiple={handleCreateMultiple}
-              onSelectProfile={() => setShowProfileModal(true)}
-            />
-          </div>
-
-          {/* Add Prompt Button */}
-          <div className="mb-4">
-            <button
-              onClick={addPrompt}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-500 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">Add New Prompt</span>
-            </button>
-          </div>
-
-          {/* Prompts List */}
-          <div className="space-y-3">
-            {filteredPrompts.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                <p>No prompts match the current filter</p>
-              </div>
-            ) : (
-              filteredPrompts.map((prompt, index) => {
-                const job = jobs.find((j) => j.promptId === prompt.id);
-                return (
-                  <PromptRow
-                    key={prompt.id}
-                    prompt={prompt}
-                    index={index}
-                    canDelete={prompts.length > 1}
-                    globalPreviewMode={globalPreviewMode}
-                    globalProfileId={selectedProfileId}
-                    job={job}
-                    onUpdate={updatePrompt}
-                    onDelete={removePrompt}
-                    onToggleSelect={togglePromptSelection}
-                    onTogglePreview={togglePromptPreview}
-                    onCreate={handleCreateVideo}
-                    onShowInfo={handleShowInfo}
-                    onToggleProfileSelect={togglePromptProfileSelect}
-                    onProfileChange={updatePromptProfile}
-                  />
-                );
-              })
-            )}
-          </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {/* Toolbar */}
+        <div className="mb-4">
+          <JsonToolbar
+            canUndo={canUndo()}
+            canRedo={canRedo()}
+            hasSelection={hasSelection}
+            allSelected={allSelected}
+            globalPreviewMode={globalPreviewMode}
+            statusFilter={statusFilter}
+            onUndo={undo}
+            onRedo={redo}
+            onAddJson={() => setShowAddJsonModal(true)}
+            onToggleSelectAll={toggleAllSelections}
+            onRemoveSelected={removeSelectedPrompts}
+            onClearAll={clearAllPrompts}
+            onSaveDraft={handleSaveDraft}
+            onLoadDraft={() => setShowDraftManager(true)}
+            onExportJson={handleExportJson}
+            onCopyJson={handleCopyJson}
+            onToggleGlobalPreview={toggleGlobalPreview}
+            onStatusFilterChange={setStatusFilter}
+            onCreateMultiple={handleCreateMultiple}
+          />
         </div>
 
-        {/* Profile & Project Sidebar */}
-        <ProfileProjectSidebar
-          isOpen={showProfileSidebar}
-          onClose={() => setShowProfileSidebar(false)}
-          selectedProfileId={selectedProfileId}
-          selectedProjectId={selectedProjectId}
-          onProfileChange={setSelectedProfileId}
-          onProjectChange={setSelectedProjectId}
-        />
+        {/* Add Prompt Button */}
+        <div className="mb-4">
+          <button
+            onClick={addPrompt}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-500 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="font-medium">Add New Prompt</span>
+          </button>
+        </div>
+
+        {/* Prompts List */}
+        <div className="space-y-3">
+          {filteredPrompts.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <p>No prompts match the current filter</p>
+            </div>
+          ) : (
+            filteredPrompts.map((prompt, index) => {
+              const job = jobs.find((j) => j.promptId === prompt.id);
+              return (
+                <PromptRow
+                  key={prompt.id}
+                  prompt={prompt}
+                  index={index}
+                  canDelete={prompts.length > 1}
+                  globalPreviewMode={globalPreviewMode}
+                  globalProfileId={selectedProfileId}
+                  job={job}
+                  onUpdate={updatePrompt}
+                  onDelete={removePrompt}
+                  onToggleSelect={togglePromptSelection}
+                  onTogglePreview={togglePromptPreview}
+                  onCreate={handleCreateVideo}
+                  onShowInfo={handleShowInfo}
+                  onToggleProfileSelect={togglePromptProfileSelect}
+                  onProfileChange={updatePromptProfile}
+                />
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Modals */}
       <AddJsonModal isOpen={showAddJsonModal} onClose={() => setShowAddJsonModal(false)} onAdd={handleAddJson} />
-
-      <ProfileProjectModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        initialProfileId={selectedProfileId}
-        initialProjectId={selectedProjectId}
-        onConfirm={handleProfileSelect}
-      />
 
       <JobDetailsModal
         job={selectedJob}
