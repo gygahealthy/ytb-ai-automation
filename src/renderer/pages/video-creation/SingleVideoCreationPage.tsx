@@ -1,11 +1,14 @@
-import { History, Plus, Video } from "lucide-react";
+import { History, Plus, User, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
 import JobDetailsModal from "../../components/video-creation/JobDetailsModal";
 import JsonToolbar from "../../components/video-creation/JsonToolbar";
+import ProfileProjectModal from "../../components/video-creation/ProfileProjectModal";
+import ProfileProjectSidebar from "../../components/video-creation/ProfileProjectSidebar";
 import PromptRow from "../../components/video-creation/PromptRow";
 import { useDrawer } from "../../contexts/DrawerContext";
+import profileIPC from "../../ipc/profile";
 import { useVideoCreationStore } from "../../store/video-creation.store";
 
 export default function SingleVideoCreationPage() {
@@ -14,6 +17,11 @@ export default function SingleVideoCreationPage() {
   const [draftName, setDraftName] = useState("");
   const [showSaveDraftDialog, setShowSaveDraftDialog] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProfileName, setSelectedProfileName] = useState<string>("");
 
   const { openDrawer } = useDrawer();
 
@@ -28,6 +36,8 @@ export default function SingleVideoCreationPage() {
     updatePrompt,
     togglePromptSelection,
     togglePromptPreview,
+    togglePromptProfileSelect,
+    updatePromptProfile,
     toggleAllSelections,
     removeSelectedPrompts,
     clearAllPrompts,
@@ -175,15 +185,15 @@ export default function SingleVideoCreationPage() {
       icon: <History className="w-5 h-5" />,
       children: (
         <div className="space-y-3">
-              {jobs.length === 0 ? (
+          {jobs.length === 0 ? (
             <div className="text-center py-12">
-                  <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">No videos created yet</p>
-                </div>
-              ) : (
-                jobs.map((job) => (
-                  <div
-                    key={job.id}
+              <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">No videos created yet</p>
+            </div>
+          ) : (
+            jobs.map((job) => (
+              <div
+                key={job.id}
                 onClick={() => {
                   setSelectedJobId(job.id);
                 }}
@@ -194,20 +204,20 @@ export default function SingleVideoCreationPage() {
                     <Video className="w-4 h-4 text-primary-500" />
                     <span className="font-medium text-gray-900 dark:text-white text-sm">Video Job</span>
                   </div>
-                          <span
+                  <span
                     className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                              job.status === "completed"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                : job.status === "processing"
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                : job.status === "failed"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400"
-                            }`}
-                          >
-                            {job.status}
-                          </span>
-                        </div>
+                      job.status === "completed"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : job.status === "processing"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        : job.status === "failed"
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+                    }`}
+                  >
+                    {job.status}
+                  </span>
+                </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{job.promptText}</p>
 
@@ -215,20 +225,42 @@ export default function SingleVideoCreationPage() {
                   <div className="mb-3">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                       <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
-                      </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{job.progress}% complete</p>
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{job.progress}% complete</p>
+                  </div>
                 )}
 
                 {job.error && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{job.error}</p>}
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{new Date(job.createdAt).toLocaleString()}</p>
-                  </div>
-                ))
-              )}
-            </div>
+              </div>
+            ))
+          )}
+        </div>
       ),
     });
+  };
+
+  const handleProfileSelect = async (profileId: string, projectId?: string) => {
+    setSelectedProfileId(profileId);
+    setSelectedProjectId(projectId || "");
+
+    // Fetch profile name from IPC
+    try {
+      const response = await profileIPC.getAll();
+      if (response.success && response.data) {
+        const profile = response.data.find((p: any) => p.id === profileId);
+        if (profile) {
+          setSelectedProfileName(profile.name);
+          console.log(`[SingleVideoCreationPage] Selected profile: ${profile.name} (${profileId}), project: ${projectId}`);
+        } else {
+          setSelectedProfileName("Unknown Profile");
+        }
+      }
+    } catch (error) {
+      console.error("[SingleVideoCreationPage] Failed to fetch profile name", error);
+      setSelectedProfileName("Profile " + profileId.substring(0, 8));
+    }
   };
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
@@ -242,86 +274,125 @@ export default function SingleVideoCreationPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Single Video Creation</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Create videos using single or multiple prompts</p>
           </div>
-          <button
-            onClick={handleOpenHistory}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
-          >
-            <History className="w-5 h-5" />
-            <span>History ({jobs.length})</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowProfileSidebar(!showProfileSidebar)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                showProfileSidebar
+                  ? "bg-primary-500 text-white"
+                  : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+              }`}
+              title="Toggle profile & project sidebar"
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={handleOpenHistory}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+            >
+              <History className="w-5 h-5" />
+              <span>History ({jobs.length})</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Toolbar */}
-        <div className="mb-4">
-          <JsonToolbar
-            canUndo={canUndo()}
-            canRedo={canRedo()}
-            hasSelection={hasSelection}
-            allSelected={allSelected}
-            globalPreviewMode={globalPreviewMode}
-            statusFilter={statusFilter}
-            onUndo={undo}
-            onRedo={redo}
-            onAddJson={() => setShowAddJsonModal(true)}
-            onToggleSelectAll={toggleAllSelections}
-            onRemoveSelected={removeSelectedPrompts}
-            onClearAll={clearAllPrompts}
-            onSaveDraft={handleSaveDraft}
-            onLoadDraft={() => setShowDraftManager(true)}
-            onExportJson={handleExportJson}
-            onCopyJson={handleCopyJson}
-            onToggleGlobalPreview={toggleGlobalPreview}
-            onStatusFilterChange={setStatusFilter}
-            onCreateMultiple={handleCreateMultiple}
-          />
+      {/* Main Content with optional sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Toolbar */}
+          <div className="mb-4">
+            <JsonToolbar
+              canUndo={canUndo()}
+              canRedo={canRedo()}
+              hasSelection={hasSelection}
+              allSelected={allSelected}
+              globalPreviewMode={globalPreviewMode}
+              statusFilter={statusFilter}
+              selectedProfileName={selectedProfileName}
+              onUndo={undo}
+              onRedo={redo}
+              onAddJson={() => setShowAddJsonModal(true)}
+              onToggleSelectAll={toggleAllSelections}
+              onRemoveSelected={removeSelectedPrompts}
+              onClearAll={clearAllPrompts}
+              onSaveDraft={handleSaveDraft}
+              onLoadDraft={() => setShowDraftManager(true)}
+              onExportJson={handleExportJson}
+              onCopyJson={handleCopyJson}
+              onToggleGlobalPreview={toggleGlobalPreview}
+              onStatusFilterChange={setStatusFilter}
+              onCreateMultiple={handleCreateMultiple}
+              onSelectProfile={() => setShowProfileModal(true)}
+            />
+          </div>
+
+          {/* Add Prompt Button */}
+          <div className="mb-4">
+            <button
+              onClick={addPrompt}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-500 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Add New Prompt</span>
+            </button>
+          </div>
+
+          {/* Prompts List */}
+          <div className="space-y-3">
+            {filteredPrompts.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <p>No prompts match the current filter</p>
+              </div>
+            ) : (
+              filteredPrompts.map((prompt, index) => {
+                const job = jobs.find((j) => j.promptId === prompt.id);
+                return (
+                  <PromptRow
+                    key={prompt.id}
+                    prompt={prompt}
+                    index={index}
+                    canDelete={prompts.length > 1}
+                    globalPreviewMode={globalPreviewMode}
+                    globalProfileId={selectedProfileId}
+                    job={job}
+                    onUpdate={updatePrompt}
+                    onDelete={removePrompt}
+                    onToggleSelect={togglePromptSelection}
+                    onTogglePreview={togglePromptPreview}
+                    onCreate={handleCreateVideo}
+                    onShowInfo={handleShowInfo}
+                    onToggleProfileSelect={togglePromptProfileSelect}
+                    onProfileChange={updatePromptProfile}
+                  />
+                );
+              })
+            )}
+          </div>
         </div>
 
-        {/* Add Prompt Button */}
-        <div className="mb-4">
-              <button
-            onClick={addPrompt}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-500 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-              >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Add New Prompt</span>
-              </button>
-            </div>
-
-        {/* Prompts List */}
-        <div className="space-y-3">
-          {filteredPrompts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p>No prompts match the current filter</p>
-                    </div>
-          ) : (
-            filteredPrompts.map((prompt, index) => {
-              const job = jobs.find((j) => j.promptId === prompt.id);
-              return (
-                <PromptRow
-                  key={prompt.id}
-                  prompt={prompt}
-                  index={index}
-                  canDelete={prompts.length > 1}
-                  globalPreviewMode={globalPreviewMode}
-                  job={job}
-                  onUpdate={updatePrompt}
-                  onDelete={removePrompt}
-                  onToggleSelect={togglePromptSelection}
-                  onTogglePreview={togglePromptPreview}
-                  onCreate={handleCreateVideo}
-                  onShowInfo={handleShowInfo}
-                />
-              );
-            })
-          )}
-                </div>
-              </div>
+        {/* Profile & Project Sidebar */}
+        <ProfileProjectSidebar
+          isOpen={showProfileSidebar}
+          onClose={() => setShowProfileSidebar(false)}
+          selectedProfileId={selectedProfileId}
+          selectedProjectId={selectedProjectId}
+          onProfileChange={setSelectedProfileId}
+          onProjectChange={setSelectedProjectId}
+        />
+      </div>
 
       {/* Modals */}
       <AddJsonModal isOpen={showAddJsonModal} onClose={() => setShowAddJsonModal(false)} onAdd={handleAddJson} />
+
+      <ProfileProjectModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        initialProfileId={selectedProfileId}
+        initialProjectId={selectedProjectId}
+        onConfirm={handleProfileSelect}
+      />
 
       <JobDetailsModal
         job={selectedJob}

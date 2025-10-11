@@ -1,4 +1,19 @@
-import { CheckSquare, Copy, Eye, EyeOff, FileDown, FileUp, Filter, Plus, Redo, Save, Square, Trash2, Undo } from "lucide-react";
+import {
+  CheckSquare,
+  Copy,
+  Eye,
+  EyeOff,
+  FileDown,
+  FileUp,
+  Filter,
+  Plus,
+  Redo,
+  Save,
+  Square,
+  Trash2,
+  Undo,
+  User,
+} from "lucide-react";
 
 interface JsonToolbarProps {
   canUndo: boolean;
@@ -7,6 +22,7 @@ interface JsonToolbarProps {
   allSelected: boolean;
   globalPreviewMode: boolean;
   statusFilter: "all" | "idle" | "processing" | "completed" | "failed";
+  selectedProfileName?: string;
   onUndo: () => void;
   onRedo: () => void;
   onAddJson: () => void;
@@ -20,6 +36,7 @@ interface JsonToolbarProps {
   onToggleGlobalPreview: () => void;
   onStatusFilterChange: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
   onCreateMultiple?: () => void;
+  onSelectProfile: () => void;
 }
 
 export default function JsonToolbar({
@@ -29,6 +46,7 @@ export default function JsonToolbar({
   allSelected,
   globalPreviewMode,
   statusFilter,
+  selectedProfileName,
   onUndo,
   onRedo,
   onAddJson,
@@ -42,10 +60,27 @@ export default function JsonToolbar({
   onToggleGlobalPreview,
   onStatusFilterChange,
   onCreateMultiple,
+  onSelectProfile,
 }: JsonToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-700">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
       <div className="flex flex-wrap items-center gap-2">
+        {/* Profile Selection */}
+        <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
+          <button
+            onClick={onSelectProfile}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border transition-colors text-sm ${
+              selectedProfileName
+                ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700"
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
+            }`}
+            title="Select profile and project for video creation"
+          >
+            <User className="w-4 h-4" />
+            <span>{selectedProfileName || "Select Profile"}</span>
+          </button>
+        </div>
+
         {/* JSON Operations */}
         <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
           <button

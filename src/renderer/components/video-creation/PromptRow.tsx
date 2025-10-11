@@ -1,11 +1,20 @@
-import { Archive, CheckCircle2, Eye, EyeOff, Info, Play, Video } from "lucide-react";
+import { Archive, CheckCircle2, Eye, EyeOff, Info, Play, User, Video } from "lucide-react";
+import { useEffect, useState } from "react";
+import profileIPC from "../../ipc/profile";
 import { Prompt, VideoCreationJob } from "../../types/video-creation.types";
+
+interface Profile {
+  id: string;
+  name: string;
+  isLoggedIn?: boolean;
+}
 
 interface PromptRowProps {
   prompt: Prompt;
   index: number;
   canDelete: boolean;
   globalPreviewMode: boolean;
+  globalProfileId?: string;
   job?: VideoCreationJob;
   onUpdate: (id: string, text: string) => void;
   onDelete: (id: string) => void;
@@ -13,6 +22,8 @@ interface PromptRowProps {
   onTogglePreview: (id: string) => void;
   onCreate: (id: string, text: string) => void;
   onShowInfo: (id: string) => void;
+  onToggleProfileSelect: (id: string) => void;
+  onProfileChange: (id: string, profileId: string) => void;
 }
 
 export default function PromptRow({
@@ -20,6 +31,7 @@ export default function PromptRow({
   index,
   canDelete,
   globalPreviewMode,
+  globalProfileId,
   job,
   onUpdate,
   onDelete,
@@ -27,11 +39,46 @@ export default function PromptRow({
   onTogglePreview,
   onCreate,
   onShowInfo,
+  onToggleProfileSelect,
+  onProfileChange,
 }: PromptRowProps) {
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(false);
+
   const isValid = prompt.text.trim().length > 0;
   // Per-row preview: independent toggle even in global mode
   // If global mode is on, individual row can still hide its preview
   const showPreview = globalPreviewMode ? !prompt.showPreview : prompt.showPreview || false;
+
+  // Determine which profile to use: row-specific or global
+  const effectiveProfileId = prompt.profileId || globalProfileId;
+  const hasCustomProfile = !!prompt.profileId;
+
+  // Fetch profiles when profile select is shown
+  useEffect(() => {
+    if (prompt.showProfileSelect) {
+      fetchProfiles();
+    }
+  }, [prompt.showProfileSelect]);
+
+  const fetchProfiles = async () => {
+    setLoading(true);
+    try {
+      console.log("[PromptRow] Fetching profiles...");
+      const response = await profileIPC.getAll();
+      if (response.success && response.data) {
+        setProfiles(response.data);
+      } else {
+        console.error("[PromptRow] Failed to fetch profiles:", response.error);
+        setProfiles([]);
+      }
+    } catch (error) {
+      console.error("[PromptRow] Failed to fetch profiles", error);
+      setProfiles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Determine row status for the left-edge indicator
   // If there's a job, use its status. Map 'idle' to 'new'. Otherwise treat as 'new'.
@@ -76,12 +123,24 @@ export default function PromptRow({
         title={isArchived ? "Archived" : status}
         aria-hidden="true"
       />
-      {/* Video Created Indicator */}
-      {job && (
-        <div className="absolute top-2 right-2 z-10">
-          <CheckCircle2 className="w-5 h-5 text-green-500" />
-        </div>
-      )}
+      {/* Top Right Icons */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+        {/* Profile Toggle Button */}
+        <button
+          onClick={() => onToggleProfileSelect(prompt.id)}
+          className={`p-1.5 rounded-md transition-all shadow-sm ${
+            prompt.showProfileSelect || hasCustomProfile
+              ? "bg-primary-500 text-white hover:bg-primary-600"
+              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
+          }`}
+          title={hasCustomProfile ? "Custom profile set" : "Select profile for this video"}
+        >
+          <User className="w-4 h-4" />
+        </button>
+
+        {/* Video Created Indicator */}
+        {job && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+      </div>
       {/* Checkbox */}
       <div className="flex-shrink-0 flex items-start pt-2">
         <input
@@ -204,6 +263,66 @@ export default function PromptRow({
           </div>
         )}
       </div>
+
+      {/* Profile Selection Panel - 1/3 width, slides in from right */}
+      {prompt.showProfileSelect && (
+        <div className="flex-shrink-0 w-1/3 h-full border-l border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 rounded-r-lg flex flex-col p-3">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-300 dark:border-gray-600">
+            <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Profile</h4>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {/* Profile Select */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Select Profile</label>
+              <select
+                value={prompt.profileId || ""}
+                onChange={(e) => onProfileChange(prompt.id, e.target.value)}
+                disabled={loading}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+              >
+                <option value="">-- Use Global Profile --</option>
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} {profile.isLoggedIn ? "✓" : ""}
+                  </option>
+                ))}
+              </select>
+              {profiles.length === 0 && !loading && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">No profiles found.</p>
+              )}
+            </div>
+
+            {/* Info Box */}
+            {hasCustomProfile ? (
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                <p className="text-xs text-green-800 dark:text-green-200">✓ Custom profile set for this video</p>
+              </div>
+            ) : effectiveProfileId ? (
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-800 dark:text-blue-200">Using global profile from toolbar</p>
+              </div>
+            ) : (
+              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
+                <p className="text-xs text-yellow-800 dark:text-yellow-200">⚠ No profile selected</p>
+              </div>
+            )}
+
+            {/* Clear Custom Profile */}
+            {hasCustomProfile && (
+              <button
+                onClick={() => onProfileChange(prompt.id, "")}
+                className="w-full px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
+              >
+                Clear Custom Profile
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

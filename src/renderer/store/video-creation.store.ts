@@ -19,6 +19,8 @@ interface VideoCreationStore {
   updatePrompt: (id: string, text: string) => void;
   togglePromptSelection: (id: string) => void;
   togglePromptPreview: (id: string) => void;
+  togglePromptProfileSelect: (id: string) => void;
+  updatePromptProfile: (id: string, profileId: string) => void;
   selectAllPrompts: () => void;
   clearAllSelections: () => void;
   toggleAllSelections: () => void;
@@ -121,6 +123,18 @@ export const useVideoCreationStore = create<VideoCreationStore>((set, get) => ({
   togglePromptPreview: (id: string) => {
     set({
       prompts: get().prompts.map((p) => (p.id === id ? { ...p, showPreview: !p.showPreview } : p)),
+    });
+  },
+
+  togglePromptProfileSelect: (id: string) => {
+    set({
+      prompts: get().prompts.map((p) => (p.id === id ? { ...p, showProfileSelect: !p.showProfileSelect } : p)),
+    });
+  },
+
+  updatePromptProfile: (id: string, profileId: string) => {
+    set({
+      prompts: get().prompts.map((p) => (p.id === id ? { ...p, profileId: profileId || undefined } : p)),
     });
   },
 

@@ -4,6 +4,8 @@ export interface Prompt {
   order: number;
   selected?: boolean;
   showPreview?: boolean;
+  profileId?: string; // Override global profile for this specific prompt
+  showProfileSelect?: boolean; // Toggle visibility of profile selector in row
 }
 
 export interface VideoResource {
