@@ -18,6 +18,9 @@ interface SettingsState {
   compactMode: boolean;
   fontSize: FontSize;
   browserPaths: BrowserPath[];
+  // Visibility of settings sections
+  visibleSections?: Record<string, boolean>;
+  setVisibleSection?: (section: string, visible: boolean) => void;
   setTheme: (theme: Theme) => void;
   setColorScheme: (scheme: ColorScheme) => void;
   setCompactMode: (compact: boolean) => void;
@@ -116,6 +119,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getDefaultBrowserPath: () => {
     return get().browserPaths.find(bp => bp.isDefault);
   },
+  // Visibility defaults will be hydrated below if stored
+  visibleSections: undefined,
+  setVisibleSection: (section: string, visible: boolean) => {
+    const current = get().visibleSections || { general: true, browsers: true, keyboard: true, filePaths: true };
+    const updated = { ...current, [section]: visible };
+    set({ visibleSections: updated });
+    localStorage.setItem('veo3-visible-sections', JSON.stringify(updated));
+  },
 }));
 
 // Initialize settings from localStorage
@@ -144,4 +155,26 @@ if (savedBrowserPaths) {
   } catch (e) {
     console.error("Failed to parse saved browser paths", e);
   }
+}
+// Hydrate visibleSections with per-section keys (including filePaths subsections)
+const savedVisible = localStorage.getItem('veo3-visible-sections');
+const defaultVisible = {
+  general: true,
+  browsers: true,
+  keyboard: true,
+  filePaths: true,
+  'filePaths.defaultLocations': true,
+  'filePaths.fileNaming': true,
+  'filePaths.folderNaming': true,
+};
+if (savedVisible) {
+  try {
+    const parsed = JSON.parse(savedVisible);
+    useSettingsStore.setState({ visibleSections: { ...defaultVisible, ...parsed } });
+  } catch (e) {
+    console.error('Failed to parse saved visible sections', e);
+    useSettingsStore.setState({ visibleSections: defaultVisible });
+  }
+} else {
+  useSettingsStore.setState({ visibleSections: defaultVisible });
 }

@@ -47,10 +47,12 @@ class ElectronApp {
         : path.join(__dirname, "../renderer/assets/icon.png");
 
     this.mainWindow = new BrowserWindow({
-      width: 1400,
+      width: 1440,
       height: 900,
       minWidth: 1000,
       minHeight: 600,
+      fullscreen: false,
+      center: true,
       icon: iconPath,
       webPreferences: {
         nodeIntegration: false,
@@ -64,8 +66,10 @@ class ElectronApp {
     // Load the app
     if (process.env.NODE_ENV === "development") {
       this.mainWindow.loadURL("http://localhost:5173");
-      // Open DevTools in development
-      this.mainWindow.webContents.openDevTools();
+      // Do not open DevTools automatically. Developers can set OPEN_DEVTOOLS=1 to open them.
+      if (process.env.OPEN_DEVTOOLS === '1') {
+        this.mainWindow.webContents.openDevTools();
+      }
     } else {
       this.mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
     }

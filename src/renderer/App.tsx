@@ -3,15 +3,27 @@ import { BrowserRouter } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import SettingsForm from "./components/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
-import AppRoutes from './Routes';
+import { Settings } from "lucide-react";
+import AppRoutes from "./Routes";
+import { DrawerProvider } from "./contexts/DrawerContext";
+import { AlertProvider } from "./hooks/useAlert";
+import { ConfirmProvider } from "./hooks/useConfirm";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { ModalProvider, useModal } from "./hooks/useModal";
 import { useSettingsStore } from "./store/settings.store";
-import { AlertProvider } from './hooks/useAlert';
-import { ConfirmProvider } from './hooks/useConfirm';
-import { ModalProvider, useModal } from './hooks/useModal';
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { Settings } from 'lucide-react';
 
-export type Page = "dashboard" | "automation" | "automation.chat" | "automation.dashboard" | "profiles" | "history" | "admin";
+export type Page =
+  | "dashboard"
+  | "automation"
+  | "automation.chat"
+  | "automation.dashboard"
+  | "profiles"
+  | "history"
+  | "admin"
+  | "video-creation"
+  | "video-creation.channels"
+  | "video-creation.single"
+  | "video-creation.prompt-flows";
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
@@ -22,20 +34,24 @@ function AppContent() {
 
   const handleSettingsClick = () => {
     modal.openModal({
-      title: 'Settings',
+      title: "Settings",
       icon: <Settings className="w-6 h-6 text-indigo-500" />,
       content: <SettingsForm />,
       footer: (
-        <button
-          onClick={() => modal.closeModal()}
-          className="w-full px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg transition-colors"
-        >
-          Done
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => modal.closeModal()}
+            className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full text-sm font-medium transition-colors"
+            aria-label="Close settings"
+            title="Close settings"
+          >
+            Done
+          </button>
+        </div>
       ),
-      size: 'xl',
+      size: "xl",
       // allow Settings to render a sidebar layout inside the modal
-      contentClassName: '',
+      contentClassName: "",
     });
   };
 
@@ -58,11 +74,13 @@ function App() {
   return (
     <div className={theme}>
       <ModalProvider>
-      <AlertProvider>
-      <ConfirmProvider>
-        <AppContent />
-      </ConfirmProvider>
-      </AlertProvider>
+        <AlertProvider>
+          <ConfirmProvider>
+            <DrawerProvider>
+              <AppContent />
+            </DrawerProvider>
+          </ConfirmProvider>
+        </AlertProvider>
       </ModalProvider>
     </div>
   );

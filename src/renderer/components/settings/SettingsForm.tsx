@@ -1,21 +1,23 @@
 import clsx from "clsx";
-import { Palette, Globe, Keyboard } from "lucide-react";
+import { Palette, Globe, Keyboard, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import GeneralSettings from "./GeneralSettings";
 import BrowsersSettings from "./BrowsersSettings";
 import KeyboardShortcutsSettings from "./KeyboardShortcutsSettings";
+import FilePathsSettings from "./FilePathsSettings";
 import { useSettingsStore } from "../../store/settings.store";
 
-type SettingsSection = "general" | "browsers" | "keyboard";
+type SettingsSection = "general" | "browsers" | "keyboard" | "filePaths";
 
 const menuItems: { id: SettingsSection; label: string; icon: any }[] = [
   { id: "general", label: "General", icon: Palette },
   { id: "browsers", label: "Browsers", icon: Globe },
   { id: "keyboard", label: "Keyboard Shortcuts", icon: Keyboard },
+  { id: "filePaths", label: "File Paths & Naming", icon: FolderOpen },
 ];
 
 export default function SettingsForm() {
-  const { addBrowserPath } = useSettingsStore();
+  const { addBrowserPath, visibleSections = { general: true, browsers: true, keyboard: true, filePaths: true } } = useSettingsStore();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SettingsSection>("general");
 
@@ -89,9 +91,45 @@ export default function SettingsForm() {
             </div>
           )}
 
-          {activeSection === "general" && <GeneralSettings />}
-          {activeSection === "browsers" && <BrowsersSettings onAdd={handleAddBrowser} />}
-          {activeSection === "keyboard" && <KeyboardShortcutsSettings />}
+          {activeSection === "general" && (
+            visibleSections.general ? (
+              <GeneralSettings />
+            ) : (
+              <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                This section is hidden. Click the icon in the sidebar to show it.
+              </div>
+            )
+          )}
+
+          {activeSection === "browsers" && (
+            visibleSections.browsers ? (
+              <BrowsersSettings onAdd={handleAddBrowser} />
+            ) : (
+              <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                This section is hidden. Click the icon in the sidebar to show it.
+              </div>
+            )
+          )}
+
+          {activeSection === "keyboard" && (
+            visibleSections.keyboard ? (
+              <KeyboardShortcutsSettings />
+            ) : (
+              <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                This section is hidden. Click the icon in the sidebar to show it.
+              </div>
+            )
+          )}
+
+          {activeSection === "filePaths" && (
+            visibleSections.filePaths ? (
+              <FilePathsSettings />
+            ) : (
+              <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                This section is hidden. Click the icon in the sidebar to show it.
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>

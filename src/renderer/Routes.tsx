@@ -1,13 +1,16 @@
 // JSX runtime does not require explicit React import
-import { Routes, Route, Navigate } from 'react-router-dom';
-import AutomationPage from './pages/AutomationPage';
-import ProfilesPage from './pages/ProfilesPage';
-import ChatAutomation from './pages/automation/ChatAutomation';
-import InstanceDashboard from './pages/automation/InstanceDashboard';
-import AdminPage from './pages/AdminPage';
-import PlatformAnalysisPromptsPage from './pages/admin/PlatformAnalysisPromptsPage';
-import ChannelAnalysisPromptsPage from './pages/admin/ChannelAnalysisPromptsPage';
-import VideoCreationPromptsPage from './pages/admin/VideoCreationPromptsPage';
+import { Navigate, Route, Routes } from "react-router-dom";
+import AdminPage from "./pages/AdminPage";
+import AutomationPage from "./pages/AutomationPage";
+import ProfilesPage from "./pages/ProfilesPage";
+import ChannelAnalysisPromptsPage from "./pages/admin/ChannelAnalysisPromptsPage";
+import PlatformAnalysisPromptsPage from "./pages/admin/PlatformAnalysisPromptsPage";
+import VideoCreationPromptsPage from "./pages/admin/VideoCreationPromptsPage";
+import ChatAutomation from "./pages/automation/ChatAutomation";
+import InstanceDashboard from "./pages/automation/InstanceDashboard";
+import MyVideoChannelsPage from "./pages/video-creation/MyVideoChannelsPage";
+import PromptFlowConfigPage from "./pages/video-creation/PromptFlowConfigPage";
+import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 
 export default function AppRoutes() {
   return (
@@ -21,6 +24,9 @@ export default function AppRoutes() {
       <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
       <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
       <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
+      <Route path="/video-creation/channels" element={<MyVideoChannelsPage />} />
+      <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
+      <Route path="/video-creation/prompt-flows" element={<PromptFlowConfigPage />} />
       <Route
         path="/history"
         element={

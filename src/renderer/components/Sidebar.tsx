@@ -1,7 +1,19 @@
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, History, LayoutDashboard, PlayCircle, Settings, Users, Shield } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  History,
+  LayoutDashboard,
+  PlayCircle,
+  Settings,
+  Shield,
+  Users,
+  Video,
+  Workflow,
+} from "lucide-react";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Page } from "../App";
 import iconImage from "../assets/icon.png";
 
@@ -20,6 +32,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "profiles", label: "Profiles", icon: Users },
   { id: "automation", label: "Automation", icon: PlayCircle },
+  { id: "video-creation", label: "Video Creation", icon: Video },
   { id: "admin", label: "Admin", icon: Shield },
   { id: "history", label: "History", icon: History },
 ];
@@ -27,6 +40,7 @@ const navItems: NavItem[] = [
 export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAutomationOpen, setIsAutomationOpen] = useState(true);
+  const [isVideoCreationOpen, setIsVideoCreationOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -92,18 +106,98 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
                   <div className="mt-2 space-y-1 pl-8">
                     <button
                       onClick={() => {
-                        navigate('/automation/instance');
+                        navigate("/automation/instance");
                         onPageChange("automation.dashboard" as any);
                       }}
                       className={clsx(
                         "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
-                        location.pathname === "/automation/instance" ? "bg-primary-100 text-primary-700" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        location.pathname === "/automation/instance"
+                          ? "bg-primary-100 text-primary-700"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       )}
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       <span>Browser Instance</span>
                     </button>
                     {/* Future submenu items can be added here */}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Render Video Creation as a parent with dropdown
+          if (item.id === "video-creation") {
+            return (
+              <div key={item.id} className="w-full">
+                <button
+                  onClick={() => setIsVideoCreationOpen(!isVideoCreationOpen)}
+                  className={clsx(
+                    "w-full flex items-center gap-3 rounded-lg font-medium transition-colors",
+                    isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
+                    isActive
+                      ? "bg-primary-500 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  )}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <Icon className="w-5 h-5" />
+                  {!isCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                  {!isCollapsed && (
+                    <ChevronRight
+                      className={clsx("w-4 h-4 transition-transform", isVideoCreationOpen ? "rotate-90" : "rotate-0")}
+                    />
+                  )}
+                </button>
+
+                {/* Submenu */}
+                {isVideoCreationOpen && !isCollapsed && (
+                  <div className="mt-2 space-y-1 pl-8">
+                    <button
+                      onClick={() => {
+                        navigate("/video-creation/channels");
+                        onPageChange("video-creation.channels" as any);
+                      }}
+                      className={clsx(
+                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
+                        location.pathname === "/video-creation/channels"
+                          ? "bg-primary-100 text-primary-700"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>My Video Channels</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate("/video-creation/single");
+                        onPageChange("video-creation.single" as any);
+                      }}
+                      className={clsx(
+                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
+                        location.pathname === "/video-creation/single"
+                          ? "bg-primary-100 text-primary-700"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      <Clapperboard className="w-4 h-4" />
+                      <span>Single Video Creation</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate("/video-creation/prompt-flows");
+                        onPageChange("video-creation.prompt-flows" as any);
+                      }}
+                      className={clsx(
+                        "w-full flex items-center gap-2 rounded-lg text-sm transition-colors px-3 py-2",
+                        location.pathname === "/video-creation/prompt-flows"
+                          ? "bg-primary-100 text-primary-700"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      <Workflow className="w-4 h-4" />
+                      <span>Prompt Flow Config</span>
+                    </button>
                   </div>
                 )}
               </div>

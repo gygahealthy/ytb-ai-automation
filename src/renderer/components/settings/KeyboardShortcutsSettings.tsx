@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Keyboard, RefreshCw, Code } from "lucide-react";
+import { Code, History, Keyboard, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useKeyboardShortcutsStore } from "../../store/keyboard-shortcuts.store";
 
 export default function KeyboardShortcutsSettings() {
@@ -12,6 +12,7 @@ export default function KeyboardShortcutsSettings() {
   const iconMap: Record<string, any> = {
     RefreshCw,
     Code,
+    History,
   };
 
   // Handle key recording when editing a shortcut
@@ -95,9 +96,7 @@ export default function KeyboardShortcutsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-          Keyboard Shortcuts
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Keyboard Shortcuts</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Customize keyboard shortcuts for quick actions. Click on a shortcut to record a new key combination.
         </p>
@@ -118,12 +117,8 @@ export default function KeyboardShortcutsSettings() {
                   <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                    {shortcut.label}
-                  </h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                    {shortcut.description}
-                  </p>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">{shortcut.label}</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{shortcut.description}</p>
                 </div>
               </div>
 
