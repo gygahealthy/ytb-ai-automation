@@ -1,8 +1,10 @@
 import { veo3Repository } from "../../../storage/database";
+import { profileRepository } from "../../../storage/database";
 import { ApiResponse } from "../../../../shared/types";
 import { Logger } from "../../../../shared/utils/logger";
 import { StringUtil } from "../../../../shared/utils/string";
 import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
+import { veo3ApiClient } from "./veo3-api.client";
 
 const logger = new Logger("VEO3Service");
 
@@ -179,6 +181,97 @@ export class VEO3Service {
       return { success: true, data: true };
     } catch (error) {
       logger.error("Failed to delete project", error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Fetch projects from VEO3 API using profile's cookies
+   * @param profileId - Profile ID to get cookies from
+   */
+  async fetchProjectsFromAPI(profileId: string): Promise<ApiResponse<any[]>> {
+    try {
+      // Get profile to retrieve cookies
+      const profile = await profileRepository.findById(profileId);
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
+      }
+
+      if (!profile.cookies) {
+        return { success: false, error: "Profile has no cookies. Please login first." };
+      }
+
+      if (!profile.isLoggedIn) {
+        return { success: false, error: "Profile is not logged in. Please login first." };
+      }
+
+      // Check if cookies are expired
+      if (profile.cookieExpires && new Date(profile.cookieExpires) < new Date()) {
+        return { success: false, error: "Profile cookies have expired. Please login again." };
+      }
+
+      logger.info(`Fetching VEO3 projects for profile: ${profile.name}`);
+
+      // Call VEO3 API to list projects
+      const result = await veo3ApiClient.listProjects(profile.cookies);
+      
+      if (!result.success) {
+        return { success: false, error: result.error || "Failed to fetch projects from VEO3 API" };
+      }
+
+      // Extract projects array from response
+      const projects = result.data?.projects || [];
+      
+      logger.info(`Fetched ${projects.length} projects from VEO3 API`);
+      return { success: true, data: projects };
+    } catch (error) {
+      logger.error("Failed to fetch projects from API", error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Create a new project via VEO3 API using profile's cookies
+   * @param profileId - Profile ID to get cookies from
+   * @param projectTitle - Title for the new project
+   */
+  async createProjectViaAPI(
+    profileId: string,
+    projectTitle: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      // Get profile to retrieve cookies
+      const profile = await profileRepository.findById(profileId);
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
+      }
+
+      if (!profile.cookies) {
+        return { success: false, error: "Profile has no cookies. Please login first." };
+      }
+
+      if (!profile.isLoggedIn) {
+        return { success: false, error: "Profile is not logged in. Please login first." };
+      }
+
+      // Check if cookies are expired
+      if (profile.cookieExpires && new Date(profile.cookieExpires) < new Date()) {
+        return { success: false, error: "Profile cookies have expired. Please login again." };
+      }
+
+      logger.info(`Creating VEO3 project "${projectTitle}" for profile: ${profile.name}`);
+
+      // Call VEO3 API to create project
+      const result = await veo3ApiClient.createProject(profile.cookies, projectTitle);
+      
+      if (!result.success) {
+        return { success: false, error: result.error || "Failed to create project via VEO3 API" };
+      }
+
+      logger.info(`Successfully created VEO3 project: ${result.data?.projectId}`);
+      return { success: true, data: result.data };
+    } catch (error) {
+      logger.error("Failed to create project via API", error);
       return { success: false, error: String(error) };
     }
   }

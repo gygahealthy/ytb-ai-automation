@@ -10,4 +10,6 @@ export const veo3Registrations: IpcRegistration[] = [
   { channel: 'veo3:removeScene', description: 'Remove scene', handler: async (req: { projectId: string; sceneId: string }) => { return await veo3Service.removeScene((req as any).projectId, (req as any).sceneId); } },
   { channel: 'veo3:updatePrompt', description: 'Update json prompt', handler: async (req: { projectId: string; jsonPrompt: any }) => { return await veo3Service.updateJsonPrompt((req as any).projectId, (req as any).jsonPrompt); } },
   { channel: 'veo3:delete', description: 'Delete project', handler: async (req: { id: string }) => { return await veo3Service.deleteProject((req as any).id); } },
+  { channel: 'veo3:fetchProjectsFromAPI', description: 'Fetch projects from VEO3 API by profile', handler: async (req: { profileId: string }) => { return await veo3Service.fetchProjectsFromAPI((req as any).profileId); } },
+  { channel: 'veo3:createProjectViaAPI', description: 'Create project via VEO3 API', handler: async (req: { profileId: string; projectTitle: string }) => { return await veo3Service.createProjectViaAPI((req as any).profileId, (req as any).projectTitle); } },
 ];

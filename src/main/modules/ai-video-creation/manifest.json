@@ -1,6 +1,6 @@
 {
   "name": "ai-video-creation",
-  "description": "Create and manage VEO3 video projects: scenes, prompts, and status updates.",
+  "description": "Create and manage VEO3 video projects: scenes, prompts, and status updates. Integrates with Google Labs VEO3 API.",
   "process": "main",
   "publicApi": "./index.ts",
   "capabilities": [
@@ -11,6 +11,8 @@
     "addScene",
     "removeScene",
     "updatePrompt",
-    "deleteProject"
+    "deleteProject",
+    "fetchProjectsFromAPI",
+    "createProjectViaAPI"
   ]
 }

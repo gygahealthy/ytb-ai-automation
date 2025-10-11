@@ -1,6 +1,7 @@
 import { Check, FolderKanban, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import profileIPC from "../../ipc/profile";
+import veo3IPC from "../../ipc/veo3";
 
 interface Profile {
   id: string;
@@ -74,12 +75,23 @@ export default function ProfileProjectModal({
   const fetchProjects = async (profileId: string) => {
     setLoading(true);
     try {
-      // TODO: Call IPC to get projects for profile
       console.log(`[ProfileProjectModal] Fetching projects for profile: ${profileId}`);
-      // Mock data for now
-      setProjects([]);
+      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
+      if (response.success && response.data) {
+        // Transform VEO3 API projects to our Project interface
+        const transformedProjects = response.data.map((p: any) => ({
+          id: p.projectId || p.id,
+          name: p.title || p.projectTitle || p.name,
+          description: p.description || "",
+        }));
+        setProjects(transformedProjects);
+      } else {
+        console.error("[ProfileProjectModal] Failed to fetch projects:", response.error);
+        setProjects([]);
+      }
     } catch (error) {
-      console.error("Failed to fetch projects", error);
+      console.error("[ProfileProjectModal] Failed to fetch projects", error);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
