@@ -25,7 +25,7 @@ export default function LogDrawer() {
 
   // Subscribe to backend logs
   useEffect(() => {
-    console.log("[LogDrawer] Setting up log subscription...");
+    console.log("[LogDrawer] 🔄 Setting up log subscription...");
 
     if (typeof window === "undefined") {
       console.warn("[LogDrawer] Window is undefined, cannot subscribe");
@@ -43,9 +43,9 @@ export default function LogDrawer() {
       return;
     }
 
-    console.log("[LogDrawer] Subscribing to logs...");
+    console.log("[LogDrawer] ✅ electronAPI.logger available, subscribing...");
     const unsubscribe = electronAPI.logger.onLog((data: any) => {
-      console.log("[LogDrawer] Received log:", data);
+      console.log("[LogDrawer] 📨 Received log from backend:", data);
       useLogStore.getState().addLog({
         level: data.level as "info" | "warn" | "error" | "debug",
         message: data.message,
@@ -54,10 +54,10 @@ export default function LogDrawer() {
       });
     });
 
-    console.log("[LogDrawer] Log subscription active");
+    console.log("[LogDrawer] ✅ Log subscription active, unsubscribe function:", !!unsubscribe);
 
     return () => {
-      console.log("[LogDrawer] Unsubscribing from logs");
+      console.log("[LogDrawer] 🛑 Unsubscribing from logs");
       if (unsubscribe) unsubscribe();
     };
   }, []);

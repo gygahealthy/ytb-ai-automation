@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
 import useVeo3Store from "../../store/veo3.store";
-import { useVideoCreationStore } from "../../store/video-creation.store";
 import { Prompt, VideoCreationJob } from "../../types/video-creation.types";
 import PreviewPanel from "../common/PreviewPanel";
 import ActionControls from "./video-prompt-row/ActionControls";
@@ -61,7 +60,6 @@ export default function VideoPromptRow({
   const [loading, setLoading] = useState(false);
   const [pollingProgress, setPollingProgress] = useState(0); // Fake progress bar
   const veo3Store = useVeo3Store();
-  const { updateJobStatus } = useVideoCreationStore();
 
   const isValid = prompt.text.trim().length > 0;
   // When globalPreviewMode is false (default), show all previews
@@ -87,102 +85,50 @@ export default function VideoPromptRow({
   }, [prompt.showProfileSelect, effectiveProfileId]);
 
   useEffect(() => {
-    if (!job) {
-      console.log(`[VideoPromptRow] No job found for prompt ${prompt.id}`);
+    console.log(`[VideoPromptRow] 🔄 Effect triggered - job:`, job?.id, `generationId:`, job?.generationId, `status:`, job?.status, `progress:`, job?.progress);
+
+    // If job is completed, show 100%
+    if (job?.status === "completed") {
+      console.log(`[VideoPromptRow] ✅ Job completed - setting progress to 100%`);
+      setPollingProgress(100);
+      return;
+    }
+
+    // If job is failed, reset progress
+    if (job?.status === "failed") {
+      console.log(`[VideoPromptRow] ❌ Job failed - resetting progress`);
       setPollingProgress(0);
       return;
     }
 
-    if (!job.generationId) {
-      console.log(`[VideoPromptRow] Job ${job.id} has no generationId yet, waiting...`);
+    // If not processing or no generationId, reset
+    if (!job || !job.generationId || job.status !== "processing") {
+      console.log(`[VideoPromptRow] ⏭️ Not in processing state - resetting progress`);
       setPollingProgress(0);
       return;
     }
 
-    if (job.status !== "processing") {
-      console.log(`[VideoPromptRow] Job ${job.id} status is ${job.status}, not polling`);
-      setPollingProgress(0);
-      return;
-    }
+    console.log(`[VideoPromptRow] ⚡ Job is processing - starting fake progress animation`);
 
-    console.log(`[VideoPromptRow] ⚡ Starting polling for job: ${job.id}, generationId: ${job.generationId}`);
+    // Start fake progress animation while waiting for backend updates
+    // Use current job.progress as starting point
+    let currentProgress = job.progress || 0;
+    setPollingProgress(currentProgress);
 
-    let pollInterval: NodeJS.Timeout;
-    let progressInterval: NodeJS.Timeout;
-    let currentProgress = 0;
-
-    const animateProgress = () => {
-      progressInterval = setInterval(() => {
-        // increment slowly: 1% per second, cap below 100 to avoid reaching 100 before actual completion
-        currentProgress += 1;
-        if (currentProgress <= 98) {
-          setPollingProgress(currentProgress);
-        }
-      }, 1000);
-    };
-
-    animateProgress();
-
-    const pollStatus = async () => {
-      try {
-        const timestamp = new Date().toLocaleTimeString();
-        console.log(`[VideoPromptRow] 🔄 [${timestamp}] Polling status for generationId: ${job.generationId}`);
-        const result = await veo3IPC.checkGenerationStatus(job.generationId!);
-
-        if (result.success && result.data) {
-          const { status, videoUrl, errorMessage, completedAt } = result.data;
-          console.log(`[VideoPromptRow] Status response: ${status}`);
-
-          if (status === "completed") {
-            console.log(`[VideoPromptRow] ✅ Video generation completed! URL: ${videoUrl}`);
-            setPollingProgress(100);
-            clearInterval(pollInterval);
-            clearInterval(progressInterval);
-
-            updateJobStatus(job.id, "completed", {
-              videoUrl,
-              completedAt,
-              progress: 100,
-            });
-
-            return;
-          } else if (status === "failed") {
-            console.error(`[VideoPromptRow] ❌ Video generation failed: ${errorMessage}`);
-            setPollingProgress(0);
-            clearInterval(pollInterval);
-            clearInterval(progressInterval);
-
-            updateJobStatus(job.id, "failed", {
-              error: errorMessage,
-              progress: 0,
-            });
-
-            return;
-          } else {
-            console.log(`[VideoPromptRow] ⏳ Still processing (status: ${status})... will check again in 10s`);
-            // Continue animating progress from current value without resetting to 0
-            clearInterval(progressInterval);
-            animateProgress();
-          }
-        } else {
-          console.error(`[VideoPromptRow] Failed to check status:`, result.error);
-        }
-      } catch (error) {
-        console.error(`[VideoPromptRow] Error checking status:`, error);
+    const progressInterval = setInterval(() => {
+      currentProgress += 1;
+      if (currentProgress <= 98) {
+        setPollingProgress(currentProgress);
       }
-    };
-
-    console.log(`[VideoPromptRow] 🚀 Starting initial poll...`);
-    pollStatus();
-    console.log(`[VideoPromptRow] ⏰ Setting up 10-second interval polling`);
-    pollInterval = setInterval(pollStatus, 10000);
+    }, 1000);
+    
+    console.log(`[VideoPromptRow] ⏱️ Fake progress animation started from ${currentProgress}%`);
 
     return () => {
-      console.log(`[VideoPromptRow] 🛑 Cleaning up polling for job ${job.id}`);
-      clearInterval(pollInterval);
+      console.log(`[VideoPromptRow] 🛑 Cleaning up progress interval for job ${job.id}`);
       clearInterval(progressInterval);
     };
-  }, [job?.id, job?.generationId, job?.status, updateJobStatus]);
+  }, [job?.id, job?.generationId, job?.status, job?.progress]);
 
   const fetchProfiles = async () => {
     setLoading(true);

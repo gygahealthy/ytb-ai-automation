@@ -1,5 +1,6 @@
 import { History, Plus, User, Video } from "lucide-react";
 import { useEffect, useState } from "react";
+import AppAlert from "../../components/common/AppAlert";
 import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
 import JobDetailsModal from "../../components/video-creation/JobDetailsModal";
@@ -18,6 +19,11 @@ export default function SingleVideoCreationPage() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [alertState, setAlertState] = useState<{
+    open: boolean;
+    message: string;
+    severity: "info" | "success" | "warning" | "error";
+  }>({ open: false, message: "", severity: "info" });
 
   const { openDrawer } = useDrawer();
 
@@ -92,6 +98,99 @@ export default function SingleVideoCreationPage() {
     window.addEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
     return () => window.removeEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
   }, [selectedProfileId, selectedProjectId]);
+
+  // Listen for VEO3 events and update job status
+  useEffect(() => {
+    console.log("[SingleVideoCreationPage] 🔄 Setting up VEO3 event listeners...");
+    
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI || !electronAPI.on) {
+      console.error("[SingleVideoCreationPage] ❌ electronAPI.on not available!");
+      return;
+    }
+
+    console.log("[SingleVideoCreationPage] ✅ electronAPI.on available, setting up listeners...");
+
+    // Listen for generation status updates from backend polling
+    const unsubStatus = electronAPI.on("veo3:generation:status", (data: any) => {
+      console.log("[SingleVideoCreationPage] 📨 veo3:generation:status event received:", data);
+      
+      const { generationId, promptId, status, videoUrl, error, progress } = data;
+      
+      // Get current jobs from store to avoid stale closure
+      const currentJobs = useVideoCreationStore.getState().jobs;
+      const updateStatus = useVideoCreationStore.getState().updateJobStatus;
+      
+      // Find the job by generationId or promptId
+      const job = currentJobs.find((j) => j.generationId === generationId || j.promptId === promptId);
+      
+      if (job) {
+        console.log(`[SingleVideoCreationPage] 🔄 Updating job ${job.id} with status: ${status}`);
+        
+        if (status === "completed") {
+          updateStatus(job.id, "completed", {
+            videoUrl,
+            progress: 100,
+          });
+        } else if (status === "failed") {
+          updateStatus(job.id, "failed", {
+            error,
+            progress: 0,
+          });
+        } else if (status === "processing") {
+          updateStatus(job.id, "processing", {
+            progress: progress || job.progress || 0,
+          });
+        }
+      } else {
+        console.warn(`[SingleVideoCreationPage] ⚠️ No job found for generationId: ${generationId}, promptId: ${promptId}`);
+      }
+    });
+
+    // Listen for batch progress (when each video starts generating)
+    const unsubProgress = electronAPI.on("veo3:multipleVideos:progress", (data: any) => {
+      console.log("[SingleVideoCreationPage] 📨 veo3:multipleVideos:progress event received:", data);
+      
+      const { promptId, generationId, success, error } = data;
+      
+      // Get current jobs from store to avoid stale closure
+      const currentJobs = useVideoCreationStore.getState().jobs;
+      const updateStatus = useVideoCreationStore.getState().updateJobStatus;
+      
+      if (success && generationId) {
+        // Find job by promptId and update with generationId
+        const job = currentJobs.find((j) => j.promptId === promptId);
+        if (job) {
+          console.log(`[SingleVideoCreationPage] 🔄 Updating job ${job.id} with generationId: ${generationId}`);
+          updateStatus(job.id, "processing", {
+            generationId,
+            progress: 0,
+          });
+        }
+      } else if (error) {
+        const job = currentJobs.find((j) => j.promptId === promptId);
+        if (job) {
+          console.error(`[SingleVideoCreationPage] ❌ Job ${job.id} failed: ${error}`);
+          updateStatus(job.id, "failed", {
+            error,
+          });
+        }
+      }
+    });
+
+    const unsubBatchStarted = electronAPI.on("veo3:batch:started", (data: any) => {
+      console.log("[SingleVideoCreationPage] 📨 veo3:batch:started event received:", data);
+    });
+
+    console.log("[SingleVideoCreationPage] ✅ All event listeners registered!");
+
+    return () => {
+      console.log("[SingleVideoCreationPage] 🛑 Unsubscribing from event listeners");
+      if (unsubStatus) unsubStatus();
+      if (unsubProgress) unsubProgress();
+      if (unsubBatchStarted) unsubBatchStarted();
+    };
+  }, []); // Empty deps - listeners set up once and use getState() to get current data
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -234,16 +333,168 @@ export default function SingleVideoCreationPage() {
     };
   }, [selectedProfileId, selectedProjectId]);
 
-  const handleCreateMultiple = () => {
-    const input = window.prompt("How many prompts would you like to create?", "5");
-    if (!input) return;
-    const count = parseInt(input, 10);
-    if (isNaN(count) || count <= 0) {
-      alert("Please enter a valid positive number");
+  const handleCreateMultiple = async (opts?: { skipConfirm?: boolean }) => {
+    // Get selected prompts
+    const selectedPrompts = prompts.filter((p) => p.selected);
+
+    if (selectedPrompts.length === 0) {
+      setAlertState({ open: true, message: "Please select at least one prompt to generate videos", severity: "error" });
       return;
     }
-    for (let i = 0; i < count; i++) {
-      addPrompt();
+
+    // Filter out prompts that already have completed jobs
+    const promptsToGenerate = selectedPrompts.filter((prompt) => {
+      const job = jobs.find((j) => j.promptId === prompt.id);
+      return !job || job.status !== "completed";
+    });
+
+    const skippedCount = selectedPrompts.length - promptsToGenerate.length;
+
+    if (promptsToGenerate.length === 0) {
+      setAlertState({
+        open: true,
+        message: "All selected prompts already have completed videos. Please select prompts without videos.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    // Validate all selected prompts have text
+    const invalidPrompts = promptsToGenerate.filter((p) => !p.text.trim());
+    if (invalidPrompts.length > 0) {
+      setAlertState({
+        open: true,
+        message: `${invalidPrompts.length} prompt(s) have no text. Please fill them in first.`,
+        severity: "error",
+      });
+      return;
+    }
+
+    // Confirm action (skip if already confirmed by toolbar)
+    if (!opts?.skipConfirm) {
+      const skippedMessage = skippedCount > 0 ? `\n\n${skippedCount} completed prompt(s) will be skipped.` : "";
+      const confirmed = window.confirm(
+        `Generate videos for ${promptsToGenerate.length} prompt(s)?${skippedMessage}\n\nThis will start video generation for all selected prompts with a small delay between each to avoid rate limiting.`
+      );
+      if (!confirmed) return;
+    }
+
+    console.log(`[MultiGen] Starting batch generation for ${promptsToGenerate.length} prompts (${skippedCount} skipped)`);
+
+    // Prepare requests for all selected prompts
+    const requests = promptsToGenerate.map((prompt) => {
+      const effectiveProfileId = prompt.profileId || selectedProfileId;
+      const effectiveProjectId = prompt.projectId || selectedProjectId;
+
+      return {
+        promptId: prompt.id,
+        profileId: effectiveProfileId,
+        projectId: effectiveProjectId,
+        prompt: prompt.text,
+        aspectRatio: "VIDEO_ASPECT_RATIO_LANDSCAPE" as const,
+      };
+    });
+
+    // Validate all requests have profile and project
+    const invalidRequests = requests.filter((r) => !r.profileId || !r.projectId);
+    if (invalidRequests.length > 0) {
+      setAlertState({
+        open: true,
+        message: `${invalidRequests.length} prompt(s) are missing profile or project.\n\nPlease select a global profile/project or set them individually for each prompt.`,
+        severity: "error",
+      });
+      return;
+    }
+
+    // Create jobs for all prompts immediately (with "processing" status)
+    const jobMap = new Map<string, string>(); // promptId -> jobId
+    for (const prompt of promptsToGenerate) {
+      const jobId = createJob(prompt.id, prompt.text);
+      jobMap.set(prompt.id, jobId);
+    }
+
+    try {
+      // Set up event listener for progress updates (BEFORE calling async method)
+      console.log(`[MultiGen] Setting up progress event listener...`);
+      const cleanup = veo3IPC.onMultipleVideosProgress((progress) => {
+        console.log(`[MultiGen] 🎯 Progress event received for prompt ${progress.promptId}:`, progress);
+
+        const jobId = jobMap.get(progress.promptId);
+        if (!jobId) {
+          console.warn(
+            `[MultiGen] ⚠️ No job found for promptId: ${progress.promptId}. Available jobs:`,
+            Array.from(jobMap.keys())
+          );
+          return;
+        }
+
+        if (progress.success && progress.generationId) {
+          console.log(`[MultiGen] ✅ [${progress.index}/${progress.total}] Video generation started: ${progress.generationId}`);
+          console.log(`[MultiGen] Updating job ${jobId} with generationId ${progress.generationId}`);
+
+          // Update job with generationId - this will trigger polling in VideoPromptRow
+          updateJobStatus(jobId, "processing", {
+            generationId: progress.generationId,
+            progress: 0,
+          });
+
+          console.log(`[MultiGen] Job ${jobId} updated successfully`);
+        } else {
+          console.error(`[MultiGen] ❌ [${progress.index}/${progress.total}] Failed: ${progress.error}`);
+
+          updateJobStatus(jobId, "failed", {
+            error: progress.error || "Unknown error",
+          });
+        }
+      });
+      console.log(`[MultiGen] Event listener registered. Cleanup function created:`, !!cleanup);
+
+      // Call backend async method - returns immediately
+      console.log(`[MultiGen] Calling async backend for ${requests.length} videos...`);
+      const result = await veo3IPC.generateMultipleVideosAsync(requests, 1500); // 1.5s delay between requests
+
+      if (!result.success || !result.data) {
+        console.error("[MultiGen] Failed to start batch generation:", result.error);
+        setAlertState({ open: true, message: `Failed to start batch generation: ${result.error}`, severity: "error" });
+        cleanup(); // Clean up event listener
+
+        // Mark all jobs as failed
+        for (const [, jobId] of jobMap.entries()) {
+          updateJobStatus(jobId, "failed", {
+            error: result.error || "Batch generation failed",
+          });
+        }
+        return;
+      }
+
+      const { batchId, total } = result.data;
+      console.log(`[MultiGen] Batch started (${batchId}), ${total} videos will be processed in background`);
+
+      const skippedMessage = skippedCount > 0 ? `\n\n${skippedCount} completed prompt(s) were skipped.` : "";
+      setAlertState({
+        open: true,
+        message: `Batch generation started!${skippedMessage}\n\n${total} video(s) will be generated with delays between each request.\n\nEach video will update independently as processing starts.`,
+        severity: "success",
+      });
+
+      // Clean up event listener after a reasonable time (total * delayMs + buffer)
+      const cleanupTimeout = setTimeout(() => {
+        cleanup();
+        console.log(`[MultiGen] Event listener cleaned up for batch ${batchId}`);
+      }, total * 1500 + 10000); // Add 10s buffer
+
+      // Store cleanup reference if needed later
+      (window as any).__multiGenCleanup = { cleanup, timeout: cleanupTimeout };
+    } catch (error) {
+      console.error("[MultiGen] Error during batch generation:", error);
+      setAlertState({ open: true, message: `Error: ${error}`, severity: "error" });
+
+      // Mark all jobs as failed
+      for (const [, jobId] of jobMap.entries()) {
+        updateJobStatus(jobId, "failed", {
+          error: String(error),
+        });
+      }
     }
   };
 
@@ -430,6 +681,7 @@ export default function SingleVideoCreationPage() {
             allSelected={allSelected}
             globalPreviewMode={globalPreviewMode}
             statusFilter={statusFilter}
+            selectedCount={prompts.filter((p) => p.selected).length}
             onUndo={undo}
             onRedo={redo}
             onAddJson={() => setShowAddJsonModal(true)}
@@ -549,6 +801,16 @@ export default function SingleVideoCreationPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AppAlert for validation and notifications */}
+      {alertState.open && (
+        <AppAlert
+          title={alertState.severity === "error" ? "Error" : alertState.severity === "success" ? "Success" : "Notice"}
+          message={alertState.message}
+          severity={alertState.severity}
+          onClose={() => setAlertState((s) => ({ ...s, open: false }))}
+        />
       )}
     </div>
   );

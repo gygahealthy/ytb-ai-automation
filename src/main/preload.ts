@@ -139,6 +139,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Generic invoke for other channels
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+
+  // Generic event listener methods for IPC events
+  on: (channel: string, callback: (...args: any[]) => void) => {
+    const listener = (_event: any, ...args: any[]) => callback(...args);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
+  removeListener: (channel: string, listener: (...args: any[]) => void) => {
+    ipcRenderer.removeListener(channel, listener);
+  },
 });
 
 // Type declaration for TypeScript
@@ -213,6 +223,8 @@ declare global {
         delete: (id: number) => Promise<any>;
       };
       invoke: (channel: string, ...args: any[]) => Promise<any>;
+      on: (channel: string, callback: (...args: any[]) => void) => () => void;
+      removeListener: (channel: string, listener: (...args: any[]) => void) => void;
     };
   }
 }

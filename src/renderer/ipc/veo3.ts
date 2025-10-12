@@ -77,6 +77,49 @@ const refreshVideoStatus = (operationName: string, generationId: string) => {
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
+const generateMultipleVideosAsync = (
+  requests: Array<{
+    promptId: string;
+    profileId: string;
+    projectId: string;
+    prompt: string;
+    aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+  }>,
+  delayMs?: number
+) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.generateMultipleVideosAsync === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.generateMultipleVideosAsync(requests, delayMs));
+  if (hasInvoke()) return invoke("veo3:generateMultipleVideosAsync", { requests, delayMs });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const onMultipleVideosProgress = (
+  callback: (progress: {
+    promptId: string;
+    success: boolean;
+    generationId?: string;
+    sceneId?: string;
+    operationName?: string;
+    error?: string;
+    index: number;
+    total: number;
+  }) => void
+) => {
+  if (!hasWindow()) return () => {};
+
+  const handler = (_event: any, progress: any) => {
+    callback(progress);
+  };
+
+  if ((window as any).electronAPI && (window as any).electronAPI.on) {
+    (window as any).electronAPI.on("veo3:multipleVideos:progress", handler);
+    return () => (window as any).electronAPI.removeListener("veo3:multipleVideos:progress", handler);
+  }
+
+  return () => {};
+};
+
 export default {
   fetchProjectsFromAPI,
   createProjectViaAPI,
@@ -87,4 +130,6 @@ export default {
   listGenerationsByProfile,
   getGenerationById,
   refreshVideoStatus,
+  generateMultipleVideosAsync,
+  onMultipleVideosProgress,
 };

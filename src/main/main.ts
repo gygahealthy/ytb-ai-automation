@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu } from "electron";
 import * as path from "path";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
+import { veo3PollingService } from "./modules/ai-video-creation/services/veo3.service";
 
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;
@@ -18,6 +19,9 @@ class ElectronApp {
 
       // Register IPC handlers
       registerIPCHandlers();
+
+      // Restore pending video generations to polling queue
+      await veo3PollingService.restorePendingGenerations();
 
       // Create window
       this.createWindow();
