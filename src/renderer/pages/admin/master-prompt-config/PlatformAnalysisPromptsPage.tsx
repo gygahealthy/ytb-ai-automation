@@ -1,12 +1,12 @@
-/// <reference types="../../types/electron-api" />
+/// <reference types="../../../types/electron-api" />
 import { ArrowLeft, Music, Plus, Youtube } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AdminPromptTable, { VideoPromptRow } from "../../components/admin/AdminPromptTable";
-import PromptModal from "../../components/admin/PromptModal";
-import VariablesHint from "../../components/admin/VariablesHint";
-import { useConfirm } from "../../hooks/useConfirm";
-import electronApi from "../../ipc";
+import AdminPromptTable, { VideoPromptRow } from "../../../components/admin/AdminPromptTable";
+import PromptModal from "../../../components/admin/PromptModal";
+import VariablesHint from "../../../components/admin/VariablesHint";
+import { useConfirm } from "../../../hooks/useConfirm";
+import electronApi from "../../../ipc";
 
 interface MasterPrompt {
   id?: number;
@@ -72,7 +72,7 @@ const PlatformAnalysisPromptsPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/admin/dashboard")}
             className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

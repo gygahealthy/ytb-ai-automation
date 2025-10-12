@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Video, Youtube, Settings, TrendingUp } from 'lucide-react';
-import PromptCard from '../components/admin/PromptCard';
+import PromptCard from '../../components/admin/PromptCard';
 
 type AdminCard = {
   id: string;

@@ -14,7 +14,7 @@ This call get the generation status (pending or complete)
 curl 'https://aisandbox-pa.googleapis.com/v1/video:batchCheckAsyncVideoGenerationStatus' \
   -H 'accept: */*' \
   -H 'accept-language: en,en-US;q=0.9' \
-  -H 'authorization: Bearer ya29.a0AQQ_BDQBJdMULeuXrGKiDZ3DGmHkwF5UhxJ1TrnbzEiwOEwtq7NNoVvnf8fwAzlGRhDbyNuxSCofjcYKU6hj9gHj601-F5o5PDdsyjmflIWQy31gCv3AfrLK_rTU2XFY1mW5UUAhv6TcCq3SP6UJjRuINr9zDEAKjFe3XxkGISxOeKx08ltXLZa2TBUIVkuM_IHTmlw4rRtcn51dIXQKsOeZQMNKbRfkhYhTe-QLUeoXozo21ijP9pBiSjej6xAUOZ0OG3lf9O5sxtFHeH_itAEFnaftNpqSS926IO3cXjnkkT_kLiAOcajLWBuhieb8fqCR8m-BhXngtkENvW-3xqYx3fHM3kBcfDW-mo0vVZJ2aCgYKAUsSARYSFQHGX2MidE7hJrcQ3OU2YWkJTPecGQ0371' \
+    -H 'authorization: Bearer [REDACTED_OAUTH_TOKEN]' \
   -H 'cache-control: no-cache' \
   -H 'content-type: text/plain;charset=UTF-8' \
   -H 'origin: https://labs.google' \
@@ -30,9 +30,9 @@ curl 'https://aisandbox-pa.googleapis.com/v1/video:batchCheckAsyncVideoGeneratio
   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36' \
   -H 'x-browser-channel: stable' \
   -H 'x-browser-copyright: Copyright 2025 Google LLC. All rights reserved.' \
-  -H 'x-browser-validation: AGaxImjg97xQkd0h3geRTArJi8Y=' \
-  -H 'x-browser-year: 2025' \
-  -H 'x-client-data: CJK2yQEIpbbJAQipncoBCKLcygEIkqHLAQiwpMsBCIWgzQEI7I7PAQ==' \
+    -H 'x-browser-validation: [REDACTED_VALIDATION_HEADER]' \
+    -H 'x-browser-year: 2025' \
+    -H 'x-client-data: [REDACTED_CLIENT_DATA]' \
   --data-raw '{"operations":[{"operation":{"name":"895377fb0691f831b227b996abfdd366"},"sceneId":"a0981b9c-97d8-4959-abf6-0b3ce8542e80","status":"MEDIA_GENERATION_STATUS_PENDING"}]}'
 ```
 
@@ -46,7 +46,7 @@ This is a classic **polling** request, designed to check the status of a long-ru
 
 These components are absolutely essential. Without them, the server won't know who you are or what you're asking about.
 
-- **`authorization: Bearer ya29.a0...`**: Just like the generation request, this **OAuth 2.0 Bearer Token** is your high-security key 🔑. It's the primary way you prove your identity and authorization to the Google API. The token must be valid and unexpired.
+- **`authorization: Bearer [REDACTED_OAUTH_TOKEN]`**: Just like the generation request, this **OAuth 2.0 Bearer Token** is your high-security key 🔑. It's the primary way you prove your identity and authorization to the Google API. Tokens must be valid and unexpired — do not commit them to source control.
     
 - **`--data-raw '{...}'`**: This is the payload, which tells the server _which specific job_ you're asking about.
     

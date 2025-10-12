@@ -13,7 +13,7 @@ cssclasses:
 curl 'https://aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoText' \
   -H 'accept: */*' \
   -H 'accept-language: en,en-US;q=0.9' \
-  -H 'authorization: Bearer ya29.a0AQQ_BDQBJdMULeuXrGKiDZ3DGmHkwF5UhxJ1TrnbzEiwOEwtq7NNoVvnf8fwAzlGRhDbyNuxSCofjcYKU6hj9gHj601-F5o5PDdsyjmflIWQy31gCv3AfrLK_rTU2XFY1mW5UUAhv6TcCq3SP6UJjRuINr9zDEAKjFe3XxkGISxOeKx08ltXLZa2TBUIVkuM_IHTmlw4rRtcn51dIXQKsOeZQMNKbRfkhYhTe-QLUeoXozo21ijP9pBiSjej6xAUOZ0OG3lf9O5sxtFHeH_itAEFnaftNpqSS926IO3cXjnkkT_kLiAOcajLWBuhieb8fqCR8m-BhXngtkENvW-3xqYx3fHM3kBcfDW-mo0vVZJ2aCgYKAUsSARYSFQHGX2MidE7hJrcQ3OU2YWkJTPecGQ0371' \
+  -H 'authorization: Bearer [REDACTED_OAUTH_TOKEN]' \
   -H 'cache-control: no-cache' \
   -H 'content-type: text/plain;charset=UTF-8' \
   -H 'origin: https://labs.google' \
@@ -29,9 +29,9 @@ curl 'https://aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoText' 
   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36' \
   -H 'x-browser-channel: stable' \
   -H 'x-browser-copyright: Copyright 2025 Google LLC. All rights reserved.' \
-  -H 'x-browser-validation: AGaxImjg97xQkd0h3geRTArJi8Y=' \
+  -H 'x-browser-validation: [REDACTED_VALIDATION_HEADER]' \
   -H 'x-browser-year: 2025' \
-  -H 'x-client-data: CJK2yQEIpbbJAQipncoBCKLcygEIkqHLAQiwpMsBCIWgzQEI7I7PAQ==' \
+  -H 'x-client-data: [REDACTED_CLIENT_DATA]' \
   --data-raw $'{"clientContext":{"projectId":"3afb1f80-ca7d-4b33-8318-35dd3cf0d714","tool":"PINHOLE","userPaygateTier":"PAYGATE_TIER_ONE"},"requests":[{"aspectRatio":"VIDEO_ASPECT_RATIO_LANDSCAPE","seed":9307,"textInput":{"prompt":"{\\n    \\"prompt\\": \\"A breathtaking cinematic shot of thick, white morning fog rolling slowly and peacefully through a silent forest of tall, dark trees. The fog is so dense it obscures vision beyond a few feet, creating a sense of quiet disorientation but also tranquility. Sunlight filters weakly through the fog from above, giving it a soft, ethereal glow. Hyperrealistic, atmospheric, 8K, wide-angle shot.\\",\\n    \\"style\\": [\\n      \\"cinematic documentary style\\",\\n      \\"hyperrealistic\\",\\n      \\"minimalist\\",\\n      \\"The Resilient Mind\'s \'Calm Authority\' aesthetic\\",\\n      \\"soft, naturalistic lighting\\"\\n    ],\\n    \\"camera_movement\\": [\\n      \\"slow, steady forward dolly\\",\\n      \\"wide shot\\"\\n    ],\\n    \\"audio\\": {\\n      \\"music\\": \\"Calm, ambient, focus-enhancing background music, low in the mix.\\",\\n      \\"ambient_sound\\": \\"complete silence, absence of forest sounds\\",\\n      \\"sound_effects\\": [\\n        \\"none\\"\\n      ]\\n    },\\n    \\"negative_prompt\\": \\"cartoon, animated, stylized, illustration, low-resolution, blurry, morphing artifacts, distorted features, unrealistic movement, fast motion, shaky cam, text, watermark, humans, animals, stressed office workers, corporate stock photos, cluttered backgrounds, jarring colors.\\"\\n  }"},"videoModelKey":"veo_3_0_t2v_fast","metadata":{"sceneId":"a0981b9c-97d8-4959-abf6-0b3ce8542e80"}}]}'
 ```
 
@@ -46,7 +46,7 @@ Here’s the analysis:
 
 These are the non-negotiable components. Without them, the request is dead on arrival.
 
-- **`authorization: Bearer ya29.a0...`**: **This is the single most important header.** It completely replaces the cookie-based authentication from the previous examples. This is an **OAuth 2.0 Bearer Token**. Think of it as a temporary, high-security key 🔑 that the `labs.google` website gets from Google's authentication system on your behalf. It proves not only _who you are_ but also that you have granted the "Google Labs" application permission to perform this action. This token is short-lived and is the standard for modern, secure API communication.
+- **`authorization: Bearer [REDACTED_OAUTH_TOKEN]`**: **This is the single most important header.** It completely replaces the cookie-based authentication from the previous examples. This is an **OAuth 2.0 Bearer Token**. Think of it as a temporary, high-security key 🔑 that the `labs.google` website gets from Google's authentication system on your behalf. It proves not only _who you are_ but also that you have granted the "Google Labs" application permission to perform this action. Tokens are short-lived — do not commit them to source control.
     
 - **`--data-raw '{...}'`**: This is the **payload**, containing the detailed instructions for the video generation. It tells the API everything it needs to know.
     
@@ -133,6 +133,6 @@ Then do the search for it in the script tag like this:
 ```json
 <script id="__NEXT_DATA__" type="application/json">
 
-{"props":{"pageProps":{"session":{"user":{"name":"Hiếu Nguyễn Quang","email":"hieu2906090@gmail.com","image":"https://lh3.googleusercontent.com/a/ACg8ocJt5RuSUQU-1BJNWQbIODzgzXLvq-S9OiiCaFjr4-MIFbJ12_KE=s96-c"},"expires":"2025-10-12T00:48:19.000Z","access_token":"ya29.a0AQQ_BDQBJdMULeuXrGKiDZ3DGmHkwF5UhxJ1TrnbzEiwOEwtq7NNoVvnf8fwAzlGRhDbyNuxSCofjcYKU6hj9gHj601-F5o5PDdsyjmflIWQy31gCv3AfrLK_rTU2XFY1mW5UUAhv6TcCq3SP6UJjRuINr9zDEAKjFe3XxkGISxOeKx08ltXLZa2TBUIVkuM_IHTmlw4rRtcn51dIXQKsOeZQMNKbRfkhYhTe-QLUeoXozo21ijP9pBiSjej6xAUOZ0OG3lf9O5sxtFHeH_itAEFnaftNpqSS926IO3cXjnkkT_kLiAOcajLWBuhieb8fqCR8m-BhXngtkENvW-3xqYx3fHM3kBcfDW-mo0vVZJ2aCgYKAUsSARYSFQHGX2MidE7hJrcQ3OU2YWkJTPecGQ0371"},"_nextI18Next":{"initialI18nStore":{"en":{"common":{"pinhole_minor_harm_upload_error":{"message":"This image might violate our \u003cFAQLink\u003epolicies\u003c/FAQLink\u003e about harmful content related to minors. Please try a different image or send feedback."}
+{"props":{"pageProps":{"session":{"user":{"name":"Hiếu Nguyễn Quang","email":"hieu2906090@gmail.com","image":"https://lh3.googleusercontent.com/a/ACg8ocJt5RuSUQU-1BJNWQbIODzgzXLvq-S9OiiCaFjr4-MIFbJ12_KE=s96-c"},"expires":"2025-10-12T00:48:19.000Z","access_token":"[REDACTED_OAUTH_TOKEN]"},"_nextI18Next":{"initialI18nStore":{"en":{"common":{"pinhole_minor_harm_upload_error":{"message":"This image might violate our \u003cFAQLink\u003epolicies\u003c/FAQLink\u003e about harmful content related to minors. Please try a different image or send feedback."}
 
 ```

@@ -1,20 +1,13 @@
-import {
-  ChevronDown,
-  Eye,
-  Filter,
-  Grid3x3,
-  List,
-  Plus,
-  Search,
-  Tag,
-  User,
-  X,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Search, Tag, User, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import ProfileForm, { ProfileFormData } from "../components/profiles/ProfileForm";
 import ProfilesTable from "../components/profiles/ProfilesTable";
 import ProfilesGrid from "../components/profiles/ProfilesGrid";
+import ProfilesToolbar from "../components/profiles/ProfilesToolbar";
 import { useModal } from "../hooks/useModal";
+import { useAlert } from '../hooks/useAlert';
+import { useConfirm } from '../hooks/useConfirm';
+import electronApi from "../ipc";
 
 interface Profile {
   id: string;
@@ -36,7 +29,7 @@ interface ApiResponse<T> {
   error?: string;
 }
 
-interface ColumnVisibility {
+interface ColumnVisibility extends Record<string, boolean> {
   id: boolean;
   name: boolean;
   browser: boolean;
@@ -49,34 +42,22 @@ interface ColumnVisibility {
   loginStatus: boolean;
 }
 
-import electronApi from "../ipc";
-import { useAlert } from '../hooks/useAlert';
-import { useConfirm } from '../hooks/useConfirm';
-
 export default function ProfilesPage() {
   const modal = useModal();
   const alertApi = useAlert();
   const confirm = useConfirm();
+  
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showColumnSettings, setShowColumnSettings] = useState(false);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-
-  // Refs for detecting clicks outside dropdowns
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
-  const columnDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Column visibility state
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
-    id: false,
+    id: true,
     name: true,
     browser: true,
-    path: false,
+    path: true,
     userAgent: true,
     credit: true,
     tags: true,
@@ -85,63 +66,35 @@ export default function ProfilesPage() {
     loginStatus: true,
   });
 
-  // Load profiles on mount
   useEffect(() => {
     loadProfiles();
   }, []);
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setShowFilterDropdown(false);
-      }
-      if (columnDropdownRef.current && !columnDropdownRef.current.contains(event.target as Node)) {
-        setShowColumnSettings(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Filter profiles when search or tags change
-  useEffect(() => {
-    let filtered = profiles;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (profile) =>
-          profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.userDataDir.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Tag filter
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((profile) => selectedTags.every((tag) => profile.tags?.includes(tag)));
-    }
-
-    setFilteredProfiles(filtered);
-  }, [profiles, searchQuery, selectedTags]);
-
-  // Get all unique tags from profiles
-  const allTags = Array.from(new Set(profiles.flatMap((profile) => profile.tags || []))).sort();
-
   const loadProfiles = async () => {
     try {
       const response = (await electronApi.profile.getAll()) as ApiResponse<Profile[]>;
-      if (response && response.success && response.data) {
+      if (response.success && response.data) {
         setProfiles(response.data);
       }
     } catch (error) {
       console.error("Failed to load profiles:", error);
     }
   };
+
+  const filteredProfiles = profiles.filter((profile) => {
+    const matchesSearch =
+      profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.userDataDir?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesTags =
+      selectedTags.length === 0 ||
+      (profile.tags && profile.tags.some((tag) => selectedTags.includes(tag)));
+
+    return matchesSearch && matchesTags;
+  });
+
+  const allTags = Array.from(new Set(profiles.flatMap((p) => p.tags || [])));
 
   const handleOpenModal = () => {
     setIsEditMode(false);
@@ -160,7 +113,7 @@ export default function ProfilesPage() {
       ),
       size: 'lg',
       closeOnEscape: true,
-      closeOnOverlay: false, // Prevent accidental close during form editing
+      closeOnOverlay: false,
     });
   };
 
@@ -200,8 +153,9 @@ export default function ProfilesPage() {
 
         if (response.success) {
           await loadProfiles();
+          modal.closeModal();
         } else {
-            alertApi.show({ message: `Failed to update profile: ${response.error}`, title: 'Profile Error' });
+          alertApi.show({ message: `Failed to update profile: ${response.error}`, title: 'Profile Error' });
           throw new Error(response.error);
         }
       } else {
@@ -217,6 +171,7 @@ export default function ProfilesPage() {
 
         if (response.success) {
           await loadProfiles();
+          modal.closeModal();
         } else {
           alertApi.show({ message: `Failed to create profile: ${response.error}`, title: 'Profile Error' });
           throw new Error(response.error);
@@ -230,25 +185,25 @@ export default function ProfilesPage() {
 
   const handleDeleteProfile = async (id: string) => {
     if (!(await confirm({ message: "Are you sure you want to delete this profile?" }))) {
-        return;
-      }
+      return;
+    }
 
     try {
-  const response = (await electronApi.profile.delete(id)) as ApiResponse<boolean>;
+      const response = (await electronApi.profile.delete(id)) as ApiResponse<boolean>;
       if (response.success) {
         await loadProfiles();
       } else {
-  alertApi.show({ message: `Failed to delete profile: ${response.error}`, title: 'Profile Error' });
+        alertApi.show({ message: `Failed to delete profile: ${response.error}`, title: 'Profile Error' });
       }
     } catch (error) {
       console.error("Failed to delete profile:", error);
-  alertApi.show({ message: `Failed to delete profile: ${error}`, title: 'Profile Error' });
+      alertApi.show({ message: `Failed to delete profile: ${error}`, title: 'Profile Error' });
     }
   };
 
   const handleLoginProfile = async (id: string) => {
     try {
-  const response = (await electronApi.profile.login(id)) as ApiResponse<Profile>;
+      const response = (await electronApi.profile.login(id)) as ApiResponse<Profile>;
       if (response.success) {
         await loadProfiles();
       } else {
@@ -278,146 +233,21 @@ export default function ProfilesPage() {
           </h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your browser profiles</p>
         </div>
-        <button
-          onClick={handleOpenModal}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors shadow-lg hover:shadow-xl"
-        >
-          <Plus className="w-5 h-5" />
-          New Profile
-        </button>
       </div>
 
-      {/* Search, Filter, and View Controls */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        {/* Search Bar */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search profiles by name, ID, or path..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        {/* Filter Button */}
-        <div className="relative" ref={filterDropdownRef}>
-          <button
-            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-            className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
-              selectedTags.length > 0
-                ? "bg-primary-500 text-white border-primary-500"
-                : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-            }`}
-          >
-            <Filter className="w-5 h-5" />
-            Filter by Tags
-            {selectedTags.length > 0 && (
-              <span className="bg-white text-primary-500 rounded-full px-2 py-0.5 text-xs font-bold">{selectedTags.length}</span>
-            )}
-          </button>
-
-          {/* Filter Dropdown */}
-          {showFilterDropdown && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-10">
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm flex items-center gap-2">
-                    <Tag className="w-4 h-4" />
-                    Filter by Tags
-                  </span>
-                  {selectedTags.length > 0 && (
-                    <button onClick={() => setSelectedTags([])} className="text-xs text-red-600 hover:text-red-700">
-                      Clear
-                    </button>
-                  )}
-                </div>
-                {allTags.length > 0 ? (
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {allTags.map((tag) => (
-                      <label
-                        key={tag}
-                        className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTags.includes(tag)}
-                          onChange={() => toggleTagFilter(tag)}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{tag}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 py-2">No tags available</p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Column Visibility */}
-        <div className="relative" ref={columnDropdownRef}>
-          <button
-            onClick={() => setShowColumnSettings(!showColumnSettings)}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <Eye className="w-5 h-5" />
-            Columns
-            <ChevronDown className="w-4 h-4" />
-          </button>
-
-          {/* Column Settings Dropdown */}
-          {showColumnSettings && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-10">
-              <div className="p-3 space-y-1">
-                {Object.entries(columnVisibility).map(([column, visible]) => (
-                  <label
-                    key={column}
-                    className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={visible}
-                      onChange={() => toggleColumnVisibility(column as keyof ColumnVisibility)}
-                      className="rounded"
-                    />
-                    <span className="text-sm capitalize">{column}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* View Mode Toggle */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode("table")}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === "table"
-                ? "bg-primary-500 text-white"
-                : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-            }`}
-            title="Table View"
-          >
-            <List className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === "grid"
-                ? "bg-primary-500 text-white"
-                : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-            }`}
-            title="Grid View"
-          >
-            <Grid3x3 className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+      {/* Toolbar */}
+      <ProfilesToolbar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedTags={selectedTags}
+        toggleTagFilter={toggleTagFilter}
+        allTags={allTags}
+        columnVisibility={columnVisibility}
+        toggleColumnVisibility={(c) => toggleColumnVisibility(c as keyof ColumnVisibility)}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        onNewProfile={handleOpenModal}
+      />
 
       {/* Active Filters Display */}
       {(searchQuery || selectedTags.length > 0) && (

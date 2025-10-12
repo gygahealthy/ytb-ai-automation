@@ -13,10 +13,10 @@ CURL create:
 give me idea of those request heder: 
 
 curl 'https://labs.google/fx/api/trpc/project.createProject' \
-  -H 'accept: */*' \
-  -H 'accept-language: en-US,en;q=0.9' \
-  -H 'content-type: application/json' \
-  -b '_ga=GA1.1.235780010.1759577051; EMAIL=%22hieu.mbf3%40gmail.com%22; __Host-next-auth.csrf-token=0ffe849446cddf7ad96d5155da95003a5a4d28bef9e129b7459b4ee6f2923c00%7C26afa198390a85a66db381c57fc7df5d6f56f12d0f5dead3ef62e2fc21777a86; __Secure-next-auth.callback-url=https%3A%2F%2Flabs.google%2Ffx%2Ftools%2Fflow; email=hieu.mbf3%40gmail.com; _ga_X2GNH8R5NS=GS2.1.s1760148736$o6$g0$t1760148739$j57$l0$h2099874662; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..eDrAgkltr4IfmXOj.IRTWwseyWGbs8187CO9KQcSApoEY693Qpi5SL3jxUQGnaOFtPH3A9NFPbNh74aHS85QX97JXvXw_eJAgUSfKrUD6WTrNn1nhhiw3ZnFF-hdxb_Xb3-Ep8lGy38ptTnoDbIsEAg7sTVZzz8S4poDN7ShOcfy6K2FBX7cukyvl0bD72gBJtcdzR0ESFlxT-1oDY21x_K04kf19800BgVrxnliIsO3h3sgDLl_nxKv8BnD0VCSuTASRKxWUa4oFiYHZsxo3lijDc2qCkScQ3vWIJ8rdHRzv3vQ_1rXOFSI1oAngaeQgVZ4sSDsyIv64RLxpcmcZNgNd2wdLo-ImrJGH1lAnCKhxW2VPMEonuqUs1dc_JJv5B5wTZPLpgbV31kvYU5nYc5i0s22gRJ77R5UqGLeUvBkVgTklmw4rA2lc2L9JXNn-evUazhFZQUi8RrzqNxblTqYv8Xa5WBtE-HpopaOUMcA7CmUuZ-Q8A9EI7mAJgY_nJ96N8TldIwjJGKI7To5N6SBvBDKpg80JdPP2VYWr5rbDqTRplivg2d6aS9Ubxv_Xgig6qwVgVxbsLL-ruFm68GIB7Ct1UL05slWPz8P-BhaBrmMf_B02EMTfXe6KxbxlX8I51eCyCpN5lgal4oTmPdwIw9fe-nWDQzJTC9TRNAPEjpw6swfqT-JKpvvktYHVQu-m2qt0Am6-CWBd49Bcjj-3K9xMz4SmA3IJOtT0uTFQTFrdtjrq0Lx4O6Gjcj7xXVO4Yu8yhOBG0LCDlRsz6ZEBseM_YMxnhN1vFNOVb6vcMpdjepWlueC6uh4ix_zR37-ovQgE65LQbWzwlNlLJHlnVTaQjfyPEEqKLsRwcoRsTQVb_g2vT9lBCczX_a7pq0bdxQk57J6lqx4aHA44eyaIbYhYqnIl3rL_P1QLFyVPYkrIpeHObKYyLHj-7f-fAAlxhGL5BsFik2DZeu84Dc3sUql9r1xmxnrv3dqe2Zmzdm0.8VLHtE00zhUoMi-NZAXAug' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'content-type: application/json' \
+  -b '[REDACTED_COOKIES_AND_SESSION_TOKENS]' \
   -H 'origin: https://labs.google' \
   -H 'priority: u=1, i' \
   -H 'referer: https://labs.google/fx/tools/flow' \
@@ -118,7 +118,7 @@ curl 'https://labs.google/fx/api/trpc/project.searchUserProjects?input=%7B%22jso
   -H 'accept-language: en,en-US;q=0.9' \
   -H 'cache-control: no-cache' \
   -H 'content-type: application/json' \
-  -b '_ga=GA1.1.886022631.1748043658; _ga_X5V89YHGSH=GS2.1.s1752718237$o1$g0$t1752718237$j60$l0$h0; _ga_5K7X2T4V16=GS2.1.s1759216463$o5$g0$t1759216463$j60$l0$h0; __Host-next-auth.csrf-token=d14d0c9fa13c54a3ae37a59cf73c5e73c1e2ad8af611da379a82d002bb150e42%7C94d52b2e5fcc2fe97cb12b1a6f2b6cb3970f29082902efa3eb74d88020ce734e; __Secure-next-auth.callback-url=https%3A%2F%2Flabs.google%2Ffx%2Ftools%2Fflow; email=hieu2906090%40gmail.com; EMAIL=%22hieu2906090%40gmail.com%22; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..nAiXvVnFvq55cqQH.R19diiIzi0NA4GU4hmA8E4yI-xIMX-vi9mNkcHenyTUvyGlPnAoYdcyliLkuAEHV6hpyvIUneIuM2F0ZYv71Mm7Tyz52HVfxlw3zLKUaMDrmjcp_Xhpxh9o5ETQEXR9KsBsstj2_fOQTAPhIF71qR9YVIGJQssVgs33XxB43DRkJUhAw3oB5n7-1uNQWBS-7PVfHO1DCCKWmXtspiArVflEvZFF7bytY6nVnxvY3nt-uVBTCMp-4HqjBawOI1Eqf-oax7WA_ez7qoBhDaFQ9uaSEAWMGUcNI0mTgszWET-r2ia2m0VOApWH0pL_FlS5MYOeuutq5I6uYfS-QqiFcZlGcRyah8ikEdupKFGpG-4UiFTdSaCXtV8f0nOhD7WMknN-gtDE4FupVvo9PL9MeJJNOAxFyn6girmIpxr423anm-sq-JnggP44oxCX5gjq83M0WmnEkxtGYC937ceNBu_LJJO0pY2yPHD27nsphTgDgfqVwGIwOu7cHTMwzAEcAe9v3H-KYtbWVPfLL360PZuolcyOrw-BHGzZC18-WIb4_ccamnYJ5WUDGORvKZVMFIr-ZfAu6l7DUSa1LvaFf1Y0Z58ztbhvuV4ZMUABnxC--F5HZuqhPAxji5Anx1bJFQPtnPS0KZLr30tn6QSv6O-xdyUim4CEeeJp1BiBpxs7_6wZwwRWLgwWEsZW73UMT2gkPTjqPAx7Rod7tkFR-VcH37U_k2DEFUgpku9CQBW8YxQGTZpAILFr_Jj8e-HyXDDdSfBskjs2bHDitA9iC-C6me6HoIanY_H533qwNRofQlJ_1oKs6P1OgxHvsnzaL7adnMhzcitYPnzp9fZkf13d19pnc20A51SWIp0fsMnMktDti6OLfZItAt7nm_xKBNPeAei4GnShiO7ifLt9cSErN-3MRVx_BB6FNQMJSr_evrSG3ph4xw6shii_yHO6SlVi2-lPLhxJR4my8R4D22NEfo73gpno_4UQ129tYzrw8Nzxp1w.YPk5lBqrcfS9mwbFe5oWYg; _ga_X2GNH8R5NS=GS2.1.s1760151983$o21$g1$t1760151985$j58$l0$h1867484176' \
+  -b '[REDACTED_COOKIES_AND_SESSION_TOKENS]' \
   -H 'pragma: no-cache' \
   -H 'priority: u=1, i' \
   -H 'referer: https://labs.google/fx/tools/flow' \

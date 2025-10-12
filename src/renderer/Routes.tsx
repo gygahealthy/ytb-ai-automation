@@ -1,15 +1,15 @@
 // JSX runtime does not require explicit React import
 import { Navigate, Route, Routes } from "react-router-dom";
-import AdminPage from "./pages/AdminPage";
+import MasterPromptConfigPage from "./pages/admin/MasterPromptConfigPage";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
-import ChannelAnalysisPromptsPage from "./pages/admin/ChannelAnalysisPromptsPage";
-import PlatformAnalysisPromptsPage from "./pages/admin/PlatformAnalysisPromptsPage";
-import VideoCreationPromptsPage from "./pages/admin/VideoCreationPromptsPage";
+import ChannelAnalysisPromptsPage from "./pages/admin/master-prompt-config/ChannelAnalysisPromptsPage";
+import PlatformAnalysisPromptsPage from "./pages/admin/master-prompt-config/PlatformAnalysisPromptsPage";
+import VideoCreationPromptsPage from "./pages/admin/master-prompt-config/VideoCreationPromptsPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
-import MyVideoChannelsPage from "./pages/video-creation/MyVideoChannelsPage";
-import PromptFlowConfigPage from "./pages/video-creation/PromptFlowConfigPage";
+import MyVideoChannelsPage from "./pages/MyVideoChannelsPage";
+import PromptFlowConfigPage from "./pages/admin/PromptFlowConfigPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
 
@@ -21,13 +21,13 @@ export default function AppRoutes() {
       <Route path="/automation" element={<AutomationPage />} />
       <Route path="/automation/instance" element={<InstanceDashboard />} />
       <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/dashboard" element={<MasterPromptConfigPage />} />
+      <Route path="/admin/prompt-flows" element={<PromptFlowConfigPage />} />
       <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
       <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
       <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
       <Route path="/video-creation/channels" element={<MyVideoChannelsPage />} />
       <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
-      <Route path="/video-creation/prompt-flows" element={<PromptFlowConfigPage />} />
       <Route path="/video-creation/history" element={<VideoHistoryPage />} />
       <Route
         path="/history"
