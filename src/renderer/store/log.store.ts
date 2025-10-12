@@ -59,10 +59,33 @@ export const useLogStore = create<LogStore>()(
           if (state.isPinned) {
             return { isPinned: false, isDrawerOpen: false } as any;
           }
+
+          // If opening, close any generic drawer that's not pinned
+          if (!state.isDrawerOpen) {
+            // Use window API to close generic drawer
+            if (typeof window !== "undefined" && (window as any).__veo3_drawer_api) {
+              const api = (window as any).__veo3_drawer_api;
+              // Check if generic drawer is open and not pinned
+              if (api.isOpen && !api.isPinned) {
+                api.close();
+              }
+            }
+          }
+
           return { isDrawerOpen: !state.isDrawerOpen } as any;
         }),
 
-      openDrawer: () => set({ isDrawerOpen: true }),
+      openDrawer: () => {
+        // Close any generic drawer that's not pinned
+        if (typeof window !== "undefined" && (window as any).__veo3_drawer_api) {
+          const api = (window as any).__veo3_drawer_api;
+          // Check if generic drawer is open and not pinned
+          if (api.isOpen && !api.isPinned) {
+            api.close();
+          }
+        }
+        return set({ isDrawerOpen: true });
+      },
 
       closeDrawer: () => set((state) => (state.isPinned ? state : { isDrawerOpen: false })),
 

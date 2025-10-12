@@ -6,7 +6,7 @@ import SettingsForm from "./components/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
 import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";
-import { DrawerProvider } from "./contexts/DrawerContext";
+import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -30,7 +30,8 @@ export type Page =
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const modal = useModal();
-  const { isPinned } = useLogStore();
+  const { isPinned: logDrawerPinned } = useLogStore();
+  const { isPinned: genericDrawerPinned } = useDrawer();
 
   // Initialize keyboard shortcuts listener
   useKeyboardShortcuts();
@@ -58,12 +59,15 @@ function AppContent() {
     });
   };
 
+  // Calculate total right margin based on pinned drawers
+  const anyDrawerPinned = logDrawerPinned || genericDrawerPinned;
+
   return (
     <BrowserRouter>
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={handleSettingsClick} />
 
-        <main className={`flex-1 overflow-y-auto transition-all duration-300 ${isPinned ? "mr-[25%]" : ""}`}>
+        <main className={`flex-1 overflow-y-auto transition-all duration-300 ${anyDrawerPinned ? "mr-[25%]" : ""}`}>
           <AppRoutes />
         </main>
 

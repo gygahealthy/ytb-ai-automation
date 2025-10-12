@@ -13,6 +13,7 @@ export interface DrawerProps {
   width?: string;
   enablePin?: boolean;
   drawerId?: string; // Unique identifier for this drawer to persist its pin state
+  onPinChange?: (pinned: boolean) => void; // Callback when pin state changes
 }
 
 export default function Drawer({
@@ -25,6 +26,7 @@ export default function Drawer({
   width = "w-96",
   enablePin = true,
   drawerId,
+  onPinChange,
 }: DrawerProps) {
   const drawerPinStore = useDrawerPinStore();
 
@@ -43,6 +45,10 @@ export default function Drawer({
     setIsPinnedLocal(pinned);
     if (drawerId && enablePin) {
       drawerPinStore.setPinned(drawerId, pinned);
+    }
+    // Notify parent component about pin state change
+    if (onPinChange) {
+      onPinChange(pinned);
     }
   };
 

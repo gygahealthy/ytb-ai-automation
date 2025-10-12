@@ -1,23 +1,43 @@
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 import Drawer, { DrawerProps } from "../components/common/Drawer";
+import { useLogStore } from "../store/log.store";
 
 interface DrawerContextValue {
   openDrawer: (props: Omit<DrawerProps, "isOpen" | "onClose">) => void;
   closeDrawer: () => void;
   isOpen: boolean;
+  isPinned: boolean;
+  setIsPinned: (pinned: boolean) => void;
 }
 
 const DrawerContext = createContext<DrawerContextValue | undefined>(undefined);
 
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [drawerProps, setDrawerProps] = useState<Omit<DrawerProps, "isOpen" | "onClose"> | null>(null);
+  const [isPinned, setIsPinned] = useState(false);
 
   const openDrawer = (props: Omit<DrawerProps, "isOpen" | "onClose">) => {
-    setDrawerProps(props);
+    // Close LogDrawer if it's open and not pinned
+    const logStore = useLogStore.getState();
+    if (logStore.isDrawerOpen && !logStore.isPinned) {
+      logStore.closeDrawer();
+    }
+
+    // If a drawer is already open and not pinned, close it first
+    if (drawerProps && !isPinned) {
+      setDrawerProps(null);
+      // Small delay to allow close animation before opening new drawer
+      setTimeout(() => {
+        setDrawerProps(props);
+      }, 50);
+    } else {
+      setDrawerProps(props);
+    }
   };
 
   const closeDrawer = () => {
     setDrawerProps(null);
+    setIsPinned(false);
   };
 
   // Expose a simple drawer API on window so other runtime code (keyboard handlers) can
@@ -28,27 +48,67 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
     if ((window as any).__veo3_drawer_api) return; // Already created
 
     let isCurrentlyOpen = false;
+    let isCurrentlyPinned = false;
 
     (window as any).__veo3_drawer_api = {
       open: (props: Omit<DrawerProps, "isOpen" | "onClose">) => {
         console.log("[Drawer API] open called");
-        isCurrentlyOpen = true;
-        setDrawerProps(props);
+
+        // Close LogDrawer if it's open and not pinned
+        const logStore = useLogStore.getState();
+        if (logStore.isDrawerOpen && !logStore.isPinned) {
+          logStore.closeDrawer();
+        }
+
+        // If a drawer is already open and not pinned, close it first
+        if (isCurrentlyOpen && !isCurrentlyPinned) {
+          isCurrentlyOpen = false;
+          isCurrentlyPinned = false;
+          setDrawerProps(null);
+          setIsPinned(false);
+          // Small delay to allow close animation
+          setTimeout(() => {
+            isCurrentlyOpen = true;
+            setDrawerProps(props);
+          }, 50);
+        } else {
+          isCurrentlyOpen = true;
+          setDrawerProps(props);
+        }
       },
       close: () => {
         console.log("[Drawer API] close called");
         isCurrentlyOpen = false;
+        isCurrentlyPinned = false;
         setDrawerProps(null);
+        setIsPinned(false);
       },
-      isOpen: () => isCurrentlyOpen,
+      get isOpen() {
+        return isCurrentlyOpen;
+      },
+      get isPinned() {
+        return isCurrentlyPinned;
+      },
+      setPinned: (pinned: boolean) => {
+        isCurrentlyPinned = pinned;
+      },
       toggle: (props: Omit<DrawerProps, "isOpen" | "onClose">) => {
         console.log("[Drawer API] toggle called, tracked state:", isCurrentlyOpen ? "open" : "closed");
         if (isCurrentlyOpen) {
           console.log("[Drawer API] Closing drawer");
           isCurrentlyOpen = false;
+          isCurrentlyPinned = false;
           setDrawerProps(null);
+          setIsPinned(false);
         } else {
           console.log("[Drawer API] Opening drawer");
+
+          // Close LogDrawer if it's open and not pinned
+          const logStore = useLogStore.getState();
+          if (logStore.isDrawerOpen && !logStore.isPinned) {
+            logStore.closeDrawer();
+          }
+
           isCurrentlyOpen = true;
           setDrawerProps(props);
         }
@@ -76,18 +136,16 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).__veo3_drawer_api) {
       const api = (window as any).__veo3_drawer_api;
-      if (drawerProps && !api._isOpen) {
-        api._isOpen = true;
-      } else if (!drawerProps && api._isOpen) {
-        api._isOpen = false;
+      if (api.setPinned) {
+        api.setPinned(isPinned);
       }
     }
-  }, [drawerProps]);
+  }, [isPinned, drawerProps]);
 
   return (
-    <DrawerContext.Provider value={{ openDrawer, closeDrawer, isOpen: !!drawerProps }}>
+    <DrawerContext.Provider value={{ openDrawer, closeDrawer, isOpen: !!drawerProps, isPinned, setIsPinned }}>
       {children}
-      {drawerProps && <Drawer {...drawerProps} isOpen={true} onClose={closeDrawer} />}
+      {drawerProps && <Drawer {...drawerProps} isOpen={true} onClose={closeDrawer} onPinChange={setIsPinned} />}
     </DrawerContext.Provider>
   );
 }

@@ -1,15 +1,13 @@
-import { FolderKanban, History, Plus, User, Video } from "lucide-react";
+import { History, Plus, User, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
 import JobDetailsModal from "../../components/video-creation/JobDetailsModal";
 import JsonToolbar from "../../components/video-creation/JsonToolbar";
+import ProfileDrawer from "../../components/video-creation/ProfileDrawer";
 import VideoPromptRow from "../../components/video-creation/VideoPromptRow";
 import { useDrawer } from "../../contexts/DrawerContext";
-import { useAlert } from "../../hooks/useAlert";
-import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
-import useVeo3Store from "../../store/veo3.store";
 import { useVideoCreationStore } from "../../store/video-creation.store";
 
 export default function SingleVideoCreationPage() {
@@ -21,9 +19,7 @@ export default function SingleVideoCreationPage() {
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
-  const { openDrawer, closeDrawer } = useDrawer();
-  const veo3Store = useVeo3Store();
-  const { show: showAlert } = useAlert();
+  const { openDrawer } = useDrawer();
 
   const {
     prompts,
@@ -205,7 +201,17 @@ export default function SingleVideoCreationPage() {
             api.toggle({
               title: "Profile & Project Selection",
               icon: <User className="w-5 h-5" />,
-              children: <ProfileDrawerContent />,
+              children: (
+                <ProfileDrawer
+                  initialProfileId={selectedProfileId || null}
+                  initialProjectId={selectedProjectId || null}
+                  onApply={(p, pr) => {
+                    setSelectedProfileId(p || "");
+                    setSelectedProjectId(pr || "");
+                    // closeDrawer will be handled by ProfileDrawer via onApply if desired
+                  }}
+                />
+              ),
             });
           } else {
             // fallback to dispatch event
@@ -366,180 +372,17 @@ export default function SingleVideoCreationPage() {
     openDrawer({
       title: "Profile & Project Selection",
       icon: <User className="w-5 h-5" />,
-      children: <ProfileDrawerContent />,
+      children: (
+        <ProfileDrawer
+          initialProfileId={selectedProfileId || null}
+          initialProjectId={selectedProjectId || null}
+          onApply={(p, pr) => {
+            setSelectedProfileId(p || "");
+            setSelectedProjectId(pr || "");
+          }}
+        />
+      ),
     });
-  };
-
-  const ProfileDrawerContent = () => {
-    const [profiles, setProfiles] = useState<any[]>([]);
-    const [projects, setProjects] = useState<any[]>([]);
-    const [localProfileId, setLocalProfileId] = useState(selectedProfileId);
-    const [localProjectId, setLocalProjectId] = useState(selectedProjectId);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-      fetchProfiles();
-    }, []);
-
-    useEffect(() => {
-      if (localProfileId) {
-        fetchProjects(localProfileId);
-      } else {
-        setProjects([]);
-      }
-    }, [localProfileId]);
-
-    const fetchProfiles = async () => {
-      setLoading(true);
-      try {
-        const response = await profileIPC.getAll();
-        if (response.success && response.data) {
-          setProfiles(response.data);
-        }
-      } catch (error) {
-        console.error("[ProfileDrawer] Failed to fetch profiles", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchProjects = async (profileId: string) => {
-      setLoading(true);
-      try {
-        // Check cache first
-        const cached = veo3Store.getProjectsForProfile(profileId);
-        if (cached) {
-          const transformedProjects = cached.map((p: any) => ({
-            id: p.projectId || p.id,
-            name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
-            description: p.description || "",
-          }));
-          setProjects(transformedProjects);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch from API
-        const response = await veo3IPC.fetchProjectsFromAPI(profileId);
-        if (response && response.success) {
-          const projectsArr = Array.isArray(response.data) ? response.data : response.data?.projects || [];
-          veo3Store.setProjectsForProfile(profileId, projectsArr);
-          const transformedProjects = projectsArr.map((p: any) => ({
-            id: p.projectId || p.id,
-            name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
-            description: p.description || "",
-          }));
-          setProjects(transformedProjects);
-        } else {
-          // Show error alert to user
-          const errorMsg = response?.error || "Unknown error";
-          console.error("[ProfileDrawer] Failed to fetch projects:", errorMsg);
-
-          if (errorMsg.includes("401") || errorMsg.includes("Unauthorized")) {
-            showAlert({
-              title: "Authentication Failed",
-              message: "Your session has expired or you are not logged in. Please log in to the profile again to fetch projects.",
-              severity: "error",
-              duration: null,
-            });
-          } else if (errorMsg.includes("cookies") || errorMsg.includes("expired")) {
-            showAlert({
-              title: "Session Expired",
-              message: errorMsg,
-              severity: "warning",
-              duration: null,
-            });
-          } else {
-            showAlert({
-              title: "Failed to Fetch Projects",
-              message: errorMsg,
-              severity: "error",
-              duration: null,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("[ProfileDrawer] Failed to fetch projects", error);
-        showAlert({
-          title: "Error",
-          message: `Failed to fetch projects: ${String(error)}`,
-          severity: "error",
-          duration: null,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleApply = () => {
-      setSelectedProfileId(localProfileId);
-      setSelectedProjectId(localProjectId);
-      closeDrawer();
-    };
-
-    return (
-      <div className="space-y-6">
-        {/* Profile Selection */}
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            <User className="w-4 h-4" />
-            <span>Select Profile</span>
-          </label>
-          <select
-            value={localProfileId}
-            onChange={(e) => setLocalProfileId(e.target.value)}
-            disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-          >
-            <option value="">-- Select Profile --</option>
-            {profiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.name} {profile.isLoggedIn ? "✓" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Project Selection */}
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            <FolderKanban className="w-4 h-4" />
-            <span>Select Project</span>
-          </label>
-          <select
-            value={localProjectId}
-            onChange={(e) => setLocalProjectId(e.target.value)}
-            disabled={!localProfileId || loading}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-          >
-            <option value="">-- Select Project --</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          {!localProfileId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Select a profile first</p>}
-        </div>
-
-        {/* Info Box */}
-        {localProfileId && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
-              This profile and project will be used globally for all video creation unless overridden per-row.
-            </p>
-          </div>
-        )}
-
-        {/* Apply Button */}
-        <button
-          onClick={handleApply}
-          className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium"
-        >
-          Apply Selection
-        </button>
-      </div>
-    );
   };
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
