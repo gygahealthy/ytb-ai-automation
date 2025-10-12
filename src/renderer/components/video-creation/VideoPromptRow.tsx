@@ -5,8 +5,8 @@ import veo3IPC from "../../ipc/veo3";
 import useVeo3Store from "../../store/veo3.store";
 import { useVideoCreationStore } from "../../store/video-creation.store";
 import { Prompt, VideoCreationJob } from "../../types/video-creation.types";
-import ActionControls from "./video-prompt-row/ActionControls";
 import PreviewPanel from "../common/PreviewPanel";
+import ActionControls from "./video-prompt-row/ActionControls";
 import ProfilePanel from "./video-prompt-row/ProfilePanel";
 
 interface Profile {
@@ -64,9 +64,10 @@ export default function VideoPromptRow({
   const { updateJobStatus } = useVideoCreationStore();
 
   const isValid = prompt.text.trim().length > 0;
-  // Default behavior: show previews by default unless explicitly disabled per-prompt.
-  // When globalPreviewMode is enabled, it inverts per-prompt visibility (existing pattern).
-  const showPreview = globalPreviewMode ? !prompt.showPreview : (prompt.showPreview ?? true);
+  // When globalPreviewMode is false (default), show all previews
+  // When globalPreviewMode is true, hide all previews
+  // Individual prompt.showPreview can override this behavior
+  const showPreview = globalPreviewMode ? false : prompt.showPreview ?? true;
 
   const effectiveProfileId = prompt.profileId || globalProfileId;
   const hasCustomProfile = !!prompt.profileId;

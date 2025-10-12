@@ -10,12 +10,18 @@ export default function LogDrawer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<"all" | LogEntry["level"]>("all");
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll based on sort order when new logs arrive
   useEffect(() => {
     if (logContainerRef.current && isDrawerOpen) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+      if (sortOrder === "latest") {
+        // Scroll to top when showing latest first
+        logContainerRef.current.scrollTop = 0;
+      } else {
+        // Scroll to bottom when showing oldest first
+        logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+      }
     }
-  }, [logs, isDrawerOpen]);
+  }, [logs, isDrawerOpen, sortOrder]);
 
   // Subscribe to backend logs
   useEffect(() => {

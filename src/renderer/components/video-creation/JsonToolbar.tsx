@@ -63,14 +63,14 @@ export default function JsonToolbar({
           <button
             onClick={onToggleGlobalPreview}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded border transition-colors text-sm ${
-              globalPreviewMode
+              !globalPreviewMode
                 ? "bg-primary-500 text-white border-primary-500"
                 : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
             }`}
-            title={globalPreviewMode ? "Hide all previews" : "Show all previews"}
+            title={!globalPreviewMode ? "Showing all previews" : "Hiding all previews"}
           >
-            {globalPreviewMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            <span>{globalPreviewMode ? "Hide Previews" : "Show Previews"}</span>
+            {!globalPreviewMode ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            <span>{!globalPreviewMode ? "Show Previews" : "Hide Previews"}</span>
           </button>
         </div>
 

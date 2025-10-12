@@ -214,12 +214,23 @@ export const useVideoCreationStore = create<VideoCreationStore>((set, get) => ({
       }));
 
       if (mode === "add") {
-        // Add to top and reorder existing prompts
-        const reorderedExisting = prompts.map((p) => ({ ...p, order: p.order + newPrompts.length }));
-        set({
-          prompts: [...newPrompts, ...reorderedExisting],
-          history: saveToHistory(prompts, history),
-        });
+        // Check if we only have one empty prompt (initial state)
+        const hasOnlyEmptyPrompt = prompts.length === 1 && prompts[0].text.trim() === "";
+
+        if (hasOnlyEmptyPrompt) {
+          // Replace the empty prompt instead of adding to it
+          set({
+            prompts: newPrompts,
+            history: saveToHistory(prompts, history),
+          });
+        } else {
+          // Add to top and reorder existing prompts
+          const reorderedExisting = prompts.map((p) => ({ ...p, order: p.order + newPrompts.length }));
+          set({
+            prompts: [...newPrompts, ...reorderedExisting],
+            history: saveToHistory(prompts, history),
+          });
+        }
       } else {
         set({
           prompts: newPrompts,

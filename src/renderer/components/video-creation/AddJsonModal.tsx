@@ -20,7 +20,6 @@ export default function AddJsonModal({ isOpen, onClose, onAdd }: AddJsonModalPro
     setIsDragging(false);
   }, []);
 
-
   // parsing handled directly in handleAdd
   // previewError intentionally removed: we validate on Add and show inline errors
 
@@ -129,72 +128,77 @@ export default function AddJsonModal({ isOpen, onClose, onAdd }: AddJsonModalPro
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
             <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">JSON Input</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">JSON Input</label>
 
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={`w-full mb-3 p-4 border-2 rounded-lg transition-all ${
-                    isDragging ? "border-primary-500 bg-primary-50 dark:bg-primary-900/10" : "border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        accept="application/json,.json"
-                        id="jsonFileInput"
-                        onChange={async (e) => {
-                          setError("");
-                          const file = e.target.files && e.target.files[0];
-                          await handleFile(file ?? null);
-                        }}
-                        className="hidden"
-                      />
-                      <label htmlFor="jsonFileInput" className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 cursor-pointer text-sm">
-                        Choose File
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!jsonInput.trim()) {
-                            setError("No JSON loaded from file or input");
-                            return;
-                          }
-                          handleAdd();
-                        }}
-                        className="px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm"
-                      >
-                        Add to List
-                      </button>
-                    </div>
-                    <div className="text-xs text-gray-500">{fileName ?? "No file chosen"}</div>
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={`w-full mb-3 p-4 border-2 rounded-lg transition-all ${
+                  isDragging
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/10"
+                    : "border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="application/json,.json"
+                      id="jsonFileInput"
+                      onChange={async (e) => {
+                        setError("");
+                        const file = e.target.files && e.target.files[0];
+                        await handleFile(file ?? null);
+                      }}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="jsonFileInput"
+                      className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 cursor-pointer text-sm"
+                    >
+                      Choose File
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!jsonInput.trim()) {
+                          setError("No JSON loaded from file or input");
+                          return;
+                        }
+                        handleAdd();
+                      }}
+                      className="px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm"
+                    >
+                      Add to List
+                    </button>
                   </div>
-
-                  <textarea
-                    value={jsonInput}
-                    onChange={(e) => setJsonInput(e.target.value)}
-                    placeholder={`Enter prompts as JSON array:\n[\n  "First prompt here",\n  "Second prompt here",\n  "Third prompt here"\n]\n\nOr as objects:\n[\n  { "text": "First prompt", "order": 0 },\n  { "text": "Second prompt", "order": 1 }\n]`}
-                    rows={14}
-                    className="w-full px-4 py-3 border border-transparent rounded-md bg-transparent text-gray-900 dark:text-white focus:outline-none font-mono text-sm resize-none"
-                  />
+                  <div className="text-xs text-gray-500">{fileName ?? "No file chosen"}</div>
                 </div>
 
-                {error && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-                  </div>
-                )}
+                <textarea
+                  value={jsonInput}
+                  onChange={(e) => setJsonInput(e.target.value)}
+                  placeholder={`Enter prompts as JSON array:\n[\n  "First prompt here",\n  "Second prompt here",\n  "Third prompt here"\n]\n\nOr as objects:\n[\n  { "text": "First prompt", "order": 0 },\n  { "text": "Second prompt", "order": 1 }\n]`}
+                  rows={14}
+                  className="w-full px-4 py-3 border border-transparent rounded-md bg-transparent text-gray-900 dark:text-white focus:outline-none font-mono text-sm resize-none"
+                />
+              </div>
 
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg mt-3">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Tip:</strong> New prompts will be added to the top of your current list.
-                  </p>
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
+              )}
+
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg mt-3">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  <strong>Tip:</strong> New prompts will be added to the top of your current list.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -205,12 +209,6 @@ export default function AddJsonModal({ isOpen, onClose, onAdd }: AddJsonModalPro
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors font-medium"
             >
               Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium"
-            >
-              Add to List
             </button>
           </div>
         </div>

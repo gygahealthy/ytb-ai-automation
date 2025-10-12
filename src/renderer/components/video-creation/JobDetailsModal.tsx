@@ -1,4 +1,7 @@
 import { Download, FileText, FolderOpen, Image, Music, Video, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import veo3IPC from "../../ipc/veo3";
+import { useVideoCreationStore } from "../../store/video-creation.store";
 import { VideoCreationJob } from "../../types/video-creation.types";
 
 interface JobDetailsModalProps {
@@ -9,6 +12,94 @@ interface JobDetailsModalProps {
 }
 
 export default function JobDetailsModal({ job, onClose, onShowInFolder, onDownload }: JobDetailsModalProps) {
+  const [pollingProgress, setPollingProgress] = useState(0);
+  const { updateJobStatus } = useVideoCreationStore();
+
+  // Polling logic for processing jobs
+  useEffect(() => {
+    if (!job) {
+      setPollingProgress(0);
+      return;
+    }
+
+    if (!job.generationId) {
+      setPollingProgress(0);
+      return;
+    }
+
+    if (job.status !== "processing") {
+      setPollingProgress(0);
+      return;
+    }
+
+    console.log(`[JobDetailsModal] Starting polling for job: ${job.id}, generationId: ${job.generationId}`);
+
+    let pollInterval: NodeJS.Timeout;
+    let progressInterval: NodeJS.Timeout;
+    let currentProgress = 0;
+
+    const animateProgress = () => {
+      progressInterval = setInterval(() => {
+        currentProgress += 1;
+        if (currentProgress <= 98) {
+          setPollingProgress(currentProgress);
+        }
+      }, 1000);
+    };
+
+    animateProgress();
+
+    const pollStatus = async () => {
+      try {
+        const result = await veo3IPC.checkGenerationStatus(job.generationId!);
+
+        if (result.success && result.data) {
+          const { status, videoUrl, errorMessage, completedAt } = result.data;
+
+          if (status === "completed") {
+            console.log(`[JobDetailsModal] Video generation completed!`);
+            setPollingProgress(100);
+            clearInterval(pollInterval);
+            clearInterval(progressInterval);
+
+            updateJobStatus(job.id, "completed", {
+              videoUrl,
+              completedAt,
+              progress: 100,
+            });
+
+            return;
+          } else if (status === "failed") {
+            console.error(`[JobDetailsModal] Video generation failed: ${errorMessage}`);
+            setPollingProgress(0);
+            clearInterval(pollInterval);
+            clearInterval(progressInterval);
+
+            updateJobStatus(job.id, "failed", {
+              error: errorMessage,
+              progress: 0,
+            });
+
+            return;
+          } else {
+            clearInterval(progressInterval);
+            animateProgress();
+          }
+        }
+      } catch (error) {
+        console.error(`[JobDetailsModal] Error checking status:`, error);
+      }
+    };
+
+    pollStatus();
+    pollInterval = setInterval(pollStatus, 10000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearInterval(progressInterval);
+    };
+  }, [job?.id, job?.generationId, job?.status, updateJobStatus]);
+
   if (!job) return null;
 
   // Mock video metadata - In real implementation, this would come from the job data
@@ -74,8 +165,8 @@ export default function JobDetailsModal({ job, onClose, onShowInFolder, onDownlo
               </span>
             </div>
 
-            {/* Progress */}
-            {job.status === "processing" && job.progress !== undefined && (
+            {/* Progress - only show if not displaying video loading state */}
+            {job.status === "processing" && !job.videoUrl && job.progress !== undefined && (
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">Progress</h4>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -103,31 +194,58 @@ export default function JobDetailsModal({ job, onClose, onShowInFolder, onDownlo
               </div>
             </div>
 
-            {/* Video Output */}
-            {job.videoUrl && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Video Output</h4>
-                <div className="space-y-3">
-                  <video src={job.videoUrl} controls className="w-full rounded-lg border border-gray-200 dark:border-gray-700" />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleDownload}
-                      className="flex items-center gap-2 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                    <button
-                      onClick={handleShowInFolder}
-                      className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
-                    >
-                      <FolderOpen className="w-4 h-4" />
-                      Show in Folder
-                    </button>
+            {/* Video Output or Loading */}
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Video Output</h4>
+              <div className="space-y-3">
+                {job.videoUrl ? (
+                  <>
+                    <video
+                      src={job.videoUrl}
+                      controls
+                      className="w-full rounded-lg border border-gray-200 dark:border-gray-700"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleDownload}
+                        className="flex items-center gap-2 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </button>
+                      <button
+                        onClick={handleShowInFolder}
+                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        Show in Folder
+                      </button>
+                    </div>
+                  </>
+                ) : job.status === "processing" ? (
+                  <div className="w-full h-64 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-3">
+                    <div
+                      className="w-12 h-12 rounded-full border-4 border-t-primary-500 border-gray-200 dark:border-gray-600 animate-spin"
+                      aria-hidden="true"
+                    />
+                    <div className="text-center px-4">
+                      <span className="text-sm text-gray-600 dark:text-gray-300 font-medium block">Generating video...</span>
+                      <span className="text-xs text-gray-400 mt-1 block">{pollingProgress}%</span>
+                    </div>
+                    <div className="w-48 mt-2 bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-primary-400 to-primary-600 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(Math.max(pollingProgress, 0), 100)}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="w-full h-64 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+                    <span className="text-sm text-gray-400">No video yet</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Video Metadata */}
             {job.videoUrl && job.status === "completed" && (
