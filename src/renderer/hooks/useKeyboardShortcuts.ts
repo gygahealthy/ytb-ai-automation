@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import electronApi from "../ipc";
 import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
+import { useLogStore } from "../store/log.store";
 
 type ShortcutHandler = () => void;
 
@@ -50,6 +51,27 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
 
     // Fallback: dispatch event
     window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
+  },
+  "toggle-logs": () => {
+    console.log("[Keyboard] Toggle System Logs triggered");
+    const logStore = useLogStore.getState();
+    // If pinned, unpin it first, then toggle will work normally
+    if (logStore.isPinned) {
+      logStore.togglePin(); // This will unpin
+    }
+    logStore.toggleDrawer();
+  },
+  "pin-drawer": () => {
+    console.log("[Keyboard] Pin/Unpin Drawer triggered");
+    // Try to pin the log drawer if it's open
+    const logStore = useLogStore.getState();
+    if (logStore.isDrawerOpen) {
+      logStore.togglePin();
+      return;
+    }
+
+    // Try to pin other drawers via custom event
+    window.dispatchEvent(new CustomEvent("pin-drawer"));
   },
 };
 

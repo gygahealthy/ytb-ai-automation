@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter } from "react-router-dom";
+import LogDrawer from "./components/LogDrawer";
 import Sidebar from "./components/Sidebar";
 import SettingsForm from "./components/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
@@ -10,6 +11,7 @@ import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ModalProvider, useModal } from "./hooks/useModal";
+import { useLogStore } from "./store/log.store";
 import { useSettingsStore } from "./store/settings.store";
 
 export type Page =
@@ -28,6 +30,7 @@ export type Page =
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const modal = useModal();
+  const { isPinned } = useLogStore();
 
   // Initialize keyboard shortcuts listener
   useKeyboardShortcuts();
@@ -60,9 +63,12 @@ function AppContent() {
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={handleSettingsClick} />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto transition-all duration-300 ${isPinned ? "mr-[25%]" : ""}`}>
           <AppRoutes />
         </main>
+
+        {/* Global Log Drawer */}
+        <LogDrawer />
       </div>
     </BrowserRouter>
   );

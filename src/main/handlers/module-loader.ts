@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Dynamically discover modules from the `main/modules` directory by reading
@@ -11,9 +11,9 @@ export function collectModuleRegistrations(): any[] {
   // Prefer compiled runtime modules folder (e.g. dist/main/modules). When
   // running from source (dev mode) the compiled folder may not exist, so
   // fall back to the repository's source modules directory.
-  let modulesDir = path.resolve(__dirname, '../modules');
+  let modulesDir = path.resolve(__dirname, "../modules");
   if (!fs.existsSync(modulesDir)) {
-    const srcFallback = path.resolve(process.cwd(), 'src', 'main', 'modules');
+    const srcFallback = path.resolve(process.cwd(), "src", "main", "modules");
     if (fs.existsSync(srcFallback)) {
       modulesDir = srcFallback;
     }
@@ -23,20 +23,20 @@ export function collectModuleRegistrations(): any[] {
   try {
     entries = fs.readdirSync(modulesDir, { withFileTypes: true });
   } catch (e) {
-    console.warn('Module loader: failed to read modules directory', e);
+    console.warn("Module loader: failed to read modules directory", e);
     return allRegistrations;
   }
 
   for (const d of entries) {
     if (!d.isDirectory()) continue;
     const modulePath = path.join(modulesDir, d.name);
-    const manifestPath = path.join(modulePath, 'manifest.json');
+    const manifestPath = path.join(modulePath, "manifest.json");
     let hasManifest = false;
     if (fs.existsSync(manifestPath)) {
       hasManifest = true;
       // read manifest to optionally allow disabling modules via manifest
       try {
-        const manifestRaw = fs.readFileSync(manifestPath, 'utf8');
+        const manifestRaw = fs.readFileSync(manifestPath, "utf8");
         const manifest = JSON.parse(manifestRaw);
         if (manifest && manifest.disabled) {
           console.log(`Module loader: skipping disabled module ${d.name}`);
@@ -53,13 +53,13 @@ export function collectModuleRegistrations(): any[] {
     let loadedRegistrations: any[] | null = null;
     const tryRequire = (p: string) => {
       try {
-        if (!fs.existsSync(p) && !fs.existsSync(p + '.js') && !fs.existsSync(p + '.ts')) return null;
+        if (!fs.existsSync(p) && !fs.existsSync(p + ".js") && !fs.existsSync(p + ".ts")) return null;
         const exported = require(p);
         // If the module directly exports an array (default export), return it
         if (Array.isArray(exported)) return exported;
         // Otherwise inspect named exports for an array of registrations
         for (const val of Object.values(exported)) {
-          if (Array.isArray(val) && val.length > 0 && typeof val[0].channel === 'string') {
+          if (Array.isArray(val) && val.length > 0 && typeof val[0].channel === "string") {
             return val as any[];
           }
         }
@@ -72,13 +72,13 @@ export function collectModuleRegistrations(): any[] {
     // Candidate paths (prefer compiled dist when available)
     const candidates = [] as string[];
     // handlers/registrations under modulePath
-    candidates.push(path.join(modulePath, 'handlers', 'registrations'));
+    candidates.push(path.join(modulePath, "handlers", "registrations"));
     // compiled dist equivalent
     const cwd = process.cwd();
-    const srcPrefix = path.join(cwd, 'src');
+    const srcPrefix = path.join(cwd, "src");
     if (modulePath.startsWith(srcPrefix)) {
-      const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, 'dist'));
-      candidates.push(path.join(compiledPath, 'handlers', 'registrations'));
+      const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, "dist"));
+      candidates.push(path.join(compiledPath, "handlers", "registrations"));
     }
 
     for (const cand of candidates) {
@@ -102,8 +102,8 @@ export function collectModuleRegistrations(): any[] {
           mod = require(modulePath);
         } catch (innerErr) {
           if (modulePath.startsWith(srcPrefix)) {
-            const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, 'dist'));
-            const compiledIndex = path.join(compiledPath, 'index.js');
+            const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, "dist"));
+            const compiledIndex = path.join(compiledPath, "index.js");
             if (fs.existsSync(compiledIndex)) {
               mod = require(compiledPath);
             } else {
@@ -114,11 +114,11 @@ export function collectModuleRegistrations(): any[] {
           }
         }
 
-        if (mod && typeof mod.registerModule === 'function') {
+        if (mod && typeof mod.registerModule === "function") {
           mod.registerModule((regs: any[]) => allRegistrations.push(...regs));
-          console.log(`Module loader: loaded module ${d.name} via registerModule${hasManifest ? '' : ' (no manifest)'}'`);
+          console.log(`Module loader: loaded module ${d.name} via registerModule${hasManifest ? "" : " (no manifest)"}'`);
         } else {
-          console.log(`Module loader: module ${d.name} did not export registerModule${hasManifest ? '' : ' (no manifest)'}'`);
+          console.log(`Module loader: module ${d.name} did not export registerModule${hasManifest ? "" : " (no manifest)"}'`);
         }
       } catch (err) {
         if (!hasManifest) {

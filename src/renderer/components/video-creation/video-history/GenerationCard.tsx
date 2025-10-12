@@ -1,13 +1,28 @@
-import { Calendar, CheckCircle, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
-import StatusBadge from "./StatusBadge";
-import VideoLink from "./VideoLink";
-import TechnicalDetails from "./TechnicalDetails";
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { VideoGeneration } from "src/shared/types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
+import StatusBadge from "./StatusBadge";
+import TechnicalDetails from "./TechnicalDetails";
+import VideoLink from "./VideoLink";
 
-export default function GenerationCard({ generation, onRefresh, refreshingId, globalPreview }: { generation: VideoGeneration; onRefresh: (g: VideoGeneration) => void; refreshingId: string | null; globalPreview?: boolean; }) {
+export default function GenerationCard({
+  generation,
+  onRefresh,
+  refreshingId,
+  globalPreview,
+}: {
+  generation: VideoGeneration;
+  onRefresh: (g: VideoGeneration) => void;
+  refreshingId: string | null;
+  globalPreview?: boolean;
+}) {
   const [showPreview, setShowPreview] = useState<boolean>(!!globalPreview);
+
+  // Sync showPreview when globalPreview changes
+  useEffect(() => {
+    setShowPreview(!!globalPreview);
+  }, [globalPreview]);
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("en-US", {
@@ -35,7 +50,7 @@ export default function GenerationCard({ generation, onRefresh, refreshingId, gl
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="p-0 flex">
         {/* Left preview column - only render when visible. Wider preview for better visibility */}
-  {(globalPreview || showPreview) && (
+        {(globalPreview || showPreview) && (
           <div className="w-72 p-4 border-r border-gray-100 dark:border-gray-700 flex-shrink-0">
             <div className="w-full h-40 bg-gray-50 dark:bg-gray-900/20 rounded-md overflow-hidden">
               <PreviewPanel job={generation} pollingProgress={0} />
@@ -52,7 +67,11 @@ export default function GenerationCard({ generation, onRefresh, refreshingId, gl
                   {/* External link icon near title */}
                   <VideoLink generation={generation} />
                   {/* Toggle preview */}
-                  <button onClick={() => setShowPreview((s) => !s)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-900/30" title={showPreview ? 'Hide preview' : 'Show preview'}>
+                  <button
+                    onClick={() => setShowPreview((s) => !s)}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-900/30"
+                    title={showPreview ? "Hide preview" : "Show preview"}
+                  >
                     {showPreview ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </button>
                   {/* Refresh button (only for non-completed) */}
@@ -74,7 +93,6 @@ export default function GenerationCard({ generation, onRefresh, refreshingId, gl
               <span className="text-xs text-gray-500 dark:text-gray-400">{getAspectRatioLabel(generation.aspectRatio)}</span>
               <StatusBadge status={generation.status} />
             </div>
-
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">

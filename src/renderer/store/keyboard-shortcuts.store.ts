@@ -1,7 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ShortcutAction = "refresh" | "refresh-alt" | "devtools" | "toggle-history" | "toggle-profile-select";
+export type ShortcutAction =
+  | "refresh"
+  | "refresh-alt"
+  | "devtools"
+  | "toggle-history"
+  | "toggle-profile-select"
+  | "toggle-logs"
+  | "pin-drawer";
 
 export type KeyboardShortcut = {
   id: ShortcutAction;
@@ -54,6 +61,20 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     description: "Open/close the profile & project selection drawer",
     keys: ["Ctrl", "F"],
     icon: "User",
+  },
+  {
+    id: "toggle-logs",
+    label: "Toggle System Logs",
+    description: "Open/close the system logs drawer",
+    keys: ["Ctrl", "G"],
+    icon: "Terminal",
+  },
+  {
+    id: "pin-drawer",
+    label: "Pin/Unpin Drawer",
+    description: "Pin or unpin the currently open drawer",
+    keys: ["Ctrl", "N"],
+    icon: "Pin",
   },
 ];
 

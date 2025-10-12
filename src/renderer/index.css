@@ -149,6 +149,23 @@ code {
   @apply bg-gray-400 dark:bg-gray-500;
 }
 
+/* Log highlight animation */
+.log-highlight {
+  animation: log-highlight-fade 1.6s ease-in-out;
+}
+
+@keyframes log-highlight-fade {
+  0% {
+    background-color: rgba(59, 130, 246, 0.12);
+  }
+  40% {
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 /* Font Size Support */
 :root[data-font-size="xs"] {
   font-size: 12px;

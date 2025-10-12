@@ -19,10 +19,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getById: (id: string) => ipcRenderer.invoke("automation:getById", { id }),
     create: (input: any) => ipcRenderer.invoke("automation:create", input),
     start: (id: string) => ipcRenderer.invoke("automation:start", { id }),
-  stop: (id: string) => ipcRenderer.invoke("automation:stop", { id }),
+    stop: (id: string) => ipcRenderer.invoke("automation:stop", { id }),
     // Multi-instance automation
     launch: (request: any) => ipcRenderer.invoke("automation:launch", request),
-  stopInstance: (instanceId: string) => ipcRenderer.invoke("automation:stopInstance", { instanceId }),
+    stopInstance: (instanceId: string) => ipcRenderer.invoke("automation:stopInstance", { instanceId }),
     stopAll: () => ipcRenderer.invoke("automation:stopAll"),
     // Multi-instance getters
     get: (instanceId: string) => ipcRenderer.invoke("automation:getInstance", { instanceId }),
@@ -31,10 +31,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     highlight: (instanceId: string) => ipcRenderer.invoke("automation:highlight", { instanceId }),
     updateConfig: (config: any) => ipcRenderer.invoke("automation:updateConfig", config),
     getConfig: () => ipcRenderer.invoke("automation:getConfig"),
-      applyPreset: (preset: string) => ipcRenderer.invoke('automation:applyPreset', { preset }),
-  repositionInstance: (instanceId: string) => ipcRenderer.invoke('automation:repositionInstance', { instanceId }),
-  repositionAll: () => ipcRenderer.invoke('automation:repositionAll'),
-  moveInstanceToSlot: (instanceId: string, slot: number) => ipcRenderer.invoke('automation:moveInstanceToSlot', { instanceId, slot }),
+    applyPreset: (preset: string) => ipcRenderer.invoke("automation:applyPreset", { preset }),
+    repositionInstance: (instanceId: string) => ipcRenderer.invoke("automation:repositionInstance", { instanceId }),
+    repositionAll: () => ipcRenderer.invoke("automation:repositionAll"),
+    moveInstanceToSlot: (instanceId: string, slot: number) =>
+      ipcRenderer.invoke("automation:moveInstanceToSlot", { instanceId, slot }),
     // Event listeners
     onInstanceRegistered: (callback: (data: any) => void) => {
       const channel = "automation:instance:registered";
@@ -64,7 +65,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Chat Automation APIs
   chatAutomation: {
-    init: (profileId: string, provider: "chatgpt" | "gemini") => ipcRenderer.invoke("chatAutomation:init", { profileId, provider }),
+    init: (profileId: string, provider: "chatgpt" | "gemini") =>
+      ipcRenderer.invoke("chatAutomation:init", { profileId, provider }),
     closeSession: (sessionId: string) => ipcRenderer.invoke("chatAutomation:closeSession", { sessionId }),
     getActiveSessions: () => ipcRenderer.invoke("chatAutomation:getActiveSessions"),
   },
@@ -125,6 +127,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     delete: (id: number) => ipcRenderer.invoke("master-prompts:delete", id),
   },
 
+  // Logger APIs
+  logger: {
+    onLog: (callback: (data: any) => void) => {
+      const channel = "logger:log";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
+
   // Generic invoke for other channels
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
 });
@@ -143,10 +155,10 @@ declare global {
         login: (id: string) => Promise<any>;
       };
       automation: {
-  repositionInstance: (instanceId: string) => Promise<any>;
-  repositionAll: () => Promise<any>;
-  applyPreset: (preset: string) => Promise<any>;
-  moveInstanceToSlot: (instanceId: string, slot: number) => Promise<any>;
+        repositionInstance: (instanceId: string) => Promise<any>;
+        repositionAll: () => Promise<any>;
+        applyPreset: (preset: string) => Promise<any>;
+        moveInstanceToSlot: (instanceId: string, slot: number) => Promise<any>;
         onInstanceRegistered: (callback: (data: any) => void) => void;
         onInstanceUpdated: (callback: (data: any) => void) => void;
         onInstanceStatus: (callback: (data: any) => void) => void;
@@ -188,6 +200,9 @@ declare global {
         showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
       };
       validateBrowserPath: (path: string) => Promise<{ valid: boolean; error?: string; detectedName?: string; version?: string }>;
+      logger: {
+        onLog: (callback: (data: { level: string; message: string; args: any[]; timestamp: number }) => void) => () => void;
+      };
       masterPrompts: {
         getAll: () => Promise<any>;
         getById: (id: number) => Promise<any>;
