@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Edit3, Trash2, Archive, CheckCircle2, XCircle } from 'lucide-react';
+import { Archive, CheckCircle2, Edit3, Trash2, XCircle } from "lucide-react";
+import React, { useState } from "react";
 
-export interface PromptRow {
+export interface VideoPromptRow {
   id?: number;
   provider?: string;
   promptKind?: string;
@@ -14,8 +14,8 @@ export interface PromptRow {
 }
 
 type Props = {
-  prompts: PromptRow[];
-  onEdit: (row: PromptRow) => void;
+  prompts: VideoPromptRow[];
+  onEdit: (row: VideoPromptRow) => void;
   onDelete: (id: number) => void;
   onToggleActive?: (id: number, active: boolean) => void;
   onArchive?: (id: number) => void;
@@ -25,13 +25,26 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
   const [showArchived, setShowArchived] = useState(false);
 
   const providerBadge = (provider?: string) => {
-    const key = (provider || '').toLowerCase();
+    const key = (provider || "").toLowerCase();
     const map: Record<string, { label: string; classes: string }> = {
-      youtube: { label: 'YouTube', classes: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
-      tiktok: { label: 'TikTok', classes: 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800' },
-      veo3: { label: 'VEO3', classes: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800' },
+      youtube: {
+        label: "YouTube",
+        classes: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
+      },
+      tiktok: {
+        label: "TikTok",
+        classes: "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800",
+      },
+      veo3: {
+        label: "VEO3",
+        classes:
+          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800",
+      },
     };
-    const info = map[key] || { label: provider || 'Unknown', classes: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700' };
+    const info = map[key] || {
+      label: provider || "Unknown",
+      classes: "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700",
+    };
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border ${info.classes}`}>
         {info.label}
@@ -41,23 +54,23 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
 
   const kindBadge = (kind?: string) => (
     <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-xs font-mono">
-      {kind || 'N/A'}
+      {kind || "N/A"}
     </span>
   );
 
-  const filteredPrompts = prompts.filter(p => showArchived || !p.archived);
+  const filteredPrompts = prompts.filter((p) => showArchived || !p.archived);
 
   return (
     <div className="space-y-4">
       {/* Header Controls */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-slate-500 dark:text-slate-400">
-          {filteredPrompts.length} {filteredPrompts.length === 1 ? 'prompt' : 'prompts'}
+          {filteredPrompts.length} {filteredPrompts.length === 1 ? "prompt" : "prompts"}
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-          <input 
-            type="checkbox" 
-            checked={showArchived} 
+          <input
+            type="checkbox"
+            checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
@@ -65,20 +78,18 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
         </label>
       </div>
 
-  {/* Prompt Cards - responsive 3-up grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Prompt Cards - responsive 3-up grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPrompts.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            No prompts found
-          </div>
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400">No prompts found</div>
         ) : (
           filteredPrompts.map((p, idx) => (
             <div
               key={p.id ?? idx}
               className={`group relative bg-white dark:bg-slate-800 rounded-lg border transition-all duration-200 hover:shadow-md h-full flex flex-col ${
-                p.archived 
-                  ? 'border-slate-200 dark:border-slate-700 opacity-60' 
-                  : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+                p.archived
+                  ? "border-slate-200 dark:border-slate-700 opacity-60"
+                  : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700"
               }`}
             >
               {/* Card Content */}
@@ -94,7 +105,7 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Action Buttons - Visible on hover */}
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     <button
@@ -128,13 +139,11 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
                 {/* Description */}
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                    {p.description || 'No description'}
+                    {p.description || "No description"}
                   </h3>
                   {p.promptTemplate && (
                     <div className="text-xs text-slate-600 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900/30 rounded px-2 py-1.5 mt-2 overflow-hidden">
-                      <div className="line-clamp-2 break-words whitespace-pre-wrap">
-                        {p.promptTemplate}
-                      </div>
+                      <div className="line-clamp-2 break-words whitespace-pre-wrap">{p.promptTemplate}</div>
                     </div>
                   )}
                 </div>
@@ -145,8 +154,8 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
                   <div className="flex items-center gap-1.5 flex-wrap flex-1">
                     {(p.tags || []).length > 0 ? (
                       p.tags?.map((t) => (
-                        <span 
-                          key={t} 
+                        <span
+                          key={t}
                           className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
                         >
                           {t}
@@ -162,8 +171,8 @@ const AdminPromptTable: React.FC<Props> = ({ prompts, onEdit, onDelete, onToggle
                     onClick={() => p.id && onToggleActive && onToggleActive(p.id, !(p.isActive ?? true))}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                       p.isActive ?? true
-                        ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30'
-                        : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/50 dark:text-slate-400 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
+                        : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/50 dark:text-slate-400 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
                     {p.isActive ?? true ? (

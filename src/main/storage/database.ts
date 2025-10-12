@@ -56,7 +56,7 @@ export const database = new Database();
 export {
   automationRepository,
   profileRepository,
-  veo3Repository,
+  veo3ProjectRepository,
   videoAnalysisRepository,
   youtubeChannelRepository,
 } from "./repositories";

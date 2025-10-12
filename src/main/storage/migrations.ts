@@ -1,9 +1,9 @@
-import { Logger } from "../../shared/utils/logger";
-import { SQLiteDatabase } from "./sqlite-database";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as sqlite3 from "sqlite3";
-import * as crypto from 'crypto';
+import { Logger } from "../../shared/utils/logger";
+import { SQLiteDatabase } from "./sqlite-database";
 
 const logger = new Logger("DatabaseMigrations");
 
@@ -59,6 +59,14 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
       await migration_009_add_prompt_history_digest_short(db);
     }
 
+    if (version < 10) {
+      await migration_010_add_veo3_video_generations(db);
+    }
+
+    if (version < 11) {
+      await migration_011_add_video_metadata_fields(db);
+    }
+
     logger.info("All migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
@@ -71,27 +79,27 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
  */
 async function migration_005_add_master_prompts_flags_and_tags(db: SQLiteDatabase): Promise<void> {
   const loggerLocal = logger;
-  loggerLocal.info('Running migration 005: Add tags/is_active/archived to master_prompts');
+  loggerLocal.info("Running migration 005: Add tags/is_active/archived to master_prompts");
   try {
-    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(master_prompts)');
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(master_prompts)");
     const columns = tableInfo.map((c) => c.name);
-    if (!columns.includes('tags')) {
-      await db.run('ALTER TABLE master_prompts ADD COLUMN tags TEXT');
-      loggerLocal.info('Added tags column to master_prompts');
+    if (!columns.includes("tags")) {
+      await db.run("ALTER TABLE master_prompts ADD COLUMN tags TEXT");
+      loggerLocal.info("Added tags column to master_prompts");
     }
-    if (!columns.includes('is_active')) {
-      await db.run('ALTER TABLE master_prompts ADD COLUMN is_active INTEGER DEFAULT 1');
-      loggerLocal.info('Added is_active column to master_prompts');
+    if (!columns.includes("is_active")) {
+      await db.run("ALTER TABLE master_prompts ADD COLUMN is_active INTEGER DEFAULT 1");
+      loggerLocal.info("Added is_active column to master_prompts");
     }
-    if (!columns.includes('archived')) {
-      await db.run('ALTER TABLE master_prompts ADD COLUMN archived INTEGER DEFAULT 0');
-      loggerLocal.info('Added archived column to master_prompts');
+    if (!columns.includes("archived")) {
+      await db.run("ALTER TABLE master_prompts ADD COLUMN archived INTEGER DEFAULT 0");
+      loggerLocal.info("Added archived column to master_prompts");
     }
 
     await recordMigration(db, 5);
-    loggerLocal.info('Migration 005 completed successfully');
+    loggerLocal.info("Migration 005 completed successfully");
   } catch (error) {
-    loggerLocal.error('Migration 005 failed', error);
+    loggerLocal.error("Migration 005 failed", error);
     throw error;
   }
 }
@@ -101,7 +109,7 @@ async function migration_005_add_master_prompts_flags_and_tags(db: SQLiteDatabas
  */
 async function migration_006_add_prompt_history_table(db: SQLiteDatabase): Promise<void> {
   const loggerLocal = logger;
-  loggerLocal.info('Running migration 006: Add prompt_history table');
+  loggerLocal.info("Running migration 006: Add prompt_history table");
   try {
     await db.run(`
       CREATE TABLE IF NOT EXISTS prompt_history (
@@ -119,16 +127,16 @@ async function migration_006_add_prompt_history_table(db: SQLiteDatabase): Promi
         FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE
       )
     `);
-    loggerLocal.info('Created prompt_history table');
+    loggerLocal.info("Created prompt_history table");
 
-    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_prompt_id ON prompt_history(prompt_id)');
-    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_created_at ON prompt_history(created_at)');
-    loggerLocal.info('Created indexes for prompt_history table');
+    await db.run("CREATE INDEX IF NOT EXISTS idx_prompt_history_prompt_id ON prompt_history(prompt_id)");
+    await db.run("CREATE INDEX IF NOT EXISTS idx_prompt_history_created_at ON prompt_history(created_at)");
+    loggerLocal.info("Created indexes for prompt_history table");
 
     await recordMigration(db, 6);
-    loggerLocal.info('Migration 006 completed successfully');
+    loggerLocal.info("Migration 006 completed successfully");
   } catch (error) {
-    loggerLocal.error('Migration 006 failed', error);
+    loggerLocal.error("Migration 006 failed", error);
     throw error;
   }
 }
@@ -138,22 +146,22 @@ async function migration_006_add_prompt_history_table(db: SQLiteDatabase): Promi
  */
 async function migration_007_add_prompt_history_digest(db: SQLiteDatabase): Promise<void> {
   const loggerLocal = logger;
-  loggerLocal.info('Running migration 007: Add digest column to prompt_history');
+  loggerLocal.info("Running migration 007: Add digest column to prompt_history");
   try {
-    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(prompt_history)");
     const columns = tableInfo.map((c) => c.name);
-    if (!columns.includes('digest')) {
-      await db.run('ALTER TABLE prompt_history ADD COLUMN digest TEXT');
-      loggerLocal.info('Added digest column to prompt_history');
+    if (!columns.includes("digest")) {
+      await db.run("ALTER TABLE prompt_history ADD COLUMN digest TEXT");
+      loggerLocal.info("Added digest column to prompt_history");
     }
 
-    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)');
-    loggerLocal.info('Created digest index for prompt_history');
+    await db.run("CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)");
+    loggerLocal.info("Created digest index for prompt_history");
 
     await recordMigration(db, 7);
-    loggerLocal.info('Migration 007 completed successfully');
+    loggerLocal.info("Migration 007 completed successfully");
   } catch (error) {
-    loggerLocal.error('Migration 007 failed', error);
+    loggerLocal.error("Migration 007 failed", error);
     throw error;
   }
 }
@@ -165,7 +173,7 @@ function normalizeTagsForDigest(tagsJson: string | null | undefined): string[] {
     const tags = JSON.parse(tagsJson);
     if (!Array.isArray(tags)) return [];
     return (tags as any[])
-      .map((t) => (t || '').toString().trim().toLowerCase())
+      .map((t) => (t || "").toString().trim().toLowerCase())
       .filter((t) => t.length > 0)
       .sort();
   } catch {
@@ -173,12 +181,16 @@ function normalizeTagsForDigest(tagsJson: string | null | undefined): string[] {
   }
 }
 
-function computeDigestForMigration(template: string | null | undefined, description: string | null | undefined, tagsJson: string | null | undefined) {
-  const t = (template || '').toString().trim();
-  const d = (description || '').toString().trim();
+function computeDigestForMigration(
+  template: string | null | undefined,
+  description: string | null | undefined,
+  tagsJson: string | null | undefined
+) {
+  const t = (template || "").toString().trim();
+  const d = (description || "").toString().trim();
   const tags = normalizeTagsForDigest(tagsJson);
   const payload = JSON.stringify({ t, d, tags });
-  return crypto.createHash('sha256').update(payload).digest('hex');
+  return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
 /**
@@ -186,32 +198,32 @@ function computeDigestForMigration(template: string | null | undefined, descript
  */
 async function migration_008_backfill_prompt_history_digest(db: SQLiteDatabase): Promise<void> {
   const loggerLocal = logger;
-  loggerLocal.info('Running migration 008: Backfill prompt_history.digest for existing rows');
+  loggerLocal.info("Running migration 008: Backfill prompt_history.digest for existing rows");
   try {
     // Ensure digest column exists (some DBs may not have it yet)
-    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(prompt_history)");
     const columns = tableInfo.map((c) => c.name);
-    if (!columns.includes('digest')) {
-      loggerLocal.info('digest column missing, adding it now');
-      await db.run('ALTER TABLE prompt_history ADD COLUMN digest TEXT');
-      await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)');
+    if (!columns.includes("digest")) {
+      loggerLocal.info("digest column missing, adding it now");
+      await db.run("ALTER TABLE prompt_history ADD COLUMN digest TEXT");
+      await db.run("CREATE INDEX IF NOT EXISTS idx_prompt_history_digest ON prompt_history(digest)");
     }
 
-    const rows = await db.all<any>('SELECT id, prompt_template, description, tags FROM prompt_history');
+    const rows = await db.all<any>("SELECT id, prompt_template, description, tags FROM prompt_history");
     let updated = 0;
     for (const r of rows || []) {
       // compute digest whether or not a digest value exists
       const digest = computeDigestForMigration(r.prompt_template, r.description, r.tags);
       // update only if different or null
-      await db.run('UPDATE prompt_history SET digest = ? WHERE id = ?', [digest, r.id]);
+      await db.run("UPDATE prompt_history SET digest = ? WHERE id = ?", [digest, r.id]);
       updated += 1;
     }
     loggerLocal.info(`Backfilled digest for ${updated} prompt_history rows`);
 
     await recordMigration(db, 8);
-    loggerLocal.info('Migration 008 completed successfully');
+    loggerLocal.info("Migration 008 completed successfully");
   } catch (error) {
-    loggerLocal.error('Migration 008 failed', error);
+    loggerLocal.error("Migration 008 failed", error);
     throw error;
   }
 }
@@ -221,31 +233,31 @@ async function migration_008_backfill_prompt_history_digest(db: SQLiteDatabase):
  */
 async function migration_009_add_prompt_history_digest_short(db: SQLiteDatabase): Promise<void> {
   const loggerLocal = logger;
-  loggerLocal.info('Running migration 009: Add digest_short column to prompt_history');
+  loggerLocal.info("Running migration 009: Add digest_short column to prompt_history");
   try {
-    const tableInfo = await db.all<{ name: string }>('PRAGMA table_info(prompt_history)');
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(prompt_history)");
     const columns = tableInfo.map((c) => c.name);
-    if (!columns.includes('digest_short')) {
-      await db.run('ALTER TABLE prompt_history ADD COLUMN digest_short TEXT');
-      loggerLocal.info('Added digest_short column to prompt_history');
+    if (!columns.includes("digest_short")) {
+      await db.run("ALTER TABLE prompt_history ADD COLUMN digest_short TEXT");
+      loggerLocal.info("Added digest_short column to prompt_history");
     }
 
-    await db.run('CREATE INDEX IF NOT EXISTS idx_prompt_history_digest_short ON prompt_history(digest_short)');
-    loggerLocal.info('Created digest_short index');
+    await db.run("CREATE INDEX IF NOT EXISTS idx_prompt_history_digest_short ON prompt_history(digest_short)");
+    loggerLocal.info("Created digest_short index");
 
     // backfill digest_short from existing digest values
-    const rows = await db.all<any>('SELECT id, digest FROM prompt_history');
+    const rows = await db.all<any>("SELECT id, digest FROM prompt_history");
     for (const r of rows || []) {
       if (r.digest && (!r.digest_short || r.digest_short.length === 0)) {
         const short = r.digest.substring(0, 12);
-        await db.run('UPDATE prompt_history SET digest_short = ? WHERE id = ?', [short, r.id]);
+        await db.run("UPDATE prompt_history SET digest_short = ? WHERE id = ?", [short, r.id]);
       }
     }
 
     await recordMigration(db, 9);
-    loggerLocal.info('Migration 009 completed successfully');
+    loggerLocal.info("Migration 009 completed successfully");
   } catch (error) {
-    loggerLocal.error('Migration 009 failed', error);
+    loggerLocal.error("Migration 009 failed", error);
     throw error;
   }
 }
@@ -297,7 +309,7 @@ async function migration_004_migrate_profiles_from_local_db(db: SQLiteDatabase):
           row.id,
           row.name,
           row.browser_path || null,
-          row.user_data_dir || '',
+          row.user_data_dir || "",
           row.user_agent || null,
           row.proxy_server || null,
           row.proxy_username || null,
@@ -410,6 +422,83 @@ async function migration_002_add_is_logged_in(db: SQLiteDatabase): Promise<void>
     logger.info("Migration 002 completed successfully");
   } catch (error) {
     logger.error("Migration 002 failed", error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 010: Create veo3_video_generations table
+ */
+async function migration_010_add_veo3_video_generations(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info("Running migration 010: Create veo3_video_generations table");
+  try {
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS veo3_video_generations (
+        id TEXT PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        scene_id TEXT NOT NULL UNIQUE,
+        operation_name TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        seed INTEGER NOT NULL,
+        aspect_ratio TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+        video_url TEXT,
+        video_path TEXT,
+        error_message TEXT,
+        raw_response TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+      )
+    `);
+    loggerLocal.info("Created veo3_video_generations table");
+
+    await db.run("CREATE INDEX IF NOT EXISTS idx_veo3_generations_profile_id ON veo3_video_generations(profile_id)");
+    await db.run("CREATE INDEX IF NOT EXISTS idx_veo3_generations_project_id ON veo3_video_generations(project_id)");
+    await db.run("CREATE INDEX IF NOT EXISTS idx_veo3_generations_status ON veo3_video_generations(status)");
+    await db.run("CREATE INDEX IF NOT EXISTS idx_veo3_generations_scene_id ON veo3_video_generations(scene_id)");
+    loggerLocal.info("Created indexes for veo3_video_generations table");
+
+    await recordMigration(db, 10);
+    loggerLocal.info("Migration 010 completed successfully");
+  } catch (error) {
+    loggerLocal.error("Migration 010 failed", error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 011: Add media_generation_id, fife_url, and serving_base_uri to veo3_video_generations
+ */
+async function migration_011_add_video_metadata_fields(db: SQLiteDatabase): Promise<void> {
+  const loggerLocal = logger;
+  loggerLocal.info("Running migration 011: Add video metadata fields to veo3_video_generations");
+  try {
+    const tableInfo = await db.all<{ name: string }>("PRAGMA table_info(veo3_video_generations)");
+    const columns = tableInfo.map((c) => c.name);
+
+    if (!columns.includes("media_generation_id")) {
+      await db.run("ALTER TABLE veo3_video_generations ADD COLUMN media_generation_id TEXT");
+      loggerLocal.info("Added media_generation_id column to veo3_video_generations");
+    }
+
+    if (!columns.includes("fife_url")) {
+      await db.run("ALTER TABLE veo3_video_generations ADD COLUMN fife_url TEXT");
+      loggerLocal.info("Added fife_url column to veo3_video_generations");
+    }
+
+    if (!columns.includes("serving_base_uri")) {
+      await db.run("ALTER TABLE veo3_video_generations ADD COLUMN serving_base_uri TEXT");
+      loggerLocal.info("Added serving_base_uri column to veo3_video_generations");
+    }
+
+    await recordMigration(db, 11);
+    loggerLocal.info("Migration 011 completed successfully");
+  } catch (error) {
+    loggerLocal.error("Migration 011 failed", error);
     throw error;
   }
 }

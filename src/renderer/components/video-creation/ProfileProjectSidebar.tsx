@@ -1,5 +1,6 @@
 import { ChevronRight, FolderKanban, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAlert } from "../../hooks/useAlert";
 import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
 import useVeo3Store from "../../store/veo3.store";
@@ -36,6 +37,7 @@ export default function ProfileProjectSidebar({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
+  const { show: showAlert } = useAlert();
 
   // Fetch profiles on mount
   useEffect(() => {
@@ -116,12 +118,42 @@ export default function ProfileProjectSidebar({
         }));
         setProjects(transformedProjects);
       } else {
-        console.error("[ProfileProjectSidebar] Failed to fetch projects:", response?.error);
+        const errorMsg = response?.error || "Unknown error";
+        console.error("[ProfileProjectSidebar] Failed to fetch projects:", errorMsg);
         setProjects([]);
+
+        if (errorMsg.includes("401") || errorMsg.includes("Unauthorized")) {
+          showAlert({
+            title: "Authentication Failed",
+            message: "Your session has expired or you are not logged in. Please log in to the profile again to fetch projects.",
+            severity: "error",
+            duration: null,
+          });
+        } else if (errorMsg.includes("cookies") || errorMsg.includes("expired")) {
+          showAlert({
+            title: "Session Expired",
+            message: errorMsg,
+            severity: "warning",
+            duration: null,
+          });
+        } else {
+          showAlert({
+            title: "Failed to Fetch Projects",
+            message: errorMsg,
+            severity: "error",
+            duration: null,
+          });
+        }
       }
     } catch (error) {
       console.error("[ProfileProjectSidebar] Failed to fetch projects", error);
       setProjects([]);
+      showAlert({
+        title: "Error",
+        message: `Failed to fetch projects: ${String(error)}`,
+        severity: "error",
+        duration: null,
+      });
     } finally {
       setLoading(false);
     }

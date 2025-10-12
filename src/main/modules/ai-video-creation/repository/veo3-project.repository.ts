@@ -1,6 +1,6 @@
-import { VEO3Project, VideoScene } from "../veo3.types";
 import { database } from "../../../storage/database";
-import { BaseRepository } from "../../../storage/repositories";
+import { BaseRepository } from "../../../storage/repositories/base.repository";
+import { VEO3Project, VideoScene } from "../veo3.types";
 
 interface VEO3ProjectRow {
   id: string;
@@ -17,7 +17,7 @@ interface VEO3ProjectRow {
 /**
  * Repository for VEO3Project entities
  */
-export class VEO3Repository extends BaseRepository<VEO3Project> {
+export class Veo3ProjectRepository extends BaseRepository<VEO3Project> {
   constructor() {
     super("veo3_projects", database.getSQLiteDatabase());
   }
@@ -101,4 +101,4 @@ export class VEO3Repository extends BaseRepository<VEO3Project> {
   }
 }
 
-export const veo3Repository = new VEO3Repository();
+export const veo3ProjectRepository = new Veo3ProjectRepository();

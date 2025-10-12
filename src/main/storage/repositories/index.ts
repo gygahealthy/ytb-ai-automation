@@ -1,12 +1,19 @@
 // Export all repositories
-export { AutomationRepository, automationRepository } from "../../modules/workflow-task-automation/repository/automation.repository";
-export { BaseRepository } from "./base.repository";
+export { Veo3ProjectRepository, veo3ProjectRepository } from "../../modules/ai-video-creation/repository/veo3-project.repository";
+export {
+  VideoGenerationRepository,
+  videoGenerationRepository,
+} from "../../modules/ai-video-creation/repository/video-generation.repository";
 export { ProfileRepository, profileRepository } from "../../modules/profile-management/repository/profile.repository";
-export { VEO3Repository, veo3Repository } from "../../modules/ai-video-creation/repository/veo3.repository";
+export { promptRepository } from "../../modules/prompt-management/repository/prompt.repository";
+export {
+  AutomationRepository,
+  automationRepository,
+} from "../../modules/workflow-task-automation/repository/automation.repository";
 export {
   VideoAnalysisRepository,
-  YoutubeChannelRepository,
   videoAnalysisRepository,
+  YoutubeChannelRepository,
   youtubeChannelRepository,
 } from "../../modules/youtube-analysis/repository/youtube.repository";
-export { promptRepository } from "../../modules/prompt-management/repository/prompt.repository";
+export { BaseRepository } from "./base.repository";

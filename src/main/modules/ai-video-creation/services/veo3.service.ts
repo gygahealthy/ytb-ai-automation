@@ -1,73 +1,41 @@
 import { ApiResponse } from "../../../../shared/types";
-import { Logger } from "../../../../shared/utils/logger";
-import { StringUtil } from "../../../../shared/utils/string";
-import { profileRepository, veo3Repository } from "../../../storage/database";
 import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
-import { veo3ApiClient } from "./veo3-api.client";
+import { veo3ProjectService } from "./veo3/veo3-project.service";
+import { veo3VideoCreationService } from "./veo3/veo3-video-creation.service";
 
-const logger = new Logger("VEO3Service");
-
+/**
+ * VEO3 Service - Main Facade
+ *
+ * This service acts as a backward-compatible facade that delegates to:
+ * - VEO3ProjectService: All project-related operations
+ * - VEO3VideoCreationService: All video generation operations
+ *
+ * This allows existing code to continue working while keeping services focused and maintainable.
+ */
 export class VEO3Service {
+  // ========================================
+  // PROJECT OPERATIONS (delegated to VEO3ProjectService)
+  // ========================================
+
   /**
    * Get all projects
    */
   async getAllProjects(): Promise<ApiResponse<VEO3Project[]>> {
-    try {
-      const projects = await veo3Repository.findAll();
-      return { success: true, data: projects };
-    } catch (error) {
-      logger.error("Failed to get projects", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.getAllProjects();
   }
 
   /**
    * Get project by ID
    */
   async getProjectById(id: string): Promise<ApiResponse<VEO3Project>> {
-    try {
-      const project = await veo3Repository.findById(id);
-      if (!project) {
-        return { success: false, error: "Project not found" };
-      }
-      return { success: true, data: project };
-    } catch (error) {
-      logger.error("Failed to get project", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.getProjectById(id);
   }
 
   /**
    * Create new project
    */
   async createProject(input: CreateVEO3ProjectInput): Promise<ApiResponse<VEO3Project>> {
-    try {
-      // Generate IDs for scenes
-      const scenes: VideoScene[] = input.scenes.map((scene) => ({
-        ...scene,
-        id: StringUtil.generateId("scene"),
-      }));
-
-      const project: VEO3Project = {
-        id: StringUtil.generateId("veo3"),
-        projectId: input.projectId,
-        profileId: input.profileId,
-        name: input.name,
-        status: "draft",
-        scenes,
-        jsonPrompt: input.jsonPrompt,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      await veo3Repository.insert(project);
-      logger.info(`VEO3 project created: ${project.id}`);
-
-      return { success: true, data: project };
-    } catch (error) {
-      logger.error("Failed to create project", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.createProject(input);
   }
 
   /**
@@ -77,200 +45,109 @@ export class VEO3Service {
     id: string,
     status: "draft" | "processing" | "completed" | "failed"
   ): Promise<ApiResponse<VEO3Project>> {
-    try {
-      if (!(await veo3Repository.exists(id))) {
-        return { success: false, error: "Project not found" };
-      }
-
-      await veo3Repository.updateStatus(id, status);
-      const updatedProject = await veo3Repository.findById(id);
-
-      logger.info(`Project status updated: ${id} -> ${status}`);
-      return { success: true, data: updatedProject! };
-    } catch (error) {
-      logger.error("Failed to update project status", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.updateProjectStatus(id, status);
   }
 
   /**
    * Add scene to project
    */
   async addScene(projectId: string, scene: Omit<VideoScene, "id">): Promise<ApiResponse<VEO3Project>> {
-    try {
-      const project = await veo3Repository.findById(projectId);
-      if (!project) {
-        return { success: false, error: "Project not found" };
-      }
-
-      const newScene: VideoScene = {
-        ...scene,
-        id: StringUtil.generateId("scene"),
-      };
-
-      await veo3Repository.update(projectId, {
-        scenes: [...project.scenes, newScene],
-        updatedAt: new Date(),
-      });
-
-      const updatedProject = await veo3Repository.findById(projectId);
-      return { success: true, data: updatedProject! };
-    } catch (error) {
-      logger.error("Failed to add scene", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.addScene(projectId, scene);
   }
 
   /**
    * Remove scene from project
    */
   async removeScene(projectId: string, sceneId: string): Promise<ApiResponse<VEO3Project>> {
-    try {
-      const project = await veo3Repository.findById(projectId);
-      if (!project) {
-        return { success: false, error: "Project not found" };
-      }
-
-      await veo3Repository.update(projectId, {
-        scenes: project.scenes.filter((s: any) => s.id !== sceneId),
-        updatedAt: new Date(),
-      });
-
-      const updatedProject = await veo3Repository.findById(projectId);
-      return { success: true, data: updatedProject! };
-    } catch (error) {
-      logger.error("Failed to remove scene", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.removeScene(projectId, sceneId);
   }
 
   /**
    * Update JSON prompt
    */
   async updateJsonPrompt(projectId: string, jsonPrompt: Record<string, any>): Promise<ApiResponse<VEO3Project>> {
-    try {
-      if (!(await veo3Repository.exists(projectId))) {
-        return { success: false, error: "Project not found" };
-      }
-
-      await veo3Repository.update(projectId, {
-        jsonPrompt,
-        updatedAt: new Date(),
-      });
-
-      const updatedProject = await veo3Repository.findById(projectId);
-      return { success: true, data: updatedProject! };
-    } catch (error) {
-      logger.error("Failed to update JSON prompt", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.updateJsonPrompt(projectId, jsonPrompt);
   }
 
   /**
    * Delete project
    */
   async deleteProject(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      if (!(await veo3Repository.exists(id))) {
-        return { success: false, error: "Project not found" };
-      }
-
-      await veo3Repository.delete(id);
-      logger.info(`Project deleted: ${id}`);
-      return { success: true, data: true };
-    } catch (error) {
-      logger.error("Failed to delete project", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.deleteProject(id);
   }
 
   /**
    * Fetch projects from VEO3 API using profile's cookies
-   * @param profileId - Profile ID to get cookies from
    */
   async fetchProjectsFromAPI(profileId: string): Promise<ApiResponse<any[]>> {
-    try {
-      // Get profile to retrieve cookies
-      const profile = await profileRepository.findById(profileId);
-      if (!profile) {
-        return { success: false, error: "Profile not found" };
-      }
-
-      if (!profile.cookies) {
-        return { success: false, error: "Profile has no cookies. Please login first." };
-      }
-
-      if (!profile.isLoggedIn) {
-        return { success: false, error: "Profile is not logged in. Please login first." };
-      }
-
-      // Check if cookies are expired
-      if (profile.cookieExpires && new Date(profile.cookieExpires) < new Date()) {
-        return { success: false, error: "Profile cookies have expired. Please login again." };
-      }
-
-      logger.info(`Fetching VEO3 projects for profile: ${profile.name}`);
-
-      // Call VEO3 API to list projects
-      const result = await veo3ApiClient.listProjects(profile.cookies);
-
-      if (!result.success) {
-        return { success: false, error: result.error || "Failed to fetch projects from VEO3 API" };
-      }
-
-      // Extract projects array from response
-      const projects = result.data?.projects || [];
-
-      logger.info(`Fetched ${projects.length} projects from VEO3 API`);
-      return { success: true, data: projects };
-    } catch (error) {
-      logger.error("Failed to fetch projects from API", error);
-      return { success: false, error: String(error) };
-    }
+    return veo3ProjectService.fetchProjectsFromAPI(profileId);
   }
 
   /**
    * Create a new project via VEO3 API using profile's cookies
-   * @param profileId - Profile ID to get cookies from
-   * @param projectTitle - Title for the new project
    */
   async createProjectViaAPI(profileId: string, projectTitle: string): Promise<ApiResponse<any>> {
-    try {
-      // Get profile to retrieve cookies
-      const profile = await profileRepository.findById(profileId);
-      if (!profile) {
-        return { success: false, error: "Profile not found" };
-      }
+    return veo3ProjectService.createProjectViaAPI(profileId, projectTitle);
+  }
 
-      if (!profile.cookies) {
-        return { success: false, error: "Profile has no cookies. Please login first." };
-      }
+  // ========================================
+  // VIDEO CREATION OPERATIONS (delegated to VEO3VideoCreationService)
+  // ========================================
 
-      if (!profile.isLoggedIn) {
-        return { success: false, error: "Profile is not logged in. Please login first." };
-      }
+  /**
+   * Start video generation process
+   */
+  async startVideoGeneration(
+    profileId: string,
+    projectId: string,
+    prompt: string,
+    aspectRatio:
+      | "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_PORTRAIT"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
+  ): Promise<ApiResponse<{ generationId: string; sceneId: string; operationName: string }>> {
+    return veo3VideoCreationService.startVideoGeneration(profileId, projectId, prompt, aspectRatio);
+  }
 
-      // Check if cookies are expired
-      if (profile.cookieExpires && new Date(profile.cookieExpires) < new Date()) {
-        return { success: false, error: "Profile cookies have expired. Please login again." };
-      }
+  /**
+   * Check video generation status
+   */
+  async checkGenerationStatus(generationId: string): Promise<ApiResponse<any>> {
+    return veo3VideoCreationService.checkGenerationStatus(generationId);
+  }
 
-      logger.info(`Creating VEO3 project "${projectTitle}" for profile: ${profile.name}`);
+  /**
+   * Get all video generations (paginated)
+   */
+  async listGenerations(limit: number = 50, offset: number = 0): Promise<ApiResponse<any[]>> {
+    return veo3VideoCreationService.listGenerations(limit, offset);
+  }
 
-      // Call VEO3 API to create project
-      const result = await veo3ApiClient.createProject(profile.cookies, projectTitle);
+  /**
+   * Get video generations by profile
+   */
+  async listGenerationsByProfile(profileId: string, limit: number = 50, offset: number = 0): Promise<ApiResponse<any[]>> {
+    return veo3VideoCreationService.listGenerationsByProfile(profileId, limit, offset);
+  }
 
-      if (!result.success) {
-        return { success: false, error: result.error || "Failed to create project via VEO3 API" };
-      }
+  /**
+   * Get video generation by ID
+   */
+  async getGenerationById(generationId: string): Promise<ApiResponse<any>> {
+    return veo3VideoCreationService.getGenerationById(generationId);
+  }
 
-      logger.info(`Successfully created VEO3 project: ${result.data?.projectId}`);
-      return { success: true, data: result.data };
-    } catch (error) {
-      logger.error("Failed to create project via API", error);
-      return { success: false, error: String(error) };
-    }
+  /**
+   * Manually refresh video status by checking the API
+   */
+  async refreshVideoStatus(operationName: string, generationId: string): Promise<ApiResponse<any>> {
+    return veo3VideoCreationService.refreshVideoStatus(operationName, generationId);
   }
 }
 
+// Export singleton instance for backward compatibility
 export const veo3Service = new VEO3Service();
+
+// Also export the individual services for direct use
+export { veo3ProjectService } from "./veo3/veo3-project.service";
+export { veo3VideoCreationService } from "./veo3/veo3-video-creation.service";

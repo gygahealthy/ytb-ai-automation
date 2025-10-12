@@ -21,6 +21,7 @@ export interface VideoCreationJob {
   id: string;
   promptId: string;
   promptText: string;
+  generationId?: string; // ID from backend video generation record for polling
   status: "idle" | "processing" | "completed" | "failed";
   progress?: number;
   createdAt: string;
@@ -46,4 +47,26 @@ export interface VideoCreationState {
     past: Prompt[][];
     future: Prompt[][];
   };
+}
+
+export interface VideoGeneration {
+  id: string;
+  profileId: string;
+  projectId: string;
+  sceneId: string;
+  operationName: string;
+  prompt: string;
+  seed: number;
+  aspectRatio: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  mediaGenerationId?: string;
+  fifeUrl?: string;
+  servingBaseUri?: string;
+  videoUrl?: string;
+  videoPath?: string;
+  errorMessage?: string;
+  rawResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
 }

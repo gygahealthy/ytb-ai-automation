@@ -11,6 +11,7 @@ import InstanceDashboard from "./pages/automation/InstanceDashboard";
 import MyVideoChannelsPage from "./pages/video-creation/MyVideoChannelsPage";
 import PromptFlowConfigPage from "./pages/video-creation/PromptFlowConfigPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
+import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
 
 export default function AppRoutes() {
   return (
@@ -27,6 +28,7 @@ export default function AppRoutes() {
       <Route path="/video-creation/channels" element={<MyVideoChannelsPage />} />
       <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
       <Route path="/video-creation/prompt-flows" element={<PromptFlowConfigPage />} />
+      <Route path="/video-creation/history" element={<VideoHistoryPage />} />
       <Route
         path="/history"
         element={

@@ -21,6 +21,7 @@ interface VideoCreationStore {
   togglePromptPreview: (id: string) => void;
   togglePromptProfileSelect: (id: string) => void;
   updatePromptProfile: (id: string, profileId: string) => void;
+  updatePromptProject: (id: string, projectId: string) => void;
   selectAllPrompts: () => void;
   clearAllSelections: () => void;
   toggleAllSelections: () => void;

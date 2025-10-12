@@ -17,7 +17,7 @@
 
 ## Database
 
-- Always use the repository classes (profileRepository, automationRepository, veo3Repository, youtubeChannelRepository, videoAnalysisRepository)
+- Always use the repository classes (profileRepository, automationRepository, veo3ProjectRepository, youtubeChannelRepository, videoAnalysisRepository)
 - Never bypass repositories to access the database directly
 - SQLite is the database engine with better-sqlite3 package
 

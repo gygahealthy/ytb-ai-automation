@@ -4,8 +4,9 @@ import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
 import JobDetailsModal from "../../components/video-creation/JobDetailsModal";
 import JsonToolbar from "../../components/video-creation/JsonToolbar";
-import PromptRow from "../../components/video-creation/PromptRow";
+import VideoPromptRow from "../../components/video-creation/VideoPromptRow";
 import { useDrawer } from "../../contexts/DrawerContext";
+import { useAlert } from "../../hooks/useAlert";
 import profileIPC from "../../ipc/profile";
 import veo3IPC from "../../ipc/veo3";
 import useVeo3Store from "../../store/veo3.store";
@@ -22,6 +23,7 @@ export default function SingleVideoCreationPage() {
 
   const { openDrawer, closeDrawer } = useDrawer();
   const veo3Store = useVeo3Store();
+  const { show: showAlert } = useAlert();
 
   const {
     prompts,
@@ -36,6 +38,7 @@ export default function SingleVideoCreationPage() {
     togglePromptPreview,
     togglePromptProfileSelect,
     updatePromptProfile,
+    updatePromptProject,
     toggleAllSelections,
     removeSelectedPrompts,
     clearAllPrompts,
@@ -48,9 +51,25 @@ export default function SingleVideoCreationPage() {
     loadDraft,
     deleteDraft,
     createJob,
+    updateJobStatus,
     toggleGlobalPreview,
     setStatusFilter,
   } = useVideoCreationStore();
+
+  // Ensure global previews are enabled by default when entering the single creation page
+  useEffect(() => {
+    // Ensure global preview mode is enabled. toggleGlobalPreview is a toggle (no args),
+    // so call it only when the current mode is false.
+    if (!globalPreviewMode) {
+      try {
+        toggleGlobalPreview();
+      } catch (e) {
+        // ignore; best-effort to enable previews
+      }
+    }
+    // run only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const hasSelection = prompts.some((p) => p.selected);
   const allSelected = prompts.every((p) => p.selected);
@@ -96,15 +115,78 @@ export default function SingleVideoCreationPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  const handleCreateVideo = (promptId: string, promptText: string) => {
-    if (!promptText.trim()) return;
+  const handleCreateVideo = async (promptId: string, promptText: string) => {
+    if (!promptText.trim()) {
+      alert("Prompt text cannot be empty");
+      return;
+    }
 
-    // TODO: Call IPC handler to backend
+    // Get the prompt to determine which profile/project to use
+    const prompt = prompts.find((p) => p.id === promptId);
+    if (!prompt) {
+      alert("Prompt not found");
+      return;
+    }
+
+    // Determine effective profile and project
+    const effectiveProfileId = prompt.profileId || selectedProfileId;
+    const effectiveProjectId = prompt.projectId || selectedProjectId;
+
+    if (!effectiveProfileId) {
+      alert("Please select a profile first (use the Profile button or set per-row profile)");
+      return;
+    }
+
+    if (!effectiveProjectId) {
+      alert("Please select a project first (use the Profile button or set per-row project)");
+      return;
+    }
+
+    // Create job in store with "processing" status
     const jobId = createJob(promptId, promptText);
-    console.log("Created job:", jobId, "for prompt:", promptText);
+    console.log(`[VideoCreation] Starting video generation for prompt: ${promptId}`);
+    console.log(`[VideoCreation] Using profile: ${effectiveProfileId}, project: ${effectiveProjectId}`);
 
-    // This will be replaced with actual IPC call:
-    // window.electronAPI.createVideo({ promptId, promptText })
+    try {
+      // Call backend to start video generation
+      const result = await veo3IPC.startVideoGeneration(
+        effectiveProfileId,
+        effectiveProjectId,
+        promptText,
+        "VIDEO_ASPECT_RATIO_LANDSCAPE" // Default aspect ratio, can be made configurable later
+      );
+
+      if (!result.success) {
+        console.error("[VideoCreation] Failed to start video generation:", result.error);
+        alert(`Failed to start video generation: ${result.error}`);
+        // Update job status to failed using store method
+        updateJobStatus(jobId, "failed", {
+          error: result.error,
+        });
+        return;
+      }
+
+      const { generationId, sceneId, operationName } = result.data;
+      console.log(`[VideoCreation] Video generation started: ${generationId}`);
+      console.log(`[VideoCreation] Scene ID: ${sceneId}, Operation: ${operationName}`);
+
+      // Update job to processing status and store generationId - use store method to trigger re-render
+      updateJobStatus(jobId, "processing", {
+        generationId: generationId,
+        progress: 0,
+      });
+
+      console.log(
+        `[VideoCreation] Job ${jobId} updated with generationId: ${generationId}. VideoPromptRow will now poll for status updates.`
+      );
+    } catch (error) {
+      console.error("[VideoCreation] Error starting video generation:", error);
+      alert(`Error: ${error}`);
+      // Update job status to failed using store method
+      updateJobStatus(jobId, "failed", {
+        error: String(error),
+      });
+    }
   };
 
   const handleAddJson = (jsonString: string) => {
@@ -348,9 +430,42 @@ export default function SingleVideoCreationPage() {
             description: p.description || "",
           }));
           setProjects(transformedProjects);
+        } else {
+          // Show error alert to user
+          const errorMsg = response?.error || "Unknown error";
+          console.error("[ProfileDrawer] Failed to fetch projects:", errorMsg);
+
+          if (errorMsg.includes("401") || errorMsg.includes("Unauthorized")) {
+            showAlert({
+              title: "Authentication Failed",
+              message: "Your session has expired or you are not logged in. Please log in to the profile again to fetch projects.",
+              severity: "error",
+              duration: null,
+            });
+          } else if (errorMsg.includes("cookies") || errorMsg.includes("expired")) {
+            showAlert({
+              title: "Session Expired",
+              message: errorMsg,
+              severity: "warning",
+              duration: null,
+            });
+          } else {
+            showAlert({
+              title: "Failed to Fetch Projects",
+              message: errorMsg,
+              severity: "error",
+              duration: null,
+            });
+          }
         }
       } catch (error) {
         console.error("[ProfileDrawer] Failed to fetch projects", error);
+        showAlert({
+          title: "Error",
+          message: `Failed to fetch projects: ${String(error)}`,
+          severity: "error",
+          duration: null,
+        });
       } finally {
         setLoading(false);
       }
@@ -509,7 +624,7 @@ export default function SingleVideoCreationPage() {
             filteredPrompts.map((prompt, index) => {
               const job = jobs.find((j) => j.promptId === prompt.id);
               return (
-                <PromptRow
+                <VideoPromptRow
                   key={prompt.id}
                   prompt={prompt}
                   index={index}
@@ -525,6 +640,7 @@ export default function SingleVideoCreationPage() {
                   onShowInfo={handleShowInfo}
                   onToggleProfileSelect={togglePromptProfileSelect}
                   onProfileChange={updatePromptProfile}
+                  onProjectChange={updatePromptProject}
                 />
               );
             })

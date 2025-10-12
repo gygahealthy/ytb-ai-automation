@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Video } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import electronApi from '../../ipc';
-import { useConfirm } from '../../hooks/useConfirm';
-import AdminPromptTable, { PromptRow } from '../../components/admin/AdminPromptTable';
-import PromptModal from '../../components/admin/PromptModal';
-import VariablesHint from '../../components/admin/VariablesHint';
+import { ArrowLeft, Plus, Video } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AdminPromptTable, { VideoPromptRow } from "../../components/admin/AdminPromptTable";
+import PromptModal from "../../components/admin/PromptModal";
+import VariablesHint from "../../components/admin/VariablesHint";
+import { useConfirm } from "../../hooks/useConfirm";
+import electronApi from "../../ipc";
 
 interface MasterPrompt {
   id?: number;
@@ -22,7 +22,7 @@ const VideoCreationPromptsPage: React.FC = () => {
   const [prompts, setPrompts] = useState<MasterPrompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<PromptRow | undefined>(undefined);
+  const [editing, setEditing] = useState<VideoPromptRow | undefined>(undefined);
 
   useEffect(() => {
     loadPrompts();
@@ -31,32 +31,35 @@ const VideoCreationPromptsPage: React.FC = () => {
   const loadPrompts = async () => {
     setLoading(true);
     try {
-  const result = await electronApi.masterPrompts.getByKind('video_creation');
+      const result = await electronApi.masterPrompts.getByKind("video_creation");
       if (result.success) {
         setPrompts(result.data);
       }
     } catch (error) {
-      console.error('Failed to load prompts:', error);
+      console.error("Failed to load prompts:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this prompt?')) return;
+    if (!confirm("Are you sure you want to delete this prompt?")) return;
     try {
-  const confirmFn = useConfirm();
-  if (!(await confirmFn({ message: 'Are you sure you want to delete this prompt?' }))) return;
-  const result = await electronApi.masterPrompts.deletePrompt(id);
+      const confirmFn = useConfirm();
+      if (!(await confirmFn({ message: "Are you sure you want to delete this prompt?" }))) return;
+      const result = await electronApi.masterPrompts.deletePrompt(id);
       if (result.success) {
         await loadPrompts();
       }
     } catch (error) {
-      console.error('Failed to delete prompt:', error);
+      console.error("Failed to delete prompt:", error);
     }
   };
 
-  const openAddModal = () => { setEditing({ provider: 'veo3', promptKind: 'video_creation', description: '', promptTemplate: '' }); setModalOpen(true); };
+  const openAddModal = () => {
+    setEditing({ provider: "veo3", promptKind: "video_creation", description: "", promptTemplate: "" });
+    setModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
@@ -64,7 +67,7 @@ const VideoCreationPromptsPage: React.FC = () => {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate("/admin")}
             className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -85,7 +88,10 @@ const VideoCreationPromptsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-end mb-4">
-          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:shadow-md transition-all">
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:shadow-md transition-all"
+          >
             <Plus className="w-4 h-4" /> Add New Prompt
           </button>
         </div>
@@ -97,31 +103,43 @@ const VideoCreationPromptsPage: React.FC = () => {
         ) : (
           <div>
             <AdminPromptTable
-              prompts={prompts as PromptRow[]}
-              onEdit={(row) => { setEditing(row); setModalOpen(true); }}
-              onDelete={async (id) => { await handleDelete(id); }}
+              prompts={prompts as VideoPromptRow[]}
+              onEdit={(row) => {
+                setEditing(row);
+                setModalOpen(true);
+              }}
+              onDelete={async (id) => {
+                await handleDelete(id);
+              }}
               onToggleActive={async (id, active) => {
                 try {
                   await electronApi.masterPrompts.updatePrompt(id, { isActive: active } as any);
                   await loadPrompts();
-                } catch (err) { console.error(err); }
+                } catch (err) {
+                  console.error(err);
+                }
               }}
               onArchive={async (id) => {
-                const prompt = prompts.find(p => p.id === id);
+                const prompt = prompts.find((p) => p.id === id);
                 const isArchived = (prompt as any)?.archived;
-                const action = isArchived ? 'unarchive' : 'archive';
+                const action = isArchived ? "unarchive" : "archive";
                 if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this prompt?`)) return;
                 try {
                   await electronApi.masterPrompts.updatePrompt(id, { archived: !isArchived } as any);
                   await loadPrompts();
-                } catch (err) { console.error(err); }
+                } catch (err) {
+                  console.error(err);
+                }
               }}
             />
 
             <PromptModal
               open={modalOpen}
               initial={editing}
-              onClose={() => { setModalOpen(false); setEditing(undefined); }}
+              onClose={() => {
+                setModalOpen(false);
+                setEditing(undefined);
+              }}
               onSave={async (p) => {
                 setModalOpen(false);
                 try {
