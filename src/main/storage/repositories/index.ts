@@ -5,7 +5,7 @@ export {
   videoGenerationRepository,
 } from "../../modules/ai-video-creation/repository/video-generation.repository";
 export { ProfileRepository, profileRepository } from "../../modules/profile-management/repository/profile.repository";
-export { promptRepository } from "../../modules/prompt-management/repository/prompt.repository";
+export { promptRepository } from "../../modules/master-prompt-management/repository/master-prompt.repository";
 export {
   AutomationRepository,
   automationRepository,
@@ -15,5 +15,5 @@ export {
   videoAnalysisRepository,
   YoutubeChannelRepository,
   youtubeChannelRepository,
-} from "../../modules/youtube-analysis/repository/youtube.repository";
+} from "../../modules/channel-management/repository/youtube.repository";
 export { BaseRepository } from "./base.repository";

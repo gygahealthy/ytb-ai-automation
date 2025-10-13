@@ -35,7 +35,7 @@ interface VideoAnalysisRow {
  */
 export class YoutubeChannelRepository extends BaseRepository<YoutubeChannel> {
   constructor() {
-    super("youtube_channels", database.getSQLiteDatabase());
+    super("channels", database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: YoutubeChannelRow): YoutubeChannel {

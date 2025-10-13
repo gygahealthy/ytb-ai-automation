@@ -7,6 +7,7 @@ export interface MasterPrompt {
 	promptKind: string;
 	promptTemplate: string;
 	description?: string;
+	channelId?: string; // Link to specific channel
 	tags?: string[];
 	isActive?: boolean;
 	archived?: boolean;
@@ -19,6 +20,7 @@ export interface CreateMasterPromptInput {
 	promptKind: string;
 	promptTemplate: string;
 	description?: string;
+	channelId?: string;
 	tags?: string[];
 	isActive?: boolean;
 	archived?: boolean;
@@ -29,6 +31,7 @@ export interface UpdateMasterPromptInput {
 	promptKind?: string;
 	promptTemplate?: string;
 	description?: string;
+	channelId?: string;
 	tags?: string[];
 	isActive?: boolean;
 	archived?: boolean;
@@ -45,6 +48,7 @@ export class MasterPromptsRepository {
 				prompt_kind as promptKind,
 				prompt_template as promptTemplate,
 				description,
+				channel_id as channelId,
 				tags,
 				is_active as isActive,
 				archived,
@@ -60,6 +64,7 @@ export class MasterPromptsRepository {
 			promptKind: r.promptKind,
 			promptTemplate: r.promptTemplate,
 			description: r.description,
+			channelId: r.channelId,
 			tags: tryParseJson(r.tags) || [],
 			isActive: r.isActive === 1 || r.isActive === true,
 			archived: r.archived === 1 || r.archived === true,
@@ -172,6 +177,7 @@ export class MasterPromptsRepository {
 				prompt_kind as promptKind,
 				prompt_template as promptTemplate,
 				description,
+				channel_id as channelId,
 				tags,
 				is_active as isActive,
 				archived,
@@ -188,12 +194,56 @@ export class MasterPromptsRepository {
 			promptKind: r.promptKind,
 			promptTemplate: r.promptTemplate,
 			description: r.description,
+			channelId: r.channelId,
 			tags: tryParseJson(r.tags) || [],
 			isActive: r.isActive === 1 || r.isActive === true,
 			archived: r.archived === 1 || r.archived === true,
 			createdAt: r.createdAt,
 			updatedAt: r.updatedAt,
 		} as MasterPrompt;
+	}
+
+	async getByChannelId(channelId: string): Promise<MasterPrompt[]> {
+		const rows = await this.db.all<any>(`
+			SELECT 
+				id,
+				provider,
+				prompt_kind as promptKind,
+				prompt_template as promptTemplate,
+				description,
+				channel_id as channelId,
+				tags,
+				is_active as isActive,
+				archived,
+				created_at as createdAt,
+				updated_at as updatedAt
+			FROM master_prompts
+			WHERE channel_id = ?
+			ORDER BY provider, prompt_kind
+		`, [channelId]);
+
+		return rows.map((r: any) => ({
+			id: r.id,
+			provider: r.provider,
+			promptKind: r.promptKind,
+			promptTemplate: r.promptTemplate,
+			description: r.description,
+			channelId: r.channelId,
+			tags: tryParseJson(r.tags) || [],
+			isActive: r.isActive === 1 || r.isActive === true,
+			archived: r.archived === 1 || r.archived === true,
+			createdAt: r.createdAt,
+			updatedAt: r.updatedAt,
+		} as MasterPrompt));
+	}
+
+	async countByChannelId(channelId: string): Promise<number> {
+		const result = await this.db.get<{ count: number }>(`
+			SELECT COUNT(*) as count
+			FROM master_prompts
+			WHERE channel_id = ?
+		`, [channelId]);
+		return result?.count || 0;
 	}
 
 	async create(input: CreateMasterPromptInput): Promise<MasterPrompt> {
@@ -204,17 +254,19 @@ export class MasterPromptsRepository {
 				prompt_kind,
 				prompt_template,
 				description,
+				channel_id,
 				tags,
 				is_active,
 				archived,
 				created_at,
 				updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, [
 			input.provider,
 			input.promptKind,
 			input.promptTemplate,
 			input.description || '',
+			input.channelId || null,
 			input.tags ? (Array.isArray(input.tags) ? JSON.stringify(input.tags) : String(input.tags)) : JSON.stringify([]),
 			1,
 			0,
@@ -237,6 +289,7 @@ export class MasterPromptsRepository {
 		if (updates.promptKind !== undefined) { fields.push('prompt_kind = ?'); values.push(updates.promptKind); }
 		if (updates.promptTemplate !== undefined) { fields.push('prompt_template = ?'); values.push(updates.promptTemplate); }
 		if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
+		if (updates.channelId !== undefined) { fields.push('channel_id = ?'); values.push(updates.channelId || null); }
 		if ((updates as any).tags !== undefined) { fields.push('tags = ?'); values.push(Array.isArray((updates as any).tags) ? JSON.stringify((updates as any).tags) : String((updates as any).tags)); }
 		if ((updates as any).isActive !== undefined) { fields.push('is_active = ?'); values.push((updates as any).isActive ? 1 : 0); }
 		if ((updates as any).archived !== undefined) { fields.push('archived = ?'); values.push((updates as any).archived ? 1 : 0); }

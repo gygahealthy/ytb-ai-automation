@@ -102,7 +102,7 @@ export class VEO3PollingService {
    * Check status and broadcast to all clients
    */
   private async checkAndBroadcast(job: PollingJob) {
-    const { generationId, promptId, attempts } = job;
+    const { generationId, promptId } = job;
     
     job.attempts++;
     job.lastChecked = Date.now();

@@ -74,7 +74,7 @@ export class PromptHistoryRepository {
 				archived,
 				change_note as changeNote,
 				created_at as createdAt
-			FROM prompt_history
+			FROM master_prompt_history
 			WHERE prompt_id = ?
 			ORDER BY created_at DESC
 			LIMIT ?
@@ -112,7 +112,7 @@ export class PromptHistoryRepository {
 				archived,
 				change_note as changeNote,
 				created_at as createdAt
-			FROM prompt_history
+			FROM master_prompt_history
 			WHERE id = ?
 		`,
 			[id]
@@ -145,7 +145,7 @@ export class PromptHistoryRepository {
 		// First try a short indexed lookup on digest_short to avoid scanning
 		try {
 			const latest = await this.db.get<any>(`
-				SELECT digest, digest_short FROM prompt_history
+				SELECT digest, digest_short FROM master_prompt_history
 				WHERE prompt_id = ? AND digest_short = ?
 				ORDER BY created_at DESC
 				LIMIT 1
@@ -163,7 +163,7 @@ export class PromptHistoryRepository {
 
 		const result = await this.db.run(
 			`
-			INSERT INTO prompt_history (
+			INSERT INTO master_prompt_history (
 				prompt_id,
 				provider,
 				prompt_kind,
@@ -176,7 +176,7 @@ export class PromptHistoryRepository {
 				archived,
 				change_note,
 				created_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`,
 			[
 				input.promptId,
@@ -194,6 +194,7 @@ export class PromptHistoryRepository {
 			]
 		);
 
+
 		return {
 			id: result.lastID,
 			promptId: input.promptId,
@@ -210,12 +211,12 @@ export class PromptHistoryRepository {
 	}
 
 	async delete(id: number): Promise<boolean> {
-		const result = await this.db.run('DELETE FROM prompt_history WHERE id = ?', [id]);
+		const result = await this.db.run('DELETE FROM master_prompt_history WHERE id = ?', [id]);
 		return (result.changes ?? 0) > 0;
 	}
 
 	async deleteByPromptId(promptId: number): Promise<boolean> {
-		const result = await this.db.run('DELETE FROM prompt_history WHERE prompt_id = ?', [promptId]);
+		const result = await this.db.run('DELETE FROM master_prompt_history WHERE prompt_id = ?', [promptId]);
 		return (result.changes ?? 0) > 0;
 	}
 }

@@ -8,10 +8,13 @@ import PlatformAnalysisPromptsPage from "./pages/admin/master-prompt-config/Plat
 import VideoCreationPromptsPage from "./pages/admin/master-prompt-config/VideoCreationPromptsPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
-import MyVideoChannelsPage from "./pages/MyVideoChannelsPage";
+import AllChannelsOverviewPage from "./pages/AllChannelsOverviewPage";
 import PromptFlowConfigPage from "./pages/admin/PromptFlowConfigPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
+import ChannelDeepDivePage from "./pages/channel-management/ChannelDeepDivePage";
+import ChannelMonitoringPage from "./pages/channel-management/ChannelMonitoringPage";
+import CompetitorMonitoringPage from "./pages/channel-management/CompetitorMonitoringPage";
 
 export default function AppRoutes() {
   return (
@@ -26,7 +29,10 @@ export default function AppRoutes() {
       <Route path="/admin/prompts/platform-analysis" element={<PlatformAnalysisPromptsPage />} />
       <Route path="/admin/prompts/channel-analysis" element={<ChannelAnalysisPromptsPage />} />
       <Route path="/admin/prompts/video-creation" element={<VideoCreationPromptsPage />} />
-      <Route path="/video-creation/channels" element={<MyVideoChannelsPage />} />
+      <Route path="/video-creation/channels" element={<AllChannelsOverviewPage />} />
+      <Route path="/video-creation/channels/:channelId" element={<ChannelDeepDivePage />} />
+      <Route path="/video-creation/channels/:channelId/monitoring" element={<ChannelMonitoringPage />} />
+      <Route path="/video-creation/channels/:channelId/competitors" element={<CompetitorMonitoringPage />} />
       <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
       <Route path="/video-creation/history" element={<VideoHistoryPage />} />
       <Route

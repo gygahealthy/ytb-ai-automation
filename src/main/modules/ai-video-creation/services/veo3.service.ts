@@ -2,7 +2,7 @@ import { ApiResponse } from "../../../../shared/types";
 import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
 import { veo3ProjectService } from "./veo3/veo3-project.service";
 import { veo3VideoCreationService } from "./veo3/veo3-video-creation.service";
-import { veo3BatchGenerationService, BatchGenerationRequest, BatchProgressCallback } from "./veo3/veo3-batch-generation.service";
+import { veo3BatchGenerationService, BatchProgressCallback } from "./veo3/veo3-batch-generation.service";
 import { veo3StatusCheckerService } from "./veo3/veo3-status-checker.service";
 import { veo3VideoHistoryService, VideoHistoryFilter, PaginatedVideoHistory } from "./veo3/veo3-video-history.service";
 
