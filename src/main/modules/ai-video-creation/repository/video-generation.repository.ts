@@ -224,6 +224,276 @@ export class VideoGenerationRepository {
 
     logger.info(`Video generation deleted: ${id}`);
   }
+
+  /**
+   * Get video generations by profile with advanced filtering (paginated)
+   */
+  async getByProfilePaginated(
+    profileId: string,
+    limit: number = 50,
+    offset: number = 0,
+    status?: VideoGeneration["status"],
+    startDate?: string,
+    endDate?: string
+  ): Promise<VideoGeneration[]> {
+    logger.info(`Fetching paginated video generations for profile: ${profileId}`, { status, startDate, endDate });
+
+    const whereClauses = ["profile_id = ?"];
+    const params: any[] = [profileId];
+
+    if (status) {
+      whereClauses.push("status = ?");
+      params.push(status);
+    }
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    params.push(limit, offset);
+
+    const rows = await this.db.all<any>(
+      `SELECT 
+        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
+        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
+        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
+        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
+        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
+        updated_at as updatedAt, completed_at as completedAt
+       FROM veo3_video_generations 
+       WHERE ${whereClauses.join(" AND ")}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      params
+    );
+
+    return rows || [];
+  }
+
+  /**
+   * Get video generations by status with date filtering (paginated)
+   */
+  async getByStatusPaginated(
+    status: VideoGeneration["status"],
+    limit: number = 50,
+    offset: number = 0,
+    startDate?: string,
+    endDate?: string
+  ): Promise<VideoGeneration[]> {
+    logger.info(`Fetching paginated video generations with status: ${status}`, { startDate, endDate });
+
+    const whereClauses = ["status = ?"];
+    const params: any[] = [status];
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    params.push(limit, offset);
+
+    const rows = await this.db.all<any>(
+      `SELECT 
+        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
+        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
+        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
+        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
+        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
+        updated_at as updatedAt, completed_at as completedAt
+       FROM veo3_video_generations 
+       WHERE ${whereClauses.join(" AND ")}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      params
+    );
+
+    return rows || [];
+  }
+
+  /**
+   * Get all video generations with date filtering (paginated)
+   */
+  async getAllPaginated(
+    limit: number = 50,
+    offset: number = 0,
+    startDate?: string,
+    endDate?: string
+  ): Promise<VideoGeneration[]> {
+    logger.info(`Fetching all paginated video generations`, { startDate, endDate });
+
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    params.push(limit, offset);
+
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+    const rows = await this.db.all<any>(
+      `SELECT 
+        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
+        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
+        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
+        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
+        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
+        updated_at as updatedAt, completed_at as completedAt
+       FROM veo3_video_generations 
+       ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      params
+    );
+
+    return rows || [];
+  }
+
+  /**
+   * Count video generations by profile
+   */
+  async countByProfile(
+    profileId: string,
+    status?: VideoGeneration["status"],
+    startDate?: string,
+    endDate?: string
+  ): Promise<number> {
+    const whereClauses = ["profile_id = ?"];
+    const params: any[] = [profileId];
+
+    if (status) {
+      whereClauses.push("status = ?");
+      params.push(status);
+    }
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    const row = await this.db.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM veo3_video_generations WHERE ${whereClauses.join(" AND ")}`,
+      params
+    );
+
+    return row?.count || 0;
+  }
+
+  /**
+   * Count video generations by status
+   */
+  async countByStatus(
+    status: VideoGeneration["status"],
+    startDate?: string,
+    endDate?: string
+  ): Promise<number> {
+    const whereClauses = ["status = ?"];
+    const params: any[] = [status];
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    const row = await this.db.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM veo3_video_generations WHERE ${whereClauses.join(" AND ")}`,
+      params
+    );
+
+    return row?.count || 0;
+  }
+
+  /**
+   * Count all video generations
+   */
+  async countAll(startDate?: string, endDate?: string): Promise<number> {
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+
+    if (startDate) {
+      whereClauses.push("created_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push("created_at <= ?");
+      params.push(endDate);
+    }
+
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+    const row = await this.db.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM veo3_video_generations ${whereClause}`,
+      params
+    );
+
+    return row?.count || 0;
+  }
+
+  /**
+   * Get status counts for all video generations
+   */
+  async getStatusCounts(profileId?: string): Promise<{
+    total: number;
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  }> {
+    const whereClause = profileId ? "WHERE profile_id = ?" : "";
+    const params = profileId ? [profileId] : [];
+
+    const rows = await this.db.all<{ status: string; count: number }>(
+      `SELECT status, COUNT(*) as count FROM veo3_video_generations ${whereClause} GROUP BY status`,
+      params
+    );
+
+    const counts = {
+      total: 0,
+      pending: 0,
+      processing: 0,
+      completed: 0,
+      failed: 0,
+    };
+
+    for (const row of rows || []) {
+      counts.total += row.count;
+      if (row.status === "pending") counts.pending = row.count;
+      if (row.status === "processing") counts.processing = row.count;
+      if (row.status === "completed") counts.completed = row.count;
+      if (row.status === "failed") counts.failed = row.count;
+    }
+
+    return counts;
+  }
 }
 
 // Export singleton instance

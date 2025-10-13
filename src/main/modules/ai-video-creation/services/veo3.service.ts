@@ -4,6 +4,7 @@ import { veo3ProjectService } from "./veo3/veo3-project.service";
 import { veo3VideoCreationService } from "./veo3/veo3-video-creation.service";
 import { veo3BatchGenerationService, BatchGenerationRequest, BatchProgressCallback } from "./veo3/veo3-batch-generation.service";
 import { veo3StatusCheckerService } from "./veo3/veo3-status-checker.service";
+import { veo3VideoHistoryService, VideoHistoryFilter, PaginatedVideoHistory } from "./veo3/veo3-video-history.service";
 
 /**
  * VEO3 Service - Main Facade
@@ -13,6 +14,7 @@ import { veo3StatusCheckerService } from "./veo3/veo3-status-checker.service";
  * - VEO3VideoCreationService: Single video generation operations
  * - VEO3BatchGenerationService: Multiple video generation operations
  * - VEO3StatusCheckerService: Video status checking and refreshing
+ * - VEO3VideoHistoryService: Video history with pagination and filtering
  *
  * This allows existing code to continue working while keeping services focused and maintainable.
  */
@@ -198,6 +200,39 @@ export class VEO3Service {
   ): Promise<ApiResponse<{ batchId: string; total: number }>> {
     return veo3BatchGenerationService.generateMultipleVideosAsync(requests, delayMs, onProgress);
   }
+
+  // ========================================
+  // VIDEO HISTORY OPERATIONS (delegated to VEO3VideoHistoryService)
+  // ========================================
+
+  /**
+   * Get paginated video history with optional filtering
+   */
+  async getVideoHistory(
+    page: number = 1,
+    pageSize: number = 20,
+    filter?: VideoHistoryFilter
+  ): Promise<ApiResponse<PaginatedVideoHistory>> {
+    return veo3VideoHistoryService.getVideoHistory(page, pageSize, filter);
+  }
+
+  /**
+   * Get video history grouped by date for UI display
+   */
+  async getVideoHistoryGroupedByDate(
+    page: number = 1,
+    pageSize: number = 20,
+    filter?: VideoHistoryFilter
+  ): Promise<ApiResponse<any>> {
+    return veo3VideoHistoryService.getVideoHistoryGroupedByDate(page, pageSize, filter);
+  }
+
+  /**
+   * Get status counts for all videos
+   */
+  async getStatusCounts(profileId?: string): Promise<ApiResponse<any>> {
+    return veo3VideoHistoryService.getStatusCounts(profileId);
+  }
 }
 
 // Export singleton instance for backward compatibility
@@ -208,4 +243,5 @@ export { veo3ProjectService } from "./veo3/veo3-project.service";
 export { veo3VideoCreationService } from "./veo3/veo3-video-creation.service";
 export { veo3BatchGenerationService } from "./veo3/veo3-batch-generation.service";
 export { veo3StatusCheckerService } from "./veo3/veo3-status-checker.service";
+export { veo3VideoHistoryService } from "./veo3/veo3-video-history.service";
 export { veo3PollingService } from "./veo3/veo3-polling.service";

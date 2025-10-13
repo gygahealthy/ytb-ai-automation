@@ -170,4 +170,27 @@ export const veo3Registrations: IpcRegistration[] = [
       );
     },
   },
+
+  // Video History handlers (new optimized pagination and filtering)
+  {
+    channel: "veo3:getVideoHistory",
+    description: "Get paginated video history with filtering",
+    handler: async (req: { page?: number; pageSize?: number; filter?: any }) => {
+      return await veo3Service.getVideoHistory((req as any).page, (req as any).pageSize, (req as any).filter);
+    },
+  },
+  {
+    channel: "veo3:getVideoHistoryGroupedByDate",
+    description: "Get video history grouped by date (like Google Photos)",
+    handler: async (req: { page?: number; pageSize?: number; filter?: any }) => {
+      return await veo3Service.getVideoHistoryGroupedByDate((req as any).page, (req as any).pageSize, (req as any).filter);
+    },
+  },
+  {
+    channel: "veo3:getStatusCounts",
+    description: "Get status counts for video generations",
+    handler: async (req: { profileId?: string }) => {
+      return await veo3Service.getStatusCounts((req as any).profileId);
+    },
+  },
 ];

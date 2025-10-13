@@ -120,6 +120,49 @@ const onMultipleVideosProgress = (
   return () => {};
 };
 
+// New optimized video history methods with pagination
+const getVideoHistory = (
+  page?: number,
+  pageSize?: number,
+  filter?: {
+    status?: "all" | "pending" | "processing" | "completed" | "failed";
+    profileId?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getVideoHistory === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getVideoHistory(page, pageSize, filter));
+  if (hasInvoke()) return invoke("veo3:getVideoHistory", { page, pageSize, filter });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const getVideoHistoryGroupedByDate = (
+  page?: number,
+  pageSize?: number,
+  filter?: {
+    status?: "all" | "pending" | "processing" | "completed" | "failed";
+    profileId?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getVideoHistoryGroupedByDate === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getVideoHistoryGroupedByDate(page, pageSize, filter));
+  if (hasInvoke()) return invoke("veo3:getVideoHistoryGroupedByDate", { page, pageSize, filter });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const getStatusCounts = (profileId?: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getStatusCounts === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getStatusCounts(profileId));
+  if (hasInvoke()) return invoke("veo3:getStatusCounts", { profileId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
 export default {
   fetchProjectsFromAPI,
   createProjectViaAPI,
@@ -132,4 +175,8 @@ export default {
   refreshVideoStatus,
   generateMultipleVideosAsync,
   onMultipleVideosProgress,
+  // New optimized methods
+  getVideoHistory,
+  getVideoHistoryGroupedByDate,
+  getStatusCounts,
 };
