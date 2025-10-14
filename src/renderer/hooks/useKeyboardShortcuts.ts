@@ -73,6 +73,26 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
     // Try to pin other drawers via custom event
     window.dispatchEvent(new CustomEvent("pin-drawer"));
   },
+  "navigate-back": () => {
+    console.log("[Keyboard] Navigate Back triggered");
+    try {
+      if (window.history && typeof window.history.back === "function") {
+        window.history.back();
+      }
+    } catch (err) {
+      console.error("[Keyboard] Error navigating back:", err);
+    }
+  },
+  "navigate-forward": () => {
+    console.log("[Keyboard] Navigate Forward triggered");
+    try {
+      if (window.history && typeof window.history.forward === "function") {
+        window.history.forward();
+      }
+    } catch (err) {
+      console.error("[Keyboard] Error navigating forward:", err);
+    }
+  },
 };
 
 /**

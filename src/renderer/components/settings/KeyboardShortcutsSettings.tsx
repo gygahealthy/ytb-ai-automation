@@ -1,4 +1,4 @@
-import { Code, History, Keyboard, Pin, RefreshCw, Terminal, User } from "lucide-react";
+import { Code, History, Keyboard, Pin, RefreshCw, Terminal, User, ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useKeyboardShortcutsStore } from "../../store/keyboard-shortcuts.store";
 
@@ -16,6 +16,8 @@ export default function KeyboardShortcutsSettings() {
     User,
     Terminal,
     Pin,
+    ArrowLeft,
+    ArrowRight,
   };
 
   // Handle key recording when editing a shortcut

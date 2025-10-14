@@ -1,5 +1,5 @@
+import { useEffect, useRef, useState } from "react";
 import {
-  CheckSquare,
   Copy,
   Eye,
   EyeOff,
@@ -7,29 +7,23 @@ import {
   FileUp,
   Filter,
   Play,
-  Plus,
   Redo,
   Save,
-  Square,
   Trash2,
   Undo,
 } from "lucide-react";
-import { useState } from "react";
-import AppAlert from "../common/AppAlert";
+// no local react state currently required
 
 interface JsonToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   hasSelection: boolean;
-  allSelected: boolean;
   globalPreviewMode: boolean;
   statusFilter: "all" | "idle" | "processing" | "completed" | "failed";
   selectedCount?: number;
   onUndo: () => void;
   onRedo: () => void;
   onAddJson: () => void;
-  onToggleSelectAll: () => void;
-  onRemoveSelected: () => void;
   onClearAll: () => void;
   onSaveDraft: () => void;
   onLoadDraft: () => void;
@@ -44,15 +38,12 @@ export default function JsonToolbar({
   canUndo,
   canRedo,
   hasSelection,
-  allSelected,
   globalPreviewMode,
   statusFilter,
   selectedCount = 0,
   onUndo,
   onRedo,
   onAddJson,
-  onToggleSelectAll,
-  onRemoveSelected,
   onClearAll,
   onSaveDraft,
   onLoadDraft,
@@ -62,198 +53,205 @@ export default function JsonToolbar({
   onStatusFilterChange,
   onCreateMultiple,
 }: JsonToolbarProps) {
-  const [alertState, setAlertState] = useState<{
-    open: boolean;
-    message: string;
-    severity: "info" | "success" | "warning" | "error";
-  }>({ open: false, message: "", severity: "info" });
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-      <div className="flex flex-wrap items-center gap-2">
-        {/* JSON Operations */}
-        <div className="flex items-center gap-2 pr-2 border-r border-gray-300 dark:border-gray-600">
-          <button
-            onClick={onAddJson}
-            aria-label="Add prompts from JSON"
-            title="Add prompts from JSON"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary-300"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="sr-only">Add JSON</span>
-          </button>
+  // Note: alerts are shown inline via window.alert/confirm in this toolbar
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement | null>(null);
 
-          {/* Create (Generate Videos) - moved next to Add JSON */}
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!filterRef.current) return;
+      if (filterRef.current.contains(e.target as Node)) return;
+      setFilterOpen(false);
+    }
+
+    if (filterOpen) document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [filterOpen]);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-gray-700">
+  <div className="flex flex-wrap items-center gap-2 flex-1">
+        {/* Add JSON button occupies its own visual row */}
+        <div className="flex items-center gap-2 w-full sm:w-auto pr-2">
+          <div className="relative flex items-center">
+            {/* animated bordered pulse circle */}
+            <span className="absolute -inset-1 rounded-full border-2 border-indigo-300 opacity-60 transform-gpu animate-pulse-slow scale-100" aria-hidden="true"></span>
+            <button
+              onClick={onAddJson}
+              aria-label="Add prompts from JSON"
+              title="Add prompts from JSON"
+              className="relative z-10 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-[0_10px_36px_rgba(79,70,229,0.18)] hover:shadow-[0_16px_48px_rgba(79,70,229,0.22)] transition-all focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <FileUp className="w-6 h-6" />
+              <span className="sr-only">Add JSON</span>
+            </button>
+          </div>
+
           <button
             onClick={() => {
-              // Use AppAlert for validation; parent handles actual generation
               if (!onCreateMultiple) return;
-              // show alert from parent if no selection - parent also validates, but help fast feedback here
-              if (!(hasSelection as boolean)) {
-                setAlertState({ open: true, message: "Please select at least one prompt to generate videos", severity: "error" });
+              if (!hasSelection) {
+                window.alert("Please select at least one prompt to generate videos");
                 return;
               }
-              // delegate to parent handler and show our AppAlert confirm dialog
+
               const countText = selectedCount > 0 ? `${selectedCount} selected` : "selected";
-              setAlertState({
-                open: true,
-                message: `Generate videos for ${countText} prompt(s)?\n\nCompleted videos will be automatically skipped.\n\nThis will start video generation with a small delay between each to avoid rate limiting.`,
-                severity: "info",
-              });
+              const confirmed = window.confirm(
+                `Generate videos for ${countText} prompt(s)?\n\nCompleted videos will be automatically skipped.\n\nThis will start video generation with a small delay between each request.`
+              );
+
+              if (confirmed) {
+                onCreateMultiple();
+              }
             }}
             aria-label="Generate videos for selected prompts"
             title="Generate videos for selected prompts (skips completed)"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-green-300"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-green-300"
           >
             <Play className="w-5 h-5" />
             <span className="sr-only">Create Videos</span>
           </button>
-        </div>
 
-        {/* AppAlert rendered here for toolbar-level errors */}
-        {alertState.open && (
-          <AppAlert
-            title={alertState.severity === "error" ? "Error" : "Notice"}
-            message={alertState.message}
-            severity={alertState.severity}
-            onClose={() => setAlertState((s) => ({ ...s, open: false }))}
-            onConfirm={() => {
-              setAlertState((s) => ({ ...s, open: false }));
-              try {
-                if (onCreateMultiple) onCreateMultiple({ skipConfirm: true });
-              } catch (err) {
-                setAlertState({ open: true, message: String(err || "Failed to start generation"), severity: "error" });
-              }
-            }}
-          />
-        )}
-
-        {/* Preview Mode */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
-          <button
-            onClick={onToggleGlobalPreview}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border transition-colors text-sm ${
-              !globalPreviewMode
-                ? "bg-primary-500 text-white border-primary-500"
-                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
-            }`}
-            title={!globalPreviewMode ? "Showing all previews" : "Hiding all previews"}
-          >
-            {!globalPreviewMode ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span>{!globalPreviewMode ? "Show Previews" : "Hide Previews"}</span>
-          </button>
-        </div>
-
-        {/* Selection Operations */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
-          <button
-            onClick={onToggleSelectAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
-            title={allSelected ? "Unselect all prompts" : "Select all prompts"}
-          >
-            {allSelected ? <Square className="w-4 h-4" /> : <CheckSquare className="w-4 h-4" />}
-            <span>{allSelected ? "Unselect All" : "Select All"}</span>
-          </button>
-        </div>
-
-        {/* Remove Operations */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
-          <button
-            onClick={onRemoveSelected}
-            disabled={!hasSelection}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Remove selected prompts"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Remove Selected</span>
-          </button>
+          {/* Clear All next to Create button */}
           <button
             onClick={onClearAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-red-600 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
             title="Clear all prompts"
           >
             <Trash2 className="w-4 h-4" />
-            <span>Clear All</span>
+            <span className="sr-only">Clear</span>
           </button>
         </div>
 
-        {/* History Operations */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-600">
+        {/* Removed select/remove selected controls - keep Clear All next to Create */}
+
+        {/* Undo/Redo compact */}
+        <div className="flex items-center gap-2 pr-2 border-r border-gray-200 dark:border-gray-700">
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-2 rounded-md bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Undo (Ctrl+Z)"
           >
             <Undo className="w-4 h-4" />
-            <span>Undo</span>
           </button>
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-2 rounded-md bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Redo (Ctrl+Y)"
           >
             <Redo className="w-4 h-4" />
-            <span>Redo</span>
           </button>
         </div>
 
-        {/* Draft & Export Operations */}
-        <div className="flex items-center gap-1">
+        {/* Draft & Export grouped compact - preview toggle moved here */}
+        <div className="flex items-center gap-2">
           <button
             onClick={onSaveDraft}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             title="Save as draft"
           >
             <Save className="w-4 h-4" />
-            <span>Save Draft</span>
+            <span className="hidden sm:inline">Save</span>
           </button>
+
           <button
             onClick={onLoadDraft}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             title="Load draft"
           >
             <FileUp className="w-4 h-4" />
-            <span>Load Draft</span>
+            <span className="hidden sm:inline">Load</span>
           </button>
+
+          <button
+            onClick={onToggleGlobalPreview}
+            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+            title={globalPreviewMode ? "Hide all previews" : "Show all previews"}
+          >
+            {globalPreviewMode ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            <span className="hidden sm:inline">{globalPreviewMode ? "Hide Previews" : "Show Previews"}</span>
+          </button>
+
           <button
             onClick={onCopyJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             title="Copy as JSON"
           >
             <Copy className="w-4 h-4" />
-            <span>Copy JSON</span>
+            <span className="hidden sm:inline">Copy</span>
           </button>
+
           <button
             onClick={onExportJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             title="Export to file"
           >
             <FileDown className="w-4 h-4" />
-            <span>Export</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
-      {/* Status Filter - Right Side */}
-      <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-gray-500" />
-        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Filter:</span>
-        <div className="flex items-center gap-1">
-          {(["all", "idle", "processing", "completed", "failed"] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => onStatusFilterChange(filter)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                statusFilter === filter
-                  ? "bg-primary-500 text-white"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
-        </div>
+      {/* Status Filter - Right Side: single toggle that opens a popover */}
+      <div className="flex items-center gap-2 ml-auto" ref={filterRef}>
+        <button
+          onClick={() => {
+            if (filterOpen) {
+              // clicking while open clears and hides
+              onStatusFilterChange("all");
+              setFilterOpen(false);
+            } else {
+              setFilterOpen(true);
+            }
+          }}
+          aria-expanded={filterOpen}
+          title={filterOpen ? "Hide filter" : "Show filter"}
+          className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+        >
+          <Filter className="w-4 h-4 text-gray-500" />
+          <span className="hidden sm:inline text-xs text-gray-600 dark:text-gray-400 font-medium">Filter</span>
+          {statusFilter !== "all" && (
+            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-500 text-white">
+              {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+            </span>
+          )}
+        </button>
+
+        {/* Popover */}
+        {filterOpen && (
+          <div className="absolute right-3 mt-12 z-50">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-2 px-2 w-40">
+              {( ["completed", "processing", "failed"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => {
+                    onStatusFilterChange(filter);
+                    setFilterOpen(false);
+                  }}
+                  className={`w-full text-left px-2 py-1 rounded text-sm transition-colors ${
+                    statusFilter === filter
+                      ? "bg-primary-500 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
+              <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                <button
+                  onClick={() => {
+                    onStatusFilterChange("all");
+                    setFilterOpen(false);
+                  }}
+                  className="w-full text-left px-2 py-1 rounded text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Clear filter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

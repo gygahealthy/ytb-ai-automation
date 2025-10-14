@@ -1,5 +1,6 @@
-import { History, Plus, User, Video } from "lucide-react";
+import { History, User } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AppAlert from "../../components/common/AppAlert";
 import AddJsonModal from "../../components/video-creation/AddJsonModal";
 import DraftManagerModal from "../../components/video-creation/DraftManagerModal";
@@ -26,6 +27,7 @@ export default function SingleVideoCreationPage() {
   }>({ open: false, message: "", severity: "info" });
 
   const { openDrawer } = useDrawer();
+  const navigate = useNavigate();
 
   const {
     prompts,
@@ -41,9 +43,6 @@ export default function SingleVideoCreationPage() {
     togglePromptProfileSelect,
     updatePromptProfile,
     updatePromptProject,
-    toggleAllSelections,
-    removeSelectedPrompts,
-    clearAllPrompts,
     loadFromJson,
     undo,
     redo,
@@ -54,6 +53,7 @@ export default function SingleVideoCreationPage() {
     deleteDraft,
     createJob,
     updateJobStatus,
+  clearAllPrompts,
     toggleGlobalPreview,
     setStatusFilter,
   } = useVideoCreationStore();
@@ -74,7 +74,6 @@ export default function SingleVideoCreationPage() {
   }, []);
 
   const hasSelection = prompts.some((p) => p.selected);
-  const allSelected = prompts.every((p) => p.selected);
 
   // Filter prompts based on status
   const filteredPrompts = prompts.filter((prompt) => {
@@ -558,65 +557,8 @@ export default function SingleVideoCreationPage() {
   };
 
   const handleOpenHistory = () => {
-    openDrawer({
-      title: "Creation History",
-      icon: <History className="w-5 h-5" />,
-      children: (
-        <div className="space-y-3">
-          {jobs.length === 0 ? (
-            <div className="text-center py-12">
-              <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">No videos created yet</p>
-            </div>
-          ) : (
-            jobs.map((job) => (
-              <div
-                key={job.id}
-                onClick={() => {
-                  setSelectedJobId(job.id);
-                }}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-4 h-4 text-primary-500" />
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">Video Job</span>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                      job.status === "completed"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : job.status === "processing"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        : job.status === "failed"
-                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400"
-                    }`}
-                  >
-                    {job.status}
-                  </span>
-                </div>
-
-                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{job.promptText}</p>
-
-                {job.status === "processing" && job.progress !== undefined && (
-                  <div className="mb-3">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                      <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{job.progress}% complete</p>
-                  </div>
-                )}
-
-                {job.error && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{job.error}</p>}
-
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{new Date(job.createdAt).toLocaleString()}</p>
-              </div>
-            ))
-          )}
-        </div>
-      ),
-    });
+    // Navigate to the central history page instead of opening a drawer
+    navigate("/video-creation/history");
   };
 
   const handleOpenProfileDrawer = () => {
@@ -647,7 +589,7 @@ export default function SingleVideoCreationPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Single Video Creation</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Create videos using single or multiple prompts</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleOpenProfileDrawer}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${
@@ -659,12 +601,18 @@ export default function SingleVideoCreationPage() {
             >
               <User className="w-5 h-5" />
             </button>
+
             <button
               onClick={handleOpenHistory}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+              className="relative inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-gradient-to-r from-orange-400 to-rose-400 text-white font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"
+              title="Open History"
             >
-              <History className="w-5 h-5" />
-              <span>History ({jobs.length})</span>
+              <History className="w-4 h-4 opacity-95" />
+              <span className="text-sm">History</span>
+
+              <span className="ml-2 inline-flex items-center justify-center min-w-[28px] h-6 px-2 rounded-full bg-white/90 text-orange-600 font-medium text-xs shadow-sm">
+                {jobs.length}
+              </span>
             </button>
           </div>
         </div>
@@ -678,15 +626,12 @@ export default function SingleVideoCreationPage() {
             canUndo={canUndo()}
             canRedo={canRedo()}
             hasSelection={hasSelection}
-            allSelected={allSelected}
             globalPreviewMode={globalPreviewMode}
             statusFilter={statusFilter}
             selectedCount={prompts.filter((p) => p.selected).length}
             onUndo={undo}
             onRedo={redo}
             onAddJson={() => setShowAddJsonModal(true)}
-            onToggleSelectAll={toggleAllSelections}
-            onRemoveSelected={removeSelectedPrompts}
             onClearAll={clearAllPrompts}
             onSaveDraft={handleSaveDraft}
             onLoadDraft={() => setShowDraftManager(true)}
@@ -698,15 +643,28 @@ export default function SingleVideoCreationPage() {
           />
         </div>
 
-        {/* Add Prompt Button */}
+        {/* Add Prompt button in-flow (takes up the row) */}
         <div className="mb-4">
-          <button
-            onClick={addPrompt}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-500 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Add New Prompt</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <span className="absolute -inset-1 rounded-full border-2 border-rose-300 opacity-60 transform-gpu animate-pulse-slow" aria-hidden="true"></span>
+              <button
+                onClick={addPrompt}
+                aria-label="Add New Prompt"
+                title="Add New Prompt"
+                className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_10px_36px_rgba(79,70,229,0.18)] hover:shadow-[0_16px_48px_rgba(79,70,229,0.22)] transform hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* spacer to visually align with previous layout */}
+            <div className="flex-1">
+              {/* previously the prompt input area begins here; keeping spacer ensures the button sits on the left of the prompt row */}
+            </div>
+          </div>
         </div>
 
         {/* Prompts List */}

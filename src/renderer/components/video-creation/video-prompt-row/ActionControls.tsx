@@ -24,14 +24,14 @@ export default function ActionControls({
   promptText: string;
 }) {
   return (
-    <div className="flex-shrink-0 flex flex-col gap-1 items-center justify-center py-2 px-1 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
-      <div className="flex flex-col gap-1 pb-1 mb-1 border-b border-gray-300 dark:border-gray-600">
+    <div className="flex-shrink-0 flex flex-col gap-2 items-center justify-center py-2 px-1 rounded-lg">
+      <div className="flex flex-col gap-2">
         <button
           onClick={() => onTogglePreview(promptId)}
-          className={`p-2 rounded-md transition-all shadow-sm ${
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-shadow focus:outline-none focus:ring-2 ${
             showPreview
-              ? "bg-primary-500 text-white hover:bg-primary-600"
-              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
+              ? "bg-primary-600 text-white shadow-md hover:shadow-lg"
+              : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
           title={showPreview ? "Hide preview" : "Show preview"}
         >
@@ -41,10 +41,10 @@ export default function ActionControls({
         <button
           onClick={() => onShowInfo(promptId)}
           disabled={!job}
-          className={`p-2 rounded-md transition-all shadow-sm ${
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-shadow focus:outline-none ${
             job
-              ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-600"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed border border-gray-200 dark:border-gray-700"
+              ? "bg-white/90 text-blue-600 dark:bg-gray-900/60 hover:shadow-md"
+              : "bg-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50"
           }`}
           title={job ? "View job details" : "No video created yet"}
         >
@@ -52,11 +52,15 @@ export default function ActionControls({
         </button>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2 mt-1">
         <button
           onClick={() => onCreate(promptId, promptText)}
           disabled={!isValid}
-          className="p-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary-500"
+          className={`w-10 h-10 flex items-center justify-center rounded-full text-white transition-shadow focus:outline-none ${
+            isValid
+              ? "bg-gradient-to-r from-primary-500 to-primary-600 shadow-md hover:shadow-lg"
+              : "bg-gray-300 dark:bg-gray-700 opacity-40 cursor-not-allowed"
+          }`}
           title="Create video from this prompt"
         >
           <Play className="w-4 h-4" />
@@ -65,7 +69,7 @@ export default function ActionControls({
         {canDelete && (
           <button
             onClick={() => onDelete(promptId)}
-            className="p-2 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-all shadow-sm border border-gray-200 dark:border-gray-600"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-red-600 hover:bg-red-50 transition-colors focus:outline-none"
             title="Delete this prompt"
           >
             <Archive className="w-4 h-4" />

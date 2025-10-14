@@ -10,8 +10,14 @@ export type ShortcutAction =
   | "toggle-logs"
   | "pin-drawer";
 
+// Added navigation shortcuts
+export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
+
+// Merge navigation actions into ShortcutAction union
+export type AllShortcutAction = ShortcutAction | NavigationShortcutAction;
+
 export type KeyboardShortcut = {
-  id: ShortcutAction;
+  id: AllShortcutAction;
   label: string;
   description: string;
   keys: string[];
@@ -75,6 +81,21 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     description: "Pin or unpin the currently open drawer",
     keys: ["Ctrl", "N"],
     icon: "Pin",
+  },
+  // Navigation: Alt + ArrowLeft / Alt + ArrowRight
+  {
+    id: "navigate-back",
+    label: "Navigate Back",
+    description: "Go back in the page history",
+    keys: ["Alt", "ArrowLeft"],
+    icon: "ArrowLeft",
+  },
+  {
+    id: "navigate-forward",
+    label: "Navigate Forward",
+    description: "Go forward in the page history",
+    keys: ["Alt", "ArrowRight"],
+    icon: "ArrowRight",
   },
 ];
 

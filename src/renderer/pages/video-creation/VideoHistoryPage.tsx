@@ -1,10 +1,10 @@
 import React from "react";
+import { VideoHistoryContent, VideoHistoryToolbar } from "../../components/video-creation/video-history";
 import { VideoHistoryProvider } from "../../contexts/VideoHistoryContext";
-import { VideoHistoryToolbar, VideoHistoryContent } from "../../components/video-creation/video-history";
 
 /**
  * Video History Page - Main Container
- * 
+ *
  * This page uses the VideoHistoryContext to manage state and provides:
  * - Date range filtering with quick filters (Today, Yesterday, Last 7/30 days)
  * - Status filtering (All, Processing, Completed, Failed, Pending)
@@ -17,8 +17,9 @@ import { VideoHistoryToolbar, VideoHistoryContent } from "../../components/video
 const VideoHistoryPage: React.FC = () => {
   return (
     <VideoHistoryProvider pageSize={20}>
-      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative">
         <VideoHistoryToolbar />
+
         <VideoHistoryContent />
       </div>
     </VideoHistoryProvider>

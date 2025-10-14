@@ -2,6 +2,8 @@ import { ExternalLink, Eye, Plus, TrendingDown, TrendingUp, Video as VideoIcon, 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { YoutubeChannel } from "../../main/modules/channel-management/youtube.types";
+import ChannelsGrid from "../components/all-channels/ChannelsGrid";
+import ChannelsToolbar from "../components/all-channels/ChannelsToolbar";
 import { createChannel, getAllChannels } from "../ipc/youtube";
 import { formatNumber } from "../utils/formatters";
 
@@ -90,42 +92,7 @@ export default function AllChannelsOverviewPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="inline-flex items-center gap-2 bg-transparent rounded-md p-1">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === "table"
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                Table
-              </button>
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                Grid
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowCreateModal(true)}
-              aria-label="Add channel"
-              title="Add new channel"
-              className="relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-500 text-white rounded-full font-medium transition-transform hover:scale-105 shadow-xl"
-            >
-              {/* Strong glowing ring */}
-              <span
-                className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-purple-400 to-indigo-400 opacity-40 blur-xl animate-pulse"
-                aria-hidden="true"
-              />
-              <Plus className="w-6 h-6 relative z-10" />
-            </button>
+            <ChannelsToolbar viewMode={viewMode} setViewMode={setViewMode} onAdd={() => setShowCreateModal(true)} />
           </div>
         </div>
 
@@ -357,76 +324,11 @@ export default function AllChannelsOverviewPage() {
                 </table>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-2">
-                {loading ? (
-                  <div className="col-span-full p-8 text-center text-gray-500 dark:text-gray-400">Loading channels...</div>
-                ) : channels.length === 0 ? (
-                  <div className="col-span-full p-8 text-center text-gray-500 dark:text-gray-400">No channels yet</div>
-                ) : (
-                  channels.map((channel) => {
-                    const engagementRate = Math.floor(Math.random() * 60) + 20;
-                    return (
-                      <div
-                        key={channel.id}
-                        onClick={() => navigate(`/video-creation/channels/${channel.channelId}`)}
-                        className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Youtube className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-gray-900 dark:text-white truncate">{channel.channelName}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">ID: {channel.channelId}</div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {formatNumber(channel.subscriberCount || 0)}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Subs</div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {formatNumber(channel.videoCount || 0)}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Videos</div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {formatNumber(channel.viewCount || 0)}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Views</div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                                style={{ width: `${engagementRate}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{engagementRate}%</div>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/video-creation/channels/${channel.channelId}`);
-                            }}
-                            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+              <ChannelsGrid
+                channels={channels}
+                onView={(id) => navigate(`/video-creation/channels/${id}`)}
+                onCardClick={(id) => navigate(`/video-creation/channels/${id}`)}
+              />
             )}
           </div>
         </div>
