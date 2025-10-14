@@ -38,11 +38,18 @@ export const routeConfig: RouteConfig[] = [
   },
   {
     id: "video-creation",
-    label: "Video Creation",
+    label: "Single Video Creation",
     icon: Video,
     page: "video-creation",
     defaultOpen: true,
     children: [
+      {
+        id: "video-creation.story",
+        label: "Story Creator",
+        icon: Clapperboard,
+        path: "/video-creation/story-create",
+        page: "video-creation.story",
+      },
       {
         id: "video-creation.single",
         label: "Single Video Creation",
@@ -50,6 +57,7 @@ export const routeConfig: RouteConfig[] = [
         path: "/video-creation/single",
         page: "video-creation.single",
       },
+
       {
         id: "video-creation.history",
         label: "Video Creation History",

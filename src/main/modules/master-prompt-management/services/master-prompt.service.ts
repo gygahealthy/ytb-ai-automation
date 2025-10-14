@@ -1,5 +1,5 @@
-import { ApiResponse } from '../../../../shared/types';
-import { promptRepository } from '../repository/prompt.repository';
+import { ApiResponse } from "../../../../shared/types";
+import { promptRepository } from "../repository/master-prompt.repository";
 
 const repository = promptRepository;
 
@@ -17,7 +17,7 @@ class PromptService {
     try {
       const id = req?.id ?? req;
       const data = await repository.getById(Number(id));
-      if (!data) return { success: false, error: 'Not found' };
+      if (!data) return { success: false, error: "Not found" };
       return { success: true, data };
     } catch (err: any) {
       return { success: false, error: String(err) };
@@ -46,10 +46,14 @@ class PromptService {
 
   async getByProviderAndKind(req: any): Promise<ApiResponse<any>> {
     try {
-      const provider = req?.provider ?? (Array.isArray(req) ? req[0] : undefined);
+      const provider =
+        req?.provider ?? (Array.isArray(req) ? req[0] : undefined);
       const kind = req?.promptKind ?? (Array.isArray(req) ? req[1] : undefined);
-      const data = await repository.getByProviderAndKind(String(provider), String(kind));
-      if (!data) return { success: false, error: 'Not found' };
+      const data = await repository.getByProviderAndKind(
+        String(provider),
+        String(kind)
+      );
+      if (!data) return { success: false, error: "Not found" };
       return { success: true, data };
     } catch (err: any) {
       return { success: false, error: String(err) };
@@ -69,11 +73,19 @@ class PromptService {
   async update(req: any): Promise<ApiResponse<any>> {
     try {
       // Debug: log incoming request payload for update calls
-      try { console.log('[prompt.service] update called with req:', JSON.stringify(req)); } catch (e) { console.log('[prompt.service] update called (non-serializable req)'); }
+      try {
+        console.log(
+          "[prompt.service] update called with req:",
+          JSON.stringify(req)
+        );
+      } catch (e) {
+        console.log("[prompt.service] update called (non-serializable req)");
+      }
       const id = req?.id ?? (Array.isArray(req) ? req[0] : undefined);
-      const updates = req?.updates ?? (Array.isArray(req) ? req[1] : undefined) ?? req;
+      const updates =
+        req?.updates ?? (Array.isArray(req) ? req[1] : undefined) ?? req;
       const data = await repository.update(Number(id), updates);
-      if (!data) return { success: false, error: 'Not found' };
+      if (!data) return { success: false, error: "Not found" };
       return { success: true, data };
     } catch (err: any) {
       return { success: false, error: String(err) };
@@ -112,9 +124,12 @@ class PromptService {
 
   async populateTemplate(req: any): Promise<ApiResponse<string>> {
     try {
-      const template = req?.template ?? (Array.isArray(req) ? req[0] : '');
+      const template = req?.template ?? (Array.isArray(req) ? req[0] : "");
       const variables = req?.variables ?? (Array.isArray(req) ? req[1] : {});
-      const res = repository.populateTemplate(String(template), variables || {});
+      const res = repository.populateTemplate(
+        String(template),
+        variables || {}
+      );
       return { success: true, data: res };
     } catch (err: any) {
       return { success: false, error: String(err) };
