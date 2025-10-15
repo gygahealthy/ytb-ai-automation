@@ -12,10 +12,12 @@ import AllChannelsOverviewPage from "./pages/AllChannelsOverviewPage";
 import PromptFlowConfigPage from "./pages/admin/PromptFlowConfigPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
-import StoryCreatePage from "./pages/video-creation/StoryCreatePage";
+import StoryCreatePage from "./pages/video-creation/ScriptCreatePage";
+import ScriptEditorPage from "./pages/video-creation/ScriptEditorPage";
 import ChannelDeepDivePage from "./pages/channel-management/ChannelDeepDivePage";
 import ChannelMonitoringPage from "./pages/channel-management/ChannelMonitoringPage";
 import CompetitorMonitoringPage from "./pages/channel-management/CompetitorMonitoringPage";
+import { VideoCreationProvider } from "./contexts/VideoCreationContext";
 
 export default function AppRoutes() {
   return (
@@ -60,8 +62,16 @@ export default function AppRoutes() {
         element={<SingleVideoCreationPage />}
       />
       <Route
-        path="/video-creation/story-create"
-        element={<StoryCreatePage />}
+        path="/video-creation/script-create"
+        element={
+          <VideoCreationProvider>
+            <StoryCreatePage />
+          </VideoCreationProvider>
+        }
+      />
+      <Route
+        path="/video-creation/script-editor"
+        element={<ScriptEditorPage />}
       />
       <Route path="/video-creation/history" element={<VideoHistoryPage />} />
       <Route

@@ -47,7 +47,7 @@ export const routeConfig: RouteConfig[] = [
         id: "video-creation.story",
         label: "Story Creator",
         icon: Clapperboard,
-        path: "/video-creation/story-create",
+        path: "/video-creation/script-create",
         page: "video-creation.story",
       },
       {
