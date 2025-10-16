@@ -17,6 +17,7 @@ interface VideoPromptGeneratorProps {
   script: string;
   style: string;
   topic: string;
+  selectedTopic: string | null; // ✅ Add selectedTopic prop
   videoStyle: string;
   visualStyle: string;
   scriptLengthPreset?: string;
@@ -38,6 +39,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
   script,
   style,
   topic,
+  selectedTopic,
   videoStyle,
   visualStyle,
   scriptLengthPreset = "medium",
@@ -200,6 +202,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         >
           <VideoConfigurationColumn
             topic={topic}
+            selectedTopic={selectedTopic} // ✅ Pass selectedTopic prop
             videoStyle={videoStyle}
             visualStyle={visualStyle}
             scriptLengthPreset={scriptLengthPreset}

@@ -18,10 +18,16 @@ import {
   Camera,
   Grid,
   Star,
+  Wand2,
+  X,
+  Lightbulb,
+  FileText,
 } from "lucide-react";
 import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
 import { VideoPrompt } from "./VideoPromptGenerator";
+import { HintForTopicPrompt } from "./HintForTopicPrompt";
+import { AITopicSuggestions } from "./AITopicSuggestions";
 
 interface VideoConfigurationColumnProps {
   topic: string;
@@ -59,6 +65,12 @@ export const VideoConfigurationColumn: React.FC<
   onScriptChange,
 }) => {
   const [openSelect, setOpenSelect] = useState<string | null>(null);
+  const [showHintOverlay, setShowHintOverlay] = useState(false);
+  const [hintInput, setHintInput] = useState("");
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
 
   // Preset configurations: word count -> minutes
   const presetConfigs: Record<string, { words: number; mins: number }> = {
@@ -243,6 +255,82 @@ export const VideoConfigurationColumn: React.FC<
     return found ? found.label : id.replace(/-/g, " ");
   };
 
+  const handleGenerateTopicsFromHint = async () => {
+    if (!hintInput.trim()) return;
+
+    setIsGeneratingTopics(true);
+    try {
+      // TODO: Call API to generate topics based on hint
+      // For now, we'll use placeholder suggestions
+      const mockSuggestions = [
+        `Video about ${hintInput} - Complete guide for beginners`,
+        `How to master ${hintInput} - Tips and tricks`,
+        `${hintInput} - Expert interview and insights`,
+        `Top 10 things about ${hintInput}`,
+      ];
+      setTopicSuggestions(mockSuggestions);
+      setSelectedTopicId(null);
+    } catch (error) {
+      console.error("Failed to generate topics:", error);
+    } finally {
+      setIsGeneratingTopics(false);
+    }
+  };
+
+  const handleSelectSuggestedTopic = (topic: string, id: string) => {
+    setSelectedTopicId(id);
+    onTopicChange?.(topic);
+    // Close overlay after selection
+    setTimeout(() => {
+      setShowHintOverlay(false);
+      setHintInput("");
+      setTopicSuggestions([]);
+      setSelectedTopicId(null);
+    }, 100);
+  };
+
+  const handleSelectHintTopic = (topic: string) => {
+    // Just fill the input, don't close - user will click Generate button
+    setHintInput(topic);
+  };
+
+  const handleClearSuggestions = () => {
+    setTopicSuggestions([]);
+    setSelectedTopicId(null);
+  };
+
+  const handleGenerateScript = async () => {
+    if (!topic.trim()) return;
+
+    setIsGeneratingScript(true);
+    try {
+      // TODO: Call API to generate script based on topic and settings
+      // For now, we'll use placeholder script
+      const mockScript = `# ${topic}
+
+## Scene 1: Introduction
+Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
+
+## Scene 2: Background
+To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
+
+## Scene 3: Main Content
+Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
+
+## Scene 4: Practical Tips
+Let's discuss some practical ways to apply ${topic} in your daily life or business.
+
+## Scene 5: Conclusion
+Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
+
+      onScriptChange?.(mockScript);
+    } catch (error) {
+      console.error("Failed to generate script:", error);
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -261,18 +349,113 @@ export const VideoConfigurationColumn: React.FC<
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
               TOPIC
             </label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => simpleMode && onTopicChange?.(e.target.value)}
-              readOnly={!simpleMode}
-              placeholder={simpleMode ? "Enter your video topic..." : ""}
-              className={`w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm ${
-                simpleMode
-                  ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600"
-              }`}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => simpleMode && onTopicChange?.(e.target.value)}
+                readOnly={!simpleMode}
+                placeholder={simpleMode ? "Enter your video topic..." : ""}
+                className={`flex-1 px-3 py-2 border rounded text-gray-900 dark:text-white text-sm ${
+                  simpleMode
+                    ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600"
+                }`}
+              />
+              {simpleMode && (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowHintOverlay(!showHintOverlay)}
+                      className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-colors flex-shrink-0"
+                      title="Generate topics from hint"
+                    >
+                      <Lightbulb className="w-5 h-5" />
+                    </button>
+
+                    {/* Hint Dropdown - Compact */}
+                    {showHintOverlay && (
+                      <div className="absolute z-50 top-full right-0 mt-2 w-96 bg-white dark:bg-gray-800 border border-purple-300 dark:border-purple-600 rounded-lg shadow-lg p-2 space-y-2">
+                        {/* Close Button */}
+                        <div className="flex justify-end mb-1">
+                          <button
+                            onClick={() => {
+                              setShowHintOverlay(false);
+                              setHintInput("");
+                              setTopicSuggestions([]);
+                              handleClearSuggestions();
+                            }}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Hint Input Row - More Compact */}
+                        <div className="flex gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={hintInput}
+                            onChange={(e) => setHintInput(e.target.value)}
+                            placeholder="e.g., social media marketing"
+                            className="flex-1 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                handleGenerateTopicsFromHint();
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={handleGenerateTopicsFromHint}
+                            disabled={!hintInput.trim() || isGeneratingTopics}
+                            className="px-2 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white rounded text-xs font-medium transition-colors flex items-center gap-1 whitespace-nowrap"
+                          >
+                            {isGeneratingTopics ? (
+                              <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Wand2 className="w-3 h-3" />
+                            )}
+                            <span className="hidden sm:inline">Gen</span>
+                          </button>
+                        </div>
+
+                        {/* Quick Examples or AI Suggestions - More Compact */}
+                        <div className="max-h-56 overflow-y-auto">
+                          {topicSuggestions.length === 0 ? (
+                            <HintForTopicPrompt
+                              onSelectTopic={handleSelectHintTopic}
+                            />
+                          ) : (
+                            <AITopicSuggestions
+                              suggestions={topicSuggestions}
+                              selectedTopicId={selectedTopicId}
+                              onSelectTopic={(topic, id) => {
+                                handleSelectSuggestedTopic(topic, id);
+                                setShowHintOverlay(false);
+                              }}
+                              onClearSuggestions={handleClearSuggestions}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleGenerateScript}
+                    disabled={!topic.trim() || isGeneratingScript}
+                    className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white flex items-center justify-center transition-colors flex-shrink-0"
+                    title="Generate script from topic"
+                  >
+                    {isGeneratingScript ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <FileText className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

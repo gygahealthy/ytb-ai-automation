@@ -8,6 +8,8 @@ export type ViewMode = "step-by-step" | "simple";
 interface VideoCreationState {
   // User inputs
   topic: string;
+  selectedTopic: string | null; // ✅ Store the actual selected topic text
+  selectedTopicId: string | null;
   videoStyle: VideoStyle;
   visualStyle: VisualStyle;
   editedScript: string;
@@ -22,6 +24,8 @@ interface VideoCreationState {
 
   // Actions
   setTopic: (topic: string) => void;
+  setSelectedTopic: (topic: string | null) => void;
+  setSelectedTopicId: (id: string | null) => void;
   setVideoStyle: (style: VideoStyle) => void;
   setVisualStyle: (style: VisualStyle) => void;
   setEditedScript: (script: string) => void;
@@ -42,6 +46,8 @@ const VideoCreationContext = createContext<VideoCreationState | undefined>(
 
 const initialState = {
   topic: "",
+  selectedTopic: null as string | null,
+  selectedTopicId: null as string | null,
   videoStyle: "explainer" as VideoStyle,
   visualStyle: "2d-cartoon" as VisualStyle,
   editedScript: "",
@@ -57,6 +63,12 @@ export const VideoCreationProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [topic, setTopic] = useState(initialState.topic);
+  const [selectedTopic, setSelectedTopic] = useState(
+    initialState.selectedTopic
+  );
+  const [selectedTopicId, setSelectedTopicId] = useState(
+    initialState.selectedTopicId
+  );
   const [videoStyle, setVideoStyle] = useState(initialState.videoStyle);
   const [visualStyle, setVisualStyle] = useState(initialState.visualStyle);
   const [editedScript, setEditedScript] = useState(initialState.editedScript);
@@ -75,6 +87,8 @@ export const VideoCreationProvider: React.FC<{ children: ReactNode }> = ({
 
   const resetState = () => {
     setTopic(initialState.topic);
+    setSelectedTopic(initialState.selectedTopic);
+    setSelectedTopicId(initialState.selectedTopicId);
     setVideoStyle(initialState.videoStyle);
     setVisualStyle(initialState.visualStyle);
     setEditedScript(initialState.editedScript);
@@ -88,6 +102,8 @@ export const VideoCreationProvider: React.FC<{ children: ReactNode }> = ({
 
   const value: VideoCreationState = {
     topic,
+    selectedTopic,
+    selectedTopicId,
     videoStyle,
     visualStyle,
     editedScript,
@@ -98,6 +114,8 @@ export const VideoCreationProvider: React.FC<{ children: ReactNode }> = ({
     viewMode,
     isGenerating,
     setTopic,
+    setSelectedTopic,
+    setSelectedTopicId,
     setVideoStyle,
     setVisualStyle,
     setEditedScript,

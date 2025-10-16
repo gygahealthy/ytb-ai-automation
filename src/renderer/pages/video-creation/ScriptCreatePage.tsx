@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Sparkles,
   ChevronRight,
@@ -18,9 +18,17 @@ import {
 import { useVideoCreation } from "../../contexts/VideoCreationContext";
 
 const ScriptCreatePage: React.FC = () => {
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [numberOfTopics, setNumberOfTopics] = useState<number>(8);
+  const [isGeneratingTopics, setIsGeneratingTopics] = useState<boolean>(false);
+
   const {
     topic,
+    selectedTopic,
+    selectedTopicId,
     setTopic,
+    setSelectedTopic,
+    setSelectedTopicId,
     videoStyle,
     setVideoStyle,
     visualStyle,
@@ -41,18 +49,50 @@ const ScriptCreatePage: React.FC = () => {
   } = useVideoCreation();
 
   const handleSuggestTopics = () => {
-    alert("AI topic suggestions will be implemented");
+    setIsGeneratingTopics(true);
+    // TODO: Replace with actual IPC call to backend AI service
+    // Mock suggestions for now - generate based on numberOfTopics
+    setTimeout(() => {
+      const allMockSuggestions = [
+        "Complete guide to creating engaging short form video content for social media platforms like TikTok Instagram and YouTube Shorts with trending formats and techniques",
+        "How to start and grow a successful YouTube channel from zero subscribers including content strategy equipment setup and monetization methods for beginners",
+        "Effective digital marketing strategies for small business success including social media SEO content marketing and email campaigns to boost sales and brand awareness",
+        "Top productivity tools and apps for remote workers to improve efficiency collaboration task management and work life balance in distributed teams and environments",
+      ];
+      // Select the requested number of topics
+      const selectedSuggestions = allMockSuggestions.slice(0, numberOfTopics);
+      setTopicSuggestions(selectedSuggestions);
+      setIsGeneratingTopics(false);
+    }, 1000);
+  };
+
+  const handleSelectSuggestion = (suggestion: string, id: string) => {
+    setSelectedTopic(suggestion); // ✅ Store the full AI-generated topic text
+    setSelectedTopicId(id);
+    // Don't update the input field - just track the selection in context
+  };
+
+  const handleSelectHintTopic = (topic: string, id: string) => {
+    setTopic(topic);
+    setSelectedTopic(topic); // ✅ Also store in selectedTopic
+    setSelectedTopicId(id);
+    // Update input field when selecting from Hint section
+  };
+
+  const handleClearSuggestions = () => {
+    setTopicSuggestions([]);
   };
 
   const handleGenerateScript = async () => {
-    if (!topic.trim()) {
-      alert("Please enter a topic first");
+    const topicToUse = selectedTopic || topic; // ✅ Use selectedTopic if available (from AI selection), else use input
+    if (!topicToUse.trim()) {
+      alert("Please enter or select a topic first");
       return;
     }
     setIsGenerating(true);
     // TODO: Replace with actual IPC call to backend AI service
     setTimeout(() => {
-      const mockScript = `# ${topic}\n\n## Scene 1: Introduction\nWelcome to this video about ${topic}. Let's explore what makes this topic fascinating.\n\n## Scene 2: Background\nTo understand ${topic}, we need to look at its origins and key concepts.\n\n## Scene 3: Main Content\nHere are the core ideas you need to know about ${topic}.\n\n## Scene 4: Practical Examples\nLet's see how ${topic} applies in real-world scenarios.\n\n## Scene 5: Benefits\nWhy is ${topic} important? Here are the key advantages.\n\n## Scene 6: Common Misconceptions\nMany people misunderstand ${topic}. Let's clear up some myths.\n\n## Scene 7: Getting Started\nReady to dive deeper? Here's how you can begin with ${topic}.\n\n## Scene 8: Conclusion\nThat's your complete guide to ${topic}. Start applying these insights today!`;
+      const mockScript = `# ${topicToUse}\n\n## Scene 1: Introduction\nWelcome to this video about ${topicToUse}. Let's explore what makes this topic fascinating.\n\n## Scene 2: Background\nTo understand ${topicToUse}, we need to look at its origins and key concepts.\n\n## Scene 3: Main Content\nHere are the core ideas you need to know about ${topicToUse}.\n\n## Scene 4: Practical Examples\nLet's see how ${topicToUse} applies in real-world scenarios.\n\n## Scene 5: Benefits\nWhy is ${topicToUse} important? Here are the key advantages.\n\n## Scene 6: Common Misconceptions\nMany people misunderstand ${topicToUse}. Let's clear up some myths.\n\n## Scene 7: Getting Started\nReady to dive deeper? Here's how you can begin with ${topicToUse}.\n\n## Scene 8: Conclusion\nThat's your complete guide to ${topicToUse}. Start applying these insights today!`;
       setEditedScript(mockScript);
       setIsGenerating(false);
       setCurrentStep(2);
@@ -203,7 +243,15 @@ const ScriptCreatePage: React.FC = () => {
                   <TopicInput
                     topic={topic}
                     onTopicChange={setTopic}
-                    onSuggestTopics={handleSuggestTopics}
+                    numberOfTopics={numberOfTopics}
+                    onNumberOfTopicsChange={setNumberOfTopics}
+                    onGenerateTopics={handleSuggestTopics}
+                    suggestions={topicSuggestions}
+                    selectedTopicId={selectedTopicId}
+                    onSelectSuggestion={handleSelectSuggestion}
+                    onSelectHintTopic={handleSelectHintTopic}
+                    onClearSuggestions={handleClearSuggestions}
+                    isGenerating={isGeneratingTopics}
                   />
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                     <ScriptStyleSelector
@@ -297,6 +345,7 @@ const ScriptCreatePage: React.FC = () => {
                   script={editedScript}
                   style={`${videoStyle} with ${visualStyle} visual style`}
                   topic={topic}
+                  selectedTopic={selectedTopic} // ✅ Pass selectedTopic
                   videoStyle={videoStyle}
                   visualStyle={visualStyle}
                   scriptLengthPreset={scriptLengthPreset}
@@ -322,6 +371,7 @@ const ScriptCreatePage: React.FC = () => {
               script={editedScript}
               style={`${videoStyle} with ${visualStyle} visual style`}
               topic={topic}
+              selectedTopic={selectedTopic} // ✅ Pass selectedTopic
               videoStyle={videoStyle}
               visualStyle={visualStyle}
               scriptLengthPreset={scriptLengthPreset}

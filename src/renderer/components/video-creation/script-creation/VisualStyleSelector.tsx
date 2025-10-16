@@ -17,6 +17,7 @@ import {
   BookOpen,
   PenTool,
   Camera,
+  Info,
 } from "lucide-react";
 
 export type VisualStyle =
@@ -328,34 +329,30 @@ export const VisualStyleSelector: React.FC<VisualStyleSelectorProps> = ({
                   <button
                     key={style.id}
                     onClick={() => onStyleChange(style.id)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${getColorClasses(
+                    className={`w-full h-20 p-3 rounded-lg border-2 transition-all flex items-center justify-between gap-2 ${getColorClasses(
                       style.colorClass,
                       isSelected
                     )}`}
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div
-                        className={`flex-shrink-0 ${
-                          isSelected
-                            ? "text-current"
-                            : "text-gray-400 dark:text-gray-500"
-                        }`}
-                      >
-                        {style.icon}
-                      </div>
-                      <div
-                        className={`text-sm font-semibold flex-1 ${
-                          isSelected
-                            ? "text-current"
-                            : "text-gray-900 dark:text-white"
-                        }`}
-                      >
-                        {style.name}
-                      </div>
+                    <div
+                      className={`flex-shrink-0 ${
+                        isSelected
+                          ? "text-current"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    >
+                      {style.icon}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {style.description}
+                    <div
+                      className={`text-sm font-semibold flex-1 text-center ${
+                        isSelected
+                          ? "text-current"
+                          : "text-gray-900 dark:text-white"
+                      }`}
+                    >
+                      {style.name}
                     </div>
+                    <Info className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                   </button>
                 );
               })}
