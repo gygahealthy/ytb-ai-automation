@@ -31,6 +31,7 @@ import { AITopicSuggestions } from "./AITopicSuggestions";
 
 interface VideoConfigurationColumnProps {
   topic: string;
+  selectedTopic?: string | null;
   videoStyle: string;
   visualStyle: string;
   scriptLengthPreset: string;

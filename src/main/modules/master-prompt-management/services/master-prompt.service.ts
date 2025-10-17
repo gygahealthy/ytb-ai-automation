@@ -1,5 +1,8 @@
 import { ApiResponse } from "../../../../shared/types";
-import { promptRepository } from "../repository/master-prompt.repository";
+import {
+  promptRepository,
+  PromptType,
+} from "../repository/master-prompt.repository";
 
 const repository = promptRepository;
 
@@ -34,26 +37,55 @@ class PromptService {
     }
   }
 
-  async getByKind(req: any): Promise<ApiResponse<any[]>> {
+  /**
+   * Get prompts by type (script, topic, video_prompt, audio_prompt)
+   */
+  async getByType(req: any): Promise<ApiResponse<any[]>> {
     try {
-      const kind = req?.promptKind ?? req;
-      const data = await repository.getByKind(String(kind));
+      const promptType = req?.promptType ?? req;
+      if (!promptType) {
+        return { success: false, error: "promptType is required" };
+      }
+      const data = await repository.getByType(String(promptType) as PromptType);
       return { success: true, data };
     } catch (err: any) {
       return { success: false, error: String(err) };
     }
   }
 
-  async getByProviderAndKind(req: any): Promise<ApiResponse<any>> {
+  /**
+   * Get prompts for a specific channel, optionally filtered by type
+   */
+  async getByChannel(req: any): Promise<ApiResponse<any[]>> {
     try {
-      const provider =
-        req?.provider ?? (Array.isArray(req) ? req[0] : undefined);
-      const kind = req?.promptKind ?? (Array.isArray(req) ? req[1] : undefined);
-      const data = await repository.getByProviderAndKind(
-        String(provider),
-        String(kind)
+      const channelId =
+        req?.channelId ?? (Array.isArray(req) ? req[0] : undefined);
+      const promptType =
+        req?.promptType ?? (Array.isArray(req) ? req[1] : undefined);
+
+      if (!channelId) {
+        return { success: false, error: "channelId is required" };
+      }
+
+      const data = await repository.getByChannel(
+        String(channelId),
+        promptType ? (String(promptType) as PromptType) : undefined
       );
-      if (!data) return { success: false, error: "Not found" };
+      return { success: true, data };
+    } catch (err: any) {
+      return { success: false, error: String(err) };
+    }
+  }
+
+  /**
+   * Get global prompts (not associated with any channel)
+   */
+  async getGlobalPrompts(req: any): Promise<ApiResponse<any[]>> {
+    try {
+      const promptType = req?.promptType ?? req;
+      const data = await repository.getGlobalPrompts(
+        promptType ? (String(promptType) as PromptType) : undefined
+      );
       return { success: true, data };
     } catch (err: any) {
       return { success: false, error: String(err) };

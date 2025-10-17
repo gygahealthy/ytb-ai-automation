@@ -1,19 +1,17 @@
 // JSX runtime does not require explicit React import
 import { Navigate, Route, Routes } from "react-router-dom";
-import MasterPromptConfigPage from "./pages/admin/MasterPromptConfigPage";
+import MasterPromptManagementPage from "./pages/admin/MasterPromptManagementPage";
+import PromptTypesManagementPage from "./pages/admin/PromptTypesManagementPage";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
-import ChannelAnalysisPromptsPage from "./pages/admin/master-prompt-config/ChannelAnalysisPromptsPage";
-import PlatformAnalysisPromptsPage from "./pages/admin/master-prompt-config/PlatformAnalysisPromptsPage";
-import VideoCreationPromptsPage from "./pages/admin/master-prompt-config/VideoCreationPromptsPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
 import AllChannelsOverviewPage from "./pages/AllChannelsOverviewPage";
-import PromptFlowConfigPage from "./pages/admin/PromptFlowConfigPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
 import StoryCreatePage from "./pages/video-creation/ScriptCreatePage";
 import ScriptEditorPage from "./pages/video-creation/ScriptEditorPage";
+import MasterPromptSelectionPage from "./pages/video-creation/MasterPromptSelectionPage";
 import ChannelDeepDivePage from "./pages/channel-management/ChannelDeepDivePage";
 import ChannelMonitoringPage from "./pages/channel-management/ChannelMonitoringPage";
 import CompetitorMonitoringPage from "./pages/channel-management/CompetitorMonitoringPage";
@@ -27,19 +25,14 @@ export default function AppRoutes() {
       <Route path="/automation" element={<AutomationPage />} />
       <Route path="/automation/instance" element={<InstanceDashboard />} />
       <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-      <Route path="/admin/dashboard" element={<MasterPromptConfigPage />} />
-      <Route path="/admin/prompt-flows" element={<PromptFlowConfigPage />} />
+      <Route path="/admin/dashboard" element={<MasterPromptManagementPage />} />
       <Route
-        path="/admin/prompts/platform-analysis"
-        element={<PlatformAnalysisPromptsPage />}
+        path="/admin/master-prompts"
+        element={<MasterPromptManagementPage />}
       />
       <Route
-        path="/admin/prompts/channel-analysis"
-        element={<ChannelAnalysisPromptsPage />}
-      />
-      <Route
-        path="/admin/prompts/video-creation"
-        element={<VideoCreationPromptsPage />}
+        path="/admin/prompt-types"
+        element={<PromptTypesManagementPage />}
       />
       <Route
         path="/video-creation/channels"
@@ -62,6 +55,10 @@ export default function AppRoutes() {
         element={<SingleVideoCreationPage />}
       />
       <Route
+        path="/video-creation/master-prompts"
+        element={<MasterPromptSelectionPage />}
+      />
+      <Route
         path="/video-creation/script-create"
         element={
           <VideoCreationProvider>
@@ -74,17 +71,6 @@ export default function AppRoutes() {
         element={<ScriptEditorPage />}
       />
       <Route path="/video-creation/history" element={<VideoHistoryPage />} />
-      <Route
-        path="/history"
-        element={
-          <div className="p-8">
-            <h1 className="text-3xl font-bold mb-6">History</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              History page coming soon...
-            </p>
-          </div>
-        }
-      />
     </Routes>
   );
 }

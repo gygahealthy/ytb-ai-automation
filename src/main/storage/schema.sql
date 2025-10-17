@@ -279,31 +279,44 @@ CREATE INDEX IF NOT EXISTS idx_youtube_video_analyses_channel_id ON youtube_vide
 CREATE TABLE IF NOT EXISTS master_prompts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   provider TEXT NOT NULL, -- 'youtube', 'tiktok', 'veo3', 'openai', etc.
-  prompt_kind TEXT NOT NULL, -- 'video_analysis', 'channel_analysis', 'video_creation', etc.
   prompt_template TEXT NOT NULL, -- The actual prompt with [VARIABLE] placeholders
   description TEXT,
+  prompt_type_id INTEGER NOT NULL, -- Foreign key to master_prompt_types
   channel_id TEXT, -- Link prompt to specific channel (NULL = global)
   tags TEXT, -- JSON array of tags
   is_active INTEGER DEFAULT 1,
   archived INTEGER DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  FOREIGN KEY (prompt_type_id) REFERENCES master_prompt_types(id) ON DELETE CASCADE,
   FOREIGN KEY (channel_id) REFERENCES channels(channel_id) ON DELETE CASCADE
+);
+
+-- Master prompt types reference table
+CREATE TABLE IF NOT EXISTS master_prompt_types (
+  id INTEGER PRIMARY KEY,
+  type_name TEXT NOT NULL UNIQUE,
+  type_code TEXT NOT NULL UNIQUE,
+  description TEXT,
+  status INTEGER DEFAULT 1, -- 0 = inactive, 1 = active
+  created_at TEXT NOT NULL
 );
 
 -- Create index for master prompts
 CREATE INDEX IF NOT EXISTS idx_master_prompts_provider ON master_prompts(provider);
-CREATE INDEX IF NOT EXISTS idx_master_prompts_kind ON master_prompts(prompt_kind);
 CREATE INDEX IF NOT EXISTS idx_master_prompts_channel ON master_prompts(channel_id);
+CREATE INDEX IF NOT EXISTS idx_master_prompts_type_id ON master_prompts(prompt_type_id);
+CREATE INDEX IF NOT EXISTS idx_master_prompts_channel_type ON master_prompts(channel_id, prompt_type_id);
+CREATE INDEX IF NOT EXISTS idx_master_prompts_active_type ON master_prompts(is_active, prompt_type_id);
 
 -- Prompt history table for version control and rollback
 CREATE TABLE IF NOT EXISTS master_prompt_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   prompt_id INTEGER NOT NULL,
   provider TEXT NOT NULL,
-  prompt_kind TEXT NOT NULL,
   prompt_template TEXT NOT NULL,
   description TEXT,
+  prompt_type_id INTEGER NOT NULL,
   tags TEXT, -- JSON array of tags
   is_active INTEGER DEFAULT 1,
   archived INTEGER DEFAULT 0,
@@ -311,7 +324,8 @@ CREATE TABLE IF NOT EXISTS master_prompt_history (
   digest TEXT, -- SHA-256 digest of normalized content for duplicate detection
   digest_short TEXT, -- short prefix of digest to speed indexed lookups
   created_at TEXT NOT NULL,
-  FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE
+  FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE,
+  FOREIGN KEY (prompt_type_id) REFERENCES master_prompt_types(id) ON DELETE CASCADE
 );
 
 -- Create index for prompt history

@@ -84,14 +84,23 @@ export const routeConfig: RouteConfig[] = [
     id: "admin",
     label: "Admin",
     icon: Shield,
-    path: "/admin/dashboard",
     page: "admin",
-  },
-  {
-    id: "history",
-    label: "History",
-    icon: History,
-    path: "/history",
-    page: "history",
+    defaultOpen: false,
+    children: [
+      {
+        id: "admin.prompt-types",
+        label: "Prompt Types",
+        icon: Sparkles,
+        path: "/admin/prompt-types",
+        page: "admin.prompt-types",
+      },
+      {
+        id: "admin.master-prompts",
+        label: "Master Prompts",
+        icon: Sparkles,
+        path: "/admin/master-prompts",
+        page: "admin.master-prompts",
+      },
+    ],
   },
 ];

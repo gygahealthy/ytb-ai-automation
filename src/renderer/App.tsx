@@ -22,10 +22,14 @@ export type Page =
   | "profiles"
   | "history"
   | "admin"
+  | "admin.prompt-types"
   | "video-creation"
   | "video-creation.channels"
   | "video-creation.single"
-  | "video-creation.prompt-flows";
+  | "video-creation.prompt-flows"
+  | "video-creation.master-prompts"
+  | "video-creation.story"
+  | "video-creation.history";
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
@@ -65,9 +69,17 @@ function AppContent() {
   return (
     <BrowserRouter>
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={handleSettingsClick} />
+        <Sidebar
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSettingsClick={handleSettingsClick}
+        />
 
-        <main className={`flex-1 overflow-y-auto transition-all duration-300 ${anyDrawerPinned ? "mr-[25%]" : ""}`}>
+        <main
+          className={`flex-1 overflow-y-auto transition-all duration-300 ${
+            anyDrawerPinned ? "mr-[25%]" : ""
+          }`}
+        >
           <AppRoutes />
         </main>
 

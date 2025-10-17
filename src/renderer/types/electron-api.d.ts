@@ -21,22 +21,25 @@ declare global {
         launch: (request: any) => Promise<any>;
         stopInstance: (instanceId: string) => Promise<any>;
         stopAll: () => Promise<any>;
-  get: (instanceId: string) => Promise<any>;
-  getInstances: () => Promise<any>;
+        get: (instanceId: string) => Promise<any>;
+        getInstances: () => Promise<any>;
         sendMessage: (instanceId: string, message: string) => Promise<any>;
         highlight: (instanceId: string) => Promise<any>;
         updateConfig: (config: any) => Promise<any>;
         getConfig: () => Promise<any>;
-  repositionInstance: (instanceId: string) => Promise<any>;
-  repositionAll: () => Promise<any>;
-  applyPreset: (preset: string) => Promise<any>;
+        repositionInstance: (instanceId: string) => Promise<any>;
+        repositionAll: () => Promise<any>;
+        applyPreset: (preset: string) => Promise<any>;
         onInstanceRegistered: (callback: (data: any) => void) => () => void;
         onInstanceUpdated: (callback: (data: any) => void) => () => void;
         onInstanceStatus: (callback: (data: any) => void) => () => void;
         onInstanceUnregistered: (callback: (data: any) => void) => () => void;
       };
       chatAutomation: {
-        init: (profileId: string, provider: "chatgpt" | "gemini") => Promise<any>;
+        init: (
+          profileId: string,
+          provider: "chatgpt" | "gemini"
+        ) => Promise<any>;
         closeSession: (sessionId: string) => Promise<any>;
         getActiveSessions: () => Promise<any>;
       };
@@ -67,19 +70,27 @@ declare global {
         generateUserAgent: () => Promise<any>;
         getDefaultChromePath: () => Promise<any>;
         selectBrowserExecutable: () => Promise<any>;
-        showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
+        showOpenDialog: (
+          options: any
+        ) => Promise<{ canceled: boolean; filePaths: string[] }>;
       };
       devtools: {
         toggle: () => void;
         open: () => void;
         close: () => void;
       };
-      validateBrowserPath: (path: string) => Promise<{ valid: boolean; error?: string; detectedName?: string; version?: string }>;
+      validateBrowserPath: (
+        path: string
+      ) => Promise<{
+        valid: boolean;
+        error?: string;
+        detectedName?: string;
+        version?: string;
+      }>;
       masterPrompts: {
         getAll: () => Promise<any>;
         getById: (id: number) => Promise<any>;
         getByProvider: (provider: string) => Promise<any>;
-        getByKind: (kind: string) => Promise<any>;
         create: (prompt: any) => Promise<any>;
         update: (id: number, prompt: any) => Promise<any>;
         delete: (id: number) => Promise<any>;

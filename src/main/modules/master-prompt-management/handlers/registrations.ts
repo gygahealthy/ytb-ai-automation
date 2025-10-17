@@ -1,6 +1,7 @@
 import { IpcRegistration } from "../../../../core/ipc/types";
 import { promptService } from "../services/master-prompt.service";
 import { promptHistoryService } from "../services/master-prompt-history.service";
+import { promptTypesService } from "../services/master-prompt-types.service";
 
 export const promptRegistrations: IpcRegistration[] = [
   {
@@ -19,15 +20,22 @@ export const promptRegistrations: IpcRegistration[] = [
     handler: async (req: any) => await promptService.getByProvider(req as any),
   },
   {
-    channel: "master-prompts:getByKind",
-    description: "Get master prompts by kind",
-    handler: async (req: any) => await promptService.getByKind(req as any),
+    channel: "master-prompts:getByType",
+    description:
+      "Get master prompts by type (script, topic, video_prompt, audio_prompt)",
+    handler: async (req: any) => await promptService.getByType(req as any),
   },
   {
-    channel: "master-prompts:getByProviderAndKind",
-    description: "Get master prompt by provider and kind",
+    channel: "master-prompts:getByChannel",
+    description:
+      "Get master prompts for a specific channel, optionally filtered by type",
+    handler: async (req: any) => await promptService.getByChannel(req as any),
+  },
+  {
+    channel: "master-prompts:getGlobalPrompts",
+    description: "Get global prompts (not associated with any channel)",
     handler: async (req: any) =>
-      await promptService.getByProviderAndKind(req as any),
+      await promptService.getGlobalPrompts(req as any),
   },
   {
     channel: "master-prompts:create",
@@ -88,5 +96,39 @@ export const promptRegistrations: IpcRegistration[] = [
     description: "Delete all prompt history for a prompt",
     handler: async (req: any) =>
       await promptHistoryService.deleteByPromptId(req as any),
+  },
+  // Master Prompt Types handlers
+  {
+    channel: "master-prompt-types:getAll",
+    description: "Get all prompt types",
+    handler: async () => await promptTypesService.getAllTypes(),
+  },
+  {
+    channel: "master-prompt-types:getById",
+    description: "Get prompt type by ID",
+    handler: async (req: any) => await promptTypesService.getTypeById(req?.id),
+  },
+  {
+    channel: "master-prompt-types:getByName",
+    description: "Get prompt type by name",
+    handler: async (req: any) =>
+      await promptTypesService.getTypeByName(req?.typeName),
+  },
+  {
+    channel: "master-prompt-types:create",
+    description: "Create new prompt type",
+    handler: async (req: any) =>
+      await promptTypesService.createType(req as any),
+  },
+  {
+    channel: "master-prompt-types:update",
+    description: "Update prompt type",
+    handler: async (req: any) =>
+      await promptTypesService.updateType(req?.id, req?.updates),
+  },
+  {
+    channel: "master-prompt-types:delete",
+    description: "Delete prompt type",
+    handler: async (req: any) => await promptTypesService.deleteType(req?.id),
   },
 ];

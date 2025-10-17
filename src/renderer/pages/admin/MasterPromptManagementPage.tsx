@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Sparkles,
   AlertCircle,
   ChevronDown,
+  Grid3x3,
+  List,
 } from "lucide-react";
 import { useAlert } from "../../hooks/useAlert";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -27,12 +28,15 @@ interface MasterPrompt extends VideoPromptRow {
   updatedAt?: string;
 }
 
-type PromptKindFilter =
-  | "all"
-  | "video_creation"
-  | "channel_analysis"
-  | "platform_analysis";
-type ProviderFilter = "all" | "youtube" | "tiktok" | "veo3";
+interface PromptType {
+  id: number;
+  typeName: string;
+  typeCode: string;
+  status: number;
+  createdAt?: string;
+}
+
+type PromptKindFilter = "all" | string;
 type StatusFilter = "all" | "active" | "inactive";
 
 const MasterPromptManagementPage: React.FC = () => {
@@ -43,9 +47,11 @@ const MasterPromptManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [kindFilter, setKindFilter] = useState<PromptKindFilter>("all");
-  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showVariablesHint, setShowVariablesHint] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<
@@ -54,16 +60,10 @@ const MasterPromptManagementPage: React.FC = () => {
 
   const promptKindOptions: { value: PromptKindFilter; label: string }[] = [
     { value: "all", label: "All Types" },
-    { value: "video_creation", label: "Video Creation" },
-    { value: "platform_analysis", label: "Platform Analysis" },
-    { value: "channel_analysis", label: "Channel Analysis" },
-  ];
-
-  const providerOptions: { value: ProviderFilter; label: string }[] = [
-    { value: "all", label: "All Providers" },
-    { value: "youtube", label: "YouTube" },
-    { value: "tiktok", label: "TikTok" },
-    { value: "veo3", label: "VEO3" },
+    ...promptTypes.map((pt) => ({
+      value: pt.typeCode as PromptKindFilter,
+      label: pt.typeName,
+    })),
   ];
 
   const statusOptions: { value: StatusFilter; label: string }[] = [
@@ -74,6 +74,7 @@ const MasterPromptManagementPage: React.FC = () => {
 
   useEffect(() => {
     loadAllPrompts();
+    loadPromptTypes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,7 +101,28 @@ const MasterPromptManagementPage: React.FC = () => {
     }
   };
 
+  const loadPromptTypes = async () => {
+    try {
+      const result = await electronApi.promptTypes.getAll();
+      if (result.success && result.data) {
+        // Filter to only active prompt types
+        const activeTypes = result.data.filter(
+          (pt: PromptType) => pt.status === 1
+        );
+        setPromptTypes(activeTypes);
+      } else {
+        console.error("Failed to load prompt types:", result.error);
+      }
+    } catch (error) {
+      console.error("Failed to load prompt types:", error);
+    }
+  };
+
   const filteredPrompts = prompts.filter((p) => {
+    // Archived filter
+    if (!showArchived && p.archived) return false;
+    if (showArchived && !p.archived) return false;
+
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -113,21 +135,13 @@ const MasterPromptManagementPage: React.FC = () => {
 
     // Kind filter
     if (kindFilter !== "all") {
-      if (kindFilter === "platform_analysis") {
-        const isPlatformAnalysis =
-          p.promptKind?.includes("analysis") &&
-          !p.promptKind?.includes("channel");
-        if (!isPlatformAnalysis) return false;
-      } else if (p.promptKind !== kindFilter) {
+      if (p.promptKind !== kindFilter) {
         return false;
       }
     }
 
     // Provider filter
-    if (providerFilter !== "all") {
-      if (p.provider?.toLowerCase() !== providerFilter.toLowerCase())
-        return false;
-    }
+    // (removed - only filtering by Type and Status now)
 
     // Status filter
     if (statusFilter !== "all") {
@@ -164,9 +178,54 @@ const MasterPromptManagementPage: React.FC = () => {
     setEditingPrompt(undefined);
   };
 
-  const handleModalSave = async () => {
-    await loadAllPrompts();
-    handleCloseModal();
+  const handleModalSave = async (prompt: any) => {
+    try {
+      let result;
+      if (prompt.id) {
+        // Update existing prompt
+        result = await electronApi.masterPrompts.updatePrompt(prompt.id, {
+          provider: prompt.provider,
+          promptKind: prompt.promptKind,
+          description: prompt.description,
+          promptTemplate: prompt.promptTemplate,
+          tags: prompt.tags,
+          isActive: prompt.isActive,
+          archived: prompt.archived,
+        });
+      } else {
+        // Create new prompt
+        result = await electronApi.masterPrompts.createPrompt({
+          provider: prompt.provider,
+          promptKind: prompt.promptKind,
+          description: prompt.description,
+          promptTemplate: prompt.promptTemplate,
+          tags: prompt.tags,
+          isActive: prompt.isActive,
+        });
+      }
+
+      if (result.success) {
+        alertApi.show({
+          message: prompt.id
+            ? "Prompt updated successfully"
+            : "Prompt created successfully",
+          title: "Success",
+        });
+        await loadAllPrompts();
+        handleCloseModal();
+      } else {
+        alertApi.show({
+          message: result.error || "Failed to save prompt",
+          title: "Error",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to save prompt:", error);
+      alertApi.show({
+        message: "Failed to save prompt",
+        title: "Error",
+      });
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -199,173 +258,226 @@ const MasterPromptManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white">
-      <div className="w-full px-6 py-8">
+    <div className="h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col">
+      <div className="w-full px-6 py-8 flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
+        <div className="mb-6">
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Master Prompts</h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Manage all AI master prompts across the application
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Master Prompts</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                Manage all AI master prompts across the application
+
+            {/* Prompt Count */}
+            <div className="text-right">
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium uppercase tracking-wide">
+                Total Prompts
+              </p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                {prompts.length}
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Collapsible Variables Hint */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+        {/* Toolbar - All Controls in One Row */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            {/* Variables Hint Button */}
             <button
               onClick={() => setShowVariablesHint(!showVariablesHint)}
-              className="w-full px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap"
             >
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                📌 Using Variables in Prompts
-              </span>
+              <span>📌 Using Variables in Prompts</span>
               <ChevronDown
-                className={`w-4 h-4 text-slate-500 transition-transform ${
+                className={`w-4 h-4 transition-transform ${
                   showVariablesHint ? "rotate-180" : ""
                 }`}
               />
             </button>
-            {showVariablesHint && (
-              <div className="px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-                <VariablesHint />
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Toolbar with Filters and Add Button */}
-        <div className="mb-6 space-y-4">
-          {/* Search Bar and Add Button */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
+            {/* Show Archived Checkbox */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showArchived"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 cursor-pointer"
+              />
+              <label
+                htmlFor="showArchived"
+                className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer whitespace-nowrap"
+              >
+                Show archived
+              </label>
+            </div>
+
+            {/* Spacer */}
+            <div className="flex-1"></div>
+
+            {/* Type Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Type:
+              </span>
+              <select
+                value={kindFilter}
+                onChange={(e) =>
+                  setKindFilter(e.target.value as PromptKindFilter)
+                }
+                className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {promptKindOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Status:
+              </span>
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
+                className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Input (Small) */}
+            <div className="relative w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search prompts..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+
+            {/* View Toggle Buttons */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+                title="Grid view"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === "table"
+                    ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+                title="Table view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Add Button - Circle */}
             <button
               onClick={() => handleOpenModal()}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:shadow-md transition-all"
+              title="Add New Prompt"
             >
-              <Plus className="w-4 h-4" /> Add New Prompt
+              <Plus className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Filter Row */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <Filter className="w-4 h-4" />
-              <span>Filter by:</span>
+          {/* Variables Hint Content */}
+          {showVariablesHint && (
+            <div className="mt-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <VariablesHint />
             </div>
-
-            {/* Prompt Kind Filter */}
-            <select
-              value={kindFilter}
-              onChange={(e) =>
-                setKindFilter(e.target.value as PromptKindFilter)
-              }
-              className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {promptKindOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            {/* Provider Filter */}
-            <select
-              value={providerFilter}
-              onChange={(e) =>
-                setProviderFilter(e.target.value as ProviderFilter)
-              }
-              className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {providerOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {statusOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            {/* Clear Filters Button */}
-            {(kindFilter !== "all" ||
-              providerFilter !== "all" ||
-              statusFilter !== "all" ||
-              searchTerm) && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setKindFilter("all");
-                  setProviderFilter("all");
-                  setStatusFilter("all");
-                }}
-                className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded-lg transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Content Area */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-              <p className="text-slate-600 dark:text-slate-400">
-                Loading prompts...
-              </p>
-            </div>
-          </div>
-        ) : filteredPrompts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-            <AlertCircle className="w-12 h-12 text-slate-400 mb-3" />
-            <p className="text-slate-600 dark:text-slate-400 mb-2">
-              {prompts.length === 0
-                ? "No prompts found"
-                : "No prompts match your filters"}
-            </p>
-            {prompts.length === 0 && (
-              <button
-                onClick={() => handleOpenModal()}
-                className="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-sm font-medium"
-              >
-                Create your first prompt
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-            <AdminPromptTable
-              prompts={filteredPrompts}
-              onEdit={(row) => handleOpenModal(row as MasterPrompt)}
-              onDelete={handleDelete}
-            />
+        {/* Clear Filters Button - Show only if filters are active */}
+        {(kindFilter !== "all" ||
+          statusFilter !== "all" ||
+          searchTerm ||
+          showArchived) && (
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setKindFilter("all");
+                setStatusFilter("all");
+                setShowArchived(false);
+              }}
+              className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-600 rounded-lg transition-colors"
+            >
+              Clear Filters
+            </button>
           </div>
         )}
+
+        {/* Content Area - Full Height */}
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Loading prompts...
+                </p>
+              </div>
+            </div>
+          ) : filteredPrompts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+              <AlertCircle className="w-12 h-12 text-slate-400 mb-3" />
+              <p className="text-slate-600 dark:text-slate-400 mb-2">
+                {prompts.length === 0
+                  ? "No prompts found"
+                  : "No prompts match your filters"}
+              </p>
+              {prompts.length === 0 && (
+                <button
+                  onClick={() => handleOpenModal()}
+                  className="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-sm font-medium"
+                >
+                  Create your first prompt
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+              <AdminPromptTable
+                prompts={filteredPrompts}
+                onEdit={(row) => handleOpenModal(row as MasterPrompt)}
+                onDelete={handleDelete}
+                viewMode={viewMode}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal for Add/Edit */}
@@ -374,7 +486,7 @@ const MasterPromptManagementPage: React.FC = () => {
           open={modalOpen}
           onClose={handleCloseModal}
           initial={editingPrompt}
-          onSave={() => handleModalSave()}
+          onSave={(prompt) => handleModalSave(prompt)}
         />
       )}
     </div>
