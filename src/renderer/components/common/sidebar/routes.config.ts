@@ -7,7 +7,6 @@ import {
   Sparkles,
   Users,
   Video,
-  Workflow,
   Youtube,
 } from "lucide-react";
 import { RouteConfig } from "../../../types/menu-route.types";
@@ -44,6 +43,13 @@ export const routeConfig: RouteConfig[] = [
     defaultOpen: true,
     children: [
       {
+        id: "video-creation.master-prompts",
+        label: "Master Prompts",
+        icon: Sparkles,
+        path: "/video-creation/master-prompts",
+        page: "video-creation.master-prompts",
+      },
+      {
         id: "video-creation.story",
         label: "Story Creator",
         icon: Clapperboard,
@@ -78,24 +84,8 @@ export const routeConfig: RouteConfig[] = [
     id: "admin",
     label: "Admin",
     icon: Shield,
+    path: "/admin/dashboard",
     page: "admin",
-    defaultOpen: true,
-    children: [
-      {
-        id: "admin.dashboard",
-        label: "Master Prompt Config",
-        icon: Sparkles,
-        path: "/admin/dashboard",
-        page: "admin.dashboard",
-      },
-      {
-        id: "admin.prompt-flows",
-        label: "Prompt Flow Config",
-        icon: Workflow,
-        path: "/admin/prompt-flows",
-        page: "admin.prompt-flows",
-      },
-    ],
   },
   {
     id: "history",
