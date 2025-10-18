@@ -77,153 +77,169 @@ export default function ProfilesTable({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
+    <div className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-max">
-          <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 border-b border-gray-200 dark:border-gray-600">
+        <table className="w-full">
+          <thead className="bg-white dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-36">
                 Actions
               </th>
               {columnVisibility.id && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-40">
                   ID
                 </th>
               )}
               {columnVisibility.name && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-40">
                   Name
                 </th>
               )}
               {columnVisibility.browser && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-32">
                   Browser
                 </th>
               )}
               {columnVisibility.path && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-48">
                   Path
                 </th>
               )}
               {columnVisibility.userAgent && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-80">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-56">
                   User Agent
                 </th>
               )}
               {columnVisibility.credit && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-28">
                   Credit
                 </th>
               )}
               {columnVisibility.tags && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-40">
                   Tags
                 </th>
               )}
               {columnVisibility.createdAt && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-44">
-                  Created At
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-44">
+                  Created
                 </th>
               )}
               {columnVisibility.cookie && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-40">
                   Cookie
                 </th>
               )}
               {columnVisibility.loginStatus && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
-                  Login Status
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-32">
+                  Status
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {filteredProfiles.length === 0 ? (
               <tr>
-                <td
-                  colSpan={9}
-                  className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
-                >
-                  {profiles.length === 0
-                    ? "No profiles yet. Create your first profile to get started."
-                    : "No profiles match your filters."}
+                <td colSpan={10} className="px-6 py-20 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700/30 dark:to-gray-700/50 rounded-2xl flex items-center justify-center">
+                      <User className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-300 font-semibold">
+                        {profiles.length === 0
+                          ? "No profiles yet"
+                          : "No profiles match"}
+                      </p>
+                      <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+                        {profiles.length === 0
+                          ? "Click 'New Profile' to create one"
+                          : "Try adjusting your filters"}
+                      </p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
               filteredProfiles.map((profile) => (
                 <tr
                   key={profile.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-all duration-150"
                 >
-                  <td className="px-4 py-4 whitespace-nowrap w-32">
-                    <div className="flex items-center gap-2">
+                  <td className="px-4 py-3.5 whitespace-nowrap w-36">
+                    <div className="flex items-center gap-0.5">
                       <button
                         onClick={() => onEditProfile(profile)}
-                        className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group"
+                        className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="Edit"
                       >
-                        <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                        <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </button>
                       <button
                         onClick={() => onLoginProfile(profile.id)}
-                        className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors group"
+                        className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                         title="Login"
                       >
-                        <LogIn className="w-4 h-4 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+                        <LogIn className="w-4 h-4 text-green-600 dark:text-green-400" />
                       </button>
                       <button
                         onClick={() => onDeleteProfile(profile.id)}
-                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                        className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" />
+                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                       </button>
                       {onOpenCookieModal && (
                         <button
                           onClick={() => onOpenCookieModal(profile.id)}
-                          className="p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors group"
+                          className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
                           title="Manage Cookies"
                         >
-                          <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                          <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                         </button>
                       )}
                       {onOpenChatModal && (
                         <button
                           onClick={() => onOpenChatModal(profile.id)}
-                          className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
+                          className="p-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                           title="Test Chat"
                         >
-                          <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                          <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                         </button>
                       )}
                     </div>
                   </td>
                   {columnVisibility.id && (
-                    <td className="px-4 py-4 whitespace-nowrap w-32">
+                    <td className="px-4 py-3.5 whitespace-nowrap w-40">
                       <span
-                        className="text-xs font-mono text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded block truncate"
+                        className="text-xs font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded block truncate"
                         title={profile.id}
                       >
-                        {profile.id}
+                        {profile.id.slice(0, 12)}...
                       </span>
                     </td>
                   )}
                   {columnVisibility.name && (
-                    <td className="px-4 py-4 whitespace-nowrap w-32">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        <User className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                        <span className="truncate" title={profile.name}>
+                    <td className="px-4 py-3.5 whitespace-nowrap w-40">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <span
+                          className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
+                          title={profile.name}
+                        >
                           {profile.name}
                         </span>
-                      </span>
+                      </div>
                     </td>
                   )}
                   {columnVisibility.browser && (
-                    <td className="px-4 py-4 whitespace-nowrap w-28">
-                      <span className="text-xs text-gray-600 dark:text-gray-400 font-medium flex items-center gap-2">
+                    <td className="px-4 py-3.5 whitespace-nowrap w-32">
+                      <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
                         <span
-                          className="truncate"
+                          className="text-xs text-gray-600 dark:text-gray-400 truncate"
                           title={profile.browserPath || "Chrome"}
                         >
                           {profile.browserPath
@@ -233,74 +249,82 @@ export default function ProfilesTable({
                                 ?.replace(".exe", "") || "Chrome"
                             : "Chrome"}
                         </span>
-                      </span>
+                      </div>
                     </td>
                   )}
                   {columnVisibility.path && (
-                    <td className="px-4 py-4 w-32">
-                      <span className="text-xs text-gray-600 dark:text-gray-400 font-mono flex items-center gap-2">
-                        <Folder className="w-4 h-4 flex-shrink-0" />
+                    <td className="px-4 py-3.5 w-48">
+                      <div className="flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         <span
-                          className="truncate block"
+                          className="text-xs text-gray-600 dark:text-gray-400 truncate"
                           title={profile.userDataDir}
                         >
-                          {profile.userDataDir}
+                          {profile.userDataDir.split("\\").pop() ||
+                            profile.userDataDir}
                         </span>
-                      </span>
+                      </div>
                     </td>
                   )}
                   {columnVisibility.userAgent && (
-                    <td className="px-4 py-4 w-80">
-                      <span className="text-xs text-gray-600 dark:text-gray-400 font-mono flex items-center gap-2">
-                        <Globe className="w-4 h-4 flex-shrink-0" />
+                    <td className="px-4 py-3.5 w-56">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         <span
-                          className="line-clamp-2"
+                          className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1"
                           title={profile.userAgent}
                         >
-                          {profile.userAgent || "Default"}
+                          {profile.userAgent
+                            ? profile.userAgent.slice(0, 40) + "..."
+                            : "Default"}
                         </span>
-                      </span>
+                      </div>
                     </td>
                   )}
                   {columnVisibility.credit && (
-                    <td className="px-4 py-4 whitespace-nowrap w-28">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-semibold">
-                        <DollarSign className="w-4 h-4" />
+                    <td className="px-4 py-3.5 whitespace-nowrap w-28">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-xs font-semibold">
+                        <DollarSign className="w-3 h-3" />
                         {profile.creditRemaining.toFixed(2)}
                       </span>
                     </td>
                   )}
                   {columnVisibility.tags && (
-                    <td className="px-4 py-4 w-40">
+                    <td className="px-4 py-3.5 w-40">
                       <div className="flex flex-wrap gap-1">
                         {profile.tags && profile.tags.length > 0 ? (
-                          profile.tags.map((tag) => (
+                          profile.tags.slice(0, 2).map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium"
                             >
                               <Tag className="w-3 h-3" />
                               {tag}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400">No tags</span>
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                        {profile.tags && profile.tags.length > 2 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            +{profile.tags.length - 2}
+                          </span>
                         )}
                       </div>
                     </td>
                   )}
                   {columnVisibility.createdAt && (
-                    <td className="px-4 py-4 whitespace-nowrap w-44">
-                      <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span className="text-xs">
+                    <td className="px-4 py-3.5 whitespace-nowrap w-44">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           {formatDate(profile.createdAt)}
                         </span>
-                      </span>
+                      </div>
                     </td>
                   )}
                   {columnVisibility.cookie && (
-                    <td className="px-4 py-4 whitespace-nowrap w-36">
+                    <td className="px-4 py-3.5 whitespace-nowrap w-40">
                       <div className="flex items-center gap-2">
                         <Cookie
                           className={`w-4 h-4 ${
@@ -311,7 +335,7 @@ export default function ProfilesTable({
                         />
                         {profile.cookieExpires ? (
                           <span
-                            className={`text-xs ${
+                            className={`text-xs font-medium ${
                               isCookieExpired(profile.cookieExpires)
                                 ? "text-red-600 dark:text-red-400"
                                 : "text-green-600 dark:text-green-400"
@@ -319,26 +343,31 @@ export default function ProfilesTable({
                           >
                             {isCookieExpired(profile.cookieExpires)
                               ? "Expired"
-                              : formatDate(profile.cookieExpires)}
+                              : "Valid"}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            No cookie
+                            None
                           </span>
                         )}
                       </div>
                     </td>
                   )}
                   {columnVisibility.loginStatus && (
-                    <td className="px-4 py-4 whitespace-nowrap w-32">
+                    <td className="px-4 py-3.5 whitespace-nowrap w-32">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                           profile.isLoggedIn
                             ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                             : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                         }`}
                       >
-                        {profile.isLoggedIn ? "✓ Logged In" : "✗ Not Logged In"}
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            profile.isLoggedIn ? "bg-green-600" : "bg-gray-500"
+                          }`}
+                        />
+                        {profile.isLoggedIn ? "Logged In" : "Logged Out"}
                       </span>
                     </td>
                   )}

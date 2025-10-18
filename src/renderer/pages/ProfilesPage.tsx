@@ -1,4 +1,4 @@
-import { Search, Tag, User, X } from "lucide-react";
+import { Plus, Search, Tag, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProfileForm, {
   ProfileFormData,
@@ -6,7 +6,7 @@ import ProfileForm, {
 import ProfilesTable from "../components/profiles/ProfilesTable";
 import ProfilesGrid from "../components/profiles/ProfilesGrid";
 import ProfilesToolbar from "../components/profiles/ProfilesToolbar";
-import CookieManagementModal from "../components/profiles/CookieManagementModal";
+import CookieModal from "../components/profiles/CookieModal";
 import ChatModal from "../components/profiles/ChatModal";
 import { useModal } from "../hooks/useModal";
 import { useAlert } from "../hooks/useAlert";
@@ -66,11 +66,11 @@ export default function ProfilesPage() {
     null
   );
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
-    id: true,
+    id: false,
     name: true,
     browser: true,
-    path: true,
-    userAgent: true,
+    path: false,
+    userAgent: false,
     credit: true,
     tags: true,
     createdAt: true,
@@ -279,17 +279,30 @@ export default function ProfilesPage() {
   };
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-            <User className="w-8 h-8 text-primary-500" />
-            Profiles
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage your browser profiles
-          </p>
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6 lg:p-8 flex flex-col">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <User className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                Profiles
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Manage your browser profiles efficiently
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleOpenModal}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            <Plus className="w-5 h-5" />
+            New Profile
+          </button>
         </div>
       </div>
 
@@ -306,74 +319,78 @@ export default function ProfilesPage() {
         }
         viewMode={viewMode}
         setViewMode={setViewMode}
-        onNewProfile={handleOpenModal}
       />
 
       {/* Active Filters Display */}
       {(searchQuery || selectedTags.length > 0) && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
             Active filters:
           </span>
           {searchQuery && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-              <Search className="w-3 h-3" />
-              Search: {searchQuery}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+              <Search className="w-3.5 h-3.5" />
+              {searchQuery}
               <button
                 onClick={() => setSearchQuery("")}
-                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
-            </span>
+            </div>
           )}
           {selectedTags.map((tag) => (
-            <span
+            <div
               key={tag}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium"
             >
-              <Tag className="w-3 h-3" />
+              <Tag className="w-3.5 h-3.5" />
               {tag}
               <button
                 onClick={() => toggleTagFilter(tag)}
-                className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5"
+                className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 transition-colors"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
-            </span>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Table View */}
-      {viewMode === "table" && (
-        <ProfilesTable
-          profiles={profiles}
-          filteredProfiles={filteredProfiles}
-          columnVisibility={columnVisibility}
-          onEditProfile={handleEditProfile}
-          onLoginProfile={handleLoginProfile}
-          onDeleteProfile={handleDeleteProfile}
-          onOpenCookieModal={handleOpenCookieModal}
-          onOpenChatModal={handleOpenChatModal}
-        />
-      )}
+      {/* Content Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 flex-1 flex flex-col">
+        {/* Table View */}
+        {viewMode === "table" && (
+          <ProfilesTable
+            profiles={profiles}
+            filteredProfiles={filteredProfiles}
+            columnVisibility={columnVisibility}
+            onEditProfile={handleEditProfile}
+            onLoginProfile={handleLoginProfile}
+            onDeleteProfile={handleDeleteProfile}
+            onOpenCookieModal={handleOpenCookieModal}
+            onOpenChatModal={handleOpenChatModal}
+          />
+        )}
 
-      {/* Grid View */}
-      {viewMode === "grid" && (
-        <ProfilesGrid
-          profiles={profiles}
-          filteredProfiles={filteredProfiles}
-          onEditProfile={handleEditProfile}
-          onLoginProfile={handleLoginProfile}
-          onDeleteProfile={handleDeleteProfile}
-          onOpenCookieModal={handleOpenCookieModal}
-          onOpenChatModal={handleOpenChatModal}
-        />
-      )}
+        {/* Grid View */}
+        {viewMode === "grid" && (
+          <div className="p-6 h-full flex flex-col overflow-y-auto">
+            <ProfilesGrid
+              profiles={profiles}
+              filteredProfiles={filteredProfiles}
+              onEditProfile={handleEditProfile}
+              onLoginProfile={handleLoginProfile}
+              onDeleteProfile={handleDeleteProfile}
+              onOpenCookieModal={handleOpenCookieModal}
+              onOpenChatModal={handleOpenChatModal}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Cookie Management Modal */}
-      <CookieManagementModal
+      <CookieModal
         isOpen={showCookieModal}
         profileId={cookieModalProfileId}
         onClose={handleCloseCookieModal}
