@@ -85,18 +85,23 @@ export function collectModuleRegistrations(): any[] {
     };
 
     // Candidate paths (prefer compiled dist when available)
-    const candidates = [] as string[];
-    // handlers/registrations under modulePath
-    candidates.push(path.join(modulePath, "handlers", "registrations"));
-    // compiled dist equivalent
+    let candidates = [] as string[];
     const cwd = process.cwd();
     const srcPrefix = path.join(cwd, "src");
+
+    // Determine which candidate to try based on modulePath location
     if (modulePath.startsWith(srcPrefix)) {
+      // If modulePath is in src, prefer the compiled dist version
       const compiledPath = modulePath.replace(
         srcPrefix,
         path.join(cwd, "dist")
       );
       candidates.push(path.join(compiledPath, "handlers", "registrations"));
+      // Fall back to src if dist doesn't exist
+      candidates.push(path.join(modulePath, "handlers", "registrations"));
+    } else {
+      // If modulePath is already in dist, only try that
+      candidates.push(path.join(modulePath, "handlers", "registrations"));
     }
 
     for (const cand of candidates) {

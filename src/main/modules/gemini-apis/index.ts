@@ -15,6 +15,14 @@ export {
 export { ChatService } from "./services/chat.service";
 export { CookieService } from "./services/cookie.service";
 export { cookieService } from "./services/cookie.service";
+export {
+  getOrCreateCookieManager,
+  getOrCreateChatService,
+  resetChatService,
+  resetCookieManager,
+  clearAll,
+  getStats,
+} from "./services/chat.registry";
 export type { Cookie } from "./types/cookies.types";
 export type {
   ChatResponse,

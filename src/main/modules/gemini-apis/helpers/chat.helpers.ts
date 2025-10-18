@@ -14,23 +14,34 @@ import type {
 import { logger } from "../../../utils/logger-backend.js";
 import type { CookieManagerDB } from "../services/cookie-manager-db.js";
 import { createHttpService, HttpService } from "../services/http.service.js";
+import { resolveChatModel } from "../shared/constants/model.constants.js";
 
 /**
  * Build f.req payload for chat request
  * Format: [null, JSON.stringify([[prompt], null, conversationContext, ...gemParams])]
+ *
+ * @param prompt The user's prompt/message
+ * @param conversationContext Optional conversation context for multi-turn chats
+ * @param model Optional model parameter (null for default, model ID string for specific model)
+ * @returns Encoded f.req payload
  */
 export function buildChatPayload(
   prompt: string,
-  conversationContext: ConversationContext | null = null
+  conversationContext: ConversationContext | null = null,
+  model: string | null = null
 ): string {
   let inner: unknown[];
 
+  // Note: model parameter should be null for default model
+  // Model ID selection is handled via HTTP headers, not payload
+
   if (conversationContext) {
     const { chatId, replyId, rcId } = conversationContext;
-    inner = [[prompt], null, [chatId, replyId, rcId]];
+    // Include model in the payload: [prompt], null, conversationContext, null, modelParam
+    inner = [[prompt], null, [chatId, replyId, rcId], null, model];
   } else {
-    // New conversation
-    inner = [[prompt], null, null];
+    // New conversation with model parameter
+    inner = [[prompt], null, null, null, model];
   }
 
   const innerJson = JSON.stringify(inner);
@@ -107,6 +118,58 @@ export function htmlToText(html: string): string {
     .trim();
 
   return text;
+}
+
+/**
+ * Extract error information from parsed response
+ * Detects BardErrorInfo and returns error code if present
+ */
+export function extractError(
+  parsedData: unknown[]
+): { code: number; message: string } | null {
+  try {
+    for (const part of parsedData) {
+      if (!Array.isArray(part)) continue;
+
+      // Look for error structure: ["wrb.fr", null, null, null, null, [3, null, [["type.googleapis.com/assistant.boq.bard.application.BardErrorInfo", [errorCode]]]]]
+      if (part[0] === "wrb.fr" && Array.isArray(part[5])) {
+        const errorSection = part[5];
+        if (errorSection[0] === 3 && Array.isArray(errorSection[2])) {
+          for (const errorDetail of errorSection[2]) {
+            if (
+              Array.isArray(errorDetail) &&
+              errorDetail[0]?.includes("BardErrorInfo") &&
+              Array.isArray(errorDetail[1])
+            ) {
+              const errorCode = errorDetail[1][0];
+              return {
+                code: errorCode,
+                message: `Gemini API Error ${errorCode}: ${getErrorMessage(
+                  errorCode
+                )}`,
+              };
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    logger.error("Error extracting error info:", error);
+  }
+  return null;
+}
+
+/**
+ * Get human-readable error message for Gemini error codes
+ */
+function getErrorMessage(code: number): string {
+  const errorMessages: Record<number, string> = {
+    1052: "Account access issue or model not available. This could be due to: rate limiting, region restrictions, or the selected model not being available for your account.",
+    1001: "Invalid request format",
+    1002: "Authentication failed",
+    1003: "Rate limit exceeded",
+  };
+  return errorMessages[code] || "Unknown error";
 }
 
 /**
@@ -219,7 +282,11 @@ export async function sendChatRequest(
   prompt: string,
   options: ChatOptions = {}
 ): Promise<ChatResponse> {
-  const { conversationContext = null, dryRun = false } = options;
+  const {
+    conversationContext = null,
+    dryRun = false,
+    model = "unspecified",
+  } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -232,9 +299,19 @@ export async function sendChatRequest(
   logger.debug(
     `Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`
   );
+  logger.debug(`Model: ${model}`);
 
-  // Build payload
-  const fReq = buildChatPayload(prompt, conversationContext);
+  // Resolve model to get ID and headers BEFORE building payload
+  const { modelId, headers: modelHeaders } = resolveChatModel(model);
+  logger.debug(`Using model: ${modelId}`);
+
+  // Build payload - IMPORTANT: Pass null for model parameter
+  // The model ID goes ONLY in HTTP headers, not in the f.req payload
+  const fReq = buildChatPayload(prompt, conversationContext, null);
+
+  // DEBUG: Log the actual payload to verify format
+  logger.debug(`Built payload: ${fReq}`);
+  logger.debug(`Payload length: ${fReq.length} chars`);
 
   if (conversationContext) {
     logger.debug(`Conversation: ${conversationContext.chatId}`);
@@ -256,12 +333,16 @@ export async function sendChatRequest(
 
   try {
     // Create HTTP service (uses consolidated implementation)
+    // Model headers are used here
+
+    // Create HTTP service (uses consolidated implementation)
     const httpService = createHttpService(cookieManager);
 
     try {
-      // Send request with automatic token handling
+      // Send request with automatic token handling and model headers
       const response = await httpService.sendGeminiRequest(fReq, {
         retries: 3,
+        headers: modelHeaders,
       });
 
       if (response.statusCode !== 200) {
@@ -277,6 +358,9 @@ export async function sendChatRequest(
       // Handle response (always string from new service)
       const bodyText = response.body;
       logger.debug(`Response body length: ${bodyText.length} chars`);
+
+      // DEBUG: Log the actual response body to diagnose empty messages
+      logger.debug(`Response body: ${bodyText}`);
 
       // Check if it starts with Google prefix
       if (bodyText.startsWith(")]}'\n") || bodyText.startsWith(")]}'")) {
@@ -294,12 +378,28 @@ export async function sendChatRequest(
       for await (const parsed of HttpService.parseStreamingJson(
         readable as unknown as NodeJS.ReadableStream
       )) {
+        // DEBUG: Log what we're parsing
+        logger.debug(
+          `Parsed chunk: ${JSON.stringify(parsed).substring(0, 200)}`
+        );
+
+        // Check for errors first
+        const error = extractError(parsed);
+        if (error) {
+          logger.error(`❌ ${error.message}`);
+          throw new Error(error.message);
+        }
+
         // Extract metadata if not already set
         if (!metadata) {
           metadata = extractMetadata(parsed);
+          if (metadata) {
+            logger.debug(`Extracted metadata: ${JSON.stringify(metadata)}`);
+          }
         }
 
         const extracted = extractMessages(parsed);
+        logger.debug(`Extracted ${extracted.length} message(s) from chunk`);
 
         if (extracted.length > 0) {
           htmlMessages.push(...extracted);
@@ -351,7 +451,11 @@ export async function sendChatRequestStreaming(
   onChunk: (chunk: { text: string; html: string; index: number }) => void,
   options: ChatOptions = {}
 ): Promise<{ metadata: ConversationMetadata | null; totalChunks: number }> {
-  const { conversationContext = null, dryRun = false } = options;
+  const {
+    conversationContext = null,
+    dryRun = false,
+    model = "unspecified",
+  } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -364,9 +468,19 @@ export async function sendChatRequestStreaming(
   logger.debug(
     `Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`
   );
+  logger.debug(`Model: ${model}`);
 
-  // Build payload
-  const fReq = buildChatPayload(prompt, conversationContext);
+  // Resolve model to get ID and headers BEFORE building payload
+  const { modelId, headers: modelHeaders } = resolveChatModel(model);
+  logger.debug(`Using model: ${modelId}`);
+
+  // Build payload - IMPORTANT: Pass null for model parameter
+  // The model ID goes ONLY in HTTP headers, not in the f.req payload
+  const fReq = buildChatPayload(prompt, conversationContext, null);
+
+  // DEBUG: Log the actual payload to verify format
+  logger.debug(`Built payload: ${fReq}`);
+  logger.debug(`Payload length: ${fReq.length} chars`);
 
   if (conversationContext) {
     logger.debug(`Conversation: ${conversationContext.chatId}`);
@@ -382,19 +496,23 @@ export async function sendChatRequestStreaming(
 
   try {
     // Create HTTP service
+    // Model headers are used here
+
+    // Create HTTP service
     const httpService = createHttpService(cookieManager);
 
     try {
       // Get token
       const token = await httpService.getToken();
 
-      // Send streaming request
+      // Send streaming request with model headers
       let metadata: ConversationMetadata | null = null;
       let totalChunks = 0;
       let chunkIndex = 0;
 
       for await (const streamChunk of httpService.postStream(token, fReq, {
         retries: 3,
+        headers: modelHeaders,
       })) {
         totalChunks++;
 

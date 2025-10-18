@@ -21,9 +21,10 @@ export async function sendChatMessageNonStreaming(req: {
     replyId: string;
     rcId: string;
   };
+  model?: string; // Model selection
 }): Promise<any> {
   try {
-    const { profileId, prompt, conversationContext } = req;
+    const { profileId, prompt, conversationContext, model } = req;
 
     // Validate required fields
     if (!profileId || !prompt) {
@@ -120,7 +121,12 @@ export async function sendChatMessageNonStreaming(req: {
     logger.info(
       "[chat:non-streaming] Sending message and waiting for full response..."
     );
-    const response = await chatService.sendMessage(prompt);
+    if (model) {
+      logger.info(`[chat:non-streaming] Model: ${model}`);
+    }
+    const response = await chatService.sendMessage(prompt, {
+      model,
+    });
 
     logger.info("[chat:non-streaming] Response received, returning to client");
 

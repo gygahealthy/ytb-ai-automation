@@ -7,6 +7,7 @@ import SettingsForm from "./components/settings/SettingsForm";
 import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";
 import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
+import { GeminiChatProvider } from "./contexts/GeminiChatContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -99,7 +100,9 @@ function App() {
         <AlertProvider>
           <ConfirmProvider>
             <DrawerProvider>
-              <AppContent />
+              <GeminiChatProvider>
+                <AppContent />
+              </GeminiChatProvider>
             </DrawerProvider>
           </ConfirmProvider>
         </AlertProvider>

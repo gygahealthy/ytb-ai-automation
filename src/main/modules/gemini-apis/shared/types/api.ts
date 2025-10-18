@@ -23,6 +23,22 @@ export interface ChatRequest {
   token: string;
 }
 
+// Extended request for IPC between renderer and main for Gemini chat
+export interface GeminiChatRequest {
+  profileId: string;
+  prompt: string;
+  conversationContext?: {
+    chatId: string;
+    replyId: string;
+    rcId: string;
+  };
+  stream?: boolean;
+  requestId?: string;
+  mode?: string; // EPHEMERAL | PERSISTENT | TEMPORARY (string for flexibility)
+  model?: string; // unspecified | gemini-2.5-pro | gemini-2.5-flash | etc
+  resetContext?: boolean;
+}
+
 /**
  * Chat response data
  */

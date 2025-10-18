@@ -10,6 +10,10 @@ interface ChatRequest {
   };
   stream?: boolean; // Enable streaming (default: false)
   requestId?: string; // Required if stream=true
+  // Optional mode (e.g., "EPHEMERAL", "PERSISTENT", "TEMPORARY")
+  mode?: string;
+  // Optional model selection (e.g., "unspecified", "gemini-2.5-pro", "gemini-2.5-flash")
+  model?: string;
 }
 
 interface ChatResponse {
@@ -19,6 +23,12 @@ interface ChatResponse {
   streaming?: boolean;
   channel?: string;
   message?: string;
+  mode?: string;
+  storedMetadata?: {
+    cid: string | null;
+    rid: string | null;
+    rcid: string | null;
+  };
 }
 
 const sendChatMessage = async (req: ChatRequest): Promise<ChatResponse> => {

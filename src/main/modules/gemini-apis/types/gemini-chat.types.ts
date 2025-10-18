@@ -15,6 +15,7 @@ export interface ChatOptions {
   stream?: boolean;
   dryRun?: boolean;
   timeout?: number;
+  model?: string; // Model selection (e.g., "unspecified", "gemini-2.5-pro", "gemini-2.5-flash")
 }
 
 /**

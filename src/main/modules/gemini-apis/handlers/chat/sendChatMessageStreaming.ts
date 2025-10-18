@@ -23,9 +23,10 @@ export async function sendChatMessageStreaming(req: {
     rcId: string;
   };
   requestId: string; // Required for streaming (unique ID per request)
+  model?: string; // Model selection
 }): Promise<any> {
   try {
-    const { profileId, prompt, conversationContext, requestId } = req;
+    const { profileId, prompt, conversationContext, requestId, model } = req;
 
     // Validate required fields
     if (!profileId || !prompt || !requestId) {
@@ -129,6 +130,10 @@ export async function sendChatMessageStreaming(req: {
           });
         };
 
+        if (model) {
+          logger.info(`[chat:stream] Model: ${model}`);
+        }
+
         await sendChatRequestStreaming(
           cookieManager!,
           prompt,
@@ -150,6 +155,7 @@ export async function sendChatMessageStreaming(req: {
                   rcId: conversationContext.rcId,
                 }
               : undefined,
+            model,
           }
         );
 

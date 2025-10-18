@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import ChatUI, { Message } from "../automation/ChatUI";
 import { useAlert } from "../../hooks/useAlert";
-import electronApi from "../../ipc";
 import { useSettingsStore } from "../../store/settings.store";
+import { useGeminiChatSession } from "../../hooks/useGeminiChatSession";
+import electronApi from "../../ipc";
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -18,25 +19,27 @@ export default function ChatModal({
 }: ChatModalProps) {
   const { show: showAlert } = useAlert();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [canSend, setCanSend] = useState(true);
   const [streamChannel, setStreamChannel] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Use the custom hook for conversation management
+  const chat = useGeminiChatSession(profileId);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setMessages([]);
-      setIsLoading(false);
       setCanSend(true);
       setStreamChannel(null);
+      chat.resetConversation();
     } else {
       // Focus input when modal opens
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, chat]);
 
   // Listen for streaming chunks when streamChannel is set
   useEffect(() => {
@@ -71,11 +74,11 @@ export default function ChatModal({
           return [...prev, botMessage];
         });
       } else if (data.type === "complete") {
-        setIsLoading(false);
         setCanSend(true);
         setStreamChannel(null);
+        // Extract and store metadata from streaming completion via hook
+        chat.handleStreamComplete(data.data);
       } else if (data.type === "error") {
-        setIsLoading(false);
         setCanSend(true);
         setStreamChannel(null);
         showAlert({
@@ -88,7 +91,7 @@ export default function ChatModal({
     return () => {
       unsubscribe();
     };
-  }, [streamChannel, showAlert]);
+  }, [streamChannel, showAlert, chat]);
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -106,31 +109,20 @@ export default function ChatModal({
         };
         setMessages((prev) => [...prev, userMessage]);
 
-        // Send to Gemini API via IPC
-        setIsLoading(true);
-
         // Get streaming setting from store
         const { streamingEnabled } = useSettingsStore.getState();
 
-        // Generate a unique request ID for this streaming request (if streaming enabled)
-        const requestId = streamingEnabled
-          ? `${Date.now()}-${Math.random().toString(36).substring(7)}`
-          : undefined;
-
-        const response = await electronApi.gemini.chat.send({
-          profileId,
-          prompt: text.trim(),
+        // Send message via hook (handles all context preservation)
+        const response = await chat.sendMessage(text.trim(), {
           stream: streamingEnabled,
-          requestId,
         });
 
-        if (response.success) {
+        if (response && response.success) {
           if (response.streaming && response.channel) {
             // Set up streaming listener
             setStreamChannel(response.channel);
-            // Keep loading state until stream completes
           } else {
-            // Non-streaming fallback
+            // Non-streaming response - add bot message
             const botMessage: Message = {
               id: messages.length + 1,
               from: "bot",
@@ -138,15 +130,13 @@ export default function ChatModal({
               ts: new Date().toLocaleTimeString(),
             };
             setMessages((prev) => [...prev, botMessage]);
-            setIsLoading(false);
             setCanSend(true);
           }
-        } else {
+        } else if (response) {
           showAlert({
             message: response.error || "Failed to send message",
             severity: "error",
           });
-          setIsLoading(false);
           setCanSend(true);
         }
       } catch (error) {
@@ -155,11 +145,10 @@ export default function ChatModal({
           message: "Failed to send message. Please try again.",
           severity: "error",
         });
-        setIsLoading(false);
         setCanSend(true);
       }
     },
-    [profileId, messages.length, showAlert]
+    [profileId, messages.length, showAlert, chat]
   );
 
   if (!isOpen || !profileId) return null;
@@ -200,8 +189,8 @@ export default function ChatModal({
             ref={inputRef}
             messages={messages}
             onSend={handleSendMessage}
-            canSend={canSend && !isLoading}
-            isTyping={isLoading}
+            canSend={canSend && !chat.isLoading}
+            isTyping={chat.isLoading}
           />
         </div>
 
@@ -209,7 +198,7 @@ export default function ChatModal({
         <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 h-5">
-              {isLoading ? (
+              {chat.isLoading ? (
                 <div className="flex gap-1">
                   <div
                     className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse"
