@@ -5,6 +5,8 @@ import automation from "./automation";
 import masterPrompts from "./masterPrompts";
 import promptHistory from "./promptHistory";
 import promptTypes from "./promptTypes";
+import cookies from "./cookies";
+import gemini from "./gemini";
 import { devtools } from "./devtools";
 
 // Named exports for convenient imports
@@ -15,10 +17,12 @@ export {
   masterPrompts,
   promptHistory,
   promptTypes,
+  cookies,
+  gemini,
   devtools,
 };
 
-// Default export matches the old shape: { invoke, profile, automation, masterPrompts, promptHistory, promptTypes, devtools }
+// Default export matches the old shape
 const api = {
   invoke: invokeHelpers.invoke,
   profile,
@@ -26,6 +30,8 @@ const api = {
   masterPrompts,
   promptHistory,
   promptTypes,
+  cookies,
+  gemini,
   devtools,
 };
 export default api;

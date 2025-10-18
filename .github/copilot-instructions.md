@@ -47,14 +47,6 @@ This file provides custom instructions for GitHub Copilot when working on the VE
 
 ### Repository Pattern
 
-**MANDATORY**: Always use the repository classes for data access:
-
-- `profileRepository` - for profile data
-- `automationRepository` - for automation tasks
-- `veo3ProjectRepository` - for VEO3 projects
-- `youtubeChannelRepository` - for YouTube channels
-- `videoAnalysisRepository` - for video analysis data
-
 ### Direct Database Access
 
 - ❌ **NEVER** bypass repositories to access the database directly
@@ -87,19 +79,6 @@ const connection = sqlite3.open(":memory:");
 - Keep business logic in services, data access in repositories
 - Never import or use database classes directly in services
 
-### Return Types
-
-- Always return `ApiResponse<T>` from service methods
-- Follow this pattern:
-
-```typescript
-return {
-  success: true,
-  data: result,
-  error: null,
-};
-```
-
 ### Dependency Injection
 
 - Services should accept repositories through constructor
@@ -107,32 +86,6 @@ return {
 - Inject dependencies rather than creating instances
 
 ## File Organization
-
-### Directory Structure
-
-```
-src/
-├── main/
-│   ├── storage/
-│   │   ├── repositories/     # Data access layer
-│   │   ├── migrations/       # Database migrations
-│   │   └── schema.sql
-│   ├── modules/
-│   │   └── [module-name]/
-│   │       ├── handlers/
-│   │       ├── services/
-│   │       └── types/
-│   └── handlers/             # IPC handlers
-├── renderer/
-│   ├── pages/
-│   ├── components/
-│   ├── contexts/
-│   ├── hooks/
-│   └── ipc/
-└── shared/
-    ├── types/
-    └── utils/
-```
 
 ### File Naming Conventions
 
@@ -283,16 +236,6 @@ export default MyComponent;
 - Handle auth errors gracefully
 
 ## Common Patterns in This Project
-
-### API Response Pattern
-
-```typescript
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-```
 
 ### Repository Pattern
 

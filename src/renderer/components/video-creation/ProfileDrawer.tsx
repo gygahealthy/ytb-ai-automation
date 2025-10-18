@@ -38,7 +38,7 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
 
   useEffect(() => {
     fetchProfiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {

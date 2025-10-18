@@ -1,12 +1,16 @@
 import { Search, Tag, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import ProfileForm, { ProfileFormData } from "../components/profiles/ProfileForm";
+import ProfileForm, {
+  ProfileFormData,
+} from "../components/profiles/ProfileForm";
 import ProfilesTable from "../components/profiles/ProfilesTable";
 import ProfilesGrid from "../components/profiles/ProfilesGrid";
 import ProfilesToolbar from "../components/profiles/ProfilesToolbar";
+import CookieManagementModal from "../components/profiles/CookieManagementModal";
+import ChatModal from "../components/profiles/ChatModal";
 import { useModal } from "../hooks/useModal";
-import { useAlert } from '../hooks/useAlert';
-import { useConfirm } from '../hooks/useConfirm';
+import { useAlert } from "../hooks/useAlert";
+import { useConfirm } from "../hooks/useConfirm";
 import electronApi from "../ipc";
 
 interface Profile {
@@ -46,13 +50,21 @@ export default function ProfilesPage() {
   const modal = useModal();
   const alertApi = useAlert();
   const confirm = useConfirm();
-  
+
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [showCookieModal, setShowCookieModal] = useState(false);
+  const [cookieModalProfileId, setCookieModalProfileId] = useState<
+    string | null
+  >(null);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatModalProfileId, setChatModalProfileId] = useState<string | null>(
+    null
+  );
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     id: true,
     name: true,
@@ -72,7 +84,9 @@ export default function ProfilesPage() {
 
   const loadProfiles = async () => {
     try {
-      const response = (await electronApi.profile.getAll()) as ApiResponse<Profile[]>;
+      const response = (await electronApi.profile.getAll()) as ApiResponse<
+        Profile[]
+      >;
       if (response.success && response.data) {
         setProfiles(response.data);
       }
@@ -99,9 +113,9 @@ export default function ProfilesPage() {
   const handleOpenModal = () => {
     setIsEditMode(false);
     setEditingProfile(null);
-    
+
     modal.openModal({
-      title: 'Create New Profile',
+      title: "Create New Profile",
       icon: <User className="w-6 h-6 text-indigo-500" />,
       content: (
         <ProfileForm
@@ -111,7 +125,7 @@ export default function ProfilesPage() {
           onCancel={() => modal.closeModal()}
         />
       ),
-      size: 'lg',
+      size: "lg",
       closeOnEscape: true,
       closeOnOverlay: false,
     });
@@ -120,9 +134,9 @@ export default function ProfilesPage() {
   const handleEditProfile = (profile: Profile) => {
     setIsEditMode(true);
     setEditingProfile(profile);
-    
+
     modal.openModal({
-      title: 'Edit Profile',
+      title: "Edit Profile",
       icon: <User className="w-6 h-6 text-indigo-500" />,
       content: (
         <ProfileForm
@@ -132,7 +146,7 @@ export default function ProfilesPage() {
           onCancel={() => modal.closeModal()}
         />
       ),
-      size: 'lg',
+      size: "lg",
       closeOnEscape: true,
       closeOnOverlay: false,
     });
@@ -155,7 +169,10 @@ export default function ProfilesPage() {
           await loadProfiles();
           modal.closeModal();
         } else {
-          alertApi.show({ message: `Failed to update profile: ${response.error}`, title: 'Profile Error' });
+          alertApi.show({
+            message: `Failed to update profile: ${response.error}`,
+            title: "Profile Error",
+          });
           throw new Error(response.error);
         }
       } else {
@@ -173,7 +190,10 @@ export default function ProfilesPage() {
           await loadProfiles();
           modal.closeModal();
         } else {
-          alertApi.show({ message: `Failed to create profile: ${response.error}`, title: 'Profile Error' });
+          alertApi.show({
+            message: `Failed to create profile: ${response.error}`,
+            title: "Profile Error",
+          });
           throw new Error(response.error);
         }
       }
@@ -184,26 +204,40 @@ export default function ProfilesPage() {
   };
 
   const handleDeleteProfile = async (id: string) => {
-    if (!(await confirm({ message: "Are you sure you want to delete this profile?" }))) {
+    if (
+      !(await confirm({
+        message: "Are you sure you want to delete this profile?",
+      }))
+    ) {
       return;
     }
 
     try {
-      const response = (await electronApi.profile.delete(id)) as ApiResponse<boolean>;
+      const response = (await electronApi.profile.delete(
+        id
+      )) as ApiResponse<boolean>;
       if (response.success) {
         await loadProfiles();
       } else {
-        alertApi.show({ message: `Failed to delete profile: ${response.error}`, title: 'Profile Error' });
+        alertApi.show({
+          message: `Failed to delete profile: ${response.error}`,
+          title: "Profile Error",
+        });
       }
     } catch (error) {
       console.error("Failed to delete profile:", error);
-      alertApi.show({ message: `Failed to delete profile: ${error}`, title: 'Profile Error' });
+      alertApi.show({
+        message: `Failed to delete profile: ${error}`,
+        title: "Profile Error",
+      });
     }
   };
 
   const handleLoginProfile = async (id: string) => {
     try {
-      const response = (await electronApi.profile.login(id)) as ApiResponse<Profile>;
+      const response = (await electronApi.profile.login(
+        id
+      )) as ApiResponse<Profile>;
       if (response.success) {
         await loadProfiles();
       } else {
@@ -219,7 +253,29 @@ export default function ProfilesPage() {
   };
 
   const toggleTagFilter = (tag: string) => {
-    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleOpenCookieModal = (profileId: string) => {
+    setCookieModalProfileId(profileId);
+    setShowCookieModal(true);
+  };
+
+  const handleCloseCookieModal = () => {
+    setShowCookieModal(false);
+    setCookieModalProfileId(null);
+  };
+
+  const handleOpenChatModal = (profileId: string) => {
+    setChatModalProfileId(profileId);
+    setShowChatModal(true);
+  };
+
+  const handleCloseChatModal = () => {
+    setShowChatModal(false);
+    setChatModalProfileId(null);
   };
 
   return (
@@ -231,7 +287,9 @@ export default function ProfilesPage() {
             <User className="w-8 h-8 text-primary-500" />
             Profiles
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your browser profiles</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage your browser profiles
+          </p>
         </div>
       </div>
 
@@ -243,7 +301,9 @@ export default function ProfilesPage() {
         toggleTagFilter={toggleTagFilter}
         allTags={allTags}
         columnVisibility={columnVisibility}
-        toggleColumnVisibility={(c) => toggleColumnVisibility(c as keyof ColumnVisibility)}
+        toggleColumnVisibility={(c) =>
+          toggleColumnVisibility(c as keyof ColumnVisibility)
+        }
         viewMode={viewMode}
         setViewMode={setViewMode}
         onNewProfile={handleOpenModal}
@@ -252,12 +312,17 @@ export default function ProfilesPage() {
       {/* Active Filters Display */}
       {(searchQuery || selectedTags.length > 0) && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Active filters:
+          </span>
           {searchQuery && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
               <Search className="w-3 h-3" />
               Search: {searchQuery}
-              <button onClick={() => setSearchQuery("")} className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5">
+              <button
+                onClick={() => setSearchQuery("")}
+                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+              >
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -289,6 +354,8 @@ export default function ProfilesPage() {
           onEditProfile={handleEditProfile}
           onLoginProfile={handleLoginProfile}
           onDeleteProfile={handleDeleteProfile}
+          onOpenCookieModal={handleOpenCookieModal}
+          onOpenChatModal={handleOpenChatModal}
         />
       )}
 
@@ -300,8 +367,24 @@ export default function ProfilesPage() {
           onEditProfile={handleEditProfile}
           onLoginProfile={handleLoginProfile}
           onDeleteProfile={handleDeleteProfile}
+          onOpenCookieModal={handleOpenCookieModal}
+          onOpenChatModal={handleOpenChatModal}
         />
       )}
+
+      {/* Cookie Management Modal */}
+      <CookieManagementModal
+        isOpen={showCookieModal}
+        profileId={cookieModalProfileId}
+        onClose={handleCloseCookieModal}
+      />
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={showChatModal}
+        profileId={chatModalProfileId}
+        onClose={handleCloseChatModal}
+      />
     </div>
   );
 }

@@ -10,7 +10,12 @@ export interface ApiResponse<T> {
 
 // ============= Automation Shared Types =============
 export type AutomationType = "chat" | "veo3" | "youtube" | "custom";
-export type InstanceStatus = "launching" | "running" | "error" | "stopping" | "stopped";
+export type InstanceStatus =
+  | "launching"
+  | "running"
+  | "error"
+  | "stopping"
+  | "stopped";
 
 import type { ChatMessage } from "../../main/modules/chat-automation/types";
 import type {
@@ -21,6 +26,7 @@ import type {
   WindowBounds,
   WindowPositioningConfig,
 } from "../../main/modules/instance-management/types";
+import type { Cookie } from "../../main/modules/gemini-apis/shared/types";
 
 export type {
   ChatMessage,
@@ -30,4 +36,5 @@ export type {
   LaunchInstanceResponse,
   WindowBounds,
   WindowPositioningConfig,
+  Cookie,
 };

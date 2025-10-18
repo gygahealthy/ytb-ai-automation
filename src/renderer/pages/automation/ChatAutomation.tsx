@@ -75,9 +75,9 @@ export default function ChatAutomation() {
     });
 
     return () => {
-      try { unsubStatus(); } catch {};
-      try { unsubUpdated(); } catch {};
-      try { unsubUnregistered(); } catch {};
+      try { unsubStatus(); } catch {}
+      try { unsubUpdated(); } catch {}
+      try { unsubUnregistered(); } catch {}
     };
   }, [instanceId]);
 

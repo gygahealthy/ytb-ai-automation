@@ -1,4 +1,14 @@
-import { Calendar, Cookie, DollarSign, Edit, LogIn, Tag, Trash2, User } from "lucide-react";
+import {
+  Calendar,
+  Cookie,
+  DollarSign,
+  Edit,
+  LogIn,
+  Tag,
+  Trash2,
+  User,
+  MessageSquare,
+} from "lucide-react";
 
 interface Profile {
   id: string;
@@ -20,6 +30,8 @@ interface ProfilesGridProps {
   onEditProfile: (profile: Profile) => void;
   onLoginProfile: (id: string) => void;
   onDeleteProfile: (id: string) => void;
+  onOpenCookieModal?: (profileId: string) => void;
+  onOpenChatModal?: (profileId: string) => void;
 }
 
 export default function ProfilesGrid({
@@ -28,6 +40,8 @@ export default function ProfilesGrid({
   onEditProfile,
   onLoginProfile,
   onDeleteProfile,
+  onOpenCookieModal,
+  onOpenChatModal,
 }: ProfilesGridProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -86,11 +100,32 @@ export default function ProfilesGrid({
                 >
                   <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </button>
+                {onOpenCookieModal && (
+                  <button
+                    onClick={() => onOpenCookieModal(profile.id)}
+                    className="p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    title="Manage Cookies"
+                  >
+                    <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </button>
+                )}
+                {onOpenChatModal && (
+                  <button
+                    onClick={() => onOpenChatModal(profile.id)}
+                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    title="Test Chat"
+                  >
+                    <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Profile Name */}
-            <h3 className="text-lg font-bold mb-2 truncate" title={profile.name}>
+            <h3
+              className="text-lg font-bold mb-2 truncate"
+              title={profile.name}
+            >
               {profile.name}
             </h3>
 
@@ -123,7 +158,11 @@ export default function ProfilesGrid({
             {/* Cookie Status */}
             <div className="mb-3 flex items-center gap-2">
               <Cookie
-                className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`}
+                className={`w-4 h-4 ${
+                  isCookieExpired(profile.cookieExpires)
+                    ? "text-red-500"
+                    : "text-green-500"
+                }`}
               />
               <span
                 className={`text-xs ${

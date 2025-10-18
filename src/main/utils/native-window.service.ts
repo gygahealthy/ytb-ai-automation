@@ -7,7 +7,7 @@ let nativeAvailable = false;
 let nw: any = null;
 
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   nw = require('node-window-manager');
   nativeAvailable = !!nw;
   if (nativeAvailable) logger.info('node-window-manager available for native window control');

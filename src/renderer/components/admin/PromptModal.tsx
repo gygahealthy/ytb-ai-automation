@@ -105,7 +105,7 @@ const PromptModal: React.FC<Props> = ({
   }, [open, onClose]);
 
   // Load prompt types when modal opens
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     if (!open) return;
 

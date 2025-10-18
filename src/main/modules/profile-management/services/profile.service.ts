@@ -49,12 +49,16 @@ export class ProfileService {
   /**
    * Create new profile
    */
-  async createProfile(input: CreateProfileInput): Promise<ApiResponse<Profile>> {
+  async createProfile(
+    input: CreateProfileInput
+  ): Promise<ApiResponse<Profile>> {
     try {
       const profileId = StringUtil.generateId("profile");
 
       // Sanitize profile name for use in folder name (replace spaces and special chars with underscore)
-      const sanitizedName = input.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
+      const sanitizedName = input.name
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .replace(/_+/g, "_");
       const folderName = `${sanitizedName}_${profileId}`;
 
       // Determine profile directory path
@@ -98,7 +102,10 @@ export class ProfileService {
   /**
    * Update profile
    */
-  async updateProfile(id: string, updates: Partial<Profile>): Promise<ApiResponse<Profile>> {
+  async updateProfile(
+    id: string,
+    updates: Partial<Profile>
+  ): Promise<ApiResponse<Profile>> {
     try {
       if (!(await profileRepository.exists(id))) {
         return { success: false, error: "Profile not found" };
@@ -139,7 +146,10 @@ export class ProfileService {
           fs.rmSync(profile.userDataDir, { recursive: true, force: true });
           logger.info(`Profile directory deleted: ${profile.userDataDir}`);
         } catch (dirError) {
-          logger.error(`Failed to delete profile directory: ${profile.userDataDir}`, dirError);
+          logger.error(
+            `Failed to delete profile directory: ${profile.userDataDir}`,
+            dirError
+          );
           // Don't fail the whole operation if directory deletion fails
           // The profile is already removed from database
         }
@@ -155,7 +165,10 @@ export class ProfileService {
   /**
    * Update credit
    */
-  async updateCredit(id: string, amount: number): Promise<ApiResponse<Profile>> {
+  async updateCredit(
+    id: string,
+    amount: number
+  ): Promise<ApiResponse<Profile>> {
     try {
       const profile = await profileRepository.findById(id);
       if (!profile) {
@@ -182,7 +195,9 @@ export class ProfileService {
    * Check if page has authentication cookies
    * Returns cookie string in standard format: "name=value; name2=value2"
    */
-  private async checkAndGetCookies(page: Page): Promise<{ hasAuth: boolean; cookieString: string; expires?: Date }> {
+  private async checkAndGetCookies(
+    page: Page
+  ): Promise<{ hasAuth: boolean; cookieString: string; expires?: Date }> {
     try {
       // Get all cookies from the page
       const allCookies = await page.cookies();
@@ -190,7 +205,7 @@ export class ProfileService {
       // Filter cookies for labs.google and google.com domains
       const labsCookies = allCookies.filter(
         (cookie) =>
-          cookie.domain.includes("labs.google") || 
+          cookie.domain.includes("labs.google") ||
           cookie.domain.includes(".google.com") ||
           cookie.domain === "google.com"
       );
@@ -215,7 +230,10 @@ export class ProfileService {
           .filter((c) => c.expires && c.expires > 0)
           .map((c) => c.expires! * 1000);
 
-        const earliestExpiry = expiryDates.length > 0 ? new Date(Math.min(...expiryDates)) : undefined;
+        const earliestExpiry =
+          expiryDates.length > 0
+            ? new Date(Math.min(...expiryDates))
+            : undefined;
 
         return {
           hasAuth: true,
@@ -237,7 +255,9 @@ export class ProfileService {
   private async isSignInPage(page: Page): Promise<boolean> {
     try {
       // Check if there's a "Sign in" button or link
-      const signInElement = await page.$('a[href*="accounts.google"], button:has-text("Sign in"), a:has-text("Sign in")');
+      const signInElement = await page.$(
+        'a[href*="accounts.google"], button:has-text("Sign in"), a:has-text("Sign in")'
+      );
       return signInElement !== null;
     } catch (error) {
       return false;
@@ -263,14 +283,15 @@ export class ProfileService {
 
       // Determine browser executable path
       let executablePath = profile.browserPath;
-      
+
       // If no browser path specified, try to find Chrome
       if (!executablePath) {
         executablePath = this.getDefaultChromePath();
         if (!executablePath) {
-          return { 
-            success: false, 
-            error: "No browser path configured and Chrome not found. Please configure a browser path in the profile settings." 
+          return {
+            success: false,
+            error:
+              "No browser path configured and Chrome not found. Please configure a browser path in the profile settings.",
           };
         }
         logger.info(`Using auto-detected Chrome path: ${executablePath}`);
@@ -283,13 +304,13 @@ export class ProfileService {
       // Launch Chrome directly with spawn (more reliable than PowerShell)
       const chromeArgs = [
         `--remote-debugging-port=${debugPort}`,
-        '--remote-debugging-address=127.0.0.1',
+        "--remote-debugging-address=127.0.0.1",
         `--user-data-dir=${profile.userDataDir}`,
-        '--start-maximized',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--disable-popup-blocking',
-        '--disable-sync',
+        "--start-maximized",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-popup-blocking",
+        "--disable-sync",
       ];
 
       if (profile.userAgent) {
@@ -297,18 +318,18 @@ export class ProfileService {
       }
 
       logger.info(`Launching Chrome with debugging enabled...`);
-      
+
       // Launch Chrome using spawn for better control
-      const { spawn } = require('child_process');
+      const { spawn } = require("child_process");
       chromeProcess = spawn(executablePath, chromeArgs, {
         detached: true,
-        stdio: 'ignore',
+        stdio: "ignore",
       });
-      
+
       // Unref so the parent can exit independently
       chromeProcess.unref();
-      
-      logger.info('Chrome process started, waiting for debugging port...');
+
+      logger.info("Chrome process started, waiting for debugging port...");
 
       // Wait and retry connection to debugging port
       const maxRetries = 10;
@@ -318,7 +339,7 @@ export class ProfileService {
       for (let i = 0; i < maxRetries; i++) {
         try {
           logger.info(`Connection attempt ${i + 1}/${maxRetries}...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
           // Try to connect
           browser = await puppeteer.connect({
@@ -326,13 +347,13 @@ export class ProfileService {
             defaultViewport: null,
           });
 
-          logger.info('Successfully connected to Chrome instance!');
+          logger.info("Successfully connected to Chrome instance!");
           connected = true;
           break;
         } catch (err) {
           logger.info(`Connection attempt ${i + 1} failed, retrying...`);
           if (i === maxRetries - 1) {
-            logger.error('Failed to connect after all retries', err);
+            logger.error("Failed to connect after all retries", err);
             return {
               success: false,
               error: `Failed to connect to Chrome after ${maxRetries} attempts. Please check:\n1. Chrome path is correct: ${executablePath}\n2. Port ${debugPort} is not in use\n3. Firewall allows localhost connections`,
@@ -344,20 +365,20 @@ export class ProfileService {
       if (!connected || !browser) {
         return {
           success: false,
-          error: 'Failed to establish connection to Chrome',
+          error: "Failed to establish connection to Chrome",
         };
       }
 
       // Get all pages
       const pages = await browser.pages();
-      
+
       // Use existing page or create new one
       if (pages.length > 0) {
         page = pages[0];
-        logger.info('Using existing Chrome page');
+        logger.info("Using existing Chrome page");
       } else {
         page = await browser.newPage();
-        logger.info('Created new Chrome page');
+        logger.info("Created new Chrome page");
       }
 
       // Navigate to Google Labs FX Tools Flow page
@@ -366,7 +387,9 @@ export class ProfileService {
         timeout: 30000,
       });
 
-      logger.info("Navigated to Google Labs page, waiting for user to login...");
+      logger.info(
+        "Navigated to Google Labs page, waiting for user to login..."
+      );
 
       // Check immediately for cookies (user might already be logged in)
       let result = await this.checkAndGetCookies(page);
@@ -385,44 +408,49 @@ export class ProfileService {
 
         // If we have cookies AND no sign-in button, we're logged in
         if (result.hasAuth && !isSignIn) {
-          logger.info(`Authentication detected! Cookie string length: ${result.cookieString.length}`);
+          logger.info(
+            `Authentication detected! Cookie string length: ${result.cookieString.length}`
+          );
           break;
         }
       }
 
       if (!result.hasAuth) {
         await browser.disconnect();
-        logger.info('Disconnected from Chrome instance (timeout)');
+        logger.info("Disconnected from Chrome instance (timeout)");
         return {
           success: false,
-          error: "Login timeout. No authentication cookies detected after 5 minutes.",
+          error:
+            "Login timeout. No authentication cookies detected after 5 minutes.",
         };
       }
 
       logger.info(`Cookies found for profile ${profile.name}`);
 
-      // Update profile with cookie string as-is
+      // Update profile login status only
       await profileRepository.update(id, {
-        cookies: result.cookieString,
-        cookieExpires: result.expires,
         isLoggedIn: true,
         updatedAt: new Date(),
       });
 
-      logger.info(`Cookies saved for profile: ${id}`);
+      logger.info(`Profile marked as logged in: ${id}`);
 
       // Get updated profile
       const updatedProfile = await profileRepository.findById(id);
 
       // Disconnect from browser (don't close it, user might want to keep using it)
       await browser.disconnect();
-      logger.info('Disconnected from Chrome instance');
+      logger.info("Disconnected from Chrome instance");
 
       return { success: true, data: updatedProfile! };
     } catch (error) {
       logger.error("Failed to login profile", error);
       if (browser) {
-        await browser.disconnect().catch((e: any) => logger.error("Failed to disconnect from browser", e));
+        await browser
+          .disconnect()
+          .catch((e: any) =>
+            logger.error("Failed to disconnect from browser", e)
+          );
       }
       return { success: false, error: String(error) };
     }
@@ -439,9 +467,18 @@ export class ProfileService {
       const possiblePaths = [
         "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        path.join(process.env.LOCALAPPDATA || "", "Google\\Chrome\\Application\\chrome.exe"),
-        path.join(process.env.PROGRAMFILES || "", "Google\\Chrome\\Application\\chrome.exe"),
-        path.join(process.env["PROGRAMFILES(X86)"] || "", "Google\\Chrome\\Application\\chrome.exe"),
+        path.join(
+          process.env.LOCALAPPDATA || "",
+          "Google\\Chrome\\Application\\chrome.exe"
+        ),
+        path.join(
+          process.env.PROGRAMFILES || "",
+          "Google\\Chrome\\Application\\chrome.exe"
+        ),
+        path.join(
+          process.env["PROGRAMFILES(X86)"] || "",
+          "Google\\Chrome\\Application\\chrome.exe"
+        ),
       ];
 
       for (const chromePath of possiblePaths) {
@@ -453,7 +490,10 @@ export class ProfileService {
       // macOS
       const possiblePaths = [
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        path.join(process.env.HOME || "", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        path.join(
+          process.env.HOME || "",
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        ),
       ];
 
       for (const chromePath of possiblePaths) {

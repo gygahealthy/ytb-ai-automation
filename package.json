@@ -56,6 +56,7 @@
   "dependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
     "clsx": "^2.0.0",
+    "got": "^14.6.0",
     "lucide-react": "^0.294.0",
     "puppeteer": "^21.6.1",
     "puppeteer-core": "^21.6.1",
@@ -69,7 +70,10 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^3.0.1",
     "sqlite3": "^5.1.7",
+    "tough-cookie": "^6.0.0",
+    "undici": "^6.22.0",
     "user-agents": "^1.1.667",
+    "uuid": "^13.0.0",
     "zustand": "^4.4.7"
   },
   "optionalDependencies": {

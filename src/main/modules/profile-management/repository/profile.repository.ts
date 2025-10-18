@@ -13,8 +13,6 @@ interface ProfileRow {
   proxy_password: string | null;
   credit_remaining: number;
   tags: string | null;
-  cookies: string | null;
-  cookie_expires: string | null;
   is_logged_in: number;
   created_at: string;
   updated_at: string;
@@ -60,16 +58,6 @@ export class ProfileRepository extends BaseRepository<Profile> {
       }
     }
 
-    // Parse cookies if exists (stored as plain string now)
-    if (row.cookies) {
-      profile.cookies = row.cookies;
-    }
-
-    // Parse cookie expires
-    if (row.cookie_expires) {
-      profile.cookieExpires = new Date(row.cookie_expires);
-    }
-
     return profile;
   }
 
@@ -78,11 +66,15 @@ export class ProfileRepository extends BaseRepository<Profile> {
 
     if (entity.id) row.id = entity.id;
     if (entity.name) row.name = entity.name;
-    if (entity.browserPath !== undefined) row.browser_path = entity.browserPath || null;
+    if (entity.browserPath !== undefined)
+      row.browser_path = entity.browserPath || null;
     if (entity.userDataDir) row.user_data_dir = entity.userDataDir;
-    if (entity.userAgent !== undefined) row.user_agent = entity.userAgent || null;
-    if (entity.creditRemaining !== undefined) row.credit_remaining = entity.creditRemaining;
-    if (entity.isLoggedIn !== undefined) row.is_logged_in = entity.isLoggedIn ? 1 : 0;
+    if (entity.userAgent !== undefined)
+      row.user_agent = entity.userAgent || null;
+    if (entity.creditRemaining !== undefined)
+      row.credit_remaining = entity.creditRemaining;
+    if (entity.isLoggedIn !== undefined)
+      row.is_logged_in = entity.isLoggedIn ? 1 : 0;
 
     // Serialize proxy
     if (entity.proxy) {
@@ -93,17 +85,10 @@ export class ProfileRepository extends BaseRepository<Profile> {
 
     // Serialize tags
     if (entity.tags !== undefined) {
-      row.tags = entity.tags && entity.tags.length > 0 ? JSON.stringify(entity.tags) : null;
-    }
-
-    // Store cookies as plain string (no serialization needed)
-    if (entity.cookies !== undefined) {
-      row.cookies = entity.cookies || null;
-    }
-
-    // Serialize cookie expires
-    if (entity.cookieExpires !== undefined) {
-      row.cookie_expires = entity.cookieExpires ? entity.cookieExpires.toISOString() : null;
+      row.tags =
+        entity.tags && entity.tags.length > 0
+          ? JSON.stringify(entity.tags)
+          : null;
     }
 
     if (entity.createdAt) row.created_at = entity.createdAt.toISOString();
@@ -116,11 +101,10 @@ export class ProfileRepository extends BaseRepository<Profile> {
    * Update profile credit
    */
   async updateCredit(id: string, amount: number): Promise<void> {
-    await this.db.run(`UPDATE ${this.tableName} SET credit_remaining = ?, updated_at = ? WHERE id = ?`, [
-      amount,
-      new Date().toISOString(),
-      id,
-    ]);
+    await this.db.run(
+      `UPDATE ${this.tableName} SET credit_remaining = ?, updated_at = ? WHERE id = ?`,
+      [amount, new Date().toISOString(), id]
+    );
   }
 }
 

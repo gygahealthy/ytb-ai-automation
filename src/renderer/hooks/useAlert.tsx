@@ -76,7 +76,7 @@ export function useAlert() {
           window.alert(title + opts.message);
         } catch (e) {
           // last-resort
-          // eslint-disable-next-line no-console
+           
           console.warn('Failed to show fallback alert', e);
         }
       },

@@ -1,8 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "noEmit": false,
     "outDir": "./dist",
     "jsx": "preserve",
@@ -10,6 +10,14 @@
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": ["src/main/**/*", "src/domain/**/*", "src/api/**/*", "src/common/**/*", "src/storage/**/*", "src/types/**/*", "src/utils/**/*"],
+  "include": [
+    "src/main/**/*",
+    "src/domain/**/*",
+    "src/api/**/*",
+    "src/common/**/*",
+    "src/storage/**/*",
+    "src/types/**/*",
+    "src/utils/**/*"
+  ],
   "exclude": ["node_modules", "dist", "src/renderer/**/*"]
 }

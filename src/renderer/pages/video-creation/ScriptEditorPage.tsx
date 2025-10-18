@@ -23,7 +23,7 @@ export type AspectRatio = "16:9" | "9:16" | "1:1";
 export type VideoQuality = "720p" | "1080p" | "4k";
 
 interface ScriptEditorPageProps {
-  initialScript?: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+  initialScript?: string;  
   initialScenes?: Scene[];
 }
 

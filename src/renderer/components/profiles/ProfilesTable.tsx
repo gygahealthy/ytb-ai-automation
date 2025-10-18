@@ -9,6 +9,7 @@ import {
   Tag,
   Trash2,
   User,
+  MessageSquare,
 } from "lucide-react";
 
 interface Profile {
@@ -45,6 +46,8 @@ interface ProfilesTableProps {
   onEditProfile: (profile: Profile) => void;
   onLoginProfile: (id: string) => void;
   onDeleteProfile: (id: string) => void;
+  onOpenCookieModal?: (profileId: string) => void;
+  onOpenChatModal?: (profileId: string) => void;
 }
 
 export default function ProfilesTable({
@@ -54,6 +57,8 @@ export default function ProfilesTable({
   onEditProfile,
   onLoginProfile,
   onDeleteProfile,
+  onOpenCookieModal,
+  onOpenChatModal,
 }: ProfilesTableProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -135,7 +140,10 @@ export default function ProfilesTable({
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {filteredProfiles.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                <td
+                  colSpan={9}
+                  className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                >
                   {profiles.length === 0
                     ? "No profiles yet. Create your first profile to get started."
                     : "No profiles match your filters."}
@@ -143,7 +151,10 @@ export default function ProfilesTable({
               </tr>
             ) : (
               filteredProfiles.map((profile) => (
-                <tr key={profile.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <tr
+                  key={profile.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
                   <td className="px-4 py-4 whitespace-nowrap w-32">
                     <div className="flex items-center gap-2">
                       <button
@@ -167,6 +178,24 @@ export default function ProfilesTable({
                       >
                         <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" />
                       </button>
+                      {onOpenCookieModal && (
+                        <button
+                          onClick={() => onOpenCookieModal(profile.id)}
+                          className="p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors group"
+                          title="Manage Cookies"
+                        >
+                          <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                        </button>
+                      )}
+                      {onOpenChatModal && (
+                        <button
+                          onClick={() => onOpenChatModal(profile.id)}
+                          className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
+                          title="Test Chat"
+                        >
+                          <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                        </button>
+                      )}
                     </div>
                   </td>
                   {columnVisibility.id && (
@@ -193,9 +222,15 @@ export default function ProfilesTable({
                     <td className="px-4 py-4 whitespace-nowrap w-28">
                       <span className="text-xs text-gray-600 dark:text-gray-400 font-medium flex items-center gap-2">
                         <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <span className="truncate" title={profile.browserPath || "Chrome"}>
+                        <span
+                          className="truncate"
+                          title={profile.browserPath || "Chrome"}
+                        >
                           {profile.browserPath
-                            ? profile.browserPath.split("\\").pop()?.replace(".exe", "") || "Chrome"
+                            ? profile.browserPath
+                                .split("\\")
+                                .pop()
+                                ?.replace(".exe", "") || "Chrome"
                             : "Chrome"}
                         </span>
                       </span>
@@ -205,7 +240,10 @@ export default function ProfilesTable({
                     <td className="px-4 py-4 w-32">
                       <span className="text-xs text-gray-600 dark:text-gray-400 font-mono flex items-center gap-2">
                         <Folder className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate block" title={profile.userDataDir}>
+                        <span
+                          className="truncate block"
+                          title={profile.userDataDir}
+                        >
                           {profile.userDataDir}
                         </span>
                       </span>
@@ -215,7 +253,10 @@ export default function ProfilesTable({
                     <td className="px-4 py-4 w-80">
                       <span className="text-xs text-gray-600 dark:text-gray-400 font-mono flex items-center gap-2">
                         <Globe className="w-4 h-4 flex-shrink-0" />
-                        <span className="line-clamp-2" title={profile.userAgent}>
+                        <span
+                          className="line-clamp-2"
+                          title={profile.userAgent}
+                        >
                           {profile.userAgent || "Default"}
                         </span>
                       </span>
@@ -252,7 +293,9 @@ export default function ProfilesTable({
                     <td className="px-4 py-4 whitespace-nowrap w-44">
                       <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        <span className="text-xs">{formatDate(profile.createdAt)}</span>
+                        <span className="text-xs">
+                          {formatDate(profile.createdAt)}
+                        </span>
                       </span>
                     </td>
                   )}
@@ -260,7 +303,11 @@ export default function ProfilesTable({
                     <td className="px-4 py-4 whitespace-nowrap w-36">
                       <div className="flex items-center gap-2">
                         <Cookie
-                          className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`}
+                          className={`w-4 h-4 ${
+                            isCookieExpired(profile.cookieExpires)
+                              ? "text-red-500"
+                              : "text-green-500"
+                          }`}
                         />
                         {profile.cookieExpires ? (
                           <span
@@ -270,10 +317,14 @@ export default function ProfilesTable({
                                 : "text-green-600 dark:text-green-400"
                             }`}
                           >
-                            {isCookieExpired(profile.cookieExpires) ? "Expired" : formatDate(profile.cookieExpires)}
+                            {isCookieExpired(profile.cookieExpires)
+                              ? "Expired"
+                              : formatDate(profile.cookieExpires)}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">No cookie</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            No cookie
+                          </span>
                         )}
                       </div>
                     </td>

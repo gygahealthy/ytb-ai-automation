@@ -59,4 +59,5 @@ export {
   veo3ProjectRepository,
   videoAnalysisRepository,
   youtubeChannelRepository,
+  CookieRepository,
 } from "./repositories";
