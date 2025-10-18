@@ -6,12 +6,12 @@ export interface WindowBounds {
 }
 
 export interface WindowPositioningConfig {
-  strategy: 'grid' | 'cascade' | 'manual';
+  strategy: "grid" | "cascade" | "manual";
   grid: {
     columns: number;
     rows: number;
-    direction: 'left-right' | 'right-left' | 'top-bottom' | 'bottom-top';
-    startCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    direction: "left-right" | "right-left" | "top-bottom" | "bottom-top";
+    startCorner: "top-left" | "top-right" | "bottom-left" | "bottom-right";
     gap: { x: number; y: number };
     fullscreenEach?: boolean;
     compact?: boolean;
@@ -24,14 +24,14 @@ export interface WindowPositioningConfig {
     startY: number;
   };
   defaultSize: { width: number; height: number };
-  preferredDisplay: 'primary' | 'secondary' | number;
+  preferredDisplay: "primary" | "secondary" | number;
   maxConcurrent: number;
 }
 
 export interface LaunchInstanceRequest {
   profileId: string;
-  automationType: 'chat' | 'veo3' | 'youtube' | 'custom';
-  provider?: 'chatgpt' | 'gemini';
+  automationType: "chat" | "veo3" | "youtube" | "custom";
+  provider?: "chatgpt" | "gemini";
   config?: any;
 }
 
@@ -41,7 +41,7 @@ export interface LaunchInstanceResponse {
     instanceId: string;
     sessionId?: string;
     debugPort: number;
-    status?: 'launching' | 'running' | 'error' | 'stopping' | 'stopped';
+    status?: "launching" | "running" | "error" | "stopping" | "stopped";
   };
   error?: string;
 }
@@ -57,27 +57,27 @@ export interface InstanceState {
   instanceId: string;
   profileId: string;
   profileName?: string;
-  automationType: 'chat' | 'veo3' | 'youtube' | 'custom';
-  provider?: 'chatgpt' | 'gemini';
-  status: 'launching' | 'running' | 'error' | 'stopping' | 'stopped';
-  
+  automationType: "chat" | "veo3" | "youtube" | "custom";
+  provider?: "chatgpt" | "gemini";
+  status: "launching" | "running" | "error" | "stopping" | "stopped";
+
   // Browser info
   debugPort: number;
   chromePid?: number;
   windowHandle?: number;
   sessionId?: string;
-  
+
   // Positioning
   windowBounds?: WindowBounds;
   screenSlot: number;
-  
+
   // Runtime info
   currentUrl: string;
   startedAt: Date;
   errorMessage?: string;
-  
+
   // Optional chat history for chat automation instances
-  chatHistory?: import('../chat-automation/types').ChatMessage[];
+  chatHistory?: import("../cdp-chat-automation/types").ChatMessage[];
   // Stats
   stats: InstanceStats;
 }

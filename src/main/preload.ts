@@ -203,6 +203,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       }),
   },
 
+  // Gemini Chat APIs
+  gemini: {
+    chat: {
+      send: (request: any) => ipcRenderer.invoke("gemini:chat:send", request),
+    },
+  },
+
   // Generic invoke for other channels
   invoke: (channel: string, ...args: any[]) =>
     ipcRenderer.invoke(channel, ...args),

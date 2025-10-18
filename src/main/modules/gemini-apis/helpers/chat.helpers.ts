@@ -339,3 +339,100 @@ export async function sendChatRequest(
     throw error;
   }
 }
+
+/**
+ * Send chat request with streaming response
+ * Calls onChunk callback for each parsed JSON chunk as it arrives
+ * Returns metadata from first response chunk
+ */
+export async function sendChatRequestStreaming(
+  cookieManager: CookieManagerDB,
+  prompt: string,
+  onChunk: (chunk: { text: string; html: string; index: number }) => void,
+  options: ChatOptions = {}
+): Promise<{ metadata: ConversationMetadata | null; totalChunks: number }> {
+  const { conversationContext = null, dryRun = false } = options;
+
+  // Add random delay to look more human (1-3 seconds)
+  if (!dryRun) {
+    const delay = Math.random() * 2000 + 1000;
+    logger.debug(`Adding human-like delay: ${delay.toFixed(0)}ms`);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  logger.info("💬 Sending chat request (streaming)...");
+  logger.debug(
+    `Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`
+  );
+
+  // Build payload
+  const fReq = buildChatPayload(prompt, conversationContext);
+
+  if (conversationContext) {
+    logger.debug(`Conversation: ${conversationContext.chatId}`);
+  } else {
+    logger.debug("New conversation");
+  }
+
+  // Dry run mode
+  if (dryRun) {
+    logger.info("🔍 DRY RUN - Request prepared but not sent");
+    return { metadata: null, totalChunks: 0 };
+  }
+
+  try {
+    // Create HTTP service
+    const httpService = createHttpService(cookieManager);
+
+    try {
+      // Get token
+      const token = await httpService.getToken();
+
+      // Send streaming request
+      let metadata: ConversationMetadata | null = null;
+      let totalChunks = 0;
+      let chunkIndex = 0;
+
+      for await (const streamChunk of httpService.postStream(token, fReq, {
+        retries: 3,
+      })) {
+        totalChunks++;
+
+        // Extract metadata from first chunk
+        if (!metadata) {
+          metadata = extractMetadata(streamChunk.chunk);
+        }
+
+        // Extract messages from chunk
+        const extracted = extractMessages(streamChunk.chunk);
+
+        for (const html of extracted) {
+          const text = htmlToText(html);
+
+          logger.info(`--- Chunk ${++chunkIndex} ---`);
+          logger.info(text);
+          logger.info(`--- End chunk ${chunkIndex} ---\n`);
+
+          // Call callback with chunk data
+          onChunk({
+            text,
+            html,
+            index: chunkIndex - 1,
+          });
+        }
+      }
+
+      logger.info(
+        `✅ Stream complete (${totalChunks} chunks, ${chunkIndex} messages)`
+      );
+
+      return { metadata, totalChunks };
+    } finally {
+      // Clean up HTTP service
+      await httpService.close();
+    }
+  } catch (error) {
+    logger.error("Chat request streaming failed:", error);
+    throw error;
+  }
+}

@@ -1,7 +1,11 @@
 import clsx from "clsx";
-import { Maximize2, Moon, Palette, Sun, Type } from "lucide-react";
+import { Maximize2, Moon, Palette, Sun, Type, Zap } from "lucide-react";
 // no default React import needed with modern JSX transform
-import { ColorScheme, FontSize, useSettingsStore } from "../../store/settings.store";
+import {
+  ColorScheme,
+  FontSize,
+  useSettingsStore,
+} from "../../store/settings.store";
 
 const colorSchemes: { value: ColorScheme; label: string; color: string }[] = [
   { value: "blue", label: "Blue", color: "bg-blue-500" },
@@ -22,7 +26,18 @@ const fontSizes: { value: FontSize; label: string; size: string }[] = [
 ];
 
 export default function GeneralSettings() {
-  const { theme, colorScheme, compactMode, fontSize, setTheme, setColorScheme, setCompactMode, setFontSize } = useSettingsStore();
+  const {
+    theme,
+    colorScheme,
+    compactMode,
+    fontSize,
+    streamingEnabled,
+    setTheme,
+    setColorScheme,
+    setCompactMode,
+    setFontSize,
+    setStreamingEnabled,
+  } = useSettingsStore();
 
   return (
     <div className="space-y-6">
@@ -95,7 +110,9 @@ export default function GeneralSettings() {
           onClick={() => setCompactMode(!compactMode)}
           className={clsx(
             "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
-            compactMode ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+            compactMode
+              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
           )}
         >
           <span>Reduce spacing and padding</span>
@@ -105,7 +122,12 @@ export default function GeneralSettings() {
               compactMode ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
             )}
           >
-            <div className={clsx("absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform", compactMode ? "translate-x-6" : "translate-x-0.5")} />
+            <div
+              className={clsx(
+                "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                compactMode ? "translate-x-6" : "translate-x-0.5"
+              )}
+            />
           </div>
         </button>
       </div>
@@ -123,13 +145,49 @@ export default function GeneralSettings() {
               onClick={() => setFontSize(size.value)}
               className={clsx(
                 "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all",
-                fontSize === size.value ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                fontSize === size.value
+                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
               )}
             >
               <span className={size.size}>{size.label}</span>
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Streaming Response */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <label className="font-semibold">Streaming Response</label>
+        </div>
+        <button
+          onClick={() => setStreamingEnabled(!streamingEnabled)}
+          className={clsx(
+            "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
+            streamingEnabled
+              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+          )}
+        >
+          <span>Stream chat responses in real-time</span>
+          <div
+            className={clsx(
+              "w-12 h-6 rounded-full transition-colors relative",
+              streamingEnabled
+                ? "bg-primary-500"
+                : "bg-gray-300 dark:bg-gray-600"
+            )}
+          >
+            <div
+              className={clsx(
+                "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                streamingEnabled ? "translate-x-6" : "translate-x-0.5"
+              )}
+            />
+          </div>
+        </button>
       </div>
     </div>
   );

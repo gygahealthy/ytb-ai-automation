@@ -71,6 +71,14 @@ export interface HttpResponse {
 }
 
 /**
+ * Streaming chunk from Gemini API
+ */
+export interface StreamChunk {
+  chunk: unknown[];
+  index: number;
+}
+
+/**
  * Consolidated HTTP Service
  * Provides clean API for making HTTP requests to Gemini
  */
@@ -348,6 +356,115 @@ export class HttpService {
 
     logger.error("POST request failed after all retries:", lastError);
     throw lastError || new Error("POST request failed");
+  }
+
+  /**
+   * Send POST request to Gemini API with streaming response
+   * Yields parsed JSON chunks as they arrive
+   */
+  async *postStream(
+    token: string,
+    fReq: string,
+    options?: Partial<HttpRequestOptions>
+  ): AsyncGenerator<StreamChunk, void, unknown> {
+    if (!validateToken(token)) {
+      throw new Error("Invalid token provided to post request");
+    }
+
+    const headers = this.buildRequestHeaders("gemini", options);
+
+    const body = new URLSearchParams({
+      at: token,
+      "f.req": fReq,
+    }).toString();
+
+    logger.debug(`→ POST (STREAM) ${config.apiEndpoint}`);
+    logger.debug(`  Token: ${token.substring(0, 20)}...`);
+    logger.debug(`  f.req: ${fReq.length} chars`);
+
+    try {
+      const response = await request(config.apiEndpoint, {
+        method: "POST",
+        headers,
+        body,
+        dispatcher: sharedAgent,
+      });
+
+      const contentEncoding = response.headers["content-encoding"];
+      const statusMessage = getStatusMessage(response.statusCode);
+
+      logger.debug(`← ${response.statusCode} ${statusMessage} (streaming)`);
+
+      if (response.statusCode !== 200) {
+        throw new Error(
+          `POST request failed: ${response.statusCode} ${statusMessage}`
+        );
+      }
+
+      let buffer = "";
+      let chunkIndex = 0;
+      let isGzipped = contentEncoding === "gzip";
+
+      // If gzipped, decompress the stream first
+      if (isGzipped) {
+        const chunks: Buffer[] = [];
+
+        for await (const chunk of response.body) {
+          chunks.push(Buffer.from(chunk));
+        }
+
+        const decompressed = await decompressGzip(Buffer.concat(chunks));
+        buffer = decompressed;
+      } else {
+        // Read stream directly
+        for await (const chunk of response.body) {
+          buffer += chunk.toString("utf8");
+
+          // Try to extract and yield complete JSON arrays
+          while (true) {
+            const found = HttpService.extractFirstJsonArray(buffer);
+            if (!found) break;
+
+            buffer = buffer.slice(found.end);
+
+            try {
+              const parsed = JSON.parse(found.text);
+              if (Array.isArray(parsed)) {
+                logger.debug(`📨 Chunk ${chunkIndex}: ${parsed.length} items`);
+                yield { chunk: parsed, index: chunkIndex++ };
+              }
+            } catch (error) {
+              logger.warn("Failed to parse JSON chunk:", error);
+            }
+          }
+        }
+      }
+
+      // Handle gzipped buffer: parse remaining content
+      if (isGzipped) {
+        while (true) {
+          const found = HttpService.extractFirstJsonArray(buffer);
+          if (!found) break;
+
+          buffer = buffer.slice(found.end);
+
+          try {
+            const parsed = JSON.parse(found.text);
+            if (Array.isArray(parsed)) {
+              logger.debug(`📨 Chunk ${chunkIndex}: ${parsed.length} items`);
+              yield { chunk: parsed, index: chunkIndex++ };
+            }
+          } catch (error) {
+            logger.warn("Failed to parse JSON chunk:", error);
+          }
+        }
+      }
+
+      logger.debug(`✅ Stream complete (${chunkIndex} chunks)`);
+    } catch (error) {
+      logger.error("POST stream failed:", error);
+      throw error;
+    }
   }
 
   /**

@@ -18,7 +18,6 @@ export {
   promptHistory,
   promptTypes,
   cookies,
-  gemini,
   devtools,
 };
 
@@ -33,5 +32,6 @@ const api = {
   cookies,
   gemini,
   devtools,
+  on: gemini.on, // Export streaming listener
 };
 export default api;

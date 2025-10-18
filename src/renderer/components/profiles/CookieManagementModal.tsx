@@ -147,7 +147,25 @@ export default function CookieManagementModal({
 
         {/* Cookies List */}
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex gap-1 mb-3">
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></div>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Loading cookies...
+            </p>
+          </div>
         ) : cookies.length === 0 ? (
           <div className="flex items-center gap-2 py-8 text-gray-500">
             <AlertCircle size={20} />
@@ -268,6 +286,7 @@ function AddCookieModal({
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [error, setError] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,6 +323,7 @@ function AddCookieModal({
     }
 
     setExtracting(true);
+    setError("");
     try {
       const response: ApiResponse<Cookie> = await (
         window as any
@@ -311,11 +331,11 @@ function AddCookieModal({
       if (response.success) {
         onSuccess();
       } else {
-        alert(`Error: ${response.error}`);
+        setError(response.error || "Failed to extract cookie");
       }
     } catch (error) {
       console.error("Failed to extract cookie:", error);
-      alert("Failed to extract cookie from URL");
+      setError("Failed to extract cookie from URL");
     } finally {
       setExtracting(false);
     }
@@ -420,21 +440,38 @@ function AddCookieModal({
               </p>
             </div>
 
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 text-xs text-red-800 dark:text-red-300">
+                <p className="font-semibold mb-1">Error:</p>
+                <p>{error}</p>
+              </div>
+            )}
+
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded disabled:opacity-50"
+                disabled={extracting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleExtractCookie}
                 disabled={extracting}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded flex items-center gap-2"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-600 text-white rounded flex items-center gap-2 disabled:opacity-75 transition-all"
               >
-                <Zap size={16} />
-                {extracting ? "Extracting..." : "Extract"}
+                {extracting ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Extracting...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} />
+                    Extract
+                  </>
+                )}
               </button>
             </div>
           </div>

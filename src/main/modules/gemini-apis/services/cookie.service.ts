@@ -5,6 +5,7 @@ import { ApiResponse } from "../../../../shared/types";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as fs from "fs";
+import { database } from "../../../storage/database";
 
 // Add stealth plugin to puppeteer
 puppeteer.use(StealthPlugin());
@@ -700,8 +701,6 @@ let cookieServiceInstance: CookieService | null = null;
 export function getCookieService(): CookieService {
   if (!cookieServiceInstance) {
     // Import here to avoid circular dependencies
-    const { database } = require("../../../storage/database");
-    const { CookieRepository } = require("../repository/cookie.repository");
     const db = database.getSQLiteDatabase();
     const cookieRepository = new CookieRepository(db);
     cookieServiceInstance = new CookieService(cookieRepository);

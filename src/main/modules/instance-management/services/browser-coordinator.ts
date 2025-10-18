@@ -9,6 +9,7 @@ import { ScreenPositioner, DEFAULT_WINDOW_CONFIG } from "./screen-positioner";
 import { browserManager } from "./browser-manager";
 import { moveWindowByPid } from "../../../../platform/windows/windows.util";
 import { Logger } from "../../../../shared/utils/logger";
+import { chatAutomationService } from "../../cdp-chat-automation/services/chat-automation.service";
 
 const logger = new Logger("AutomationCoordinator");
 
@@ -373,10 +374,6 @@ export class AutomationCoordinator {
       // chatAutomationService directly), register a new instance that points to that
       // existing session so the UI can connect instead of launching a duplicate.
       try {
-        const { chatAutomationService } = await import(
-          // @ts-ignore
-          "../../chat-automation/services/chat-automation.service"
-        );
         const existingSession = chatAutomationService.getSessionByProfileId?.(
           request.profileId
         );
@@ -556,11 +553,6 @@ export class AutomationCoordinator {
     try {
       // Import automation service based on type
       if (request.automationType === "chat") {
-        const { chatAutomationService } = await import(
-          // @ts-ignore
-          "../../chat-automation/services/chat-automation.service"
-        );
-
         // If the chatAutomationService already has an active session for this profile,
         // reuse that session instead of creating a new browser/page.
         try {
@@ -646,10 +638,6 @@ export class AutomationCoordinator {
       if (instance.automationType === "chat" && instance.sessionId) {
         try {
           logger.info(`Stopping chat session ${instance.sessionId}`);
-          const { chatAutomationService } = await import(
-            // @ts-ignore
-            "../../chat-automation/services/chat-automation.service"
-          );
           const res = await chatAutomationService.closeSession(
             instance.sessionId
           );

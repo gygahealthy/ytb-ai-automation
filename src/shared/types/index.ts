@@ -17,7 +17,7 @@ export type InstanceStatus =
   | "stopping"
   | "stopped";
 
-import type { ChatMessage } from "../../main/modules/chat-automation/types";
+import type { ChatMessage } from "../../main/modules/cdp-chat-automation/types";
 import type {
   InstanceState,
   InstanceStats,
