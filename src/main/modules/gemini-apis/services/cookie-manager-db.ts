@@ -233,6 +233,14 @@ export class CookieManagerDB {
   }
 
   /**
+   * Get the cookie entity from database
+   * Used to access cached tokens and metadata
+   */
+  getEntity(): Cookie | null {
+    return this.dbEntity;
+  }
+
+  /**
    * Validate cookies
    */
   validate(): ValidationResult {

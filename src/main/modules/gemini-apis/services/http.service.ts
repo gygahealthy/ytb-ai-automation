@@ -6,6 +6,7 @@
  */
 
 import { request, Agent } from "undici";
+import { createGunzip } from "zlib";
 import { logger } from "../../../utils/logger-backend.js";
 import { config } from "../shared/config/app-config.js";
 import type { CookieManagerDB } from "./cookie-manager-db.js";
@@ -23,6 +24,29 @@ const sharedAgent = new Agent({
   keepAliveMaxTimeout: 120000,
   maxCachedSessions: 5,
 });
+
+/**
+ * Decompress gzip data to string
+ */
+function decompressGzip(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const gunzip = createGunzip();
+    let result = "";
+
+    gunzip.on("data", (chunk: Buffer) => {
+      result += chunk.toString("utf8");
+    });
+
+    gunzip.on("end", () => {
+      resolve(result);
+    });
+
+    gunzip.on("error", reject);
+
+    gunzip.write(buffer);
+    gunzip.end();
+  });
+}
 
 /**
  * HTTP request options
@@ -74,13 +98,42 @@ export class HttpService {
 
     // Extract fresh token
     logger.info("🔄 Extracting fresh token from Gemini page...");
-    const tokenData = await extractTokens(this.cookieManager);
+
+    // Get the cookie entity from database to check for cached token
+    const cookieEntity = this.cookieManager.getEntity();
+
+    const tokenData = await extractTokens(
+      this.cookieManager,
+      cookieEntity || undefined
+    );
 
     this.cachedToken = tokenData.snlm0e;
     this.tokenTimestamp = tokenData.timestamp;
 
     if (!validateToken(this.cachedToken)) {
       throw new Error("Extracted token failed validation");
+    }
+
+    // Update database with new token if it was freshly extracted
+    if (cookieEntity && cookieEntity.geminiToken !== this.cachedToken) {
+      try {
+        logger.debug("💾 Storing new token in database...");
+        const { getCookieService } = await import("./cookie.service.js");
+        const cookieService = getCookieService();
+
+        await cookieService.updateRotation(cookieEntity.id, {
+          lastRotatedAt: new Date().toISOString(),
+          geminiToken: this.cachedToken,
+        });
+
+        logger.debug("✅ Token updated in database");
+      } catch (updateError) {
+        logger.warn(
+          "⚠️ Failed to update token in database, but continuing with chat",
+          updateError
+        );
+        // Don't throw - token is valid even if we couldn't store it
+      }
     }
 
     logger.info(`✅ Token ready: ${this.cachedToken.substring(0, 20)}...`);
@@ -133,7 +186,23 @@ export class HttpService {
         dispatcher: sharedAgent,
       });
 
-      const body = await response.body.text();
+      // Read body as buffer first
+      const buffer = await response.body.arrayBuffer();
+      const contentEncoding = response.headers["content-encoding"];
+
+      // Decompress if gzipped
+      let body: string;
+      const uint8Array = new Uint8Array(buffer);
+      if (
+        contentEncoding === "gzip" ||
+        (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)
+      ) {
+        logger.debug("📦 Decompressing gzip response...");
+        body = await decompressGzip(Buffer.from(buffer));
+      } else {
+        body = Buffer.from(buffer).toString("utf8");
+      }
+
       const statusMessage = getStatusMessage(response.statusCode);
 
       logger.debug(
@@ -204,7 +273,22 @@ export class HttpService {
           dispatcher: sharedAgent,
         });
 
-        const responseBody = await response.body.text();
+        const buffer = await response.body.arrayBuffer();
+        const contentEncoding = response.headers["content-encoding"];
+
+        // Decompress if gzipped
+        let responseBody: string;
+        const uint8Array = new Uint8Array(buffer);
+        if (
+          contentEncoding === "gzip" ||
+          (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)
+        ) {
+          logger.debug("📦 Decompressing gzip response...");
+          responseBody = await decompressGzip(Buffer.from(buffer));
+        } else {
+          responseBody = Buffer.from(buffer).toString("utf8");
+        }
+
         const statusMessage = getStatusMessage(response.statusCode);
 
         logger.debug(

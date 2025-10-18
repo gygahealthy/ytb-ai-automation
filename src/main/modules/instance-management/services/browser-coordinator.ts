@@ -1,12 +1,16 @@
 // Removed unused child_process, path and app imports (workers not implemented yet)
-import { InstanceState, LaunchInstanceRequest, LaunchInstanceResponse } from '../../../../shared/types';
-import { instanceManager } from './instance-manager';
-import { ScreenPositioner, DEFAULT_WINDOW_CONFIG } from './screen-positioner';
-import { browserManager } from './browser-manager';
-import { moveWindowByPid } from '../../../../platform/windows/windows.util';
-import { Logger } from '../../../../shared/utils/logger';
+import {
+  InstanceState,
+  LaunchInstanceRequest,
+  LaunchInstanceResponse,
+} from "../../../../shared/types";
+import { instanceManager } from "./instance-manager";
+import { ScreenPositioner, DEFAULT_WINDOW_CONFIG } from "./screen-positioner";
+import { browserManager } from "./browser-manager";
+import { moveWindowByPid } from "../../../../platform/windows/windows.util";
+import { Logger } from "../../../../shared/utils/logger";
 
-const logger = new Logger('AutomationCoordinator');
+const logger = new Logger("AutomationCoordinator");
 
 /**
  * Coordinates automation workers and manages their lifecycle
@@ -35,20 +39,35 @@ export class AutomationCoordinator {
     try {
       const positioner = this.getPositioner();
       const instance = instanceManager.getInstance(instanceId);
-      if (!instance) return { success: false, error: 'Instance not found' };
+      if (!instance) return { success: false, error: "Instance not found" };
 
       const activeCount = instanceManager.getAllInstances().length;
-      const moveResult = positioner.moveInstanceToSlot(instance.screenSlot, slot, activeCount > 1 ? activeCount : undefined);
+      const moveResult = positioner.moveInstanceToSlot(
+        instance.screenSlot,
+        slot,
+        activeCount > 1 ? activeCount : undefined
+      );
 
       // Update moved instance
-      instanceManager.updateInstanceState(instanceId, { screenSlot: moveResult.moved.slot, windowBounds: moveResult.moved.bounds });
+      instanceManager.updateInstanceState(instanceId, {
+        screenSlot: moveResult.moved.slot,
+        windowBounds: moveResult.moved.bounds,
+      });
 
       // If someone was displaced, find which instance was at target and update it
       if (moveResult.displaced) {
         const displaced = moveResult.displaced;
-        const displacedInst = instanceManager.getAllInstances().find(i => i.instanceId !== instanceId && i.screenSlot === displaced.slot);
+        const displacedInst = instanceManager
+          .getAllInstances()
+          .find(
+            (i) =>
+              i.instanceId !== instanceId && i.screenSlot === displaced.slot
+          );
         if (displacedInst) {
-          instanceManager.updateInstanceState(displacedInst.instanceId, { screenSlot: displaced.slot, windowBounds: displaced.bounds });
+          instanceManager.updateInstanceState(displacedInst.instanceId, {
+            screenSlot: displaced.slot,
+            windowBounds: displaced.bounds,
+          });
           await Promise.all([
             this.repositionInstance(instanceId),
             this.repositionInstance(displacedInst.instanceId),
@@ -60,7 +79,10 @@ export class AutomationCoordinator {
       await this.repositionInstance(instanceId);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -76,7 +98,7 @@ export class AutomationCoordinator {
       if (!bounds) return false;
 
       // Try to use browserManager to set bounds via CDP if available
-      const browserInst = browserManager.getBrowser(instance.sessionId || '');
+      const browserInst = browserManager.getBrowser(instance.sessionId || "");
       if (browserInst && browserInst.browser) {
         let cdpSuccess = false;
         const maxCdpAttempts = 3;
@@ -86,47 +108,84 @@ export class AutomationCoordinator {
             const page = pages.length > 0 ? pages[0] : null;
             if (page) {
               const client = await page.target().createCDPSession();
-              const winForTarget = await client.send('Browser.getWindowForTarget');
-              const windowId = (winForTarget && (winForTarget as any).windowId) || (winForTarget as any).windowId;
-              await client.send('Browser.setWindowBounds', {
+              const winForTarget = await client.send(
+                "Browser.getWindowForTarget"
+              );
+              const windowId =
+                (winForTarget && (winForTarget as any).windowId) ||
+                (winForTarget as any).windowId;
+              await client.send("Browser.setWindowBounds", {
                 windowId,
-                bounds: { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height, windowState: 'normal' as any },
+                bounds: {
+                  left: bounds.x,
+                  top: bounds.y,
+                  width: bounds.width,
+                  height: bounds.height,
+                  windowState: "normal" as any,
+                },
               });
-              try { await client.detach(); } catch (e) { /* ignore */ }
-              logger.info(`CDP setWindowBounds success for instance ${instanceId} (attempt ${attempt})`);
+              try {
+                await client.detach();
+              } catch (e) {
+                /* ignore */
+              }
+              logger.info(
+                `CDP setWindowBounds success for instance ${instanceId} (attempt ${attempt})`
+              );
               cdpSuccess = true;
               break;
             }
           } catch (err) {
-            logger.warn(`CDP attempt ${attempt} failed for instance ${instanceId}`, err);
+            logger.warn(
+              `CDP attempt ${attempt} failed for instance ${instanceId}`,
+              err
+            );
             // small backoff before retrying
-            await new Promise(r => setTimeout(r, 200 * attempt));
+            await new Promise((r) => setTimeout(r, 200 * attempt));
           }
         }
 
         if (!cdpSuccess) {
-          logger.warn(`CDP failed for instance ${instanceId} after ${maxCdpAttempts} attempts, trying native fallback`);
+          logger.warn(
+            `CDP failed for instance ${instanceId} after ${maxCdpAttempts} attempts, trying native fallback`
+          );
           try {
-            const pid = browserInst.process && (browserInst.process.pid as number);
-            if (pid && process.platform === 'win32') {
-              logger.info(`Attempting native fallback moveWindowByPid for pid=${pid} bounds=${JSON.stringify(bounds)}`);
-              const ok = moveWindowByPid(pid, bounds.x, bounds.y, bounds.width, bounds.height);
-              if (!ok) logger.warn('Windows fallback failed to move window');
-              else logger.info(`Native moveWindowByPid succeeded for pid ${pid}`);
+            const pid =
+              browserInst.process && (browserInst.process.pid as number);
+            if (pid && process.platform === "win32") {
+              logger.info(
+                `Attempting native fallback moveWindowByPid for pid=${pid} bounds=${JSON.stringify(
+                  bounds
+                )}`
+              );
+              const ok = moveWindowByPid(
+                pid,
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height
+              );
+              if (!ok) logger.warn("Windows fallback failed to move window");
+              else
+                logger.info(`Native moveWindowByPid succeeded for pid ${pid}`);
             } else {
-              logger.warn('No PID available for native fallback or platform not supported');
+              logger.warn(
+                "No PID available for native fallback or platform not supported"
+              );
             }
           } catch (e) {
-            logger.error('Windows fallback failed', e);
+            logger.error("Windows fallback failed", e);
           }
         }
       } else {
-        logger.warn(`No browser instance available for ${instanceId}, cannot reposition via CDP`);
+        logger.warn(
+          `No browser instance available for ${instanceId}, cannot reposition via CDP`
+        );
       }
 
       return true;
     } catch (error) {
-      logger.error('Failed to reposition instance', error);
+      logger.error("Failed to reposition instance", error);
       return false;
     }
   }
@@ -142,21 +201,29 @@ export class AutomationCoordinator {
     // If a preset is being applied and this call is not forcing full-grid, skip to avoid
     // overriding the preset's full-grid sizing with active-count sizing.
     if (this.applyingPreset && !forceFullGrid) {
-      logger.info('repositionAll skipped because a preset is being applied (non-forced call)');
+      logger.info(
+        "repositionAll skipped because a preset is being applied (non-forced call)"
+      );
       return;
     }
 
     const instances = instanceManager.getAllInstances();
     const activeCount = instances.length;
-    const mode = forceFullGrid ? 'full-grid' : `active-count=${activeCount}`;
+    const mode = forceFullGrid ? "full-grid" : `active-count=${activeCount}`;
     logger.info(`Repositioning all (${instances.length}) using mode: ${mode}`);
 
     for (let idx = 0; idx < instances.length; idx++) {
       const inst = instances[idx];
       // Recalculate window bounds. If forcing full-grid, pass undefined for activeCount so
       // calculateWindowBounds uses the configured columns/rows. Otherwise pass actual activeCount.
-      const bounds = this.positioner.calculateWindowBounds(inst.screenSlot, undefined, forceFullGrid ? undefined : activeCount);
-      instanceManager.updateInstanceState(inst.instanceId, { windowBounds: bounds });
+      const bounds = this.positioner.calculateWindowBounds(
+        inst.screenSlot,
+        undefined,
+        forceFullGrid ? undefined : activeCount
+      );
+      instanceManager.updateInstanceState(inst.instanceId, {
+        windowBounds: bounds,
+      });
       // Attempt to apply via CDP/native fallback
       try {
         await this.repositionInstance(inst.instanceId);
@@ -171,39 +238,41 @@ export class AutomationCoordinator {
    */
   async applyPreset(preset: string): Promise<void> {
     // Guard: if preset is undefined/null/empty, log error and skip
-    if (!preset || typeof preset !== 'string' || preset.trim() === '') {
-      logger.error(`applyPreset called with invalid preset: ${JSON.stringify(preset)}`);
+    if (!preset || typeof preset !== "string" || preset.trim() === "") {
+      logger.error(
+        `applyPreset called with invalid preset: ${JSON.stringify(preset)}`
+      );
       return;
     }
 
     // handle presets (grid, fullscreen each, cascade, and 1x2)
     const current = this.positioner.getConfig();
 
-    if (preset === '1x1') {
+    if (preset === "1x1") {
       // each window occupies full screen
       this.positioner.updateConfig({
-        strategy: 'grid',
+        strategy: "grid",
         grid: { ...current.grid, columns: 1, rows: 1, fullscreenEach: true },
       });
-    } else if (preset === '1x2-vertical') {
+    } else if (preset === "1x2-vertical") {
       // two vertical split
       this.positioner.updateConfig({
-        strategy: 'grid',
+        strategy: "grid",
         grid: { ...current.grid, columns: 1, rows: 2, fullscreenEach: false },
       });
-    } else if (preset === '1x2-horizontal') {
+    } else if (preset === "1x2-horizontal") {
       // two horizontal split
       this.positioner.updateConfig({
-        strategy: 'grid',
+        strategy: "grid",
         grid: { ...current.grid, columns: 2, rows: 1, fullscreenEach: false },
       });
-    } else if (preset === 'cascade') {
-      this.positioner.updateConfig({ strategy: 'cascade' });
+    } else if (preset === "cascade") {
+      this.positioner.updateConfig({ strategy: "cascade" });
     } else {
       // map preset to columns/rows for other grid presets
       const map: Record<string, { columns: number; rows: number }> = {
-        '2x2': { columns: 2, rows: 2 },
-        '4x4': { columns: 4, rows: 4 },
+        "2x2": { columns: 2, rows: 2 },
+        "4x4": { columns: 4, rows: 4 },
       };
 
       const settings = map[preset];
@@ -214,20 +283,40 @@ export class AutomationCoordinator {
 
       // Update positioner config and ensure we switch back to grid strategy
       const currentGrid = current.grid;
-      logger.info(`Applying preset ${preset} => columns=${settings.columns} rows=${settings.rows} currentGrid=${JSON.stringify(currentGrid)}`);
-      this.positioner.updateConfig({ strategy: 'grid', grid: { ...currentGrid, columns: settings.columns, rows: settings.rows, fullscreenEach: false } });
-      logger.info('New grid config: ' + JSON.stringify(this.positioner.getConfig().grid));
+      logger.info(
+        `Applying preset ${preset} => columns=${settings.columns} rows=${
+          settings.rows
+        } currentGrid=${JSON.stringify(currentGrid)}`
+      );
+      this.positioner.updateConfig({
+        strategy: "grid",
+        grid: {
+          ...currentGrid,
+          columns: settings.columns,
+          rows: settings.rows,
+          fullscreenEach: false,
+        },
+      });
+      logger.info(
+        "New grid config: " + JSON.stringify(this.positioner.getConfig().grid)
+      );
     }
 
-  // Reset slots and reassign sequentially
-  this.positioner.reset();
+    // Reset slots and reassign sequentially
+    this.positioner.reset();
     const instances = instanceManager.getAllInstances();
     // Assign slots using the configured full grid so the layout reflects the preset
     for (let idx = 0; idx < instances.length; idx++) {
       const inst = instances[idx];
       const newSlot = this.positioner.getNextAvailableSlot();
-      const bounds = this.positioner.calculateWindowBounds(newSlot, undefined /* full-grid calc */);
-      instanceManager.updateInstanceState(inst.instanceId, { screenSlot: newSlot, windowBounds: bounds });
+      const bounds = this.positioner.calculateWindowBounds(
+        newSlot,
+        undefined /* full-grid calc */
+      );
+      instanceManager.updateInstanceState(inst.instanceId, {
+        screenSlot: newSlot,
+        windowBounds: bounds,
+      });
     }
 
     // Give the browser a short moment to settle (some Chrome windows may be opened maximized)
@@ -239,7 +328,7 @@ export class AutomationCoordinator {
     try {
       await this.repositionAll(true);
     } catch (e) {
-      logger.warn('repositionAll(full-grid) failed after applyPreset', e);
+      logger.warn("repositionAll(full-grid) failed after applyPreset", e);
     } finally {
       this.applyingPreset = false;
     }
@@ -255,14 +344,20 @@ export class AutomationCoordinator {
   /**
    * Launch a new automation instance
    */
-  async launchInstance(request: LaunchInstanceRequest): Promise<LaunchInstanceResponse> {
+  async launchInstance(
+    request: LaunchInstanceRequest
+  ): Promise<LaunchInstanceResponse> {
     try {
       // If a profile already has an instance, return its info so the renderer
       // can connect to the existing remote debug/session instead of trying
       // to launch a duplicate instance.
-      const existingInstance = instanceManager.getInstanceByProfileId(request.profileId);
+      const existingInstance = instanceManager.getInstanceByProfileId(
+        request.profileId
+      );
       if (existingInstance) {
-        logger.info(`Profile ${request.profileId} already running in instance ${existingInstance.instanceId}; returning existing session info`);
+        logger.info(
+          `Profile ${request.profileId} already running in instance ${existingInstance.instanceId}; returning existing session info`
+        );
         return {
           success: true,
           data: {
@@ -278,13 +373,23 @@ export class AutomationCoordinator {
       // chatAutomationService directly), register a new instance that points to that
       // existing session so the UI can connect instead of launching a duplicate.
       try {
-        const { chatAutomationService } = await import('../../chat-automation/services/chat-automation.service');
-        const existingSession = chatAutomationService.getSessionByProfileId?.(request.profileId);
+        const { chatAutomationService } = await import(
+          // @ts-ignore
+          "../../chat-automation/services/chat-automation.service"
+        );
+        const existingSession = chatAutomationService.getSessionByProfileId?.(
+          request.profileId
+        );
         if (existingSession) {
-          logger.info(`Found existing chat session for profile ${request.profileId} (session ${existingSession.sessionId}), registering instance`);
+          logger.info(
+            `Found existing chat session for profile ${request.profileId} (session ${existingSession.sessionId}), registering instance`
+          );
 
           // Generate instance and assign slot
-          const instanceId = instanceManager.generateInstanceId(request.profileId, request.automationType);
+          const instanceId = instanceManager.generateInstanceId(
+            request.profileId,
+            request.automationType
+          );
           const screenSlot = this.positioner.getNextAvailableSlot();
 
           const initialState: InstanceState = {
@@ -292,12 +397,12 @@ export class AutomationCoordinator {
             profileId: request.profileId,
             automationType: request.automationType,
             provider: request.provider,
-            status: 'running',
+            status: "running",
             debugPort: existingSession.debugPort || 0,
             sessionId: existingSession.sessionId,
             screenSlot,
             windowBounds: { x: 0, y: 0, width: 0, height: 0 },
-            currentUrl: '',
+            currentUrl: "",
             startedAt: new Date(),
             stats: {
               messagesProcessed: 0,
@@ -312,8 +417,14 @@ export class AutomationCoordinator {
           // Recalculate bounds and update
           const activeCount = instanceManager.getAllInstances().length;
           const useActiveCount = activeCount > 1 ? activeCount : undefined;
-          const recalculatedBounds = this.positioner.calculateWindowBounds(screenSlot, undefined, useActiveCount);
-          instanceManager.updateInstanceState(instanceId, { windowBounds: recalculatedBounds });
+          const recalculatedBounds = this.positioner.calculateWindowBounds(
+            screenSlot,
+            undefined,
+            useActiveCount
+          );
+          instanceManager.updateInstanceState(instanceId, {
+            windowBounds: recalculatedBounds,
+          });
 
           return {
             success: true,
@@ -321,7 +432,7 @@ export class AutomationCoordinator {
               instanceId,
               sessionId: existingSession.sessionId,
               debugPort: existingSession.debugPort || 0,
-              status: 'running',
+              status: "running",
             },
           };
         }
@@ -333,7 +444,7 @@ export class AutomationCoordinator {
       if (!instanceManager.canLaunchProfile(request.profileId)) {
         return {
           success: false,
-          error: 'Profile is locked and cannot be launched at this time',
+          error: "Profile is locked and cannot be launched at this time",
         };
       }
 
@@ -361,11 +472,11 @@ export class AutomationCoordinator {
         profileId: request.profileId,
         automationType: request.automationType,
         provider: request.provider,
-        status: 'launching',
+        status: "launching",
         debugPort: 0, // will be set by worker
         screenSlot,
         windowBounds: { x: 0, y: 0, width: 0, height: 0 },
-        currentUrl: '',
+        currentUrl: "",
         startedAt: new Date(),
         stats: {
           messagesProcessed: 0,
@@ -378,17 +489,27 @@ export class AutomationCoordinator {
       // Register instance
       instanceManager.registerInstance(initialState);
 
-  // Recalculate window bounds. For the very first instance, prefer full-grid calculation
-  // so that an explicitly applied preset (e.g., 1x2-vertical) is respected instead of
-  // collapsing to an active-count-based 1x1 layout.
-  const activeCount = instanceManager.getAllInstances().length;
-  const useActiveCount = activeCount > 1 ? activeCount : undefined;
-  const recalculatedBounds = this.positioner.calculateWindowBounds(screenSlot, undefined, useActiveCount);
-      instanceManager.updateInstanceState(instanceId, { windowBounds: recalculatedBounds });
+      // Recalculate window bounds. For the very first instance, prefer full-grid calculation
+      // so that an explicitly applied preset (e.g., 1x2-vertical) is respected instead of
+      // collapsing to an active-count-based 1x1 layout.
+      const activeCount = instanceManager.getAllInstances().length;
+      const useActiveCount = activeCount > 1 ? activeCount : undefined;
+      const recalculatedBounds = this.positioner.calculateWindowBounds(
+        screenSlot,
+        undefined,
+        useActiveCount
+      );
+      instanceManager.updateInstanceState(instanceId, {
+        windowBounds: recalculatedBounds,
+      });
 
       // For now, use direct service calls instead of worker processes
       // (Worker process implementation can be added later)
-  const result = await this.launchDirect(instanceId, request, recalculatedBounds);
+      const result = await this.launchDirect(
+        instanceId,
+        request,
+        recalculatedBounds
+      );
 
       if (!result.success) {
         instanceManager.unregisterInstance(instanceId);
@@ -400,7 +521,7 @@ export class AutomationCoordinator {
       instanceManager.updateInstanceState(instanceId, {
         sessionId: result.data?.sessionId,
         debugPort: result.data?.debugPort || 0,
-        status: 'running',
+        status: "running",
       });
 
       logger.info(`Instance ${instanceId} launched successfully`);
@@ -411,12 +532,11 @@ export class AutomationCoordinator {
           instanceId,
           sessionId: result.data?.sessionId,
           debugPort: result.data?.debugPort || 0,
-          status: 'running',
+          status: "running",
         },
       };
-
     } catch (error) {
-      logger.error('Failed to launch instance:', error);
+      logger.error("Failed to launch instance:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -435,15 +555,22 @@ export class AutomationCoordinator {
   ): Promise<LaunchInstanceResponse> {
     try {
       // Import automation service based on type
-      if (request.automationType === 'chat') {
-        const { chatAutomationService } = await import('../../chat-automation/services/chat-automation.service');
+      if (request.automationType === "chat") {
+        const { chatAutomationService } = await import(
+          // @ts-ignore
+          "../../chat-automation/services/chat-automation.service"
+        );
 
         // If the chatAutomationService already has an active session for this profile,
         // reuse that session instead of creating a new browser/page.
         try {
-          const existing = chatAutomationService.getSessionByProfileId(request.profileId);
+          const existing = chatAutomationService.getSessionByProfileId(
+            request.profileId
+          );
           if (existing) {
-            logger.info(`Reusing existing chat session ${existing.sessionId} for profile ${request.profileId}`);
+            logger.info(
+              `Reusing existing chat session ${existing.sessionId} for profile ${request.profileId}`
+            );
             return {
               success: true,
               data: {
@@ -455,16 +582,22 @@ export class AutomationCoordinator {
           }
         } catch (e) {
           // If the helper isn't available or throws, continue to init a session
-          logger.debug('getSessionByProfileId check failed, proceeding to initSession', e);
+          logger.debug(
+            "getSessionByProfileId check failed, proceeding to initSession",
+            e
+          );
         }
 
         const result = await chatAutomationService.initSession(
           request.profileId,
-          request.provider || 'gemini'
+          request.provider || "gemini"
         );
 
         if (!result.success) {
-          return { success: false, error: result.error || 'Failed to initialize session' };
+          return {
+            success: false,
+            error: result.error || "Failed to initialize session",
+          };
         }
 
         // Position window (if possible via CDP)
@@ -477,7 +610,7 @@ export class AutomationCoordinator {
           success: true,
           data: {
             instanceId,
-            sessionId: result.data?.sessionId || '',
+            sessionId: result.data?.sessionId || "",
             debugPort: result.data?.debugPort || 0,
           },
         };
@@ -488,7 +621,6 @@ export class AutomationCoordinator {
         success: false,
         error: `Automation type ${request.automationType} not yet implemented`,
       };
-
     } catch (error) {
       return {
         success: false,
@@ -508,22 +640,32 @@ export class AutomationCoordinator {
         return false;
       }
 
-      instanceManager.updateInstanceStatus(instanceId, 'stopping');
+      instanceManager.updateInstanceStatus(instanceId, "stopping");
 
       // Stop based on automation type
-      if (instance.automationType === 'chat' && instance.sessionId) {
+      if (instance.automationType === "chat" && instance.sessionId) {
         try {
           logger.info(`Stopping chat session ${instance.sessionId}`);
-          const { chatAutomationService } = await import('../../chat-automation/services/chat-automation.service');
-          const res = await chatAutomationService.closeSession(instance.sessionId);
+          const { chatAutomationService } = await import(
+            // @ts-ignore
+            "../../chat-automation/services/chat-automation.service"
+          );
+          const res = await chatAutomationService.closeSession(
+            instance.sessionId
+          );
           if (!res.success) {
-            logger.error(`Failed to close chat session ${instance.sessionId}: ${res.error}`);
-            instanceManager.updateInstanceStatus(instanceId, 'error');
+            logger.error(
+              `Failed to close chat session ${instance.sessionId}: ${res.error}`
+            );
+            instanceManager.updateInstanceStatus(instanceId, "error");
             // continue to release resources, but surface failure
           }
         } catch (err) {
-          logger.error(`Error while closing session ${instance.sessionId}:`, err);
-          instanceManager.updateInstanceStatus(instanceId, 'error');
+          logger.error(
+            `Error while closing session ${instance.sessionId}:`,
+            err
+          );
+          instanceManager.updateInstanceStatus(instanceId, "error");
         }
       }
 
@@ -533,7 +675,6 @@ export class AutomationCoordinator {
 
       logger.info(`Instance ${instanceId} stopped`);
       return true;
-
     } catch (error) {
       logger.error(`Failed to stop instance ${instanceId}:`, error);
       return false;
@@ -548,7 +689,7 @@ export class AutomationCoordinator {
     logger.info(`Stopping ${instances.length} instances...`);
 
     await Promise.all(
-      instances.map(instance => this.stopInstance(instance.instanceId))
+      instances.map((instance) => this.stopInstance(instance.instanceId))
     );
   }
 
@@ -564,20 +705,20 @@ export class AutomationCoordinator {
    */
   private setupEventListeners(): void {
     // Listen to instance manager events and forward to renderer
-    instanceManager.on('instance:registered', (state: InstanceState) => {
-      this.broadcastToRenderer('automation:instance:registered', state);
+    instanceManager.on("instance:registered", (state: InstanceState) => {
+      this.broadcastToRenderer("automation:instance:registered", state);
     });
 
-    instanceManager.on('instance:updated', (state: InstanceState) => {
-      this.broadcastToRenderer('automation:instance:updated', state);
+    instanceManager.on("instance:updated", (state: InstanceState) => {
+      this.broadcastToRenderer("automation:instance:updated", state);
     });
 
-    instanceManager.on('instance:status', (data: any) => {
-      this.broadcastToRenderer('automation:instance:status', data);
+    instanceManager.on("instance:status", (data: any) => {
+      this.broadcastToRenderer("automation:instance:status", data);
     });
 
-    instanceManager.on('instance:unregistered', (instanceId: string) => {
-      this.broadcastToRenderer('automation:instance:unregistered', instanceId);
+    instanceManager.on("instance:unregistered", (instanceId: string) => {
+      this.broadcastToRenderer("automation:instance:unregistered", instanceId);
     });
   }
 
@@ -585,7 +726,7 @@ export class AutomationCoordinator {
    * Broadcast event to all renderer windows
    */
   private broadcastToRenderer(channel: string, data: any): void {
-    const { BrowserWindow } = require('electron');
+    const { BrowserWindow } = require("electron");
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((win: any) => {
       if (win && !win.isDestroyed()) {

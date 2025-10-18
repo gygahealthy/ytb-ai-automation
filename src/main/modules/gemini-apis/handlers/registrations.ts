@@ -1,5 +1,7 @@
 import { IpcRegistration } from "../../../../core/ipc/types";
 import { profileRepository } from "../../../../main/storage/repositories";
+import { logger } from "../../../utils/logger-backend";
+import { browserManager } from "../../instance-management/services/browser-manager";
 import { ChatService } from "../services/chat.service";
 import { CookieManagerDB } from "../services/cookie-manager-db";
 import { cookieService } from "../services/cookie.service";
@@ -112,6 +114,315 @@ export const cookieRegistrations: IpcRegistration[] = [
       );
     },
   },
+  {
+    channel: "gemini:cookies:extractAndCreate",
+    description: "Extract cookies from URL for a profile",
+    handler: async (req: {
+      profileId: string;
+      service: string;
+      url: string;
+    }) => {
+      const { profileId, service, url } = req as any;
+
+      // Validate inputs
+      if (!profileId || !service || !url) {
+        return {
+          success: false,
+          error: "Missing required fields: profileId, service, url",
+        };
+      }
+
+      try {
+        // Get the profile
+        const profile = await profileRepository.findById(profileId);
+        if (!profile) {
+          return {
+            success: false,
+            error: "Profile not found",
+          };
+        }
+
+        logger.info("[cookies:extractAndCreate] Starting cookie extraction", {
+          profileId,
+          service,
+          url,
+        });
+
+        // Launch browser with the profile
+        const launchResult = await browserManager.launchBrowserWithDebugging(
+          profile,
+          { headless: false }
+        );
+
+        if (!launchResult.success || !launchResult.browser) {
+          return {
+            success: false,
+            error: `Failed to launch browser: ${launchResult.error}`,
+          };
+        }
+
+        const browser = launchResult.browser;
+        let page = null;
+
+        try {
+          // Create a new page
+          page = await browser.newPage();
+
+          // Set viewport
+          await page.setViewport({ width: 1280, height: 720 });
+
+          // Navigate to the URL
+          logger.info("[cookies:extractAndCreate] Navigating to URL", { url });
+          await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+
+          // Wait a bit for any additional scripts to load
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Get cookies from the page
+          const cookies = await page.cookies();
+
+          if (cookies.length === 0) {
+            await page.close();
+            await browser.disconnect();
+            return {
+              success: false,
+              error: `No cookies found on the page. Make sure you're logged in to ${service}.`,
+            };
+          }
+
+          logger.info("[cookies:extractAndCreate] Extracted cookies", {
+            profileId,
+            cookieCount: cookies.length,
+          });
+
+          // Extract domain from the URL for filtering
+          const urlObj = new URL(url);
+          const domain = urlObj.hostname;
+
+          // Store the cookies
+          const storeResult =
+            await cookieService.extractAndStoreCookiesFromPage(
+              profileId,
+              domain,
+              service,
+              url,
+              cookies
+            );
+
+          // Close the page and disconnect
+          await page.close();
+          await browser.disconnect();
+
+          if (!storeResult.success) {
+            return {
+              success: false,
+              error: `Failed to store cookies: ${storeResult.error}`,
+            };
+          }
+
+          logger.info(
+            "[cookies:extractAndCreate] Successfully extracted and stored cookies",
+            {
+              profileId,
+              service,
+              cookieId: storeResult.data?.id,
+            }
+          );
+
+          return storeResult;
+        } catch (error) {
+          // Clean up browser on error
+          if (page) {
+            try {
+              await page.close();
+            } catch (e) {
+              logger.error("[cookies:extractAndCreate] Error closing page", e);
+            }
+          }
+          if (browser) {
+            try {
+              await browser.disconnect();
+            } catch (e) {
+              logger.error(
+                "[cookies:extractAndCreate] Error disconnecting browser",
+                e
+              );
+            }
+          }
+
+          logger.error(
+            "[cookies:extractAndCreate] Error during extraction",
+            error
+          );
+          return {
+            success: false,
+            error: `Error extracting cookies: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          };
+        }
+      } catch (error) {
+        logger.error("[cookies:extractAndCreate] Unexpected error", error);
+        return {
+          success: false,
+          error: `Unexpected error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
+      }
+    },
+  },
+  {
+    channel: "gemini:cookies:extractFromBrowser",
+    description: "Extract cookies from browser user data directory",
+    handler: async (req: { profileId: string }) => {
+      const { profileId } = req as any;
+
+      if (!profileId) {
+        return {
+          success: false,
+          error: "Profile ID is required",
+        };
+      }
+
+      try {
+        const profile = await profileRepository.findById(profileId);
+        if (!profile) {
+          return {
+            success: false,
+            error: "Profile not found",
+          };
+        }
+
+        logger.info(
+          "[cookies:extractFromBrowser] Extracting cookies from browser profile",
+          {
+            profileId,
+            userDataDir: profile.userDataDir,
+          }
+        );
+
+        // Use the browser manager to extract cookies
+        const launchResult = await browserManager.launchBrowserWithDebugging(
+          profile,
+          { headless: false }
+        );
+
+        if (!launchResult.success || !launchResult.browser) {
+          return {
+            success: false,
+            error: `Failed to launch browser: ${launchResult.error}`,
+          };
+        }
+
+        const browser = launchResult.browser;
+        let page = null;
+
+        try {
+          page = await browser.newPage();
+          await page.setViewport({ width: 1280, height: 720 });
+
+          // Navigate to Gemini to ensure cookies are available
+          logger.info("[cookies:extractFromBrowser] Navigating to Gemini");
+          await page
+            .goto("https://gemini.google.com", {
+              waitUntil: "networkidle2",
+              timeout: 30000,
+            })
+            .catch(() => {
+              // Timeout or navigation error is ok, we just want the cookies
+            });
+
+          // Get ALL cookies from the browser (including HttpOnly!)
+          const cookies = await page.cookies();
+
+          logger.info(
+            "[cookies:extractFromBrowser] Retrieved cookies from browser",
+            {
+              totalCookies: cookies.length,
+              cookieNames: cookies.map((c) => c.name),
+            }
+          );
+
+          // Filter for Gemini-related cookies
+          const geminCookies = cookies.filter(
+            (c) =>
+              c.domain?.includes("google.com") || c.domain?.includes("gemini")
+          );
+
+          if (geminCookies.length === 0) {
+            await page.close();
+            await browser.disconnect();
+            return {
+              success: false,
+              error:
+                "No Gemini cookies found. Please log into https://gemini.google.com first.",
+            };
+          }
+
+          // Convert cookies to header format
+          const cookieString = geminCookies
+            .map((c) => `${c.name}=${c.value}`)
+            .join("; ");
+
+          logger.info(
+            "[cookies:extractFromBrowser] Creating/updating cookie record",
+            {
+              cookieCount: geminCookies.length,
+              cookieStringLength: cookieString.length,
+            }
+          );
+
+          // Create or update the cookie in the database
+          await cookieService.createCookie(
+            profileId,
+            "https://gemini.google.com",
+            "gemini",
+            {
+              rawCookieString: cookieString,
+            }
+          );
+
+          await page.close();
+          await browser.disconnect();
+
+          return {
+            success: true,
+            data: {
+              cookieCount: geminCookies.length,
+              cookies: geminCookies.map((c) => ({
+                name: c.name,
+                domain: c.domain,
+                httpOnly: c.httpOnly,
+              })),
+            },
+          };
+        } catch (error) {
+          try {
+            if (page) await page.close();
+            await browser.disconnect();
+          } catch (e) {
+            logger.warn("[cookies:extractFromBrowser] Error cleaning up", e);
+          }
+
+          return {
+            success: false,
+            error: `Failed to extract cookies: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          };
+        }
+      } catch (error) {
+        logger.error("[cookies:extractFromBrowser] Unexpected error", error);
+        return {
+          success: false,
+          error: `Unexpected error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
+      }
+    },
+  },
 ];
 
 export const chatRegistrations: IpcRegistration[] = [
@@ -158,19 +469,33 @@ async function sendChatMessage(req: {
 
     // Get cookies for the profile
     const cookiesResult = await cookieService.getCookiesByProfile(profileId);
+    logger.info(`[chat] Cookies from database for profile ${profileId}:`, {
+      found: cookiesResult.success,
+      count: cookiesResult.data?.length || 0,
+      firstCookie: cookiesResult.data?.[0]
+        ? {
+            id: cookiesResult.data[0].id,
+            service: cookiesResult.data[0].service,
+            url: cookiesResult.data[0].url,
+            hasRawString: !!cookiesResult.data[0].rawCookieString,
+            rawStringLength: cookiesResult.data[0].rawCookieString?.length,
+          }
+        : null,
+    });
+
     if (!cookiesResult.success || !cookiesResult.data?.length) {
       return {
         success: false,
-        error: `No cookies found for profile ${profileId}`,
+        error: `No cookies found for profile ${profileId}. Please log into Gemini (https://gemini.google.com) using this profile's browser, then the cookies will be automatically detected.`,
       };
     }
 
-    // Ensure cookie manager is initialized
+    // Initialize cookie manager with proper repository
     if (!cookieManager) {
-      // Create a minimal cookie manager instance
-      // In production, this should be properly initialized with full options
       const cookies = cookiesResult.data[0];
       const cookieObj: any = {};
+
+      // Parse raw cookie string into object
       if (cookies.rawCookieString) {
         for (const part of cookies.rawCookieString.split(";")) {
           const trimmed = part.trim();
@@ -180,7 +505,36 @@ async function sendChatMessage(req: {
           }
         }
       }
-      // TODO: Properly initialize CookieManagerDB with repository and options
+
+      // Import database and create cookie repository
+      const { database } = require("../../../storage/database");
+      const { CookieRepository } = require("../repository/cookie.repository");
+      const db = database.getSQLiteDatabase();
+      const cookieRepository = new CookieRepository(db);
+
+      // Create cookie manager with proper initialization
+      cookieManager = new CookieManagerDB(
+        cookieObj,
+        cookieRepository,
+        profileId,
+        "gemini.google.com",
+        {
+          autoValidate: false,
+          validateOnInit: false,
+          verbose: false,
+        }
+      );
+
+      // Initialize the cookie manager
+      try {
+        await cookieManager.init();
+      } catch (initError) {
+        logger.warn(
+          `Cookie manager initialization warning: ${initError}`,
+          initError
+        );
+        // Continue even if init fails - the cookies might still be usable
+      }
     }
 
     // Create chat service

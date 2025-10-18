@@ -35,7 +35,10 @@ export abstract class BaseRepository<T extends { id: string }> {
    * Find record by ID
    */
   async findById(id: string): Promise<T | null> {
-    const row = await this.db.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id]);
+    const row = await this.db.get(
+      `SELECT * FROM ${this.tableName} WHERE id = ?`,
+      [id]
+    );
     return row ? this.rowToEntity(row) : null;
   }
 
@@ -44,12 +47,19 @@ export abstract class BaseRepository<T extends { id: string }> {
    */
   async insert(entity: T): Promise<void> {
     const row = this.entityToRow(entity);
-    const columns = Object.keys(row).join(", ");
-    const placeholders = Object.keys(row)
+    // Filter out undefined values to avoid SQL errors
+    const filteredRow = Object.fromEntries(
+      Object.entries(row).filter(([, value]) => value !== undefined)
+    );
+    const columns = Object.keys(filteredRow).join(", ");
+    const placeholders = Object.keys(filteredRow)
       .map(() => "?")
       .join(", ");
 
-    await this.db.run(`INSERT INTO ${this.tableName} (${columns}) VALUES (${placeholders})`, Object.values(row));
+    await this.db.run(
+      `INSERT INTO ${this.tableName} (${columns}) VALUES (${placeholders})`,
+      Object.values(filteredRow)
+    );
   }
 
   /**
@@ -61,7 +71,10 @@ export abstract class BaseRepository<T extends { id: string }> {
       .map((key) => `${key} = ?`)
       .join(", ");
 
-    await this.db.run(`UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`, [...Object.values(row), id]);
+    await this.db.run(
+      `UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`,
+      [...Object.values(row), id]
+    );
   }
 
   /**
@@ -75,7 +88,9 @@ export abstract class BaseRepository<T extends { id: string }> {
    * Count all records
    */
   async count(): Promise<number> {
-    const result = await this.db.get<{ count: number }>(`SELECT COUNT(*) as count FROM ${this.tableName}`);
+    const result = await this.db.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM ${this.tableName}`
+    );
     return result?.count || 0;
   }
 
@@ -83,7 +98,10 @@ export abstract class BaseRepository<T extends { id: string }> {
    * Check if record exists
    */
   async exists(id: string): Promise<boolean> {
-    const result = await this.db.get(`SELECT 1 FROM ${this.tableName} WHERE id = ? LIMIT 1`, [id]);
+    const result = await this.db.get(
+      `SELECT 1 FROM ${this.tableName} WHERE id = ? LIMIT 1`,
+      [id]
+    );
     return result !== undefined;
   }
 }

@@ -153,6 +153,34 @@ const getByStatus = (
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
+const extractAndCreateCookie = (
+  profileId: string,
+  service: string,
+  url: string
+): Promise<ApiResponse<Cookie>> => {
+  if (!hasWindow())
+    return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if (
+    (window as any).electronAPI.cookies &&
+    typeof (window as any).electronAPI.cookies.extractAndCreateCookie ===
+      "function"
+  )
+    return safeCall(() =>
+      (window as any).electronAPI.cookies.extractAndCreateCookie(
+        profileId,
+        service,
+        url
+      )
+    );
+  if (hasInvoke())
+    return invoke("gemini:cookies:extractAndCreate", {
+      profileId,
+      service,
+      url,
+    });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
 export const cookies = {
   getCookiesByProfile,
   getCookie,
@@ -163,6 +191,7 @@ export const cookies = {
   deleteByProfile,
   getDueForRotation,
   getByStatus,
+  extractAndCreateCookie,
 };
 
 export default cookies;

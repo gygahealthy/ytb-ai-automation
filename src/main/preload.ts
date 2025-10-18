@@ -167,6 +167,42 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
   },
 
+  // Cookies APIs
+  cookies: {
+    getCookiesByProfile: (profileId: string) =>
+      ipcRenderer.invoke("gemini:cookies:list", { profileId }),
+    getCookie: (profileId: string, url: string) =>
+      ipcRenderer.invoke("gemini:cookies:get", { profileId, url }),
+    createCookie: (profileId: string, url: string, data: any) =>
+      ipcRenderer.invoke("gemini:cookies:create", {
+        profileId,
+        url,
+        service: data.service,
+        data,
+      }),
+    updateRotationInterval: (id: string, rotationIntervalMinutes: number) =>
+      ipcRenderer.invoke("gemini:cookies:updateRotationInterval", {
+        id,
+        rotationIntervalMinutes,
+      }),
+    updateStatus: (id: string, status: string) =>
+      ipcRenderer.invoke("gemini:cookies:updateStatus", { id, status }),
+    deleteCookie: (id: string) =>
+      ipcRenderer.invoke("gemini:cookies:delete", { id }),
+    deleteByProfile: (profileId: string) =>
+      ipcRenderer.invoke("gemini:cookies:deleteByProfile", { profileId }),
+    getDueForRotation: () =>
+      ipcRenderer.invoke("gemini:cookies:getDueForRotation"),
+    getByStatus: (status: string) =>
+      ipcRenderer.invoke("gemini:cookies:getByStatus", { status }),
+    extractAndCreateCookie: (profileId: string, service: string, url: string) =>
+      ipcRenderer.invoke("gemini:cookies:extractAndCreate", {
+        profileId,
+        service,
+        url,
+      }),
+  },
+
   // Generic invoke for other channels
   invoke: (channel: string, ...args: any[]) =>
     ipcRenderer.invoke(channel, ...args),
@@ -245,9 +281,7 @@ declare global {
           options: any
         ) => Promise<{ canceled: boolean; filePaths: string[] }>;
       };
-      validateBrowserPath: (
-        path: string
-      ) => Promise<{
+      validateBrowserPath: (path: string) => Promise<{
         valid: boolean;
         error?: string;
         detectedName?: string;
@@ -271,6 +305,29 @@ declare global {
         create: (prompt: any) => Promise<any>;
         update: (id: number, prompt: any) => Promise<any>;
         delete: (id: number) => Promise<any>;
+      };
+      cookies: {
+        getCookiesByProfile: (profileId: string) => Promise<any>;
+        getCookie: (profileId: string, url: string) => Promise<any>;
+        createCookie: (
+          profileId: string,
+          url: string,
+          data: any
+        ) => Promise<any>;
+        updateRotationInterval: (
+          id: string,
+          rotationIntervalMinutes: number
+        ) => Promise<any>;
+        updateStatus: (id: string, status: string) => Promise<any>;
+        deleteCookie: (id: string) => Promise<any>;
+        deleteByProfile: (profileId: string) => Promise<any>;
+        getDueForRotation: () => Promise<any>;
+        getByStatus: (status: string) => Promise<any>;
+        extractAndCreateCookie: (
+          profileId: string,
+          service: string,
+          url: string
+        ) => Promise<any>;
       };
       invoke: (channel: string, ...args: any[]) => Promise<any>;
       on: (channel: string, callback: (...args: any[]) => void) => () => void;

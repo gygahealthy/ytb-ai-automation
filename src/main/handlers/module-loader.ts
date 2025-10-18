@@ -43,7 +43,10 @@ export function collectModuleRegistrations(): any[] {
           continue;
         }
       } catch (err) {
-        console.warn(`Module loader: failed to parse manifest for ${d.name}`, err);
+        console.warn(
+          `Module loader: failed to parse manifest for ${d.name}`,
+          err
+        );
         // continue loading — non-fatal
       }
     }
@@ -53,16 +56,28 @@ export function collectModuleRegistrations(): any[] {
     let loadedRegistrations: any[] | null = null;
     const tryRequire = (p: string) => {
       try {
-        if (!fs.existsSync(p) && !fs.existsSync(p + ".js") && !fs.existsSync(p + ".ts")) return null;
+        if (
+          !fs.existsSync(p) &&
+          !fs.existsSync(p + ".js") &&
+          !fs.existsSync(p + ".ts")
+        )
+          return null;
         const exported = require(p);
         // If the module directly exports an array (default export), return it
         if (Array.isArray(exported)) return exported;
-        // Otherwise inspect named exports for an array of registrations
+        // Otherwise inspect named exports for ALL arrays of registrations
+        const allRegistrations: any[] = [];
         for (const val of Object.values(exported)) {
-          if (Array.isArray(val) && val.length > 0 && typeof val[0].channel === "string") {
-            return val as any[];
+          if (
+            Array.isArray(val) &&
+            val.length > 0 &&
+            typeof val[0].channel === "string"
+          ) {
+            allRegistrations.push(...val);
           }
         }
+        // Return combined array or null if no registrations found
+        return allRegistrations.length > 0 ? allRegistrations : null;
       } catch (e) {
         return null;
       }
@@ -77,7 +92,10 @@ export function collectModuleRegistrations(): any[] {
     const cwd = process.cwd();
     const srcPrefix = path.join(cwd, "src");
     if (modulePath.startsWith(srcPrefix)) {
-      const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, "dist"));
+      const compiledPath = modulePath.replace(
+        srcPrefix,
+        path.join(cwd, "dist")
+      );
       candidates.push(path.join(compiledPath, "handlers", "registrations"));
     }
 
@@ -85,7 +103,11 @@ export function collectModuleRegistrations(): any[] {
       const regs = tryRequire(cand);
       if (regs && regs.length > 0) {
         allRegistrations.push(...regs);
-        console.log(`Module loader: loaded registrations for ${d.name} from ${path.relative(process.cwd(), cand)}`);
+        console.log(
+          `Module loader: loaded registrations for ${
+            d.name
+          } from ${path.relative(process.cwd(), cand)}`
+        );
         loadedRegistrations = regs;
         break;
       }
@@ -102,7 +124,10 @@ export function collectModuleRegistrations(): any[] {
           mod = require(modulePath);
         } catch (innerErr) {
           if (modulePath.startsWith(srcPrefix)) {
-            const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, "dist"));
+            const compiledPath = modulePath.replace(
+              srcPrefix,
+              path.join(cwd, "dist")
+            );
             const compiledIndex = path.join(compiledPath, "index.js");
             if (fs.existsSync(compiledIndex)) {
               mod = require(compiledPath);
@@ -116,13 +141,24 @@ export function collectModuleRegistrations(): any[] {
 
         if (mod && typeof mod.registerModule === "function") {
           mod.registerModule((regs: any[]) => allRegistrations.push(...regs));
-          console.log(`Module loader: loaded module ${d.name} via registerModule${hasManifest ? "" : " (no manifest)"}'`);
+          console.log(
+            `Module loader: loaded module ${d.name} via registerModule${
+              hasManifest ? "" : " (no manifest)"
+            }'`
+          );
         } else {
-          console.log(`Module loader: module ${d.name} did not export registerModule${hasManifest ? "" : " (no manifest)"}'`);
+          console.log(
+            `Module loader: module ${d.name} did not export registerModule${
+              hasManifest ? "" : " (no manifest)"
+            }'`
+          );
         }
       } catch (err) {
         if (!hasManifest) {
-          console.warn(`Module loader: failed to load module ${d.name} (no manifest). Trying next.`, err);
+          console.warn(
+            `Module loader: failed to load module ${d.name} (no manifest). Trying next.`,
+            err
+          );
         } else {
           console.warn(`Module loader: failed to load module ${d.name}`, err);
         }

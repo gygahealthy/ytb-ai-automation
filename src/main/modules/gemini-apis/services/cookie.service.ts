@@ -2,6 +2,12 @@ import { CookieRepository } from "../repository/cookie.repository";
 import { Cookie } from "../shared/types";
 import { logger } from "../../../utils/logger-backend";
 import { ApiResponse } from "../../../../shared/types";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import * as fs from "fs";
+
+// Add stealth plugin to puppeteer
+puppeteer.use(StealthPlugin());
 
 /**
  * Service for managing cookies
@@ -9,6 +15,206 @@ import { ApiResponse } from "../../../../shared/types";
  */
 export class CookieService {
   constructor(private cookieRepository: CookieRepository) {}
+
+  /**
+   * Extract cookies from browser using Puppeteer (gets HttpOnly cookies too)
+   * @param profile - Profile with userDataDir containing browser cookies
+   * @param targetUrl - URL to extract cookies for (e.g., "https://gemini.google.com")
+   * @param domainFilter - Domain to filter cookies by (e.g., "google.com", "gemini")
+   */
+  async extractCookiesFromBrowser(
+    profile: any,
+    targetUrl: string = "https://gemini.google.com",
+    domainFilter: string = "google.com"
+  ): Promise<ApiResponse<{ cookieString: string; cookies: any[] }>> {
+    let browser: any = null;
+    let page: any = null;
+
+    try {
+      if (!profile || !profile.userDataDir) {
+        return {
+          success: false,
+          error: "Profile with userDataDir is required",
+        };
+      }
+
+      logger.info("[cookie.service] Extracting cookies from browser profile", {
+        profileId: profile.id,
+        userDataDir: profile.userDataDir,
+        targetUrl,
+        domainFilter,
+      });
+
+      // Determine browser executable path
+      let executablePath = profile.browserPath;
+      if (!executablePath) {
+        // Try to find Chrome
+        const possiblePaths = [
+          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+          "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        ];
+        for (const chromePath of possiblePaths) {
+          if (fs.existsSync(chromePath)) {
+            executablePath = chromePath;
+            break;
+          }
+        }
+      }
+
+      if (!executablePath) {
+        return {
+          success: false,
+          error:
+            "Browser executable not found. Please configure browser path in profile.",
+        };
+      }
+
+      // Use a unique debugging port
+      const debugPort = 9223 + Math.floor(Math.random() * 1000);
+
+      const chromeArgs = [
+        `--remote-debugging-port=${debugPort}`,
+        "--remote-debugging-address=127.0.0.1",
+        `--user-data-dir=${profile.userDataDir}`,
+        "--start-maximized",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-popup-blocking",
+        "--disable-sync",
+      ];
+
+      if (profile.userAgent) {
+        chromeArgs.push(`--user-agent=${profile.userAgent}`);
+      }
+
+      logger.info("[cookie.service] Launching browser for cookie extraction");
+
+      // Launch Chrome using spawn
+      const { spawn } = require("child_process");
+      const chromeProcess = spawn(executablePath, chromeArgs, {
+        detached: true,
+        stdio: "ignore",
+      });
+      chromeProcess.unref();
+
+      // Wait and connect to debugging port
+      const maxRetries = 10;
+      const retryDelay = 500;
+      let connected = false;
+
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          browser = await puppeteer.connect({
+            browserURL: `http://127.0.0.1:${debugPort}`,
+            defaultViewport: null,
+          });
+          connected = true;
+          logger.info("[cookie.service] Connected to browser");
+          break;
+        } catch (err) {
+          if (i === maxRetries - 1) {
+            return {
+              success: false,
+              error: `Failed to connect to browser on port ${debugPort}`,
+            };
+          }
+        }
+      }
+
+      if (!connected) {
+        return { success: false, error: "Failed to connect to browser" };
+      }
+
+      // Get or create page
+      const pages = await browser.pages();
+      page = pages.length > 0 ? pages[0] : await browser.newPage();
+
+      // Navigate to target URL
+      logger.info("[cookie.service] Navigating to target URL", { targetUrl });
+      try {
+        await page.goto(targetUrl, {
+          waitUntil: "networkidle2",
+          timeout: 30000,
+        });
+      } catch (navError) {
+        logger.warn(
+          "[cookie.service] Navigation timeout or error (continuing)",
+          navError
+        );
+        // Continue even if navigation times out - we just want the cookies
+      }
+
+      // Get ALL cookies from the browser (including HttpOnly!)
+      const allCookies = await page.cookies();
+
+      logger.info("[cookie.service] Retrieved all cookies from browser", {
+        totalCookies: allCookies.length,
+      });
+
+      // Filter cookies by domain
+      const filteredCookies = allCookies.filter(
+        (c: any) =>
+          c.domain.includes(domainFilter) ||
+          c.domain.includes("." + domainFilter) ||
+          c.domain === domainFilter
+      );
+
+      logger.info("[cookie.service] Filtered cookies by domain", {
+        domainFilter,
+        filteredCount: filteredCookies.length,
+        cookieNames: filteredCookies.map((c: any) => c.name),
+      });
+
+      if (filteredCookies.length === 0) {
+        await page.close();
+        await browser.disconnect();
+        return {
+          success: false,
+          error: `No cookies found for domain filter: ${domainFilter}. Please log into ${targetUrl} first.`,
+        };
+      }
+
+      // Convert to cookie string format
+      const cookieString = filteredCookies
+        .map((c: any) => `${c.name}=${c.value}`)
+        .join("; ");
+
+      logger.info("[cookie.service] Successfully extracted cookies", {
+        cookieCount: filteredCookies.length,
+        cookieStringLength: cookieString.length,
+        hasHttpOnlyCookies: filteredCookies.some((c: any) => c.httpOnly),
+      });
+
+      // Cleanup
+      await page.close().catch(() => {});
+      await browser.disconnect().catch(() => {});
+
+      return {
+        success: true,
+        data: {
+          cookieString,
+          cookies: filteredCookies,
+        },
+      };
+    } catch (error) {
+      logger.error(
+        "[cookie.service] Failed to extract cookies from browser",
+        error
+      );
+
+      // Cleanup on error
+      if (page) await page.close().catch(() => {});
+      if (browser) await browser.disconnect().catch(() => {});
+
+      return {
+        success: false,
+        error: `Failed to extract cookies: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+  }
 
   /**
    * Get all cookies for a profile
@@ -355,18 +561,35 @@ export class CookieService {
       });
 
       // Filter cookies for the specified domain
-      const urlCookies = cookies.filter(
-        (cookie) =>
-          cookie.domain.includes(url) ||
-          cookie.domain.includes("." + url) ||
-          cookie.domain === url
-      );
+      // Be more permissive - include cookies from parent domains too
+      // e.g., if url is "gemini.google.com", also get cookies from ".google.com"
+      const urlCookies = cookies.filter((cookie) => {
+        const domain = cookie.domain.toLowerCase();
+        const urlLower = url.toLowerCase();
+
+        return (
+          domain === urlLower || // exact match: gemini.google.com
+          domain.endsWith("." + urlLower) || // subdomain: .gemini.google.com
+          domain === "." + urlLower || // .google.com
+          urlLower.includes(domain.replace(/^\./, "")) // url contains domain (google.com contains .google.com)
+        );
+      });
 
       if (urlCookies.length === 0) {
-        return {
-          success: false,
-          error: `No cookies found for url: ${url}`,
-        };
+        // If no cookies found with specific domain, include all cookies as fallback
+        // This handles cases where we need parent domain cookies
+        logger.warn(
+          "[cookie.service] No cookies for specific domain, using all cookies",
+          {
+            profileId,
+            url,
+            allCookieCount: cookies.length,
+            cookieNames: cookies.map((c) => c.name).join(", "),
+          }
+        );
+
+        // Still return all cookies - they're needed for authentication
+        urlCookies.push(...cookies);
       }
 
       // Convert cookies to standard cookie string format: "name=value; name2=value2"
@@ -379,6 +602,9 @@ export class CookieService {
         url,
         cookieCount: urlCookies.length,
         cookieStringLength: cookieString.length,
+        cookieNames: urlCookies.map((c) => c.name).join(", "),
+        hasSecurePsid: urlCookies.some((c) => c.name === "__Secure-1PSID"),
+        hasSecurePsidTs: urlCookies.some((c) => c.name === "__Secure-1PSIDTS"),
       });
 
       // Find the earliest expiry date among the cookies
@@ -474,10 +700,8 @@ let cookieServiceInstance: CookieService | null = null;
 export function getCookieService(): CookieService {
   if (!cookieServiceInstance) {
     // Import here to avoid circular dependencies
-    const {
-      database,
-      CookieRepository,
-    } = require("../../../../storage/database");
+    const { database } = require("../../../storage/database");
+    const { CookieRepository } = require("../repository/cookie.repository");
     const db = database.getSQLiteDatabase();
     const cookieRepository = new CookieRepository(db);
     cookieServiceInstance = new CookieService(cookieRepository);

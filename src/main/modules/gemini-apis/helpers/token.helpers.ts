@@ -8,6 +8,7 @@ import { config } from "../shared/config/index.js";
 import { logger } from "../../../utils/logger-backend.js";
 import type { CookieManagerDB } from "../services/cookie-manager-db.js";
 import { createHttpService } from "../services/http.service.js";
+import type { Cookie } from "../shared/types/index.js";
 
 /**
  * Token data interface
@@ -40,15 +41,37 @@ function extractSnlm0eToken(html: string): string | null {
 
 /**
  * Extract tokens from Gemini page
+ * Checks database for cached token first, fetches fresh if needed
  * @param cookieManager - Database-integrated cookie manager instance
+ * @param cookieEntity - Optional: Cookie entity from database to check for cached token
  * @returns Token data
  */
 export async function extractTokens(
-  cookieManager: CookieManagerDB
+  cookieManager: CookieManagerDB,
+  cookieEntity?: Cookie
 ): Promise<TokenData> {
   logger.info("🔍 Extracting tokens from Gemini page...");
 
-  // Validate cookies
+  // Step 1: Check if we have a cached token in the database
+  if (cookieEntity?.geminiToken) {
+    logger.info(
+      "📦 Found cached geminiToken in database, attempting to use it..."
+    );
+    logger.debug(
+      `Cached token: ${cookieEntity.geminiToken.substring(0, 40)}...`
+    );
+
+    return {
+      snlm0e: cookieEntity.geminiToken,
+      timestamp: Date.now(),
+    };
+  }
+
+  logger.info(
+    "⬇️ No cached token found, fetching fresh token from Gemini page..."
+  );
+
+  // Step 2: Validate cookies before fetching
   const validation = cookieManager.validate();
   if (!validation.valid) {
     throw new Error(`Invalid cookies: ${validation.error}`);
@@ -64,7 +87,7 @@ export async function extractTokens(
   }
 
   try {
-    // Fetch Gemini page using HTTP/2 service
+    // Step 3: Fetch Gemini page using HTTP/2 service
     logger.debug(`Fetching: ${config.geminiBaseUrl}/app`);
 
     const httpService = createHttpService(cookieManager);
@@ -87,15 +110,45 @@ export async function extractTokens(
     // Clean up HTTP service
     await httpService.close();
 
-    // Extract token
+    // Step 4: Extract token
     const snlm0e = extractSnlm0eToken(html);
 
     if (!snlm0e) {
       logger.error("Failed to extract SNlM0e token from HTML");
-      throw new Error("SNlM0e token not found in HTML");
+      logger.debug(
+        `HTML length: ${html.length}, first 500 chars: ${html.substring(
+          0,
+          500
+        )}`
+      );
+
+      // Provide user-friendly error with recovery instructions
+      throw new Error(
+        "Failed to extract Gemini token from page. This usually means your authentication cookies have expired or are invalid.\n\n" +
+          "Please:\n" +
+          "1. Go to the 'Profiles' tab\n" +
+          "2. Select your profile and click 'Extract Cookies' button\n" +
+          "3. Log into Gemini if prompted\n" +
+          "4. Once cookies are extracted, try sending your message again\n\n" +
+          "If this persists, your browser session may need to be refreshed. Try logging out and back into Gemini in your browser."
+      );
     }
 
-    logger.info(`✅ Token extracted: ${snlm0e.substring(0, 40)}...`);
+    logger.info(`✅ Fresh token extracted: ${snlm0e.substring(0, 40)}...`);
+
+    // Step 5: Update database with new token if cookieEntity provided
+    if (cookieEntity) {
+      try {
+        logger.info("💾 Updating database with new token...");
+        // This will be done by the caller using cookieService.updateRotation()
+        // We just return the token and let the caller handle storage
+      } catch (updateError) {
+        logger.warn(
+          "Failed to update token in database, but returning token anyway",
+          updateError
+        );
+      }
+    }
 
     return {
       snlm0e,

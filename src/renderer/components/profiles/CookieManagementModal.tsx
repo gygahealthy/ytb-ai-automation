@@ -1,4 +1,4 @@
-import { Plus, Trash2, RefreshCw, AlertCircle } from "lucide-react";
+import { Plus, Trash2, RefreshCw, AlertCircle, Zap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Cookie, ApiResponse } from "../../../shared/types";
 
@@ -17,6 +17,7 @@ export default function CookieManagementModal({
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [rotationInterval, setRotationInterval] = useState(1440);
+  const [addMode, setAddMode] = useState<"manual" | "extract">("manual");
 
   const loadCookies = useCallback(async () => {
     if (!profileId) return;
@@ -24,7 +25,7 @@ export default function CookieManagementModal({
     try {
       const response: ApiResponse<Cookie[]> = await (
         window as any
-      ).electronApi.cookies.getCookiesByProfile(profileId);
+      ).electronAPI.cookies.getCookiesByProfile(profileId);
       if (response.success && response.data) {
         setCookies(response.data);
       }
@@ -48,7 +49,7 @@ export default function CookieManagementModal({
     try {
       const response: ApiResponse<void> = await (
         window as any
-      ).electronApi.cookies.deleteCookie(cookieId);
+      ).electronAPI.cookies.deleteCookie(cookieId);
       if (response.success) {
         await loadCookies();
       } else {
@@ -67,7 +68,7 @@ export default function CookieManagementModal({
     try {
       const response: ApiResponse<void> = await (
         window as any
-      ).electronApi.cookies.updateRotationInterval(cookieId, newInterval);
+      ).electronAPI.cookies.updateRotationInterval(cookieId, newInterval);
       if (response.success) {
         await loadCookies();
       } else {
@@ -121,13 +122,26 @@ export default function CookieManagementModal({
         </div>
 
         {/* Add Cookie Button */}
-        <div className="mb-4">
+        <div className="mb-4 flex gap-2">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setAddMode("manual");
+              setShowAddModal(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             <Plus size={16} />
-            Add Cookie
+            Add Cookie Manually
+          </button>
+          <button
+            onClick={() => {
+              setAddMode("extract");
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            <Zap size={16} />
+            Extract from URL
           </button>
         </div>
 
@@ -222,6 +236,7 @@ export default function CookieManagementModal({
         {showAddModal && (
           <AddCookieModal
             profileId={profileId}
+            mode={addMode}
             onClose={() => setShowAddModal(false)}
             onSuccess={() => {
               setShowAddModal(false);
@@ -236,18 +251,23 @@ export default function CookieManagementModal({
 
 interface AddCookieModalProps {
   profileId: string | null;
+  mode: "manual" | "extract";
   onClose: () => void;
   onSuccess: () => void;
 }
 
 function AddCookieModal({
   profileId,
+  mode,
   onClose,
   onSuccess,
 }: AddCookieModalProps) {
   const [domain, setDomain] = useState("");
   const [rawCookieString, setRawCookieString] = useState("");
+  const [service, setService] = useState("gemini");
+  const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,8 +280,9 @@ function AddCookieModal({
     try {
       const response: ApiResponse<Cookie> = await (
         window as any
-      ).electronApi.cookies.createCookie(profileId, domain, {
+      ).electronAPI.cookies.createCookie(profileId, domain, {
         rawCookieString,
+        service,
       });
       if (response.success) {
         onSuccess();
@@ -276,53 +297,148 @@ function AddCookieModal({
     }
   };
 
+  const handleExtractCookie = async () => {
+    if (!profileId || !service.trim() || !url.trim()) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setExtracting(true);
+    try {
+      const response: ApiResponse<Cookie> = await (
+        window as any
+      ).electronAPI.cookies.extractAndCreateCookie(profileId, service, url);
+      if (response.success) {
+        onSuccess();
+      } else {
+        alert(`Error: ${response.error}`);
+      }
+    } catch (error) {
+      console.error("Failed to extract cookie:", error);
+      alert("Failed to extract cookie from URL");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-bold mb-4">Add New Cookie</h3>
+        <h3 className="text-lg font-bold mb-4">
+          {mode === "manual"
+            ? "Add Cookie Manually"
+            : "Extract Cookie from URL"}
+        </h3>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Domain</label>
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="e.g., google.com"
-              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-            />
-          </div>
+        {mode === "manual" ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Service</label>
+              <select
+                value={service}
+                onChange={(e) => setService(e.target.value)}
+                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              >
+                <option value="gemini">Gemini</option>
+                <option value="flow">Flow</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Cookie String
-            </label>
-            <textarea
-              value={rawCookieString}
-              onChange={(e) => setRawCookieString(e.target.value)}
-              placeholder="Paste your cookie string here"
-              rows={4}
-              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono text-sm"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Domain</label>
+              <input
+                type="text"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="e.g., google.com"
+                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              />
+            </div>
 
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded"
-            >
-              {loading ? "Creating..." : "Create"}
-            </button>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Cookie String
+              </label>
+              <textarea
+                value={rawCookieString}
+                onChange={(e) => setRawCookieString(e.target.value)}
+                placeholder="Paste your cookie string here"
+                rows={4}
+                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono text-sm"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded"
+              >
+                {loading ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Service</label>
+              <select
+                value={service}
+                onChange={(e) => setService(e.target.value)}
+                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              >
+                <option value="gemini">Gemini</option>
+                <option value="flow">Flow</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">URL</label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="e.g., https://example.com"
+                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              />
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3 text-xs text-blue-800 dark:text-blue-300">
+              <p className="font-semibold mb-1">How it works:</p>
+              <p>
+                This will open the URL in your browser profile and automatically
+                extract cookies. Make sure you're logged in to the service.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExtractCookie}
+                disabled={extracting}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded flex items-center gap-2"
+              >
+                <Zap size={16} />
+                {extracting ? "Extracting..." : "Extract"}
+              </button>
+            </div>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );

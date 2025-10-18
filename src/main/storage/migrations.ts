@@ -99,6 +99,10 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
       await migration_019_populate_master_prompt_types(db);
     }
 
+    if (version < 20) {
+      await migration_020_add_url_to_cookies(db);
+    }
+
     logger.info("All migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
@@ -1437,6 +1441,120 @@ async function migration_019_populate_master_prompt_types(
     loggerLocal.info("Migration 019 completed successfully");
   } catch (error) {
     loggerLocal.error("Migration 019 failed", error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 020: Add url column to cookies table
+ * This migration adds the missing 'url' column to the cookies table
+ */
+async function migration_020_add_url_to_cookies(
+  db: SQLiteDatabase
+): Promise<void> {
+  const loggerLocal = new Logger("Migration020");
+
+  try {
+    loggerLocal.info("Starting migration 020: Add url column to cookies table");
+
+    // Check if url column already exists
+    const tableInfo = await db.all<{ name: string }>(
+      "PRAGMA table_info(cookies)"
+    );
+    const columns = tableInfo.map((c) => c.name);
+
+    if (columns.includes("url")) {
+      loggerLocal.info(
+        "url column already exists in cookies table, skipping migration"
+      );
+      await recordMigration(db, 20);
+      return;
+    }
+
+    loggerLocal.info(`Existing cookies table columns: ${columns.join(", ")}`);
+
+    // Create a temporary backup of the old table
+    await db.run("CREATE TABLE cookies_backup AS SELECT * FROM cookies");
+    loggerLocal.info("Created backup of cookies table");
+
+    // Drop the old table
+    await db.run("DROP TABLE cookies");
+    loggerLocal.info("Dropped old cookies table");
+
+    // Create the new table with the correct schema
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS cookies (
+        id TEXT PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        service TEXT NOT NULL,
+        gemini_token TEXT,
+        raw_cookie_string TEXT,
+        last_rotated_at TEXT,
+        spid_expiration TEXT,
+        rotation_data TEXT,
+        rotation_interval_minutes INTEGER DEFAULT 1440,
+        status TEXT NOT NULL CHECK(status IN ('active', 'expired', 'renewal_failed')) DEFAULT 'active',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+        UNIQUE(profile_id, url, service)
+      )
+    `);
+    loggerLocal.info("Created new cookies table with url column");
+
+    // Restore data from backup - handle flexible schema
+    // The old table might have different columns, so we need to be careful
+    let restoreQuery = `
+      INSERT INTO cookies (
+        id, profile_id, url, service, gemini_token, raw_cookie_string,
+        last_rotated_at, spid_expiration, rotation_data, rotation_interval_minutes,
+        status, created_at, updated_at
+      )
+      SELECT 
+        id, 
+        profile_id, 
+        'default_url',
+        'gemini',
+        ${columns.includes("gemini_token") ? "gemini_token" : "NULL"},
+        ${columns.includes("raw_cookie_string") ? "raw_cookie_string" : "NULL"},
+        ${columns.includes("last_rotated_at") ? "last_rotated_at" : "NULL"},
+        ${columns.includes("spid_expiration") ? "spid_expiration" : "NULL"},
+        ${columns.includes("rotation_data") ? "rotation_data" : "NULL"},
+        ${
+          columns.includes("rotation_interval_minutes")
+            ? "rotation_interval_minutes"
+            : "1440"
+        },
+        ${columns.includes("status") ? "status" : "'active'"},
+        created_at, 
+        updated_at
+      FROM cookies_backup
+    `;
+
+    await db.run(restoreQuery);
+    loggerLocal.info("Restored data from backup to new cookies table");
+
+    // Drop the backup table
+    await db.run("DROP TABLE cookies_backup");
+    loggerLocal.info("Dropped backup cookies table");
+
+    // Recreate indexes
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_cookies_profile_id ON cookies(profile_id)"
+    );
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_cookies_status ON cookies(status)"
+    );
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_cookies_last_rotated ON cookies(last_rotated_at)"
+    );
+    loggerLocal.info("Recreated cookies table indexes");
+
+    await recordMigration(db, 20);
+    loggerLocal.info("Migration 020 completed successfully");
+  } catch (error) {
+    loggerLocal.error("Migration 020 failed", error);
     throw error;
   }
 }
