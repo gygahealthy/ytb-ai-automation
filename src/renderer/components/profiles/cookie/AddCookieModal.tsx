@@ -32,9 +32,15 @@ export function AddCookieModal({
 
     setLoading(true);
     try {
+      // Convert domain to full URL if not already a URL
+      const fullUrl =
+        domain.startsWith("http://") || domain.startsWith("https://")
+          ? domain
+          : `https://${domain}`;
+
       const response: ApiResponse<Cookie> = await (
         window as any
-      ).electronAPI.cookies.createCookie(profileId, domain, {
+      ).electronAPI.cookies.createCookie(profileId, fullUrl, {
         rawCookieString,
         service,
       });
@@ -60,9 +66,15 @@ export function AddCookieModal({
     setExtracting(true);
     setError("");
     try {
+      // Ensure URL has protocol
+      const fullUrl =
+        url.startsWith("http://") || url.startsWith("https://")
+          ? url
+          : `https://${url}`;
+
       const response: ApiResponse<Cookie> = await (
         window as any
-      ).electronAPI.cookies.extractAndCreateCookie(profileId, service, url);
+      ).electronAPI.cookies.extractAndCreateCookie(profileId, service, fullUrl);
       if (response.success) {
         onSuccess();
       } else {

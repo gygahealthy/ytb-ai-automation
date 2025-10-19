@@ -7,9 +7,9 @@ import { CookieJar } from "tough-cookie";
 import type {
   CookieCollection,
   RotationResult,
-} from "../shared/types/index.js";
-import { logger } from "../../../utils/logger-backend.js";
-import { endpoints, headers } from "../shared/config/index.js";
+} from "../../shared/types/index.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { endpoints, headers } from "../../shared/config/index.js";
 import crypto from "crypto";
 import { cookiesToHeader } from "./cookie-parser.helpers.js";
 

@@ -1,7 +1,8 @@
 import { Plus, AlertCircle, Zap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Cookie, ApiResponse } from "../../../shared/types";
-import { CookieCard, AddCookieModal } from "./cookie";
+import { CookieCard, AddCookieModal, CookieDetailModal } from "./cookie";
+import { useAlert } from "../../hooks/useAlert";
 
 interface CookieManagementModalProps {
   isOpen: boolean;
@@ -14,9 +15,12 @@ export default function CookieModal({
   profileId,
   onClose,
 }: CookieManagementModalProps) {
+  const alert = useAlert();
   const [cookies, setCookies] = useState<Cookie[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedCookie, setSelectedCookie] = useState<Cookie | null>(null);
   const [rotationInterval, setRotationInterval] = useState(1440);
   const [addMode, setAddMode] = useState<"manual" | "extract">("manual");
   const [extractingCookieId, setExtractingCookieId] = useState<string | null>(
@@ -57,11 +61,19 @@ export default function CookieModal({
       if (response.success) {
         await loadCookies();
       } else {
-        alert(`Error: ${response.error}`);
+        alert.show({
+          title: "Delete Failed",
+          message: response.error || "Failed to delete cookie",
+          severity: "error",
+        });
       }
     } catch (error) {
       console.error("Failed to delete cookie:", error);
-      alert("Failed to delete cookie");
+      alert.show({
+        title: "Delete Error",
+        message: "An unexpected error occurred while deleting the cookie",
+        severity: "error",
+      });
     }
   };
 
@@ -76,11 +88,20 @@ export default function CookieModal({
       if (response.success) {
         await loadCookies();
       } else {
-        alert(`Error: ${response.error}`);
+        alert.show({
+          title: "Update Failed",
+          message: response.error || "Failed to update rotation interval",
+          severity: "error",
+        });
       }
     } catch (error) {
       console.error("Failed to update rotation interval:", error);
-      alert("Failed to update rotation interval");
+      alert.show({
+        title: "Update Error",
+        message:
+          "An unexpected error occurred while updating rotation interval",
+        severity: "error",
+      });
     }
   };
 
@@ -132,7 +153,7 @@ export default function CookieModal({
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
   };
 
-  const handleExtractCookie = async (cookieId: string) => {
+  const handleExtractCookie = async (cookieId: string, headless: boolean) => {
     if (!profileId) return;
     setExtractingCookieId(cookieId);
     try {
@@ -144,19 +165,49 @@ export default function CookieModal({
       ).electronAPI.cookies.extractAndCreateCookie(
         profileId,
         cookie.service,
-        cookie.url
+        cookie.url,
+        headless
       );
+
       if (response.success) {
+        // Count cookies from rawCookieString
+        const cookieCount = response.data?.rawCookieString
+          ? response.data.rawCookieString.split(";").filter((c) => c.trim())
+              .length
+          : 0;
+
+        alert.show({
+          title: "Cookie Extraction Successful",
+          message: `Successfully extracted ${cookieCount} cookie${
+            cookieCount !== 1 ? "s" : ""
+          } in ${headless ? "headless" : "visible"} mode`,
+          severity: "success",
+          duration: 4000,
+        });
+
         await loadCookies();
       } else {
-        alert(`Error: ${response.error}`);
+        alert.show({
+          title: "Cookie Extraction Failed",
+          message: response.error || "Failed to extract cookies",
+          severity: "error",
+        });
       }
     } catch (error) {
       console.error("Failed to extract cookie:", error);
-      alert("Failed to extract cookie");
+      alert.show({
+        title: "Cookie Extraction Error",
+        message: "An unexpected error occurred while extracting cookies",
+        severity: "error",
+      });
     } finally {
       setExtractingCookieId(null);
     }
+  };
+
+  const handleViewDetails = (cookie: Cookie) => {
+    setSelectedCookie(cookie);
+    setShowDetailModal(true);
   };
 
   if (!isOpen) return null;
@@ -243,6 +294,7 @@ export default function CookieModal({
                   onUpdateInterval={handleUpdateInterval}
                   onExtractCookie={handleExtractCookie}
                   onDeleteCookie={handleDeleteCookie}
+                  onViewDetails={handleViewDetails}
                   onRotationIntervalChange={setRotationInterval}
                   getStatusColor={getStatusColor}
                   getStatusBg={getStatusBg}
@@ -265,6 +317,16 @@ export default function CookieModal({
             }}
           />
         )}
+
+        {/* Cookie Detail Modal */}
+        <CookieDetailModal
+          isOpen={showDetailModal}
+          cookie={selectedCookie}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedCookie(null);
+          }}
+        />
       </div>
     </div>
   );

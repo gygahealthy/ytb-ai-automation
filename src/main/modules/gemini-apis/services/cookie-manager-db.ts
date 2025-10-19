@@ -15,14 +15,14 @@ import {
   cookiesToHeader,
   validateRequiredCookies,
   mergeCookies,
-} from "../helpers/cookie-parser.helpers.js";
+} from "../helpers/cookie/cookie-parser.helpers.js";
 import { logger } from "../../../utils/logger-backend.js";
 import {
   rotate1psidts,
   refreshCreds,
   startAutoRotation,
   type RotationControl,
-} from "../helpers/cookie-rotation.helpers.js";
+} from "../helpers/cookie/cookie-rotation.helpers.js";
 import type { CookieRepository } from "../repository/cookie.repository.js";
 import type { Cookie } from "../shared/types/index.js";
 

@@ -42,11 +42,12 @@ const chatServices = new Map<string, ChatServiceEntry>();
 function parseCookieString(
   rawCookieString: string | null | undefined
 ): CookieCollection {
-  const collection: CookieCollection = {
-    "__Secure-1PSID": "", // Required
-  };
+  const collection: CookieCollection = {} as CookieCollection;
 
-  if (!rawCookieString) return collection;
+  if (!rawCookieString) {
+    logger.debug("[chat.registry] No rawCookieString provided for parsing");
+    return collection;
+  }
 
   try {
     for (const part of rawCookieString.split(";")) {
@@ -54,12 +55,25 @@ function parseCookieString(
       if (trimmed && trimmed.includes("=")) {
         const [name, ...valueParts] = trimmed.split("=");
         const value = valueParts.join("=").trim();
-        collection[name.trim()] = value;
+
+        // Only add cookies that have non-empty values
+        if (value) {
+          collection[name.trim()] = value;
+          logger.debug(`[chat.registry] Parsed cookie: ${name.trim()}`);
+        }
       }
     }
   } catch (error) {
-    logger.warn(`[chat.registry] Failed to parse cookie string: ${error}`);
+    logger.warn(`[chat.registry] Failed to parse cookie string: ${error}`, {
+      rawCookieStringLength: rawCookieString?.length,
+    });
   }
+
+  logger.debug(
+    `[chat.registry] Parsed ${
+      Object.keys(collection).length
+    } cookies from string`
+  );
 
   return collection;
 }
@@ -86,11 +100,32 @@ export async function getOrCreateCookieManager(
   }
 
   logger.info(
-    `[chat.registry] Creating new CookieManager for profile ${profileId}`
+    `[chat.registry] Creating new CookieManager for profile ${profileId}`,
+    {
+      rawCookieStringLength: rawCookieString?.length || 0,
+    }
   );
 
   // Parse cookies into CookieCollection
   const cookieCollection = parseCookieString(rawCookieString);
+
+  // Log what cookies were parsed
+  const cookieNames = Object.keys(cookieCollection);
+  const hasRequiredPSID = "__Secure-1PSID" in cookieCollection;
+  const hasPSIDTS = "__Secure-1PSIDTS" in cookieCollection;
+
+  logger.info(`[chat.registry] Parsed cookies for profile ${profileId}`, {
+    totalCookies: cookieNames.length,
+    cookieNames,
+    hasRequiredPSID,
+    hasPSIDTS,
+    psidValue: cookieCollection["__Secure-1PSID"]
+      ? `${cookieCollection["__Secure-1PSID"].substring(0, 20)}...`
+      : "MISSING",
+    psidtsValue: cookieCollection["__Secure-1PSIDTS"]
+      ? `${cookieCollection["__Secure-1PSIDTS"].substring(0, 20)}...`
+      : "MISSING",
+  });
 
   // Create repository and manager
   const db = database.getSQLiteDatabase();
@@ -115,10 +150,11 @@ export async function getOrCreateCookieManager(
       `[chat.registry] CookieManager initialized for profile ${profileId}`
     );
   } catch (err) {
-    logger.warn(
-      `[chat.registry] CookieManager init warning for profile ${profileId}: ${err}`
+    logger.error(
+      `[chat.registry] CookieManager init failed for profile ${profileId}: ${err}`,
+      { errorMessage: err instanceof Error ? err.message : String(err) }
     );
-    // Continue even if init fails - cookies might still be usable
+    // Continue even if init fails - but log the error for debugging
   }
 
   // Store in registry

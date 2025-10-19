@@ -67,13 +67,23 @@ export abstract class BaseRepository<T extends { id: string }> {
    */
   async update(id: string, updates: Partial<T>): Promise<void> {
     const row = this.entityToRow(updates as T);
-    const setClause = Object.keys(row)
+    // Filter out undefined values to avoid setting NOT NULL columns to null
+    const filteredRow = Object.fromEntries(
+      Object.entries(row).filter(([, value]) => value !== undefined)
+    );
+
+    if (Object.keys(filteredRow).length === 0) {
+      // No fields to update
+      return;
+    }
+
+    const setClause = Object.keys(filteredRow)
       .map((key) => `${key} = ?`)
       .join(", ");
 
     await this.db.run(
       `UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`,
-      [...Object.values(row), id]
+      [...Object.values(filteredRow), id]
     );
   }
 

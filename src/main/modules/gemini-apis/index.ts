@@ -47,13 +47,13 @@ export {
   extractCookies,
   validateRequiredCookies,
   mergeCookies,
-} from "./helpers/cookie-parser.helpers";
+} from "./helpers/cookie/cookie-parser.helpers";
 export {
   refreshCreds,
   rotate1psidts,
   startAutoRotation,
   type RotationControl,
-} from "./helpers/cookie-rotation.helpers";
+} from "./helpers/cookie/cookie-rotation.helpers";
 export {
   createHttpCommonHeaders,
   createGeminiHeaders,

@@ -20,7 +20,7 @@ import {
   refreshCreds,
   startAutoRotation,
   type RotationControl,
-} from "../helpers/cookie-rotation.helpers.js";
+} from "../helpers/cookie/cookie-rotation.helpers.js";
 
 /**
  * Worker configuration options

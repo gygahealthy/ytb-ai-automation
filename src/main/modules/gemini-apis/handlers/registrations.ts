@@ -1,9 +1,7 @@
 import { IpcRegistration } from "../../../../core/ipc/types";
 import { cookieService } from "../services/cookie.service";
 import { sendChatMessage } from "./chat/sendChatMessage";
-import { extractAndStoreHandler } from "./cookie/extractAndStore";
 import { extractAndCreateHandler } from "./cookie/extractAndCreate";
-import { extractFromBrowserHandler } from "./cookie/extractFromBrowser";
 
 export const cookieRegistrations: IpcRegistration[] = [
   {
@@ -87,20 +85,15 @@ export const cookieRegistrations: IpcRegistration[] = [
   },
   {
     channel: "gemini:cookies:extractAndStore",
-    description: "Extract cookies from page and store in database",
+    description:
+      "Extract cookies from page and store in database (DEPRECATED - use extractAndCreate)",
     handler: async (req: {
       profileId: string;
-      url: string;
       service: string;
-      pageUrl: string;
-      cookies: Array<{
-        name: string;
-        value: string;
-        domain: string;
-        expires?: number;
-      }>;
+      url: string;
     }) => {
-      return await extractAndStoreHandler(req as any);
+      // Redirect to unified extractAndCreate handler
+      return await extractAndCreateHandler(req as any);
     },
   },
   {
@@ -116,9 +109,15 @@ export const cookieRegistrations: IpcRegistration[] = [
   },
   {
     channel: "gemini:cookies:extractFromBrowser",
-    description: "Extract cookies from browser user data directory",
-    handler: async (req: { profileId: string }) => {
-      return await extractFromBrowserHandler(req as any);
+    description:
+      "Extract cookies from browser user data directory (DEPRECATED - use extractAndCreate)",
+    handler: async (req: {
+      profileId: string;
+      service: string;
+      url: string;
+    }) => {
+      // Redirect to unified extractAndCreate handler
+      return await extractAndCreateHandler(req as any);
     },
   },
 ];

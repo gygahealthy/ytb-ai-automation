@@ -1,5 +1,7 @@
 # VEO3 Automation
 
+https://github.com/hieu2906090/Gemini-API
+
 An Electron-based desktop application for automating VEO3 profile creation and management using Puppeteer.
 
 ## Features

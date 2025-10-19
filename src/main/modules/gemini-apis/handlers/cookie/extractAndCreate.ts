@@ -1,15 +1,29 @@
 import { profileRepository } from "../../../../storage/repositories";
-import { browserManager } from "../../../instance-management/services/browser-manager";
 import { instanceManager as iManager } from "../../../instance-management/services/instance-manager";
 import { cookieService } from "../../services/cookie.service";
 import { logger } from "../../../../utils/logger-backend";
 
+/**
+ * Unified cookie extraction handler
+ *
+ * Consolidates all cookie extraction methods into a single, comprehensive handler.
+ * Extracts cookies from a given URL using the profile's browser context,
+ * then stores them in the database.
+ *
+ * Features:
+ * - Extracts ALL cookies from profile's browser
+ * - Filters by domain (more inclusive than just exact matches)
+ * - Stores full cookie data including HttpOnly, Secure flags
+ * - Supports both headless and visible browser modes
+ * - Handles profile locking to prevent concurrent extractions
+ */
 export const extractAndCreateHandler = async (req: {
   profileId: string;
   service: string;
   url: string;
+  headless?: boolean;
 }) => {
-  const { profileId, service, url } = req as any;
+  const { profileId, service, url, headless = true } = req as any;
 
   if (!profileId || !service || !url) {
     return {
@@ -30,71 +44,87 @@ export const extractAndCreateHandler = async (req: {
     };
   }
 
-  logger.info("[cookies:extractAndCreate] Starting cookie extraction", {
+  logger.info("[cookies:extractAndCreate] Starting unified cookie extraction", {
     profileId,
     service,
     url,
   });
 
-  const launchResult = await browserManager.launchBrowserWithDebugging(
-    profile,
-    { headless: false }
-  );
-  if (!launchResult.success || !launchResult.browser) {
-    return {
-      success: false,
-      error: `Failed to launch browser: ${launchResult.error}`,
-    };
-  }
-
-  const browser = launchResult.browser;
-  let page = null;
-
   try {
-    page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 });
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-    await new Promise((r) => setTimeout(r, 2000));
-    const cookies = await page.cookies();
+    // Extract domain from URL for cookie filtering
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
+    const domainFilter = domain.replace(/^www\./, ""); // Remove www prefix if present
 
-    if (cookies.length === 0) {
-      await page.close();
-      await browser.disconnect();
+    logger.info("[cookies:extractAndCreate] Extracted domain information", {
+      originalUrl: url,
+      hostname: domain,
+      domainFilter: domainFilter,
+    });
+
+    // Extract cookies using the specified browser mode (headless or visible)
+    logger.info("[cookies:extractAndCreate] Using browser mode:", {
+      headless: headless,
+      mode: headless ? "HEADLESS (background)" : "VISIBLE (interactive)",
+    });
+
+    const extractResult = await cookieService.extractCookiesFromBrowser(
+      profile,
+      url,
+      domainFilter,
+      headless // Use the actual headless parameter
+    );
+
+    if (!extractResult.success) {
+      logger.error("[cookies:extractAndCreate] Browser extraction failed", {
+        error: extractResult.error,
+      });
       return {
         success: false,
-        error: `No cookies found on the page. Make sure you're logged in to ${service}.`,
+        error: extractResult.error || "Failed to extract cookies from browser",
       };
     }
 
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname;
+    logger.info("[cookies:extractAndCreate] Browser extraction successful", {
+      extractedCookieCount: extractResult.data!.cookies.length,
+      cookieNames: extractResult.data!.cookies.map((c: any) => c.name),
+    });
 
+    // Store the extracted cookies in database
+    // domainFilter is used for cookie filtering, url is stored as the reference URL
     const storeResult = await cookieService.extractAndStoreCookiesFromPage(
       profileId,
-      domain,
+      domainFilter, // Used for filtering cookies by domain
       service,
-      url,
-      cookies
+      url, // Full URL stored in database
+      extractResult.data!.cookies
     );
 
-    await page.close();
-    await browser.disconnect();
-
-    if (!storeResult.success)
+    if (!storeResult.success) {
+      logger.error("[cookies:extractAndCreate] Failed to store cookies", {
+        error: storeResult.error,
+      });
       return {
         success: false,
         error: `Failed to store cookies: ${storeResult.error}`,
       };
+    }
+
+    logger.info(
+      "[cookies:extractAndCreate] Extraction and storage completed successfully",
+      {
+        service,
+        url,
+        totalExtracted: extractResult.data!.cookies.length,
+      }
+    );
 
     return storeResult;
   } catch (error) {
-    try {
-      if (page) await page.close();
-      await browser.disconnect();
-    } catch (e) {
-      // Ignore cleanup errors
-    }
-    logger.error("[cookies:extractAndCreate] Error during extraction", error);
+    logger.error(
+      "[cookies:extractAndCreate] Unexpected error during extraction",
+      error
+    );
     return {
       success: false,
       error: `Error extracting cookies: ${

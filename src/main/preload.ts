@@ -195,11 +195,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("gemini:cookies:getDueForRotation"),
     getByStatus: (status: string) =>
       ipcRenderer.invoke("gemini:cookies:getByStatus", { status }),
-    extractAndCreateCookie: (profileId: string, service: string, url: string) =>
+    extractAndCreateCookie: (
+      profileId: string,
+      service: string,
+      url: string,
+      headless: boolean = true
+    ) =>
       ipcRenderer.invoke("gemini:cookies:extractAndCreate", {
         profileId,
         service,
         url,
+        headless,
       }),
   },
 
@@ -333,7 +339,8 @@ declare global {
         extractAndCreateCookie: (
           profileId: string,
           service: string,
-          url: string
+          url: string,
+          headless?: boolean
         ) => Promise<any>;
       };
       invoke: (channel: string, ...args: any[]) => Promise<any>;

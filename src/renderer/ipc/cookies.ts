@@ -156,7 +156,8 @@ const getByStatus = (
 const extractAndCreateCookie = (
   profileId: string,
   service: string,
-  url: string
+  url: string,
+  headless: boolean = true
 ): Promise<ApiResponse<Cookie>> => {
   if (!hasWindow())
     return Promise.resolve({ success: false, error: "ipc-not-available" });
@@ -169,7 +170,8 @@ const extractAndCreateCookie = (
       (window as any).electronAPI.cookies.extractAndCreateCookie(
         profileId,
         service,
-        url
+        url,
+        headless
       )
     );
   if (hasInvoke())
@@ -177,6 +179,7 @@ const extractAndCreateCookie = (
       profileId,
       service,
       url,
+      headless,
     });
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };

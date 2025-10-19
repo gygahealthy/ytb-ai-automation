@@ -74,6 +74,18 @@ export async function extractTokens(
   // Step 2: Validate cookies before fetching
   const validation = cookieManager.validate();
   if (!validation.valid) {
+    const cookies = cookieManager.getCookies();
+    logger.error("❌ Cookie validation failed", {
+      validationError: validation.error,
+      parsedCookies: {
+        __Secure_1PSID: cookies["__Secure-1PSID"] ? "✅ present" : "❌ MISSING",
+        __Secure_1PSIDTS: cookies["__Secure-1PSIDTS"]
+          ? "✅ present"
+          : "❌ MISSING",
+      },
+      totalCookies: Object.keys(cookies).length,
+      cookieNames: Object.keys(cookies),
+    });
     throw new Error(`Invalid cookies: ${validation.error}`);
   }
 

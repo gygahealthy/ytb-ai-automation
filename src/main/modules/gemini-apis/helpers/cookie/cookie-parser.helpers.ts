@@ -5,7 +5,7 @@
 import type {
   CookieCollection,
   ValidationResult,
-} from "../shared/types/index.js";
+} from "../../shared/types/index.js";
 
 /**
  * Parse a cookie header string into an object

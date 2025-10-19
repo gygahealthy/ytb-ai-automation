@@ -2,13 +2,14 @@ import { CookieRepository } from "../repository/cookie.repository";
 import { Cookie } from "../shared/types";
 import { logger } from "../../../utils/logger-backend";
 import { ApiResponse } from "../../../../shared/types";
-import puppeteer from "puppeteer-extra";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import * as fs from "fs";
 import { database } from "../../../storage/database";
-
-// Add stealth plugin to puppeteer
-puppeteer.use(StealthPlugin());
+import { launchBrowser } from "../helpers/cookie/browser-launcher.helpers";
+import {
+  navigateAndExtractCookies,
+  logCookieExtractionSummary,
+  toCookieString,
+  logCookieExtractionSuccess,
+} from "../helpers/cookie/cookie-extraction.helpers";
 
 /**
  * Service for managing cookies
@@ -19,14 +20,17 @@ export class CookieService {
 
   /**
    * Extract cookies from browser using Puppeteer (gets HttpOnly cookies too)
+   * Extracts ALL cookies from the loaded page, regardless of domain
    * @param profile - Profile with userDataDir containing browser cookies
    * @param targetUrl - URL to extract cookies for (e.g., "https://gemini.google.com")
-   * @param domainFilter - Domain to filter cookies by (e.g., "google.com", "gemini")
+   * @param _domainFilter - Domain to filter cookies by (e.g., "google.com", "gemini") - DEPRECATED, kept for compatibility, not used
+   * @param headless - Whether to run in headless (background) mode or visible mode
    */
   async extractCookiesFromBrowser(
     profile: any,
     targetUrl: string = "https://gemini.google.com",
-    domainFilter: string = "google.com"
+    _domainFilter: string = "google.com",
+    headless: boolean = false
   ): Promise<ApiResponse<{ cookieString: string; cookies: any[] }>> {
     let browser: any = null;
     let page: any = null;
@@ -39,153 +43,62 @@ export class CookieService {
         };
       }
 
-      logger.info("[cookie.service] Extracting cookies from browser profile", {
-        profileId: profile.id,
-        userDataDir: profile.userDataDir,
-        targetUrl,
-        domainFilter,
-      });
-
-      // Determine browser executable path
-      let executablePath = profile.browserPath;
-      if (!executablePath) {
-        // Try to find Chrome
-        const possiblePaths = [
-          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-          "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        ];
-        for (const chromePath of possiblePaths) {
-          if (fs.existsSync(chromePath)) {
-            executablePath = chromePath;
-            break;
-          }
+      logger.info(
+        "[cookie.service] Extracting ALL cookies from browser profile",
+        {
+          profileId: profile.id,
+          userDataDir: profile.userDataDir,
+          targetUrl,
+          mode: headless ? "HEADLESS (background)" : "NON-HEADLESS (visible)",
+          note: "Will extract ALL cookies from ALL domains on the page",
         }
-      }
+      );
 
-      if (!executablePath) {
+      // Launch browser (headless or visible) with profile's user-data-dir
+      try {
+        logger.info(
+          "[cookie.service] Launching browser with profile user-data-dir",
+          {
+            userDataDir: profile.userDataDir,
+            headless,
+          }
+        );
+        browser = await launchBrowser(profile, headless);
+      } catch (launchError) {
+        logger.error("[cookie.service] Failed to launch browser", launchError);
         return {
           success: false,
-          error:
-            "Browser executable not found. Please configure browser path in profile.",
+          error: `Failed to launch browser: ${
+            launchError instanceof Error
+              ? launchError.message
+              : String(launchError)
+          }`,
         };
-      }
-
-      // Use a unique debugging port
-      const debugPort = 9223 + Math.floor(Math.random() * 1000);
-
-      const chromeArgs = [
-        `--remote-debugging-port=${debugPort}`,
-        "--remote-debugging-address=127.0.0.1",
-        `--user-data-dir=${profile.userDataDir}`,
-        "--start-maximized",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--disable-popup-blocking",
-        "--disable-sync",
-      ];
-
-      if (profile.userAgent) {
-        chromeArgs.push(`--user-agent=${profile.userAgent}`);
-      }
-
-      logger.info("[cookie.service] Launching browser for cookie extraction");
-
-      // Launch Chrome using spawn
-      const { spawn } = require("child_process");
-      const chromeProcess = spawn(executablePath, chromeArgs, {
-        detached: true,
-        stdio: "ignore",
-      });
-      chromeProcess.unref();
-
-      // Wait and connect to debugging port
-      const maxRetries = 10;
-      const retryDelay = 500;
-      let connected = false;
-
-      for (let i = 0; i < maxRetries; i++) {
-        try {
-          await new Promise((resolve) => setTimeout(resolve, retryDelay));
-          browser = await puppeteer.connect({
-            browserURL: `http://127.0.0.1:${debugPort}`,
-            defaultViewport: null,
-          });
-          connected = true;
-          logger.info("[cookie.service] Connected to browser");
-          break;
-        } catch (err) {
-          if (i === maxRetries - 1) {
-            return {
-              success: false,
-              error: `Failed to connect to browser on port ${debugPort}`,
-            };
-          }
-        }
-      }
-
-      if (!connected) {
-        return { success: false, error: "Failed to connect to browser" };
       }
 
       // Get or create page
       const pages = await browser.pages();
       page = pages.length > 0 ? pages[0] : await browser.newPage();
 
-      // Navigate to target URL
-      logger.info("[cookie.service] Navigating to target URL", { targetUrl });
-      try {
-        await page.goto(targetUrl, {
-          waitUntil: "networkidle2",
-          timeout: 30000,
-        });
-      } catch (navError) {
-        logger.warn(
-          "[cookie.service] Navigation timeout or error (continuing)",
-          navError
-        );
-        // Continue even if navigation times out - we just want the cookies
-      }
-
-      // Get ALL cookies from the browser (including HttpOnly!)
-      const allCookies = await page.cookies();
-
-      logger.info("[cookie.service] Retrieved all cookies from browser", {
-        totalCookies: allCookies.length,
+      // Navigate and extract ALL cookies (not filtered by domain)
+      logger.info("[cookie.service] Extracting cookies with mode:", {
+        headless,
+        targetUrl,
       });
-
-      // Filter cookies by domain
-      const filteredCookies = allCookies.filter(
-        (c: any) =>
-          c.domain.includes(domainFilter) ||
-          c.domain.includes("." + domainFilter) ||
-          c.domain === domainFilter
+      const allCookies = await navigateAndExtractCookies(
+        page,
+        targetUrl,
+        headless
       );
 
-      logger.info("[cookie.service] Filtered cookies by domain", {
-        domainFilter,
-        filteredCount: filteredCookies.length,
-        cookieNames: filteredCookies.map((c: any) => c.name),
-      });
+      // Log extraction summary (shows ALL cookies from ALL domains)
+      logCookieExtractionSummary(allCookies);
 
-      if (filteredCookies.length === 0) {
-        await page.close();
-        await browser.disconnect();
-        return {
-          success: false,
-          error: `No cookies found for domain filter: ${domainFilter}. Please log into ${targetUrl} first.`,
-        };
-      }
+      // Convert ALL cookies to cookie string
+      const cookieString = toCookieString(allCookies);
 
-      // Convert to cookie string format
-      const cookieString = filteredCookies
-        .map((c: any) => `${c.name}=${c.value}`)
-        .join("; ");
-
-      logger.info("[cookie.service] Successfully extracted cookies", {
-        cookieCount: filteredCookies.length,
-        cookieStringLength: cookieString.length,
-        hasHttpOnlyCookies: filteredCookies.some((c: any) => c.httpOnly),
-      });
+      // Log success
+      logCookieExtractionSuccess(allCookies, cookieString);
 
       // Cleanup
       await page.close().catch(() => {});
@@ -195,7 +108,7 @@ export class CookieService {
         success: true,
         data: {
           cookieString,
-          cookies: filteredCookies,
+          cookies: allCookies,
         },
       };
     } catch (error) {
@@ -517,16 +430,18 @@ export class CookieService {
 
   /**
    * Extract cookies from a Puppeteer page and store them in the database
-   * This method filters cookies for a specific url and stores them in the cookie table
+   * ✅ STORES ALL COOKIES FROM THE PAGE - NO DOMAIN FILTERING
+   * This ensures we capture all cookies from all domains on the loaded page
    * @param profileId - The profile ID to associate with the cookies
-   * @param url - The url to filter cookies for (e.g., "labs.google")
+   * @param _url - Deprecated: previously used for domain filtering, now kept for backward compatibility
+   * @param service - The service name (e.g., "gemini")
    * @param pageUrl - The page URL used for cookie extraction (for reference)
-   * @param cookies - Array of Puppeteer cookies from the page
+   * @param cookies - Array of Puppeteer cookies from the page (ALL DOMAINS)
    * @returns ApiResponse with the created Cookie entity
    */
   async extractAndStoreCookiesFromPage(
     profileId: string,
-    url: string,
+    _url: string, // eslint-disable-line @typescript-eslint/no-unused-vars
     service: string,
     pageUrl: string,
     cookies: Array<{
@@ -541,9 +456,6 @@ export class CookieService {
       if (!profileId || profileId.trim() === "") {
         return { success: false, error: "Profile ID is required" };
       }
-      if (!url || url.trim() === "") {
-        return { success: false, error: "URL is required" };
-      }
       if (!service || service.trim() === "") {
         return { success: false, error: "Service is required" };
       }
@@ -554,109 +466,88 @@ export class CookieService {
         return { success: false, error: "No cookies provided" };
       }
 
-      logger.info("[cookie.service] Extracting cookies from page", {
-        profileId,
-        url,
-        pageUrl,
-        totalCookies: cookies.length,
-      });
+      // Get unique domains from cookies
+      const domains = [...new Set(cookies.map((c) => c.domain))];
 
-      // Filter cookies for the specified domain
-      // Be more permissive - include cookies from parent domains too
-      // e.g., if url is "gemini.google.com", also get cookies from ".google.com"
-      const urlCookies = cookies.filter((cookie) => {
-        const domain = cookie.domain.toLowerCase();
-        const urlLower = url.toLowerCase();
+      logger.info(
+        "[cookie.service] Storing ALL cookies from page (all domains)",
+        {
+          profileId,
+          pageUrl,
+          totalCookies: cookies.length,
+          domains: domains,
+          domainCount: domains.length,
+        }
+      );
 
-        return (
-          domain === urlLower || // exact match: gemini.google.com
-          domain.endsWith("." + urlLower) || // subdomain: .gemini.google.com
-          domain === "." + urlLower || // .google.com
-          urlLower.includes(domain.replace(/^\./, "")) // url contains domain (google.com contains .google.com)
-        );
-      });
-
-      if (urlCookies.length === 0) {
-        // If no cookies found with specific domain, include all cookies as fallback
-        // This handles cases where we need parent domain cookies
-        logger.warn(
-          "[cookie.service] No cookies for specific domain, using all cookies",
-          {
-            profileId,
-            url,
-            allCookieCount: cookies.length,
-            cookieNames: cookies.map((c) => c.name).join(", "),
-          }
-        );
-
-        // Still return all cookies - they're needed for authentication
-        urlCookies.push(...cookies);
-      }
-
-      // Convert cookies to standard cookie string format: "name=value; name2=value2"
-      const cookieString = urlCookies
+      // ✅ Store ALL cookies without any filtering - convert to cookie string
+      // Format: "name=value; name2=value2"
+      const cookieString = cookies
         .map((cookie) => `${cookie.name}=${cookie.value}`)
         .join("; ");
 
-      logger.info("[cookie.service] Extracted cookie string", {
+      logger.info("[cookie.service] Extracted cookie string from ALL domains", {
         profileId,
-        url,
-        cookieCount: urlCookies.length,
+        cookieCount: cookies.length,
         cookieStringLength: cookieString.length,
-        cookieNames: urlCookies.map((c) => c.name).join(", "),
-        hasSecurePsid: urlCookies.some((c) => c.name === "__Secure-1PSID"),
-        hasSecurePsidTs: urlCookies.some((c) => c.name === "__Secure-1PSIDTS"),
+        cookieNames: cookies.map((c) => c.name).join(", "),
+        cookiesByDomain: domains.map((domain) => ({
+          domain,
+          count: cookies.filter((c) => c.domain === domain).length,
+        })),
       });
 
       // Find the earliest expiry date among the cookies
-      const expiryDates = urlCookies
+      const expiryDates = cookies
         .filter((c) => c.expires && c.expires > 0)
         .map((c) => c.expires! * 1000);
 
       const earliestExpiry =
         expiryDates.length > 0 ? new Date(Math.min(...expiryDates)) : undefined;
 
-      // Check if a cookie already exists for this profile and url
+      // Check if a cookie already exists for this profile and pageUrl (full URL)
       const existingCookie = await this.cookieRepository.findByProfileAndUrl(
         profileId,
-        url
+        pageUrl
       );
 
       const now = new Date().toISOString();
-      const cookieData: Partial<Cookie> = {
-        rawCookieString: cookieString,
-        spidExpiration: earliestExpiry?.toISOString(),
-        status: "active",
-      };
-
-      let result: Cookie;
 
       if (existingCookie) {
-        // Update existing cookie
-        await this.cookieRepository.update(existingCookie.id, {
-          ...cookieData,
+        // ✅ UPDATE existing cookie using ID
+        const updates: Partial<Cookie> = {
+          rawCookieString: cookieString,
+          spidExpiration: earliestExpiry?.toISOString(),
+          status: "active",
           updatedAt: now,
-        } as Partial<Cookie>);
+        };
 
-        logger.info("[cookie.service] Updated existing cookie", {
-          profileId,
-          url,
-          cookieId: existingCookie.id,
-        });
+        await this.cookieRepository.update(existingCookie.id, updates);
 
-        result = {
-          ...existingCookie,
-          ...cookieData,
-          updatedAt: now,
-        } as Cookie;
+        logger.info(
+          "[cookie.service] Updated existing cookie with ALL cookies from page",
+          {
+            cookieId: existingCookie.id,
+            cookieCount: cookies.length,
+            domains: domains,
+          }
+        );
+
+        return {
+          success: true,
+          data: {
+            ...existingCookie,
+            ...updates,
+          },
+        };
       } else {
-        // Create new cookie
+        // ✅ CREATE new cookie
         const { v4: uuidv4 } = await import("uuid");
         const newCookie: Cookie = {
           id: uuidv4(),
-          profileId,
-          url,
-          service,
+          profileId: profileId, // Ensure profileId is explicitly set
+          url: pageUrl, // Store full page URL
+          service: service, // Ensure service is explicitly set
           rawCookieString: cookieString,
           spidExpiration: earliestExpiry?.toISOString(),
           rotationIntervalMinutes: 1440, // Default 24 hours
@@ -665,21 +556,33 @@ export class CookieService {
           updatedAt: now,
         };
 
-        await this.cookieRepository.insert(newCookie);
-
         logger.info(
-          "[cookie.service] Created new cookie from page extraction",
+          "[cookie.service] Creating new cookie with ALL cookies from page",
           {
-            profileId,
-            url,
             cookieId: newCookie.id,
+            profileId: newCookie.profileId,
+            service: newCookie.service,
+            pageUrl: newCookie.url,
+            cookieCount: cookies.length,
+            domains: domains,
           }
         );
 
-        result = newCookie;
-      }
+        await this.cookieRepository.insert(newCookie);
 
-      return { success: true, data: result };
+        logger.info(
+          "[cookie.service] Created new cookie from page extraction (ALL domains)",
+          {
+            cookieId: newCookie.id,
+            profileId,
+            pageUrl,
+            cookieCount: cookies.length,
+            domains: domains,
+          }
+        );
+
+        return { success: true, data: newCookie };
+      }
     } catch (error) {
       logger.error(
         "[cookie.service] Failed to extract and store cookies from page",
