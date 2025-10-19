@@ -43,13 +43,6 @@ export const routeConfig: RouteConfig[] = [
     defaultOpen: true,
     children: [
       {
-        id: "video-creation.master-prompts",
-        label: "Master Prompts",
-        icon: Sparkles,
-        path: "/video-creation/master-prompts",
-        page: "video-creation.master-prompts",
-      },
-      {
         id: "video-creation.story",
         label: "Story Creator",
         icon: Clapperboard,

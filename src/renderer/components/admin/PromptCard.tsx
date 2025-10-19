@@ -7,6 +7,7 @@ interface PromptCardProps {
   icon: React.ReactNode;
   onClick?: () => void;
   accentColor?: "purple" | "red" | "blue";
+  promptType?: string;
 }
 
 const PromptCard: React.FC<PromptCardProps> = ({
@@ -15,6 +16,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
   icon,
   onClick,
   accentColor = "purple",
+  promptType,
 }) => {
   const accentColors = {
     purple: {
@@ -63,6 +65,16 @@ const PromptCard: React.FC<PromptCardProps> = ({
           {icon}
         </div>
         <div className="flex-1">
+          {/* Prompt type badge */}
+          {promptType && (
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.iconText} bg-slate-100 dark:bg-slate-700 border border-slate-200/80`}
+              >
+                {promptType}
+              </span>
+            </div>
+          )}
           <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
             {title}
           </h3>

@@ -15,7 +15,7 @@ import { useConfirm } from "../../hooks/useConfirm";
 type Prompt = {
   id?: number;
   provider?: string;
-  promptKind?: string;
+  promptTypeId?: number;
   description?: string;
   promptTemplate?: string;
   tags?: string[];
@@ -44,7 +44,7 @@ const PromptModal: React.FC<Props> = ({
   const makeDefaultPrompt = (provList: string[] | undefined) =>
     ({
       provider: provList && provList.length > 0 ? provList[0] : "youtube",
-      promptKind: "",
+      promptTypeId: undefined,
       description: "",
       promptTemplate: "",
     } as Prompt);
@@ -105,7 +105,7 @@ const PromptModal: React.FC<Props> = ({
   }, [open, onClose]);
 
   // Load prompt types when modal opens
-   
+
   useEffect(() => {
     if (!open) return;
 
@@ -199,7 +199,7 @@ const PromptModal: React.FC<Props> = ({
       const result = await electronApi.promptHistory.create({
         promptId: prompt.id,
         provider: prompt.provider || "",
-        promptKind: prompt.promptKind || "",
+        promptTypeId: prompt.promptTypeId || 0,
         promptTemplate: currentText || "",
         description: prompt.description,
         tags,
@@ -249,7 +249,7 @@ const PromptModal: React.FC<Props> = ({
       promptTemplate: historyItem.promptTemplate,
       description: historyItem.description,
       provider: historyItem.provider,
-      promptKind: historyItem.promptKind,
+      promptTypeId: historyItem.promptTypeId,
       isActive: historyItem.isActive,
       archived: historyItem.archived,
     });
@@ -372,8 +372,15 @@ const PromptModal: React.FC<Props> = ({
                     Prompt Kind
                   </label>
                   <select
-                    value={prompt.promptKind}
-                    onChange={(e) => update("promptKind", e.target.value)}
+                    value={
+                      prompt.promptTypeId ? String(prompt.promptTypeId) : ""
+                    }
+                    onChange={(e) =>
+                      update(
+                        "promptTypeId",
+                        e.target.value ? Number(e.target.value) : undefined
+                      )
+                    }
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                     disabled={loadingPromptTypes}
                   >
@@ -383,7 +390,7 @@ const PromptModal: React.FC<Props> = ({
                         : "Select a prompt type"}
                     </option>
                     {promptTypes.map((type) => (
-                      <option key={type.id} value={type.typeName}>
+                      <option key={type.id} value={String(type.id)}>
                         {type.typeName}
                         {type.description ? ` - ${type.description}` : ""}
                       </option>

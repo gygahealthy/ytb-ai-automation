@@ -4,6 +4,7 @@ import React from "react";
 export interface VideoPromptRow {
   id?: number;
   provider?: string;
+  promptTypeId?: number;
   promptKind?: string;
   description?: string;
   promptTemplate?: string;
@@ -20,6 +21,7 @@ type Props = {
   onToggleActive?: (id: number, active: boolean) => void;
   onArchive?: (id: number) => void;
   viewMode?: "grid" | "table";
+  promptTypes?: { id: number; typeName: string; typeCode: string }[];
 };
 
 const AdminPromptTable: React.FC<Props> = ({
@@ -29,6 +31,7 @@ const AdminPromptTable: React.FC<Props> = ({
   onToggleActive,
   onArchive,
   viewMode = "grid",
+  promptTypes,
 }) => {
   const providerBadge = (provider?: string) => {
     const key = (provider || "").toLowerCase();
@@ -97,7 +100,16 @@ const AdminPromptTable: React.FC<Props> = ({
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         {providerBadge(p.provider)}
-                        {kindBadge(p.promptKind)}
+                        {kindBadge(
+                          p.promptKind ||
+                            // prefer looking up the prompt type name when available
+                            (promptTypes
+                              ? promptTypes.find(
+                                  (pt: { id: number }) =>
+                                    pt.id === (p as any).promptTypeId
+                                )?.typeName
+                              : undefined)
+                        )}
                         {p.archived && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">
                             Archived

@@ -18,9 +18,9 @@ import VariablesHint from "../../components/admin/VariablesHint";
 import electronApi from "../../ipc";
 
 interface MasterPrompt extends VideoPromptRow {
-  id: number;
+  id?: number;
   provider: string;
-  promptKind: string;
+  promptTypeId?: number;
   promptTemplate: string;
   description: string;
   status?: number;
@@ -54,9 +54,9 @@ const MasterPromptManagementPage: React.FC = () => {
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<
-    VideoPromptRow | undefined
-  >(undefined);
+  const [editingPrompt, setEditingPrompt] = useState<MasterPrompt | undefined>(
+    undefined
+  );
 
   const promptKindOptions: { value: PromptKindFilter; label: string }[] = [
     { value: "all", label: "All Types" },
@@ -83,7 +83,16 @@ const MasterPromptManagementPage: React.FC = () => {
     try {
       const result = await electronApi.masterPrompts.getAll();
       if (result.success && result.data) {
-        setPrompts(result.data);
+        // If we already have promptTypes loaded, enrich prompts with promptKind
+        const enriched = (result.data as MasterPrompt[]).map((p) => ({
+          ...p,
+          promptKind:
+            p.promptKind ||
+            (promptTypes.find((pt: PromptType) => pt.id === p.promptTypeId)
+              ?.typeCode as any) ||
+            undefined,
+        }));
+        setPrompts(enriched);
       } else {
         alertApi.show({
           message: "Failed to load master prompts",
@@ -110,6 +119,18 @@ const MasterPromptManagementPage: React.FC = () => {
           (pt: PromptType) => pt.status === 1
         );
         setPromptTypes(activeTypes);
+
+        // Enrich any already-loaded prompts with the corresponding type code
+        setPrompts((prev) =>
+          prev.map((p) => ({
+            ...p,
+            promptKind:
+              p.promptKind ||
+              (activeTypes.find((pt: PromptType) => pt.id === p.promptTypeId)
+                ?.typeCode as any) ||
+              undefined,
+          }))
+        );
       } else {
         console.error("Failed to load prompt types:", result.error);
       }
@@ -158,14 +179,14 @@ const MasterPromptManagementPage: React.FC = () => {
       setEditingPrompt({
         id: prompt.id,
         provider: prompt.provider,
-        promptKind: prompt.promptKind,
+        promptTypeId: prompt.promptTypeId,
         description: prompt.description,
         promptTemplate: prompt.promptTemplate,
       });
     } else {
       setEditingPrompt({
         provider: "veo3",
-        promptKind: "video_creation",
+        promptTypeId: undefined,
         description: "",
         promptTemplate: "",
       });
@@ -185,7 +206,7 @@ const MasterPromptManagementPage: React.FC = () => {
         // Update existing prompt
         result = await electronApi.masterPrompts.updatePrompt(prompt.id, {
           provider: prompt.provider,
-          promptKind: prompt.promptKind,
+          promptTypeId: prompt.promptTypeId,
           description: prompt.description,
           promptTemplate: prompt.promptTemplate,
           tags: prompt.tags,
@@ -196,7 +217,7 @@ const MasterPromptManagementPage: React.FC = () => {
         // Create new prompt
         result = await electronApi.masterPrompts.createPrompt({
           provider: prompt.provider,
-          promptKind: prompt.promptKind,
+          promptTypeId: prompt.promptTypeId,
           description: prompt.description,
           promptTemplate: prompt.promptTemplate,
           tags: prompt.tags,
@@ -474,6 +495,7 @@ const MasterPromptManagementPage: React.FC = () => {
                 onEdit={(row) => handleOpenModal(row as MasterPrompt)}
                 onDelete={handleDelete}
                 viewMode={viewMode}
+                promptTypes={promptTypes}
               />
             </div>
           )}

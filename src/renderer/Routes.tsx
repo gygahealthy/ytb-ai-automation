@@ -11,7 +11,6 @@ import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationP
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
 import StoryCreatePage from "./pages/video-creation/ScriptCreatePage";
 import ScriptEditorPage from "./pages/video-creation/ScriptEditorPage";
-import MasterPromptSelectionPage from "./pages/video-creation/MasterPromptSelectionPage";
 import ChannelDeepDivePage from "./pages/channel-management/ChannelDeepDivePage";
 import ChannelMonitoringPage from "./pages/channel-management/ChannelMonitoringPage";
 import CompetitorMonitoringPage from "./pages/channel-management/CompetitorMonitoringPage";
@@ -53,10 +52,6 @@ export default function AppRoutes() {
       <Route
         path="/video-creation/single"
         element={<SingleVideoCreationPage />}
-      />
-      <Route
-        path="/video-creation/master-prompts"
-        element={<MasterPromptSelectionPage />}
       />
       <Route
         path="/video-creation/script-create"

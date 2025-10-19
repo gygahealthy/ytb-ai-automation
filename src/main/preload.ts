@@ -152,7 +152,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     create: (prompt: any) =>
       ipcRenderer.invoke("master-prompts:create", prompt),
     update: (id: number, prompt: any) =>
-      ipcRenderer.invoke("master-prompts:update", id, prompt),
+      ipcRenderer.invoke("master-prompts:update", { id, updates: prompt }),
     delete: (id: number) => ipcRenderer.invoke("master-prompts:delete", id),
   },
 

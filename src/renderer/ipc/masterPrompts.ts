@@ -65,7 +65,8 @@ const updatePrompt = (id: number, prompt: any) => {
     return safeCall(() =>
       (window as any).electronAPI.masterPrompts.update(id, prompt)
     );
-  if (hasInvoke()) return invoke("master-prompts:update", id, prompt);
+  if (hasInvoke())
+    return invoke("master-prompts:update", { id, updates: prompt });
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
