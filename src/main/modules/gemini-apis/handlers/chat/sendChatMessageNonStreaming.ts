@@ -3,6 +3,7 @@ import { logger } from "../../../../utils/logger-backend";
 import { ChatService } from "../../services/chat.service";
 import { CookieManagerDB } from "../../services/cookie-manager-db";
 import { cookieService } from "../../services/cookie.service";
+import { COOKIE_SERVICES } from "../../shared/constants/services";
 import { database } from "../../../../storage/database";
 import { CookieRepository } from "../../repository/cookie.repository";
 
@@ -50,6 +51,7 @@ export async function sendChatMessageNonStreaming(req: {
       {
         found: cookiesResult.success,
         count: cookiesResult.data?.length || 0,
+        services: cookiesResult.data?.map((c) => c.service) || [],
       }
     );
 
@@ -60,9 +62,30 @@ export async function sendChatMessageNonStreaming(req: {
       };
     }
 
+    // Find GEMINI service cookie specifically (not just the first cookie)
+    const geminiCookie = cookiesResult.data.find(
+      (c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active"
+    );
+
+    if (!geminiCookie || !geminiCookie.rawCookieString) {
+      logger.warn(
+        `[chat:non-streaming] No active GEMINI cookie found for profile ${profileId}`,
+        {
+          availableServices: cookiesResult.data.map((c) => ({
+            service: c.service,
+            status: c.status,
+          })),
+        }
+      );
+      return {
+        success: false,
+        error: `No active Gemini cookies found for profile ${profileId}. Please extract Gemini cookies first.`,
+      };
+    }
+
     // Initialize cookie manager with proper repository
     if (!cookieManager) {
-      const cookies = cookiesResult.data[0];
+      const cookies = geminiCookie;
       const cookieObj: any = {};
 
       // Parse raw cookie string into object

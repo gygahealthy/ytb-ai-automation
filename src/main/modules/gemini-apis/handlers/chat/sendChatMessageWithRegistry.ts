@@ -15,6 +15,7 @@
 import { profileRepository } from "../../../../storage/repositories/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
 import { cookieService } from "../../services/cookie.service.js";
+import { COOKIE_SERVICES } from "../../shared/constants/services.js";
 import {
   getOrCreateCookieManager,
   getOrCreateChatService,
@@ -75,6 +76,7 @@ export async function sendChatMessageWithRegistry(req: {
       {
         found: cookiesResult.success,
         count: cookiesResult.data?.length || 0,
+        services: cookiesResult.data?.map((c) => c.service) || [],
       }
     );
 
@@ -86,7 +88,29 @@ export async function sendChatMessageWithRegistry(req: {
       };
     }
 
-    const rawCookieString = cookiesResult.data[0].rawCookieString;
+    // Find GEMINI service cookie specifically (not just the first cookie)
+    const geminiCookie = cookiesResult.data.find(
+      (c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active"
+    );
+
+    if (!geminiCookie || !geminiCookie.rawCookieString) {
+      logger.warn(
+        `[chat:registry:non-streaming] No active GEMINI cookie found for profile ${profileId}`,
+        {
+          availableServices: cookiesResult.data.map((c) => ({
+            service: c.service,
+            status: c.status,
+          })),
+        }
+      );
+      return {
+        success: false,
+        error: `No active Gemini cookies found for profile ${profileId}. Please extract Gemini cookies first.`,
+        mode: "persistent",
+      };
+    }
+
+    const rawCookieString = geminiCookie.rawCookieString;
 
     // Get or create CookieManager from registry
     const cookieManager = await getOrCreateCookieManager(
