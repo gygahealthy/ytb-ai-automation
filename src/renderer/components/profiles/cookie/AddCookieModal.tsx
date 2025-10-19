@@ -74,7 +74,12 @@ export function AddCookieModal({
 
       const response: ApiResponse<Cookie> = await (
         window as any
-      ).electronAPI.cookies.extractAndCreateCookie(profileId, service, fullUrl);
+      ).electronAPI.cookies.extractAndCreateCookie(
+        profileId,
+        service,
+        fullUrl,
+        false
+      ); // visible browser (headless = false)
       if (response.success) {
         onSuccess();
       } else {
