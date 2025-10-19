@@ -233,20 +233,7 @@ export default function ProfilesPage() {
     }
   };
 
-  const handleLoginProfile = async (id: string) => {
-    try {
-      const response = (await electronApi.profile.login(
-        id
-      )) as ApiResponse<Profile>;
-      if (response.success) {
-        await loadProfiles();
-      } else {
-        console.error("Login failed:", response.error);
-      }
-    } catch (error) {
-      console.error("Failed to login profile:", error);
-    }
-  };
+  // Login flow removed
 
   const toggleColumnVisibility = (column: keyof ColumnVisibility) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
@@ -366,7 +353,6 @@ export default function ProfilesPage() {
             filteredProfiles={filteredProfiles}
             columnVisibility={columnVisibility}
             onEditProfile={handleEditProfile}
-            onLoginProfile={handleLoginProfile}
             onDeleteProfile={handleDeleteProfile}
             onOpenCookieModal={handleOpenCookieModal}
             onOpenChatModal={handleOpenChatModal}
@@ -380,7 +366,6 @@ export default function ProfilesPage() {
               profiles={profiles}
               filteredProfiles={filteredProfiles}
               onEditProfile={handleEditProfile}
-              onLoginProfile={handleLoginProfile}
               onDeleteProfile={handleDeleteProfile}
               onOpenCookieModal={handleOpenCookieModal}
               onOpenChatModal={handleOpenChatModal}

@@ -10,6 +10,10 @@ import {
   toCookieString,
   logCookieExtractionSuccess,
 } from "../helpers/cookie/cookie-extraction.helpers";
+import {
+  containsDtsCookie,
+  hasCookieChanged,
+} from "../helpers/cookie/cookie-check.helpers";
 
 /**
  * Service for managing cookies
@@ -89,11 +93,82 @@ export class CookieService {
         headless,
         targetUrl,
       });
-      const allCookies = await navigateAndExtractCookies(
+      let allCookies = await navigateAndExtractCookies(
         page,
         targetUrl,
         headless
       );
+
+      // If running in visible (interactive) mode, wait for the DTS cookie
+      // or until 30s of inactivity (no cookie changes). This prevents the
+      // browser from being closed before the user finishes interactive login/2FA.
+      if (!headless) {
+        if (!containsDtsCookie(allCookies)) {
+          logger.info(
+            "[cookie.service] DTS cookie not present yet. Waiting for interactive login/rotation...",
+            {
+              checkIntervalMs: 1000,
+              inactivityThresholdMs: 30000,
+            }
+          );
+
+          const inactivityThresholdMs = 30000; // 30s
+          const maxOverallWaitMs = 5 * 60 * 1000; // 5 minutes max as safety
+          const checkIntervalMs = 1000;
+
+          let lastCookies = allCookies;
+          let lastChangeAt = Date.now();
+          const startAt = Date.now();
+
+          while (Date.now() - startAt < maxOverallWaitMs) {
+            await new Promise((r) => setTimeout(r, checkIntervalMs));
+
+            try {
+              const currentCookies = await page.cookies();
+
+              // If we now have DTS, break and use the new cookies
+              if (containsDtsCookie(currentCookies)) {
+                logger.info(
+                  "[cookie.service] DTS cookie detected during wait",
+                  {
+                    cookieNames: currentCookies.map((c: any) => c.name),
+                  }
+                );
+                allCookies = currentCookies;
+                break;
+              }
+
+              // Detect whether cookies changed
+              const changed = hasCookieChanged(lastCookies, currentCookies);
+
+              if (changed) {
+                lastChangeAt = Date.now();
+                lastCookies = currentCookies;
+                logger.debug(
+                  "[cookie.service] Cookie jar changed, continuing to wait...",
+                  {
+                    cookieCount: currentCookies.length,
+                  }
+                );
+              } else {
+                // No change - check inactivity
+                if (Date.now() - lastChangeAt >= inactivityThresholdMs) {
+                  logger.info(
+                    "[cookie.service] No cookie activity for 30s, proceeding with extraction."
+                  );
+                  allCookies = currentCookies;
+                  break;
+                }
+              }
+            } catch (err) {
+              logger.warn(
+                "[cookie.service] Error while polling cookies during interactive wait",
+                err instanceof Error ? err.message : String(err)
+              );
+            }
+          }
+        }
+      }
 
       // Log extraction summary (shows ALL cookies from ALL domains)
       logCookieExtractionSummary(allCookies);

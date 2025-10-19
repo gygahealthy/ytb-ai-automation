@@ -14,7 +14,11 @@ interface SidebarProps {
   onSettingsClick: () => void;
 }
 
-export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
+export default function Sidebar({
+  currentPage,
+  onPageChange,
+  onSettingsClick,
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,9 +26,11 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
 
   const handleNavigate = useCallback(
     (path?: string, page?: string) => {
+      // Navigate to the path if provided
       if (path) {
         navigate(path);
       }
+      // Update the page state
       if (page) {
         onPageChange(page as Page);
       }
@@ -39,7 +45,10 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-      <Logo isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+      <Logo
+        isCollapsed={isCollapsed}
+        onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+      />
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">

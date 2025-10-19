@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     delete: (id: string) => ipcRenderer.invoke("profile:delete", { id }),
     updateCredit: (id: string, amount: number) =>
       ipcRenderer.invoke("profile:updateCredit", { id, amount }),
-    login: (id: string) => ipcRenderer.invoke("profile:login", { id }),
   },
 
   // Automation APIs
@@ -242,7 +241,6 @@ declare global {
         update: (id: string, updates: any) => Promise<any>;
         delete: (id: string) => Promise<any>;
         updateCredit: (id: string, amount: number) => Promise<any>;
-        login: (id: string) => Promise<any>;
       };
       automation: {
         repositionInstance: (instanceId: string) => Promise<any>;

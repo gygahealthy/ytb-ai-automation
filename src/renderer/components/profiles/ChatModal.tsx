@@ -39,7 +39,33 @@ export default function ChatModal({
         inputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, chat]);
+  }, [isOpen, chat.resetConversation]);
+
+  // Close on Escape and lock body scroll / restore focus
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevActive = document.activeElement as HTMLElement | null;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      try {
+        prevActive?.focus?.();
+      } catch (e) {
+        // ignore
+      }
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [isOpen, onClose]);
 
   // Listen for streaming chunks when streamChannel is set
   useEffect(() => {
@@ -91,7 +117,7 @@ export default function ChatModal({
     return () => {
       unsubscribe();
     };
-  }, [streamChannel, showAlert, chat]);
+  }, [streamChannel, showAlert, chat.handleStreamComplete]);
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -153,8 +179,22 @@ export default function ChatModal({
 
   if (!isOpen || !profileId) return null;
 
+  const handleOverlayMouseDown: React.MouseEventHandler<HTMLDivElement> = (
+    e
+  ) => {
+    const target = e.target as HTMLElement | null;
+    if (target && target.dataset && target.dataset.overlay === "true") {
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div
+        className="absolute inset-0"
+        data-overlay="true"
+        onMouseDown={handleOverlayMouseDown}
+      />
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[920px] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Modern Header with Gradient Background */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-5 flex items-center justify-between shadow-lg">

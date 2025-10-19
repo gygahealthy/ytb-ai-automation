@@ -5,7 +5,6 @@ import {
   Edit,
   Folder,
   Globe,
-  LogIn,
   Tag,
   Trash2,
   User,
@@ -44,7 +43,6 @@ interface ProfilesTableProps {
   filteredProfiles: Profile[];
   columnVisibility: ColumnVisibility;
   onEditProfile: (profile: Profile) => void;
-  onLoginProfile: (id: string) => void;
   onDeleteProfile: (id: string) => void;
   onOpenCookieModal?: (profileId: string) => void;
   onOpenChatModal?: (profileId: string) => void;
@@ -55,7 +53,6 @@ export default function ProfilesTable({
   filteredProfiles,
   columnVisibility,
   onEditProfile,
-  onLoginProfile,
   onDeleteProfile,
   onOpenCookieModal,
   onOpenChatModal,
@@ -176,11 +173,10 @@ export default function ProfilesTable({
                         <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </button>
                       <button
-                        onClick={() => onLoginProfile(profile.id)}
-                        className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                        title="Login"
+                        className="p-1.5 opacity-0 group-hover:opacity-100 hidden"
+                        title="Login-disabled"
                       >
-                        <LogIn className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        {/* Login removed */}
                       </button>
                       <button
                         onClick={() => onDeleteProfile(profile.id)}

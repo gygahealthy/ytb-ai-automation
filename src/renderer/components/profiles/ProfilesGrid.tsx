@@ -3,7 +3,6 @@ import {
   Cookie,
   DollarSign,
   Edit,
-  LogIn,
   Tag,
   Trash2,
   User,
@@ -28,7 +27,7 @@ interface ProfilesGridProps {
   profiles: Profile[];
   filteredProfiles: Profile[];
   onEditProfile: (profile: Profile) => void;
-  onLoginProfile: (id: string) => void;
+  // onLoginProfile removed - login flow deprecated
   onDeleteProfile: (id: string) => void;
   onOpenCookieModal?: (profileId: string) => void;
   onOpenChatModal?: (profileId: string) => void;
@@ -38,7 +37,6 @@ export default function ProfilesGrid({
   profiles,
   filteredProfiles,
   onEditProfile,
-  onLoginProfile,
   onDeleteProfile,
   onOpenCookieModal,
   onOpenChatModal,
@@ -90,13 +88,7 @@ export default function ProfilesGrid({
                 >
                   <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </button>
-                <button
-                  onClick={() => onLoginProfile(profile.id)}
-                  className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  title="Login"
-                >
-                  <LogIn className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </button>
+                {/* Login button removed */}
                 <button
                   onClick={() => onDeleteProfile(profile.id)}
                   className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"

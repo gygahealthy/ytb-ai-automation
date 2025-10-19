@@ -2,12 +2,22 @@ import clsx from "clsx";
 import React from "react";
 import { MenuItemProps } from "../../../types/menu-route.types";
 
-const MenuItem: React.FC<MenuItemProps> = ({ route, isActive, isCollapsed, onNavigate, isChild = false }) => {
+const MenuItem: React.FC<MenuItemProps> = ({
+  route,
+  isActive,
+  isCollapsed,
+  onNavigate,
+  isChild = false,
+}) => {
   const Icon = route.icon;
 
   const handleClick = () => {
-    if (route.path || route.page) {
+    // Only navigate if we have a path to navigate to
+    if (route.path) {
       onNavigate(route.path, route.page);
+    } else if (route.page) {
+      // If no path but has a page, just update the page state
+      onNavigate(undefined, route.page);
     }
   };
 
@@ -26,12 +36,14 @@ const MenuItem: React.FC<MenuItemProps> = ({ route, isActive, isCollapsed, onNav
       )}
       title={isCollapsed ? route.label : undefined}
     >
-      <Icon className={clsx("flex-shrink-0", isChild ? "w-4 h-4" : "w-5 h-5")} />
-      {!isCollapsed && <span className="flex-1 text-left leading-tight">{route.label}</span>}
+      <Icon
+        className={clsx("flex-shrink-0", isChild ? "w-4 h-4" : "w-5 h-5")}
+      />
+      {!isCollapsed && (
+        <span className="flex-1 text-left leading-tight">{route.label}</span>
+      )}
     </button>
   );
 };
 
 export default MenuItem;
-
-

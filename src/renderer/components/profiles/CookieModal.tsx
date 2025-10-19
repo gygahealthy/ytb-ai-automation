@@ -51,6 +51,32 @@ export default function CookieModal({
     }
   }, [isOpen, profileId, loadCookies]);
 
+  // Close on Escape and lock body scroll / restore focus
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevActive = document.activeElement as HTMLElement | null;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      try {
+        prevActive?.focus?.();
+      } catch (e) {
+        // ignore
+      }
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [isOpen, onClose]);
+
   const handleDeleteCookie = async (cookieId: string) => {
     if (!confirm("Are you sure you want to delete this cookie?")) return;
 
@@ -212,8 +238,22 @@ export default function CookieModal({
 
   if (!isOpen) return null;
 
+  const handleOverlayMouseDown: React.MouseEventHandler<HTMLDivElement> = (
+    e
+  ) => {
+    const target = e.target as HTMLElement | null;
+    if (target && target.dataset && target.dataset.overlay === "true") {
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div
+        className="absolute inset-0"
+        data-overlay="true"
+        onMouseDown={handleOverlayMouseDown}
+      />
       <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl max-w-6xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800">
           <div>
