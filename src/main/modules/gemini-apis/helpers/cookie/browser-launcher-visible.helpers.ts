@@ -65,7 +65,7 @@ export async function launchVisibleBrowser(
   userDataDir: string,
   debugPort: number,
   userAgent?: string
-): Promise<any> {
+): Promise<{ browser: any; chromeProcess: any | null }> {
   // Validate required parameters
   if (!executablePath) {
     throw new Error(
@@ -175,7 +175,7 @@ export async function launchVisibleBrowser(
       userDataDir,
     });
 
-    return browser;
+    return { browser, chromeProcess };
   } catch (error) {
     logger.error("[visible-launcher] Failed to launch NON-HEADLESS browser", {
       error: error instanceof Error ? error.message : String(error),

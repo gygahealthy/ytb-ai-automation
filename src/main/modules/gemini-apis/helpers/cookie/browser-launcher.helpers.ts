@@ -62,7 +62,7 @@ export function findChromeExecutable(): string | undefined {
 export async function launchBrowser(
   profile: any,
   headless: boolean = false
-): Promise<any> {
+): Promise<{ browser: any; chromeProcess: any | null }> {
   // Validate profile has userDataDir
   if (!profile || !profile.userDataDir) {
     throw new Error("Profile with userDataDir is required");
@@ -103,12 +103,13 @@ export async function launchBrowser(
       logger.info(
         "[browser-launcher] Routing to HEADLESS launcher (background mode)"
       );
-      return await launchHeadlessBrowser(
+      const headlessBrowser = await launchHeadlessBrowser(
         executablePath,
         profile.userDataDir,
         debugPort,
         profile.userAgent
       );
+      return { browser: headlessBrowser, chromeProcess: null };
     } else {
       // Launch in NON-HEADLESS (visible) mode
       logger.info(
@@ -122,12 +123,13 @@ export async function launchBrowser(
         );
       }
 
-      return await launchVisibleBrowser(
+      const visibleResult = await launchVisibleBrowser(
         executablePath,
         profile.userDataDir,
         debugPort,
         profile.userAgent
       );
+      return visibleResult;
     }
   } catch (error) {
     logger.error("[browser-launcher] Browser launch failed", {

@@ -34,6 +34,7 @@ export class CookieService {
   ): Promise<ApiResponse<{ cookieString: string; cookies: any[] }>> {
     let browser: any = null;
     let page: any = null;
+    let chromeProcess: any = null;
 
     try {
       if (!profile || !profile.userDataDir) {
@@ -63,7 +64,10 @@ export class CookieService {
             headless,
           }
         );
-        browser = await launchBrowser(profile, headless);
+        const launchResult = await launchBrowser(profile, headless);
+        // launchBrowser now returns { browser, chromeProcess }
+        browser = launchResult.browser;
+        chromeProcess = (launchResult as any).chromeProcess || null;
       } catch (launchError) {
         logger.error("[cookie.service] Failed to launch browser", launchError);
         return {
@@ -101,8 +105,25 @@ export class CookieService {
       logCookieExtractionSuccess(allCookies, cookieString);
 
       // Cleanup
-      await page.close().catch(() => {});
-      await browser.disconnect().catch(() => {});
+      try {
+        if (page) await page.close().catch(() => {});
+      } catch (e) {}
+
+      try {
+        // Prefer closing the browser if close() exists
+        if (browser && typeof browser.close === "function") {
+          await browser.close().catch(() => {});
+        } else if (browser && typeof browser.disconnect === "function") {
+          await browser.disconnect().catch(() => {});
+        }
+      } catch (e) {}
+
+      // Kill spawned chrome process if provided
+      try {
+        if (chromeProcess && typeof chromeProcess.kill === "function") {
+          chromeProcess.kill();
+        }
+      } catch (e) {}
 
       return {
         success: true,
@@ -118,8 +139,23 @@ export class CookieService {
       );
 
       // Cleanup on error
-      if (page) await page.close().catch(() => {});
-      if (browser) await browser.disconnect().catch(() => {});
+      try {
+        if (page) await page.close().catch(() => {});
+      } catch (e) {}
+
+      try {
+        if (browser && typeof browser.close === "function") {
+          await browser.close().catch(() => {});
+        } else if (browser && typeof browser.disconnect === "function") {
+          await browser.disconnect().catch(() => {});
+        }
+      } catch (e) {}
+
+      try {
+        if (chromeProcess && typeof chromeProcess.kill === "function") {
+          chromeProcess.kill();
+        }
+      } catch (e) {}
 
       return {
         success: false,
