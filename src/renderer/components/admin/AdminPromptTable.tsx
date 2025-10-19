@@ -75,7 +75,7 @@ const AdminPromptTable: React.FC<Props> = ({
   const filteredPrompts = prompts; // Parent component handles filtering
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col animate-fadeIn">
       {/* Grid View */}
       {viewMode === "grid" && (
         <div className="flex-1 overflow-auto p-4">

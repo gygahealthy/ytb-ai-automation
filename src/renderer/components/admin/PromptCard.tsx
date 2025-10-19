@@ -1,5 +1,10 @@
 import React from "react";
 import { ChevronRight } from "lucide-react";
+import {
+  PROMPT_ACCENT_COLORS,
+  PROMPT_BADGE_COLOR_MAP,
+  DEFAULT_PROMPT_BADGE,
+} from "../../constants/promptCardConstants";
 
 interface PromptCardProps {
   title: string;
@@ -18,37 +23,13 @@ const PromptCard: React.FC<PromptCardProps> = ({
   accentColor = "purple",
   promptType,
 }) => {
-  const accentColors = {
-    purple: {
-      iconBg:
-        "bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-500/20 dark:to-purple-600/10",
-      iconText: "text-purple-600 dark:text-purple-400",
-      linkText:
-        "text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300",
-      hoverGlow:
-        "group-hover:shadow-2xl group-hover:shadow-purple-200/60 dark:group-hover:shadow-purple-500/30",
-    },
-    red: {
-      iconBg:
-        "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/20 dark:to-red-600/10",
-      iconText: "text-red-600 dark:text-red-400",
-      linkText:
-        "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300",
-      hoverGlow:
-        "group-hover:shadow-2xl group-hover:shadow-red-200/60 dark:group-hover:shadow-red-500/30",
-    },
-    blue: {
-      iconBg:
-        "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-500/20 dark:to-blue-600/10",
-      iconText: "text-blue-600 dark:text-blue-400",
-      linkText:
-        "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300",
-      hoverGlow:
-        "group-hover:shadow-2xl group-hover:shadow-blue-200/60 dark:group-hover:shadow-blue-500/30",
-    },
-  };
+  const colors = PROMPT_ACCENT_COLORS[accentColor];
 
-  const colors = accentColors[accentColor];
+  const promptTypeKey = promptType ? promptType.toString().toLowerCase() : null;
+  const badgeColors =
+    promptTypeKey && PROMPT_BADGE_COLOR_MAP[promptTypeKey]
+      ? PROMPT_BADGE_COLOR_MAP[promptTypeKey]
+      : DEFAULT_PROMPT_BADGE;
 
   return (
     <div
@@ -56,11 +37,13 @@ const PromptCard: React.FC<PromptCardProps> = ({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onClick?.()}
-      className={`group cursor-pointer rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-lg dark:shadow-2xl dark:shadow-slate-900/30 ${colors.hoverGlow} transition-all duration-300 p-6 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 dark:focus:ring-offset-slate-900 hover:border-gray-300 dark:hover:border-slate-600`}
+      style={{ willChange: "transform, box-shadow" }}
+      className={`group cursor-pointer rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm dark:shadow-none ${colors.hoverGlow} transform-gpu transition-shadow transition-transform duration-300 ease-out p-6 hover:-translate-y-4 hover:scale-105 hover:shadow-2xl hover:z-10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 dark:focus:ring-offset-slate-900 hover:border-gray-300 dark:hover:border-slate-600 motion-reduce:transition-none motion-reduce:transform-none`}
     >
       <div className="flex items-start gap-4">
         <div
-          className={`w-16 h-16 rounded-2xl ${colors.iconBg} flex items-center justify-center ${colors.iconText} group-hover:scale-125 transition-transform duration-300 shadow-lg group-hover:shadow-xl`}
+          className={`w-16 h-16 rounded-2xl ${colors.iconBg} flex items-center justify-center ${colors.iconText} transform-gpu group-hover:scale-105 transition-transform duration-300 shadow-md group-hover:shadow-xl`}
+          style={{ willChange: "transform" }}
         >
           {icon}
         </div>
@@ -69,7 +52,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
           {promptType && (
             <div className="mb-2 flex items-center gap-2">
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.iconText} bg-slate-100 dark:bg-slate-700 border border-slate-200/80`}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeColors.text} ${badgeColors.bg} border ${badgeColors.border}`}
               >
                 {promptType}
               </span>
@@ -88,7 +71,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
               Configure Prompts
             </span>
             <ChevronRight
-              className={`w-5 h-5 ${colors.iconText} group-hover:translate-x-2 transition-transform duration-300`}
+              className={`w-5 h-5 ${colors.iconText} transform-gpu group-hover:translate-x-2 transition-transform duration-300`}
             />
           </div>
         </div>

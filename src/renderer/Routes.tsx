@@ -7,7 +7,7 @@ import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
-import AllChannelsOverviewPage from "./pages/AllChannelsOverviewPage";
+import AllChannelsOverviewPage from "./pages/channel-management/AllChannelsOverviewPage";
 import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
 import StoryCreatePage from "./pages/video-creation/ScriptCreatePage";

@@ -1,7 +1,7 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
-import { PerformanceMetrics as PerformanceMetricsType } from '../../../main/modules/channel-management/youtube.types';
-import { formatNumber, formatPercent } from '../../utils/formatters';
+import React from "react";
+import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { PerformanceMetrics as PerformanceMetricsType } from "../../../main/modules/channel-management/youtube.types";
+import { formatNumber, formatPercent } from "../../../shared/utils/formatters";
 
 interface Props {
   channelId: string;
@@ -13,12 +13,19 @@ const PerformanceMetrics: React.FC<Props> = ({ performance }) => {
 
   const renderGrowthIndicator = (value: number) => {
     if (value === 0) return null;
-    
+
     const isPositive = value > 0;
     return (
-      <div className={`flex items-center space-x-1 text-xs ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+      <div
+        className={`flex items-center space-x-1 text-xs ${
+          isPositive ? "text-green-400" : "text-red-400"
+        }`}
+      >
         {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-        <span>{isPositive ? '+' : ''}{formatNumber(value)}</span>
+        <span>
+          {isPositive ? "+" : ""}
+          {formatNumber(value)}
+        </span>
       </div>
     );
   };
@@ -34,7 +41,9 @@ const PerformanceMetrics: React.FC<Props> = ({ performance }) => {
         <div>
           <div className="text-xs text-gray-400 mb-1">Subscribers</div>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold">{formatNumber(current.subscriberCount)}</span>
+            <span className="text-2xl font-bold">
+              {formatNumber(current.subscriberCount)}
+            </span>
             {renderGrowthIndicator(growth.subscribers)}
           </div>
         </div>
@@ -42,7 +51,9 @@ const PerformanceMetrics: React.FC<Props> = ({ performance }) => {
         <div>
           <div className="text-xs text-gray-400 mb-1">Total Views</div>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold">{formatNumber(current.totalViews)}</span>
+            <span className="text-2xl font-bold">
+              {formatNumber(current.totalViews)}
+            </span>
             {renderGrowthIndicator(growth.views)}
           </div>
         </div>
@@ -58,14 +69,18 @@ const PerformanceMetrics: React.FC<Props> = ({ performance }) => {
         {current.avgViewsPerVideo && (
           <div>
             <div className="text-xs text-gray-400 mb-1">Avg Views/Video</div>
-            <span className="text-lg font-semibold">{formatNumber(current.avgViewsPerVideo)}</span>
+            <span className="text-lg font-semibold">
+              {formatNumber(current.avgViewsPerVideo)}
+            </span>
           </div>
         )}
 
         {current.engagementRate && (
           <div>
             <div className="text-xs text-gray-400 mb-1">Engagement Rate</div>
-            <span className="text-lg font-semibold">{formatPercent(current.engagementRate)}</span>
+            <span className="text-lg font-semibold">
+              {formatPercent(current.engagementRate)}
+            </span>
           </div>
         )}
 

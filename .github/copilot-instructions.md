@@ -1,298 +1,90 @@
-# VS Code Copilot Custom Instructions
+# VS Code Copilot Custom Instructions (Project-tailored)
 
-# VEO3 Automation Project
+These instructions are tuned for the VEO3 / ytb-ai-automation Electron + React + TypeScript project in this repository. They guide code generation so suggestions align with the project's architecture, safety rules, and developer workflow.
 
-## Overview
+Principles:
 
-This file provides custom instructions for GitHub Copilot when working on the VEO3 Automation project. These instructions ensure code consistency, quality, and adherence to project standards.
+- Keep the main process minimal and push heavy work into services.
+- Renderer code is React + TypeScript (strict mode) using Tailwind for styles.
+- Follow the repository/service patterns: repositories handle DB access, services orchestrate business logic, pages/components handle UI.
 
-## Documentation Policy
+## Documentation & Files
 
-### ❌ DO NOT
+Do not create new top-level documentation files unless explicitly requested. If asked to update docs under `docs/`, confirm the scope and intended audience before modifying.
 
-- Automatically create markdown (.md) documentation files after completing tasks
-- Create files like: `IMPLEMENTATION_COMPLETE.md`, `DATABASE_IMPLEMENTATION.md`, `CHANGES.md`, etc.
-- Generate documentation without explicit user request
+## TypeScript & Code Quality
 
-### ✅ DO
+- Projects use TypeScript strict mode. Always add explicit types for function parameters and return values.
+- Avoid `any`. If necessary, add a short comment explaining why and prefer `unknown` with validation.
+- Use Promises/async-await and proper try/catch error handling. Bubble clear errors with context. Log using `src/core/logging` logger utilities when relevant.
 
-- Only create documentation files when explicitly requested by the user
-- Ask for confirmation before creating new .md files
-- Update existing documentation only when instructed
+## Project Patterns (must follow)
 
-## Code Quality Standards
+- Database access: always go through repository classes in `src/main/storage/repositories/` or other repo files. Do not access `sqlite-database` or write raw SQL inside services or UI code.
+- Services: live under `src/main/modules/*` or `src/main/services` and accept repositories via dependency injection when possible.
+- IPC: use `preload.ts` exported bridge (e.g., `electronAPI`) rather than direct `ipcRenderer` in the renderer. All IPC handlers should be defined in `src/main/handlers/`.
 
-### TypeScript
+## React / Renderer Guidelines
 
-- Always use TypeScript strict mode
-- Define explicit types for all function parameters and return values
-- Avoid using `any` type unless absolutely necessary (document reasoning if used)
-- Follow existing code patterns and architecture in the project
+- Use functional components with hooks. Type props and return types.
+- Keep components focused and composable. Lift state into contexts under `src/renderer/contexts/` when needed.
+- Styling: Tailwind utilities are used across the app. Support dark mode by using `dark:` classes.
 
-### Error Handling
+## Naming Conventions
 
-- Always use try-catch blocks for error-prone operations
-- Log important operations using the Logger utility from `src/core/logging`
-- Provide meaningful error messages that indicate what went wrong
-- Return proper error responses using `ApiResponse<T>` pattern
-
-### Code Patterns
-
-- Follow existing code patterns in the repository
-- Maintain consistency with established conventions
-- Review similar implementations before writing new code
-- Refactor only when requested or critical
-
-## Database Rules
-
-### Repository Pattern
-
-### Direct Database Access
-
-- ❌ **NEVER** bypass repositories to access the database directly
-- ❌ **NEVER** write raw SQL queries in services
-- ❌ **NEVER** use `sqlite-database` directly outside of repositories
-
-### Database Engine
-
-- SQLite is the database engine
-- Uses `better-sqlite3` package
-- All migrations should be placed in `src/main/storage/migrations/`
-
-### Example - Correct Pattern
-
-```typescript
-// ✅ CORRECT
-const users = await profileRepository.findAll();
-const user = await profileRepository.findById(1);
-
-// ❌ WRONG
-const users = await database.query("SELECT * FROM profiles");
-const connection = sqlite3.open(":memory:");
-```
-
-## Service Layer Architecture
-
-### Service Responsibilities
-
-- Services should **ONLY** interact with repositories
-- Keep business logic in services, data access in repositories
-- Never import or use database classes directly in services
-
-### Dependency Injection
-
-- Services should accept repositories through constructor
-- Maintain loose coupling between layers
-- Inject dependencies rather than creating instances
-
-## File Organization
-
-### File Naming Conventions
-
-- Components: `PascalCase.tsx` (e.g., `VideoPlayer.tsx`)
-- Pages: `PascalCase.tsx` (e.g., `VideoCreationPage.tsx`)
-- Utilities: `camelCase.ts` (e.g., `videoUtils.ts`)
+- Components & pages: `PascalCase.tsx`
+- Hooks & utilities: `camelCase.ts`
 - Types: `camelCase.ts` (e.g., `videoTypes.ts`)
-- Services: `camelCase.ts` (e.g., `videoService.ts`)
-- Repositories: `camelCase.ts` (e.g., `videoRepository.ts`)
 
-## Testing & Linting
+## Windows & PowerShell
 
-### Before Completing Tasks
+- The primary development environment is Windows + PowerShell. When suggesting terminal commands, use PowerShell-compatible syntax and semicolons for compound commands.
 
-1. ✅ Run linter: `npm run lint`
-2. ✅ Fix all linting errors
-3. ✅ Verify TypeScript compilation: `npm run build`
-4. ✅ Check for any console errors or warnings
+## Linting / Build / Tests
 
-### When Requesting Help
+- Before marking tasks done, ensure:
+  - `npm run lint` passes (fix linting errors if suggested code introduces them)
+  - `npm run build` succeeds (TypeScript compiles)
 
-- Include error messages and stack traces
-- Specify which command was running when error occurred
-- Provide context about what was being attempted
+## Git & Commit Policy
 
-## Git & Version Control
+- Never commit or push changes automatically. Provide a clear suggested commit message and wait for user confirmation.
 
-### Commits
+## Small, safe proactive improvements
 
-- ❌ **NEVER** commit code automatically unless explicitly requested
-- ❌ **NEVER** force push to main/master branches
-- Always explain changes before committing
+If a requested change is small and clearly improves code quality or consistency (for example: adding a missing type, fixing a simple lint error, or adding a short unit test that doesn't alter behavior), make it and note the change. For larger or risky changes (architecture refactors, DB migrations), propose first.
 
-### Workflow
+## Security & Secrets
 
-- Create descriptive commit messages
-- Reference issue numbers when applicable
-- Keep commits focused on single features/fixes
+- Never expose secrets or environment variables in code suggestions. Use environment variables or secure storage for credentials.
 
-## Windows Environment
+## Helpful file locations
 
-### Terminal Commands
+- Main process entry: `src/main/main.ts`
+- Preload & IPC bridge: `src/main/preload.ts` and `src/main/handlers/`
+- Storage & DB: `src/main/storage/`
+- Renderer entry & pages: `src/renderer/main.tsx`, `src/renderer/pages/`, `src/renderer/components/`
+- Contexts/hooks: `src/renderer/contexts/`, `src/renderer/hooks/`
 
-- Use **PowerShell** compatible commands
-- Avoid Unix-specific shell syntax (`&&`, `||`)
-- Use semicolons or separate commands in PowerShell
-- Example:
+## Path aliases
 
-  ```powershell
-  # ✅ Correct
-  npm run build; npm run lint
+- The project uses a set of path aliases so imports like `import X from "@/foo"` resolve to `src/foo` in both the renderer and main/electron builds.
+- Aliases are defined in three places and should stay in sync:
+  - Vite: `vite.config.ts` (used by the renderer dev server and build)
+  - TypeScript: `tsconfig.json` (used by editor/TS server)
+  - Electron/Node tsconfig: `tsconfig.electron.json` (used when compiling main/electron code)
+- The primary alias is `@/*` -> `./src/*`. Other aliases include `@main/*`, `@handlers/*`, `@modules/*`, `@renderer/*`, `@components/*`, `@constants/*`, `@contexts/*`, `@hooks/*`, `@ipc/*`, `@pages/*`, and `@store/*`.
 
-  # ❌ Avoid
-  npm run build && npm run lint
-  ```
+When adding or changing aliases, update all three files above to avoid resolution mismatches between dev, build, and main-process compilation.
 
-### Path Handling
+## Quick checklist for Copilot-generated changes
 
-- Use backslashes `\` or forward slashes `/` (both work in Node.js)
-- Wrap paths with spaces in quotes
-- Use `path.join()` for cross-platform compatibility
+- [ ] Types added and `strict` respected
+- [ ] No direct DB access in services or renderer
+- [ ] IPC usage via `preload` bridge
+- [ ] Lint and build locally before suggesting commits
 
-## Electron-Specific Guidelines
+## If something's unclear
 
-### IPC Communication
-
-- Use the `electronApi` object for renderer-process communication
-- All IPC handlers should be registered in `src/main/handlers/`
-- Type all IPC messages and responses
-- Validate data before processing in handlers
-
-### Main Process
-
-- Keep main process lightweight
-- Delegate heavy operations to services
-- Handle window management in main.ts
-- Use preload.ts for API exposure
-
-### Renderer Process
-
-- Use React hooks for state management
-- Implement proper error boundaries
-- Handle IPC errors gracefully
-- Show user feedback for long operations
-
-## React & TypeScript Patterns
-
-### Component Structure
-
-```typescript
-// ✅ Use functional components with hooks
-const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
-  const [state, setState] = useState<Type>(initial);
-
-  useEffect(() => {
-    // side effects
-  }, [dependencies]);
-
-  return <div>{...}</div>;
-};
-
-export default MyComponent;
-```
-
-### Styling
-
-- Use Tailwind CSS utility classes
-- Support dark mode with `dark:` prefix
-- Use `className` prop for conditional styles
-- Prefer component composition over inline styles
-
-### Hooks
-
-- Extract custom hooks to `src/renderer/hooks/`
-- Use meaningful hook names (e.g., `useVideoCreation`)
-- Document hook parameters and return values
-
-## Performance Considerations
-
-### Optimization
-
-- Memoize expensive computations with `useMemo`
-- Prevent unnecessary re-renders with `React.memo`
-- Lazy load components when appropriate
-- Minimize bundle size by tree-shaking unused code
-
-### Async Operations
-
-- Always handle loading and error states
-- Show progress indicators for long operations
-- Cancel requests when components unmount
-- Implement proper timeout handling
-
-## Security Guidelines
-
-### Data Handling
-
-- Validate all user inputs
-- Sanitize data before database operations
-- Never expose sensitive credentials
-- Use environment variables for secrets
-
-### Authentication
-
-- Implement proper session management
-- Validate tokens on every request
-- Log security-related events
-- Handle auth errors gracefully
-
-## Common Patterns in This Project
-
-### Repository Pattern
-
-```typescript
-class UserRepository {
-  findById(id: number): User | null { ... }
-  findAll(): User[] { ... }
-  save(user: User): User { ... }
-  delete(id: number): boolean { ... }
-}
-```
-
-### Service Pattern
-
-```typescript
-class UserService {
-  constructor(private repository: UserRepository) {}
-
-  async getUser(id: number): Promise<ApiResponse<User>> {
-    try {
-      const user = this.repository.findById(id);
-      return { success: !!user, data: user };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-}
-```
-
-## Helpful Resources
-
-- Project Architecture Documentation: `docs/project_architecture.md`
-- IPC Event Debugging: `docs/IPC_EVENT_DEBUGGING.md`
-- TypeScript Configuration: `tsconfig.json`
-- ESLint Configuration: `.eslintrc.cjs`
-
-## Quick Checklist for Every Task
-
-- [ ] Code follows project patterns and conventions
-- [ ] TypeScript strict mode compliance verified
-- [ ] Repository pattern used for data access
-- [ ] Error handling implemented with try-catch
-- [ ] Logging added for important operations
-- [ ] No direct database access outside repositories
-- [ ] ApiResponse<T> pattern used for service returns
-- [ ] Linter passes: `npm run lint`
-- [ ] TypeScript compiles: `npm run build`
-- [ ] No console errors or warnings
-- [ ] Documentation created only if requested
-- [ ] Commit messages are descriptive (if committing)
-- [ ] Code reviewed against similar implementations
-
-## Questions?
-
-When something is unclear:
-
-1. Check existing code patterns in the project
-2. Review relevant documentation in `/docs` folder
-3. Look at similar implementations
-4. Ask for clarification rather than guessing
+1. Check similar files in the repo (e.g., other services, handlers, or components) and match the project's style.
+2. Ask for clarification instead of guessing when behavior is ambiguous.

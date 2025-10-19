@@ -279,7 +279,7 @@ const MasterPromptManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col">
+    <div className="h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col animate-fadeIn">
       <div className="w-full px-6 py-8 flex flex-col flex-1 overflow-hidden">
         {/* Header */}
         <div className="mb-6">

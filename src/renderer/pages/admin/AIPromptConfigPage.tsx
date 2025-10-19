@@ -58,7 +58,7 @@ export const AIPromptConfigPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6 animate-fadeIn">
       <div className="w-full mx-auto space-y-8">
         {/* Header with Icon */}
         <div className="space-y-3">

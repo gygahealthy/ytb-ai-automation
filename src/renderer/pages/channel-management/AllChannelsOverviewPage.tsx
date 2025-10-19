@@ -1,11 +1,20 @@
-import { ExternalLink, Eye, Plus, TrendingDown, TrendingUp, Video as VideoIcon, X, Youtube } from "lucide-react";
+import {
+  ExternalLink,
+  Eye,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  Video as VideoIcon,
+  X,
+  Youtube,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { YoutubeChannel } from "../../main/modules/channel-management/youtube.types";
-import ChannelsGrid from "../components/all-channels/ChannelsGrid";
-import ChannelsToolbar from "../components/all-channels/ChannelsToolbar";
-import { createChannel, getAllChannels } from "../ipc/youtube";
-import { formatNumber } from "../utils/formatters";
+import { YoutubeChannel } from "../../../main/modules/channel-management/youtube.types";
+import { createChannel, getAllChannels } from "../../ipc/youtube";
+import { formatNumber } from "../../../shared/utils/formatters";
+import ChannelsToolbar from "../../components/channel-management/all-channels/ChannelsToolbar";
+import ChannelsGrid from "../../components/channel-management/all-channels/ChannelsGrid";
 
 interface CreateChannelForm {
   channelName: string;
@@ -58,7 +67,9 @@ export default function AllChannelsOverviewPage() {
       const response = await createChannel({
         channelName: createForm.channelName,
         channelId: createForm.channelId,
-        channelUrl: createForm.channelUrl || `https://youtube.com/@${createForm.channelId}`,
+        channelUrl:
+          createForm.channelUrl ||
+          `https://youtube.com/@${createForm.channelId}`,
       });
 
       if (response.success && response.data) {
@@ -78,7 +89,10 @@ export default function AllChannelsOverviewPage() {
     }
   };
 
-  const totalSubscribers = channels.reduce((sum, ch) => sum + (ch.subscriberCount || 0), 0);
+  const totalSubscribers = channels.reduce(
+    (sum, ch) => sum + (ch.subscriberCount || 0),
+    0
+  );
   const totalViews = channels.reduce((sum, ch) => sum + (ch.viewCount || 0), 0);
 
   return (
@@ -87,12 +101,20 @@ export default function AllChannelsOverviewPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">All Channels Overview</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage and compare all your video channels</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              All Channels Overview
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage and compare all your video channels
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
-            <ChannelsToolbar viewMode={viewMode} setViewMode={setViewMode} onAdd={() => setShowCreateModal(true)} />
+            <ChannelsToolbar
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              onAdd={() => setShowCreateModal(true)}
+            />
           </div>
         </div>
 
@@ -101,9 +123,15 @@ export default function AllChannelsOverviewPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(totalSubscribers)}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Subscribers</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  Total
+                </p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatNumber(totalSubscribers)}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Subscribers
+                </p>
                 <div className="flex items-center gap-1 mt-1 text-green-500 text-sm">
                   <TrendingUp className="w-4 h-4" />
                   <span>+350K (last 30 days)</span>
@@ -118,11 +146,17 @@ export default function AllChannelsOverviewPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Videos</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  Videos
+                </p>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {formatNumber(channels.reduce((sum, ch) => sum + (ch.videoCount || 0), 0))}
+                  {formatNumber(
+                    channels.reduce((sum, ch) => sum + (ch.videoCount || 0), 0)
+                  )}
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Upload</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Upload
+                </p>
               </div>
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
                 <VideoIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -133,9 +167,15 @@ export default function AllChannelsOverviewPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Views</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(totalViews)}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">(30 Days)</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  Total Views
+                </p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatNumber(totalViews)}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  (30 Days)
+                </p>
               </div>
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                 <Eye className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -147,7 +187,9 @@ export default function AllChannelsOverviewPage() {
         {/* Channel Performance Comparison Table */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Channel Performance Comparison</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Channel Performance Comparison
+            </h2>
           </div>
 
           <div className="px-6 py-4">
@@ -182,7 +224,10 @@ export default function AllChannelsOverviewPage() {
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                        <td
+                          colSpan={7}
+                          className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                        >
                           <div className="flex flex-col items-center justify-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
                             <p>Loading channels...</p>
@@ -191,24 +236,37 @@ export default function AllChannelsOverviewPage() {
                       </tr>
                     ) : channels.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                        <td
+                          colSpan={7}
+                          className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                        >
                           <div className="flex flex-col items-center justify-center">
                             <Youtube className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                            <p className="text-lg font-medium mb-2">No channels yet</p>
-                            <p className="text-sm">Add your first channel to start tracking performance</p>
+                            <p className="text-lg font-medium mb-2">
+                              No channels yet
+                            </p>
+                            <p className="text-sm">
+                              Add your first channel to start tracking
+                              performance
+                            </p>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       channels.map((channel) => {
-                        const engagementRate = Math.floor(Math.random() * 60) + 20; // Mock data
+                        const engagementRate =
+                          Math.floor(Math.random() * 60) + 20; // Mock data
                         const isPositiveGrowth = Math.random() > 0.3;
 
                         return (
                           <tr
                             key={channel.id}
                             className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-                            onClick={() => navigate(`/video-creation/channels/${channel.channelId}`)}
+                            onClick={() =>
+                              navigate(
+                                `/video-creation/channels/${channel.channelId}`
+                              )
+                            }
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
@@ -230,24 +288,37 @@ export default function AllChannelsOverviewPage() {
                                 {formatNumber(channel.subscriberCount || 0)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                +{Math.floor((channel.subscriberCount || 0) * 0.05)} this month
+                                +
+                                {Math.floor(
+                                  (channel.subscriberCount || 0) * 0.05
+                                )}{" "}
+                                this month
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                                  {formatNumber(Math.floor((channel.subscriberCount || 0) / 1000))}M
+                                  {formatNumber(
+                                    Math.floor(
+                                      (channel.subscriberCount || 0) / 1000
+                                    )
+                                  )}
+                                  M
                                 </span>
                                 <div className="flex items-center gap-1">
                                   {isPositiveGrowth ? (
                                     <>
                                       <TrendingUp className="w-4 h-4 text-green-500" />
-                                      <span className="text-xs text-green-500">{Math.floor(Math.random() * 10) + 1}%</span>
+                                      <span className="text-xs text-green-500">
+                                        {Math.floor(Math.random() * 10) + 1}%
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <TrendingDown className="w-4 h-4 text-red-500" />
-                                      <span className="text-xs text-red-500">{Math.floor(Math.random() * 5) + 1}%</span>
+                                      <span className="text-xs text-red-500">
+                                        {Math.floor(Math.random() * 5) + 1}%
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -262,12 +333,16 @@ export default function AllChannelsOverviewPage() {
                                   {isPositiveGrowth ? (
                                     <>
                                       <TrendingUp className="w-4 h-4 text-green-500" />
-                                      <span className="text-xs text-green-500">+{Math.floor(Math.random() * 20) + 5}</span>
+                                      <span className="text-xs text-green-500">
+                                        +{Math.floor(Math.random() * 20) + 5}
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <TrendingDown className="w-4 h-4 text-red-500" />
-                                      <span className="text-xs text-red-500">-{Math.floor(Math.random() * 10) + 1}</span>
+                                      <span className="text-xs text-red-500">
+                                        -{Math.floor(Math.random() * 10) + 1}
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -282,12 +357,16 @@ export default function AllChannelsOverviewPage() {
                                   {isPositiveGrowth ? (
                                     <>
                                       <TrendingUp className="w-4 h-4 text-green-500" />
-                                      <span className="text-xs text-green-500">+{Math.floor(Math.random() * 15) + 5}%</span>
+                                      <span className="text-xs text-green-500">
+                                        +{Math.floor(Math.random() * 15) + 5}%
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <TrendingDown className="w-4 h-4 text-red-500" />
-                                      <span className="text-xs text-red-500">-{Math.floor(Math.random() * 8) + 1}%</span>
+                                      <span className="text-xs text-red-500">
+                                        -{Math.floor(Math.random() * 8) + 1}%
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -295,7 +374,9 @@ export default function AllChannelsOverviewPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">{engagementRate}%</span>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {engagementRate}%
+                                </span>
                                 <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
@@ -308,7 +389,9 @@ export default function AllChannelsOverviewPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/video-creation/channels/${channel.channelId}`);
+                                  navigate(
+                                    `/video-creation/channels/${channel.channelId}`
+                                  );
                                 }}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors"
                               >
@@ -340,16 +423,23 @@ export default function AllChannelsOverviewPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Channel</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Add New Channel
+                  </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Connect your YouTube channel to start tracking and managing content
+                    Connect your YouTube channel to start tracking and managing
+                    content
                   </p>
                 </div>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
                     setCreateError(null);
-                    setCreateForm({ channelName: "", channelId: "", channelUrl: "" });
+                    setCreateForm({
+                      channelName: "",
+                      channelId: "",
+                      channelUrl: "",
+                    });
                   }}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
@@ -361,7 +451,9 @@ export default function AllChannelsOverviewPage() {
               <div className="p-6 space-y-6">
                 {createError && (
                   <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {createError}
+                    </p>
                   </div>
                 )}
 
@@ -372,42 +464,63 @@ export default function AllChannelsOverviewPage() {
                   <input
                     type="text"
                     value={createForm.channelName}
-                    onChange={(e) => setCreateForm({ ...createForm, channelName: e.target.value })}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        channelName: e.target.value,
+                      })
+                    }
                     placeholder="e.g., Tech Reviews Pro"
                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">A friendly name to identify your channel</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    YouTube Channel ID / Handle <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.channelId}
-                    onChange={(e) => setCreateForm({ ...createForm, channelId: e.target.value })}
-                    placeholder="e.g., @yourchannel or UCxxxxxx"
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Your YouTube channel handle (e.g., @username) or channel ID (UCxxxxxx)
+                    A friendly name to identify your channel
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Channel URL <span className="text-gray-400">(Optional)</span>
+                    YouTube Channel ID / Handle{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.channelId}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        channelId: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., @yourchannel or UCxxxxxx"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Your YouTube channel handle (e.g., @username) or channel ID
+                    (UCxxxxxx)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Channel URL{" "}
+                    <span className="text-gray-400">(Optional)</span>
                   </label>
                   <input
                     type="text"
                     value={createForm.channelUrl}
-                    onChange={(e) => setCreateForm({ ...createForm, channelUrl: e.target.value })}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        channelUrl: e.target.value,
+                      })
+                    }
                     placeholder="e.g., https://youtube.com/@yourchannel"
                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Full URL to your channel (will be auto-generated if not provided)
+                    Full URL to your channel (will be auto-generated if not
+                    provided)
                   </p>
                 </div>
 
@@ -415,10 +528,14 @@ export default function AllChannelsOverviewPage() {
                   <div className="flex gap-3">
                     <Youtube className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">What's Next?</h4>
+                      <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        What's Next?
+                      </h4>
                       <p className="text-xs text-blue-700 dark:text-blue-300">
-                        After adding your channel, you'll be able to track performance metrics, analyze competitors, define
-                        content strategy, manage prompts, and organize your video content efficiently.
+                        After adding your channel, you'll be able to track
+                        performance metrics, analyze competitors, define content
+                        strategy, manage prompts, and organize your video
+                        content efficiently.
                       </p>
                     </div>
                   </div>
@@ -431,7 +548,11 @@ export default function AllChannelsOverviewPage() {
                   onClick={() => {
                     setShowCreateModal(false);
                     setCreateError(null);
-                    setCreateForm({ channelName: "", channelId: "", channelUrl: "" });
+                    setCreateForm({
+                      channelName: "",
+                      channelId: "",
+                      channelUrl: "",
+                    });
                   }}
                   disabled={isCreating}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
@@ -440,7 +561,11 @@ export default function AllChannelsOverviewPage() {
                 </button>
                 <button
                   onClick={handleCreateChannel}
-                  disabled={isCreating || !createForm.channelName.trim() || !createForm.channelId.trim()}
+                  disabled={
+                    isCreating ||
+                    !createForm.channelName.trim() ||
+                    !createForm.channelId.trim()
+                  }
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isCreating ? (

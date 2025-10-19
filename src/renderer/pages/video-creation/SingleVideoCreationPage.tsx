@@ -53,7 +53,7 @@ export default function SingleVideoCreationPage() {
     deleteDraft,
     createJob,
     updateJobStatus,
-  clearAllPrompts,
+    clearAllPrompts,
     toggleGlobalPreview,
     setStatusFilter,
   } = useVideoCreationStore();
@@ -95,96 +95,137 @@ export default function SingleVideoCreationPage() {
     };
 
     window.addEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
-    return () => window.removeEventListener("toggle-profile-drawer", handleToggleProfileDrawer);
+    return () =>
+      window.removeEventListener(
+        "toggle-profile-drawer",
+        handleToggleProfileDrawer
+      );
   }, [selectedProfileId, selectedProjectId]);
 
   // Listen for VEO3 events and update job status
   useEffect(() => {
-    console.log("[SingleVideoCreationPage] 🔄 Setting up VEO3 event listeners...");
-    
+    console.log(
+      "[SingleVideoCreationPage] 🔄 Setting up VEO3 event listeners..."
+    );
+
     const electronAPI = (window as any).electronAPI;
     if (!electronAPI || !electronAPI.on) {
-      console.error("[SingleVideoCreationPage] ❌ electronAPI.on not available!");
+      console.error(
+        "[SingleVideoCreationPage] ❌ electronAPI.on not available!"
+      );
       return;
     }
 
-    console.log("[SingleVideoCreationPage] ✅ electronAPI.on available, setting up listeners...");
+    console.log(
+      "[SingleVideoCreationPage] ✅ electronAPI.on available, setting up listeners..."
+    );
 
     // Listen for generation status updates from backend polling
-    const unsubStatus = electronAPI.on("veo3:generation:status", (data: any) => {
-      console.log("[SingleVideoCreationPage] 📨 veo3:generation:status event received:", data);
-      
-      const { generationId, promptId, status, videoUrl, error, progress } = data;
-      
-      // Get current jobs from store to avoid stale closure
-      const currentJobs = useVideoCreationStore.getState().jobs;
-      const updateStatus = useVideoCreationStore.getState().updateJobStatus;
-      
-      // Find the job by generationId or promptId
-      const job = currentJobs.find((j) => j.generationId === generationId || j.promptId === promptId);
-      
-      if (job) {
-        console.log(`[SingleVideoCreationPage] 🔄 Updating job ${job.id} with status: ${status}`);
-        
-        if (status === "completed") {
-          updateStatus(job.id, "completed", {
-            videoUrl,
-            progress: 100,
-          });
-        } else if (status === "failed") {
-          updateStatus(job.id, "failed", {
-            error,
-            progress: 0,
-          });
-        } else if (status === "processing") {
-          updateStatus(job.id, "processing", {
-            progress: progress || job.progress || 0,
-          });
+    const unsubStatus = electronAPI.on(
+      "veo3:generation:status",
+      (data: any) => {
+        console.log(
+          "[SingleVideoCreationPage] 📨 veo3:generation:status event received:",
+          data
+        );
+
+        const { generationId, promptId, status, videoUrl, error, progress } =
+          data;
+
+        // Get current jobs from store to avoid stale closure
+        const currentJobs = useVideoCreationStore.getState().jobs;
+        const updateStatus = useVideoCreationStore.getState().updateJobStatus;
+
+        // Find the job by generationId or promptId
+        const job = currentJobs.find(
+          (j) => j.generationId === generationId || j.promptId === promptId
+        );
+
+        if (job) {
+          console.log(
+            `[SingleVideoCreationPage] 🔄 Updating job ${job.id} with status: ${status}`
+          );
+
+          if (status === "completed") {
+            updateStatus(job.id, "completed", {
+              videoUrl,
+              progress: 100,
+            });
+          } else if (status === "failed") {
+            updateStatus(job.id, "failed", {
+              error,
+              progress: 0,
+            });
+          } else if (status === "processing") {
+            updateStatus(job.id, "processing", {
+              progress: progress || job.progress || 0,
+            });
+          }
+        } else {
+          console.warn(
+            `[SingleVideoCreationPage] ⚠️ No job found for generationId: ${generationId}, promptId: ${promptId}`
+          );
         }
-      } else {
-        console.warn(`[SingleVideoCreationPage] ⚠️ No job found for generationId: ${generationId}, promptId: ${promptId}`);
       }
-    });
+    );
 
     // Listen for batch progress (when each video starts generating)
-    const unsubProgress = electronAPI.on("veo3:multipleVideos:progress", (data: any) => {
-      console.log("[SingleVideoCreationPage] 📨 veo3:multipleVideos:progress event received:", data);
-      
-      const { promptId, generationId, success, error } = data;
-      
-      // Get current jobs from store to avoid stale closure
-      const currentJobs = useVideoCreationStore.getState().jobs;
-      const updateStatus = useVideoCreationStore.getState().updateJobStatus;
-      
-      if (success && generationId) {
-        // Find job by promptId and update with generationId
-        const job = currentJobs.find((j) => j.promptId === promptId);
-        if (job) {
-          console.log(`[SingleVideoCreationPage] 🔄 Updating job ${job.id} with generationId: ${generationId}`);
-          updateStatus(job.id, "processing", {
-            generationId,
-            progress: 0,
-          });
-        }
-      } else if (error) {
-        const job = currentJobs.find((j) => j.promptId === promptId);
-        if (job) {
-          console.error(`[SingleVideoCreationPage] ❌ Job ${job.id} failed: ${error}`);
-          updateStatus(job.id, "failed", {
-            error,
-          });
+    const unsubProgress = electronAPI.on(
+      "veo3:multipleVideos:progress",
+      (data: any) => {
+        console.log(
+          "[SingleVideoCreationPage] 📨 veo3:multipleVideos:progress event received:",
+          data
+        );
+
+        const { promptId, generationId, success, error } = data;
+
+        // Get current jobs from store to avoid stale closure
+        const currentJobs = useVideoCreationStore.getState().jobs;
+        const updateStatus = useVideoCreationStore.getState().updateJobStatus;
+
+        if (success && generationId) {
+          // Find job by promptId and update with generationId
+          const job = currentJobs.find((j) => j.promptId === promptId);
+          if (job) {
+            console.log(
+              `[SingleVideoCreationPage] 🔄 Updating job ${job.id} with generationId: ${generationId}`
+            );
+            updateStatus(job.id, "processing", {
+              generationId,
+              progress: 0,
+            });
+          }
+        } else if (error) {
+          const job = currentJobs.find((j) => j.promptId === promptId);
+          if (job) {
+            console.error(
+              `[SingleVideoCreationPage] ❌ Job ${job.id} failed: ${error}`
+            );
+            updateStatus(job.id, "failed", {
+              error,
+            });
+          }
         }
       }
-    });
+    );
 
-    const unsubBatchStarted = electronAPI.on("veo3:batch:started", (data: any) => {
-      console.log("[SingleVideoCreationPage] 📨 veo3:batch:started event received:", data);
-    });
+    const unsubBatchStarted = electronAPI.on(
+      "veo3:batch:started",
+      (data: any) => {
+        console.log(
+          "[SingleVideoCreationPage] 📨 veo3:batch:started event received:",
+          data
+        );
+      }
+    );
 
     console.log("[SingleVideoCreationPage] ✅ All event listeners registered!");
 
     return () => {
-      console.log("[SingleVideoCreationPage] 🛑 Unsubscribing from event listeners");
+      console.log(
+        "[SingleVideoCreationPage] 🛑 Unsubscribing from event listeners"
+      );
       if (unsubStatus) unsubStatus();
       if (unsubProgress) unsubProgress();
       if (unsubBatchStarted) unsubBatchStarted();
@@ -227,19 +268,27 @@ export default function SingleVideoCreationPage() {
     const effectiveProjectId = prompt.projectId || selectedProjectId;
 
     if (!effectiveProfileId) {
-      alert("Please select a profile first (use the Profile button or set per-row profile)");
+      alert(
+        "Please select a profile first (use the Profile button or set per-row profile)"
+      );
       return;
     }
 
     if (!effectiveProjectId) {
-      alert("Please select a project first (use the Profile button or set per-row project)");
+      alert(
+        "Please select a project first (use the Profile button or set per-row project)"
+      );
       return;
     }
 
     // Create job in store with "processing" status
     const jobId = createJob(promptId, promptText);
-    console.log(`[VideoCreation] Starting video generation for prompt: ${promptId}`);
-    console.log(`[VideoCreation] Using profile: ${effectiveProfileId}, project: ${effectiveProjectId}`);
+    console.log(
+      `[VideoCreation] Starting video generation for prompt: ${promptId}`
+    );
+    console.log(
+      `[VideoCreation] Using profile: ${effectiveProfileId}, project: ${effectiveProjectId}`
+    );
 
     try {
       // Call backend to start video generation
@@ -251,7 +300,10 @@ export default function SingleVideoCreationPage() {
       );
 
       if (!result.success) {
-        console.error("[VideoCreation] Failed to start video generation:", result.error);
+        console.error(
+          "[VideoCreation] Failed to start video generation:",
+          result.error
+        );
         alert(`Failed to start video generation: ${result.error}`);
         // Update job status to failed using store method
         updateJobStatus(jobId, "failed", {
@@ -262,7 +314,9 @@ export default function SingleVideoCreationPage() {
 
       const { generationId, sceneId, operationName } = result.data;
       console.log(`[VideoCreation] Video generation started: ${generationId}`);
-      console.log(`[VideoCreation] Scene ID: ${sceneId}, Operation: ${operationName}`);
+      console.log(
+        `[VideoCreation] Scene ID: ${sceneId}, Operation: ${operationName}`
+      );
 
       // Update job to processing status and store generationId - use store method to trigger re-render
       updateJobStatus(jobId, "processing", {
@@ -320,7 +374,8 @@ export default function SingleVideoCreationPage() {
           window.dispatchEvent(new CustomEvent("toggle-profile-drawer"));
         }
       },
-      isOpen: () => (api && typeof api.isOpen === "function" ? api.isOpen() : false),
+      isOpen: () =>
+        api && typeof api.isOpen === "function" ? api.isOpen() : false,
     };
 
     return () => {
@@ -337,7 +392,11 @@ export default function SingleVideoCreationPage() {
     const selectedPrompts = prompts.filter((p) => p.selected);
 
     if (selectedPrompts.length === 0) {
-      setAlertState({ open: true, message: "Please select at least one prompt to generate videos", severity: "error" });
+      setAlertState({
+        open: true,
+        message: "Please select at least one prompt to generate videos",
+        severity: "error",
+      });
       return;
     }
 
@@ -352,7 +411,8 @@ export default function SingleVideoCreationPage() {
     if (promptsToGenerate.length === 0) {
       setAlertState({
         open: true,
-        message: "All selected prompts already have completed videos. Please select prompts without videos.",
+        message:
+          "All selected prompts already have completed videos. Please select prompts without videos.",
         severity: "warning",
       });
       return;
@@ -371,14 +431,19 @@ export default function SingleVideoCreationPage() {
 
     // Confirm action (skip if already confirmed by toolbar)
     if (!opts?.skipConfirm) {
-      const skippedMessage = skippedCount > 0 ? `\n\n${skippedCount} completed prompt(s) will be skipped.` : "";
+      const skippedMessage =
+        skippedCount > 0
+          ? `\n\n${skippedCount} completed prompt(s) will be skipped.`
+          : "";
       const confirmed = window.confirm(
         `Generate videos for ${promptsToGenerate.length} prompt(s)?${skippedMessage}\n\nThis will start video generation for all selected prompts with a small delay between each to avoid rate limiting.`
       );
       if (!confirmed) return;
     }
 
-    console.log(`[MultiGen] Starting batch generation for ${promptsToGenerate.length} prompts (${skippedCount} skipped)`);
+    console.log(
+      `[MultiGen] Starting batch generation for ${promptsToGenerate.length} prompts (${skippedCount} skipped)`
+    );
 
     // Prepare requests for all selected prompts
     const requests = promptsToGenerate.map((prompt) => {
@@ -395,7 +460,9 @@ export default function SingleVideoCreationPage() {
     });
 
     // Validate all requests have profile and project
-    const invalidRequests = requests.filter((r) => !r.profileId || !r.projectId);
+    const invalidRequests = requests.filter(
+      (r) => !r.profileId || !r.projectId
+    );
     if (invalidRequests.length > 0) {
       setAlertState({
         open: true,
@@ -416,7 +483,10 @@ export default function SingleVideoCreationPage() {
       // Set up event listener for progress updates (BEFORE calling async method)
       console.log(`[MultiGen] Setting up progress event listener...`);
       const cleanup = veo3IPC.onMultipleVideosProgress((progress) => {
-        console.log(`[MultiGen] 🎯 Progress event received for prompt ${progress.promptId}:`, progress);
+        console.log(
+          `[MultiGen] 🎯 Progress event received for prompt ${progress.promptId}:`,
+          progress
+        );
 
         const jobId = jobMap.get(progress.promptId);
         if (!jobId) {
@@ -428,8 +498,12 @@ export default function SingleVideoCreationPage() {
         }
 
         if (progress.success && progress.generationId) {
-          console.log(`[MultiGen] ✅ [${progress.index}/${progress.total}] Video generation started: ${progress.generationId}`);
-          console.log(`[MultiGen] Updating job ${jobId} with generationId ${progress.generationId}`);
+          console.log(
+            `[MultiGen] ✅ [${progress.index}/${progress.total}] Video generation started: ${progress.generationId}`
+          );
+          console.log(
+            `[MultiGen] Updating job ${jobId} with generationId ${progress.generationId}`
+          );
 
           // Update job with generationId - this will trigger polling in VideoPromptRow
           updateJobStatus(jobId, "processing", {
@@ -439,22 +513,36 @@ export default function SingleVideoCreationPage() {
 
           console.log(`[MultiGen] Job ${jobId} updated successfully`);
         } else {
-          console.error(`[MultiGen] ❌ [${progress.index}/${progress.total}] Failed: ${progress.error}`);
+          console.error(
+            `[MultiGen] ❌ [${progress.index}/${progress.total}] Failed: ${progress.error}`
+          );
 
           updateJobStatus(jobId, "failed", {
             error: progress.error || "Unknown error",
           });
         }
       });
-      console.log(`[MultiGen] Event listener registered. Cleanup function created:`, !!cleanup);
+      console.log(
+        `[MultiGen] Event listener registered. Cleanup function created:`,
+        !!cleanup
+      );
 
       // Call backend async method - returns immediately
-      console.log(`[MultiGen] Calling async backend for ${requests.length} videos...`);
+      console.log(
+        `[MultiGen] Calling async backend for ${requests.length} videos...`
+      );
       const result = await veo3IPC.generateMultipleVideosAsync(requests, 1500); // 1.5s delay between requests
 
       if (!result.success || !result.data) {
-        console.error("[MultiGen] Failed to start batch generation:", result.error);
-        setAlertState({ open: true, message: `Failed to start batch generation: ${result.error}`, severity: "error" });
+        console.error(
+          "[MultiGen] Failed to start batch generation:",
+          result.error
+        );
+        setAlertState({
+          open: true,
+          message: `Failed to start batch generation: ${result.error}`,
+          severity: "error",
+        });
         cleanup(); // Clean up event listener
 
         // Mark all jobs as failed
@@ -467,9 +555,14 @@ export default function SingleVideoCreationPage() {
       }
 
       const { batchId, total } = result.data;
-      console.log(`[MultiGen] Batch started (${batchId}), ${total} videos will be processed in background`);
+      console.log(
+        `[MultiGen] Batch started (${batchId}), ${total} videos will be processed in background`
+      );
 
-      const skippedMessage = skippedCount > 0 ? `\n\n${skippedCount} completed prompt(s) were skipped.` : "";
+      const skippedMessage =
+        skippedCount > 0
+          ? `\n\n${skippedCount} completed prompt(s) were skipped.`
+          : "";
       setAlertState({
         open: true,
         message: `Batch generation started!${skippedMessage}\n\n${total} video(s) will be generated with delays between each request.\n\nEach video will update independently as processing starts.`,
@@ -479,14 +572,20 @@ export default function SingleVideoCreationPage() {
       // Clean up event listener after a reasonable time (total * delayMs + buffer)
       const cleanupTimeout = setTimeout(() => {
         cleanup();
-        console.log(`[MultiGen] Event listener cleaned up for batch ${batchId}`);
+        console.log(
+          `[MultiGen] Event listener cleaned up for batch ${batchId}`
+        );
       }, total * 1500 + 10000); // Add 10s buffer
 
       // Store cleanup reference if needed later
       (window as any).__multiGenCleanup = { cleanup, timeout: cleanupTimeout };
     } catch (error) {
       console.error("[MultiGen] Error during batch generation:", error);
-      setAlertState({ open: true, message: `Error: ${error}`, severity: "error" });
+      setAlertState({
+        open: true,
+        message: `Error: ${error}`,
+        severity: "error",
+      });
 
       // Mark all jobs as failed
       for (const [, jobId] of jobMap.entries()) {
@@ -581,13 +680,17 @@ export default function SingleVideoCreationPage() {
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative animate-fadeIn">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Single Video Creation</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Create videos using single or multiple prompts</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Single Video Creation
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Create videos using single or multiple prompts
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -647,15 +750,29 @@ export default function SingleVideoCreationPage() {
         <div className="mb-4">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <span className="absolute -inset-1 rounded-full border-2 border-rose-300 opacity-60 transform-gpu animate-pulse-slow" aria-hidden="true"></span>
+              <span
+                className="absolute -inset-1 rounded-full border-2 border-rose-300 opacity-60 transform-gpu animate-pulse-slow"
+                aria-hidden="true"
+              ></span>
               <button
                 onClick={addPrompt}
                 aria-label="Add New Prompt"
                 title="Add New Prompt"
                 className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_10px_36px_rgba(79,70,229,0.18)] hover:shadow-[0_16px_48px_rgba(79,70,229,0.22)] transform hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="w-6 h-6"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 5v14M5 12h14"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -702,7 +819,11 @@ export default function SingleVideoCreationPage() {
       </div>
 
       {/* Modals */}
-      <AddJsonModal isOpen={showAddJsonModal} onClose={() => setShowAddJsonModal(false)} onAdd={handleAddJson} />
+      <AddJsonModal
+        isOpen={showAddJsonModal}
+        onClose={() => setShowAddJsonModal(false)}
+        onAdd={handleAddJson}
+      />
 
       <JobDetailsModal
         job={selectedJob}
@@ -726,7 +847,9 @@ export default function SingleVideoCreationPage() {
             className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Save Draft</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Save Draft
+            </h3>
             <input
               type="text"
               value={draftName}
@@ -764,7 +887,13 @@ export default function SingleVideoCreationPage() {
       {/* AppAlert for validation and notifications */}
       {alertState.open && (
         <AppAlert
-          title={alertState.severity === "error" ? "Error" : alertState.severity === "success" ? "Success" : "Notice"}
+          title={
+            alertState.severity === "error"
+              ? "Error"
+              : alertState.severity === "success"
+              ? "Success"
+              : "Notice"
+          }
           message={alertState.message}
           severity={alertState.severity}
           onClose={() => setAlertState((s) => ({ ...s, open: false }))}

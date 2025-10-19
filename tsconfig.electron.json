@@ -10,6 +10,21 @@
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
+  "baseUrl": ".",
+  "paths": {
+    "@/*": ["./src/*"],
+    "@main/*": ["./src/main/*"],
+    "@handlers/*": ["./src/main/handlers/*"],
+    "@modules/*": ["./src/main/modules/*"],
+    "@renderer/*": ["./src/renderer/*"],
+    "@components/*": ["./src/renderer/components/*"],
+    "@constants/*": ["./src/renderer/constants/*"],
+    "@contexts/*": ["./src/renderer/contexts/*"],
+    "@hooks/*": ["./src/renderer/hooks/*"],
+    "@ipc/*": ["./src/renderer/ipc/*"],
+    "@pages/*": ["./src/renderer/pages/*"],
+    "@store/*": ["./src/renderer/store/*"]
+  },
   "include": [
     "src/main/**/*",
     "src/domain/**/*",

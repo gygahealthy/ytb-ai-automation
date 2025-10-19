@@ -266,7 +266,7 @@ export default function ProfilesPage() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6 lg:p-8 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6 lg:p-8 flex flex-col animate-fadeIn">
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-start justify-between">

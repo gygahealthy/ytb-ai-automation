@@ -1,13 +1,13 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, TrendingUp, Users, Video } from 'lucide-react';
+import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, BarChart3, TrendingUp, Users, Video } from "lucide-react";
 
 const ChannelMonitoringPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950 animate-fadeIn">
       {/* Header */}
       <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-6">
@@ -31,12 +31,13 @@ const ChannelMonitoringPage: React.FC = () => {
           <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <BarChart3 className="w-12 h-12 text-blue-600 dark:text-blue-400" />
           </div>
-          
+
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
             Channel Monitoring Dashboard
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            This page will contain comprehensive analytics, performance metrics, and monitoring tools for your channel.
+            This page will contain comprehensive analytics, performance metrics,
+            and monitoring tools for your channel.
           </p>
 
           {/* Feature Cards */}
@@ -45,7 +46,9 @@ const ChannelMonitoringPage: React.FC = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Performance Tracking</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Performance Tracking
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Monitor views, engagement, and growth metrics over time
               </p>
@@ -55,7 +58,9 @@ const ChannelMonitoringPage: React.FC = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Video className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Video Analytics</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Video Analytics
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Deep dive into individual video performance and insights
               </p>
@@ -65,7 +70,9 @@ const ChannelMonitoringPage: React.FC = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Audience Insights</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Audience Insights
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Understand your audience demographics and behavior
               </p>

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { FileText, Edit, Save, X } from 'lucide-react';
-import { ChannelDeepDive, UpdateDeepDiveInput } from '../../../main/modules/channel-management/youtube.types';
-import { upsertChannelDeepDive } from '../../ipc/youtube';
+import React, { useState } from "react";
+import { FileText, Edit, Save, X } from "lucide-react";
+import {
+  ChannelDeepDive,
+  UpdateDeepDiveInput,
+} from "../../../../main/modules/channel-management/youtube.types";
+import { upsertChannelDeepDive } from "../../../ipc/youtube";
 
 interface Props {
   channelId: string;
@@ -9,10 +12,14 @@ interface Props {
   onUpdate: () => void;
 }
 
-const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => {
+const StrategySection: React.FC<Props> = ({
+  channelId,
+  deepDive,
+  onUpdate,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [strategy, setStrategy] = useState(deepDive?.strategyMarkdown || '');
-  const [usp, setUsp] = useState(deepDive?.uspMarkdown || '');
+  const [strategy, setStrategy] = useState(deepDive?.strategyMarkdown || "");
+  const [usp, setUsp] = useState(deepDive?.uspMarkdown || "");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -27,7 +34,7 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
         setIsEditing(false);
         onUpdate();
       } else {
-        alert(response.error || 'Failed to save');
+        alert(response.error || "Failed to save");
       }
     } catch (err) {
       alert(String(err));
@@ -37,8 +44,8 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
   };
 
   const handleCancel = () => {
-    setStrategy(deepDive?.strategyMarkdown || '');
-    setUsp(deepDive?.uspMarkdown || '');
+    setStrategy(deepDive?.strategyMarkdown || "");
+    setUsp(deepDive?.uspMarkdown || "");
     setIsEditing(false);
   };
 
@@ -51,8 +58,12 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
               <FileText className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Strategy & Goals</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Define your content strategy</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Strategy & Goals
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Define your content strategy
+              </p>
             </div>
           </div>
           {!isEditing ? (
@@ -71,7 +82,7 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
               >
                 <Save className="w-4 h-4" />
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? "Saving..." : "Save"}
               </button>
               <button
                 onClick={handleCancel}
@@ -89,7 +100,9 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
         {isEditing ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Channel Strategy</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Channel Strategy
+              </label>
               <textarea
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value)}
@@ -99,7 +112,9 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Unique Selling Proposition (USP)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Unique Selling Proposition (USP)
+              </label>
               <textarea
                 value={usp}
                 onChange={(e) => setUsp(e.target.value)}
@@ -126,11 +141,15 @@ const StrategySection: React.FC<Props> = ({ channelId, deepDive, onUpdate }) => 
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <FileText className="w-8 h-8 text-gray-400 dark:text-gray-600" />
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">No strategy defined yet</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Click edit to add your content strategy</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">
+                  No strategy defined yet
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Click edit to add your content strategy
+                </p>
               </div>
             )}
-            
+
             {usp && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">

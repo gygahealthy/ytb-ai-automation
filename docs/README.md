@@ -1,7 +1,9 @@
 # VEO3 Automation Documentation
 
-**Last Updated**: October 16, 2025  
+**Last Updated**: October 20, 2025  
 **Status**: ✅ Production Ready
+
+Repository: `veo3-automation` (local workspace name)
 
 ---
 
@@ -296,8 +298,9 @@ class UserService {
 
 1. ✅ Run linter: `npm run lint`
 2. ✅ Build project: `npm run build`
-3. ✅ Fix all TypeScript errors
-4. ✅ Verify no console errors/warnings
+3. ✅ (Optional) Build the Electron main bundle: `npm run build:electron`
+4. ✅ Fix any TypeScript errors reported by the build step
+5. ✅ Verify no console errors/warnings when running the app
 
 ---
 
@@ -378,3 +381,39 @@ Key highlights:
 3. Look at similar implementations in the codebase
 4. Check browser console (F12) for client-side errors
 5. Check terminal for backend errors
+
+---
+
+### Try it (Windows / PowerShell)
+
+These commands are tuned for Windows PowerShell (the primary dev environment used for this project). Run them from the repository root (for example: `C:\Users\<you>\Desktop\NOW_WORKING\VEO3-AUTO`).
+
+1. Install dependencies:
+
+```powershell
+npm install
+```
+
+2. Development (starts Vite + TypeScript watch + Electron):
+
+```powershell
+npm run dev
+```
+
+3. Build (renderer + TypeScript) and then build main bundle:
+
+```powershell
+npm run build
+npm run build:electron
+```
+
+4. Lint (errors on warnings):
+
+```powershell
+npm run lint
+```
+
+Notes:
+
+- The `dev` script runs Vite and waits for the renderer to be available at http://localhost:5173 before launching Electron.
+- The project uses native SQLite bindings; if you see native module errors after install, run `npm run rebuild` or let `postinstall` run `electron-rebuild`.
