@@ -1,8 +1,8 @@
-import { IpcRegistration, ApiResponse } from './types';
-import { Logger } from '../logging/types';
+import { IpcRegistration, ApiResponse } from "./types";
+import { Logger } from "../logging/types";
 
 export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
-  return async (_event: any, ...args: any[]) : Promise<any> => {
+  return async (_event: any, ...args: any[]): Promise<any> => {
     const start = Date.now();
     logger.info(`IPC ${reg.channel} called`);
 
@@ -19,10 +19,27 @@ export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
       const res = await reg.handler(req);
       const duration = Date.now() - start;
       logger.info(`IPC ${reg.channel} completed in ${duration}ms`);
+
+      // Log response details for debugging specific handlers
+      if (reg.channel === "componentDiscovery:getComponentTreeForUI") {
+        logger.info(
+          `[IPC-Middleware] Returning response for ${reg.channel}:`,
+          res
+        );
+        if (res && res.data) {
+          logger.info(
+            `[IPC-Middleware] Response has data array with ${res.data.length} items`
+          );
+        }
+      }
+
       return res;
     } catch (err: any) {
       logger.error(`IPC ${reg.channel} failed`, err);
-      return { success: false, error: { code: 'INTERNAL_ERROR', message: String(err) } } as ApiResponse<any>;
+      return {
+        success: false,
+        error: { code: "INTERNAL_ERROR", message: String(err) },
+      } as ApiResponse<any>;
     }
   };
 }

@@ -6,6 +6,7 @@
  */
 
 // Ephemeral / stateless mode: no conversation metadata preserved between requests
+// --> Create new conversation each time
 export const GEMINI_CHAT_NORMAL_MODE_EPHEMERAL = "EPHEMERAL";
 
 // Persistent mode: conversation metadata is preserved per-profile (multi-turn)

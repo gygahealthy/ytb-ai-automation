@@ -27,9 +27,9 @@ interface Window {
       highlight: (instanceId: string) => Promise<any>;
       updateConfig: (config: any) => Promise<any>;
       getConfig: () => Promise<any>;
-  repositionInstance: (instanceId: string) => Promise<any>;
-  repositionAll: () => Promise<any>;
-  applyPreset: (preset: string) => Promise<any>;
+      repositionInstance: (instanceId: string) => Promise<any>;
+      repositionAll: () => Promise<any>;
+      applyPreset: (preset: string) => Promise<any>;
       onInstanceRegistered: (callback: (data: any) => void) => () => void;
       onInstanceUpdated: (callback: (data: any) => void) => () => void;
       onInstanceStatus: (callback: (data: any) => void) => () => void;
@@ -68,8 +68,32 @@ interface Window {
       generateUserAgent: () => Promise<any>;
       getDefaultChromePath: () => Promise<any>;
       selectBrowserExecutable: () => Promise<any>;
-      showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
+      showOpenDialog: (
+        options: any
+      ) => Promise<{ canceled: boolean; filePaths: string[] }>;
     };
-    validateBrowserPath: (path: string) => Promise<{ valid: boolean; error?: string; detectedName?: string; version?: string }>;
+    masterPrompts: {
+      getAll: () => Promise<any>;
+      getById: (id: number) => Promise<any>;
+      getByProvider: (provider: string) => Promise<any>;
+      create: (prompt: any) => Promise<any>;
+      update: (id: number, prompt: any) => Promise<any>;
+      delete: (id: number) => Promise<any>;
+    };
+    aiPrompt: {
+      getConfig: (componentName: string) => Promise<any>;
+      getAllConfigs: () => Promise<any>;
+      saveConfig: (request: any) => Promise<any>;
+      deleteConfig: (componentName: string) => Promise<any>;
+      callAI: (request: any) => Promise<any>;
+    };
+    validateBrowserPath: (path: string) => Promise<{
+      valid: boolean;
+      error?: string;
+      detectedName?: string;
+      version?: string;
+    }>;
+    invoke: (channel: string, ...args: any[]) => Promise<any>;
+    on: (channel: string, callback: (...args: any[]) => void) => () => void;
   };
 }

@@ -94,6 +94,13 @@ export const routeConfig: RouteConfig[] = [
         path: "/admin/master-prompts",
         page: "admin.master-prompts",
       },
+      {
+        id: "admin.ai-prompt-config",
+        label: "AI Prompt Config",
+        icon: Sparkles,
+        path: "/admin/ai-prompt-config",
+        page: "admin.ai-prompt-config",
+      },
     ],
   },
 ];

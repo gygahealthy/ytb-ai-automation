@@ -156,6 +156,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
     delete: (id: number) => ipcRenderer.invoke("master-prompts:delete", id),
   },
 
+  // AI Prompt Config APIs
+  aiPrompt: {
+    getConfig: (componentName: string) =>
+      ipcRenderer.invoke("aiPrompt:getConfig", componentName),
+    getAllConfigs: () => ipcRenderer.invoke("aiPrompt:getAllConfigs"),
+    saveConfig: (request: any) =>
+      ipcRenderer.invoke("aiPrompt:saveConfig", request),
+    deleteConfig: (componentName: string) =>
+      ipcRenderer.invoke("aiPrompt:deleteConfig", componentName),
+    callAI: (request: any) => ipcRenderer.invoke("aiPrompt:callAI", request),
+  },
+
+  // Component Discovery APIs
+  componentDiscovery: {
+    getComponentTreeForUI: () =>
+      ipcRenderer.invoke("componentDiscovery:getComponentTreeForUI"),
+  },
+
   // Logger APIs
   logger: {
     onLog: (callback: (data: any) => void) => {
@@ -340,6 +358,16 @@ declare global {
           url: string,
           headless?: boolean
         ) => Promise<any>;
+      };
+      aiPrompt: {
+        getConfig: (componentName: string) => Promise<any>;
+        getAllConfigs: () => Promise<any>;
+        saveConfig: (request: any) => Promise<any>;
+        deleteConfig: (componentName: string) => Promise<any>;
+        callAI: (request: any) => Promise<any>;
+      };
+      componentDiscovery: {
+        getComponentTreeForUI: () => Promise<any>;
       };
       invoke: (channel: string, ...args: any[]) => Promise<any>;
       on: (channel: string, callback: (...args: any[]) => void) => () => void;

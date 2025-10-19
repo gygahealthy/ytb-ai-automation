@@ -2,6 +2,8 @@ import { IpcRegistration } from "../../../../core/ipc/types";
 import { promptService } from "../services/master-prompt.service";
 import { promptHistoryService } from "../services/master-prompt-history.service";
 import { promptTypesService } from "../services/master-prompt-types.service";
+import { aiPromptService } from "../services/ai-prompt.service";
+import { ComponentDiscoveryHandlers } from "../ipc-handlers/component-discovery.handler";
 
 export const promptRegistrations: IpcRegistration[] = [
   {
@@ -130,5 +132,62 @@ export const promptRegistrations: IpcRegistration[] = [
     channel: "master-prompt-types:delete",
     description: "Delete prompt type",
     handler: async (req: any) => await promptTypesService.deleteType(req?.id),
+  },
+  // AI Prompt Config handlers
+  {
+    channel: "aiPrompt:getConfig",
+    description: "Get AI prompt configuration for a component",
+    handler: async (req: any) =>
+      await aiPromptService.getConfigForComponent(req as string),
+  },
+  {
+    channel: "aiPrompt:getAllConfigs",
+    description: "Get all AI prompt configurations",
+    handler: async () => await aiPromptService.getAllConfigs(),
+  },
+  {
+    channel: "aiPrompt:saveConfig",
+    description: "Save or update AI prompt configuration",
+    handler: async (req: any) => await aiPromptService.saveConfig(req as any),
+  },
+  {
+    channel: "aiPrompt:deleteConfig",
+    description: "Delete AI prompt configuration",
+    handler: async (req: any) =>
+      await aiPromptService.deleteConfig(req as string),
+  },
+  {
+    channel: "aiPrompt:callAI",
+    description: "Call AI with configured prompt for a component",
+    handler: async (req: any) =>
+      await aiPromptService.callAIWithPrompt(req as any),
+  },
+  // Component Discovery handlers
+  {
+    channel: "componentDiscovery:getAllComponents",
+    description: "Get all discovered components from the project",
+    handler: async () => ComponentDiscoveryHandlers.getAllComponents(),
+  },
+  {
+    channel: "componentDiscovery:getComponentHierarchy",
+    description: "Get component hierarchy tree structure",
+    handler: async () => ComponentDiscoveryHandlers.getComponentHierarchy(),
+  },
+  {
+    channel: "componentDiscovery:getComponentsByCategory",
+    description: "Get components filtered by category",
+    handler: async (req: any) =>
+      ComponentDiscoveryHandlers.getComponentsByCategory(req as string),
+  },
+  {
+    channel: "componentDiscovery:searchComponents",
+    description: "Search components by query string",
+    handler: async (req: any) =>
+      ComponentDiscoveryHandlers.searchComponents(req as string),
+  },
+  {
+    channel: "componentDiscovery:getComponentTreeForUI",
+    description: "Get component tree formatted for UI rendering",
+    handler: async () => ComponentDiscoveryHandlers.getComponentTreeForUI(),
   },
 ];

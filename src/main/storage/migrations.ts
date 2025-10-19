@@ -103,6 +103,10 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
       await migration_020_add_url_to_cookies(db);
     }
 
+    if (version < 21) {
+      await migration_021_add_component_prompt_configs(db);
+    }
+
     logger.info("All migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
@@ -1555,6 +1559,63 @@ async function migration_020_add_url_to_cookies(
     loggerLocal.info("Migration 020 completed successfully");
   } catch (error) {
     loggerLocal.error("Migration 020 failed", error);
+    throw error;
+  }
+}
+
+/**
+ * Migration 021: Add component_prompt_configs table
+ * This table stores the configuration mapping between UI components and master prompts
+ */
+async function migration_021_add_component_prompt_configs(
+  db: SQLiteDatabase
+): Promise<void> {
+  const loggerLocal = new Logger("Migration021");
+
+  try {
+    loggerLocal.info(
+      "Starting migration 021: Add component_prompt_configs table"
+    );
+
+    // Create the table
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS component_prompt_configs (
+        id TEXT PRIMARY KEY,
+        component_name TEXT NOT NULL,
+        profile_id TEXT NOT NULL,
+        prompt_id INTEGER NOT NULL,
+        ai_model TEXT DEFAULT 'GEMINI_2_5_PRO',
+        enabled INTEGER DEFAULT 1,
+        use_temp_chat INTEGER DEFAULT 0,
+        keep_context INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE,
+        FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+        UNIQUE(component_name, profile_id)
+      )
+    `);
+    loggerLocal.info("Created component_prompt_configs table");
+
+    // Create indexes for better query performance
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_component_prompt_configs_component_name ON component_prompt_configs(component_name)"
+    );
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_component_prompt_configs_profile_id ON component_prompt_configs(profile_id)"
+    );
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_component_prompt_configs_prompt_id ON component_prompt_configs(prompt_id)"
+    );
+    await db.run(
+      "CREATE INDEX IF NOT EXISTS idx_component_prompt_configs_enabled ON component_prompt_configs(enabled)"
+    );
+    loggerLocal.info("Created indexes for component_prompt_configs table");
+
+    await recordMigration(db, 21);
+    loggerLocal.info("Migration 021 completed successfully");
+  } catch (error) {
+    loggerLocal.error("Migration 021 failed", error);
     throw error;
   }
 }

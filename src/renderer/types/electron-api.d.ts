@@ -79,9 +79,7 @@ declare global {
         open: () => void;
         close: () => void;
       };
-      validateBrowserPath: (
-        path: string
-      ) => Promise<{
+      validateBrowserPath: (path: string) => Promise<{
         valid: boolean;
         error?: string;
         detectedName?: string;
@@ -94,6 +92,16 @@ declare global {
         create: (prompt: any) => Promise<any>;
         update: (id: number, prompt: any) => Promise<any>;
         delete: (id: number) => Promise<any>;
+      };
+      aiPrompt: {
+        getConfig: (componentName: string) => Promise<any>;
+        getAllConfigs: () => Promise<any>;
+        saveConfig: (request: any) => Promise<any>;
+        deleteConfig: (componentName: string) => Promise<any>;
+        callAI: (request: any) => Promise<any>;
+      };
+      componentDiscovery: {
+        getComponentTreeForUI: () => Promise<any>;
       };
       invoke: (channel: string, ...args: any[]) => Promise<any>;
     };
