@@ -1,7 +1,6 @@
 /// <reference types="../../types/electron-api" />
-import { ArrowLeft, Plus, Edit2, Trash2, Search, Tag } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Tag } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAlert } from "../../hooks/useAlert";
 import { useConfirm } from "../../hooks/useConfirm";
 import electronApi from "../../ipc";
@@ -23,7 +22,6 @@ interface PromptTypeFormData {
 }
 
 const PromptTypesManagementPage: React.FC = () => {
-  const navigate = useNavigate();
   const alertApi = useAlert();
   const confirm = useConfirm();
 
@@ -204,14 +202,6 @@ const PromptTypesManagementPage: React.FC = () => {
       <div className="w-full px-6 py-8">
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={() => navigate("/admin/dashboard")}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </button>
-
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl shadow-lg">

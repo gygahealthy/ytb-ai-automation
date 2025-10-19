@@ -107,10 +107,15 @@ export default function ChatModal({
       } else if (data.type === "error") {
         setCanSend(true);
         setStreamChannel(null);
-        showAlert({
-          message: data.error || "Stream error occurred",
-          severity: "error",
-        });
+        // Display error as a bot message in the chat
+        const errorMessage: Message = {
+          id: messages.length,
+          from: "bot",
+          text: data.error || "Stream error occurred",
+          ts: new Date().toLocaleTimeString(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
       }
     });
 
@@ -158,9 +163,20 @@ export default function ChatModal({
             setMessages((prev) => [...prev, botMessage]);
             setCanSend(true);
           }
-        } else if (response) {
+        } else if (response && response.error) {
+          // Display error as a bot message in the chat
+          const errorMessage: Message = {
+            id: messages.length + 1,
+            from: "bot",
+            text: response.error,
+            ts: new Date().toLocaleTimeString(),
+            isError: true,
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          setCanSend(true);
+        } else {
           showAlert({
-            message: response.error || "Failed to send message",
+            message: "Failed to send message",
             severity: "error",
           });
           setCanSend(true);
@@ -179,22 +195,8 @@ export default function ChatModal({
 
   if (!isOpen || !profileId) return null;
 
-  const handleOverlayMouseDown: React.MouseEventHandler<HTMLDivElement> = (
-    e
-  ) => {
-    const target = e.target as HTMLElement | null;
-    if (target && target.dataset && target.dataset.overlay === "true") {
-      onClose();
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div
-        className="absolute inset-0"
-        data-overlay="true"
-        onMouseDown={handleOverlayMouseDown}
-      />
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[920px] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Modern Header with Gradient Background */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-5 flex items-center justify-between shadow-lg">

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState, forwardRef, ForwardedRef } from "react";
-import { Send } from "lucide-react";
+import { Send, AlertTriangle } from "lucide-react";
 import { MarkdownRenderer } from "../../utils/markdown-renderer";
 
-export type Message = { id: number; from: string; text: string; ts?: string };
+export type Message = {
+  id: number;
+  from: string;
+  text: string;
+  ts?: string;
+  isError?: boolean;
+};
 
 interface Props {
   messages: Message[];
@@ -66,6 +72,7 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
 
         {messages.map((m) => {
           const isUser = m.from === "user";
+          const isError = m.isError && !isUser;
           return (
             <div
               key={m.id}
@@ -75,8 +82,14 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
             >
               {!isUser && (
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                    G
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md ${
+                      isError
+                        ? "bg-gradient-to-br from-red-500 to-orange-600"
+                        : "bg-gradient-to-br from-blue-500 to-indigo-600"
+                    }`}
+                  >
+                    {isError ? <AlertTriangle size={16} /> : "G"}
                   </div>
                 </div>
               )}
@@ -85,6 +98,8 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
                 className={`group max-w-sm lg:max-w-md xl:max-w-xl px-4 py-3 rounded-2xl shadow-md transition-all duration-200 hover:shadow-lg overflow-hidden ${
                   isUser
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none"
+                    : isError
+                    ? "bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/30 dark:to-orange-900/30 text-red-900 dark:text-red-100 rounded-bl-none border border-red-300 dark:border-red-600"
                     : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600"
                 }`}
               >

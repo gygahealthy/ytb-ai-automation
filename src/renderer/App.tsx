@@ -8,6 +8,7 @@ import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";
 import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
 import { GeminiChatProvider } from "./contexts/GeminiChatContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -99,11 +100,13 @@ function App() {
       <ModalProvider>
         <AlertProvider>
           <ConfirmProvider>
-            <DrawerProvider>
-              <GeminiChatProvider>
-                <AppContent />
-              </GeminiChatProvider>
-            </DrawerProvider>
+            <ToastProvider>
+              <DrawerProvider>
+                <GeminiChatProvider>
+                  <AppContent />
+                </GeminiChatProvider>
+              </DrawerProvider>
+            </ToastProvider>
           </ConfirmProvider>
         </AlertProvider>
       </ModalProvider>

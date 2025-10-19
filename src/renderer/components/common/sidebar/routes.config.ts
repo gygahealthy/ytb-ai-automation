@@ -2,15 +2,23 @@ import {
   Clapperboard,
   History,
   LayoutDashboard,
+  Zap,
   PlayCircle,
-  Shield,
   Sparkles,
   Users,
   Video,
   Youtube,
+  Shield,
 } from "lucide-react";
 import { RouteConfig } from "../../../types/menu-route.types";
 
+// Ordered menu per request:
+// Ordered menu per request:
+// 1. Profiles
+// 2. Single Video Creation
+// 3. Channel Management
+// 4. Admin (LayoutDashboard icon)
+// 5. Automation
 export const routeConfig: RouteConfig[] = [
   {
     id: "profiles",
@@ -20,25 +28,9 @@ export const routeConfig: RouteConfig[] = [
     page: "profiles",
   },
   {
-    id: "automation",
-    label: "Automation",
-    icon: PlayCircle,
-    page: "automation",
-    defaultOpen: true,
-    children: [
-      {
-        id: "automation.dashboard",
-        label: "Browser Instance",
-        icon: LayoutDashboard,
-        path: "/automation/instance",
-        page: "automation.dashboard",
-      },
-    ],
-  },
-  {
     id: "video-creation",
     label: "Single Video Creation",
-    icon: Video,
+    icon: PlayCircle,
     page: "video-creation",
     defaultOpen: true,
     children: [
@@ -52,11 +44,10 @@ export const routeConfig: RouteConfig[] = [
       {
         id: "video-creation.single",
         label: "Single Video Creation",
-        icon: Clapperboard,
+        icon: Video,
         path: "/video-creation/single",
         page: "video-creation.single",
       },
-
       {
         id: "video-creation.history",
         label: "Video Creation History",
@@ -78,7 +69,7 @@ export const routeConfig: RouteConfig[] = [
     label: "Admin",
     icon: Shield,
     page: "admin",
-    defaultOpen: false,
+    defaultOpen: true,
     children: [
       {
         id: "admin.prompt-types",
@@ -90,16 +81,32 @@ export const routeConfig: RouteConfig[] = [
       {
         id: "admin.master-prompts",
         label: "Master Prompts",
-        icon: Sparkles,
+        icon: LayoutDashboard,
         path: "/admin/master-prompts",
         page: "admin.master-prompts",
       },
       {
         id: "admin.ai-prompt-config",
         label: "AI Prompt Config",
-        icon: Sparkles,
+        icon: Zap,
         path: "/admin/ai-prompt-config",
         page: "admin.ai-prompt-config",
+      },
+    ],
+  },
+  {
+    id: "automation",
+    label: "Automation",
+    icon: PlayCircle,
+    page: "automation",
+    defaultOpen: true,
+    children: [
+      {
+        id: "automation.dashboard",
+        label: "Browser Instance",
+        icon: LayoutDashboard,
+        path: "/automation/instance",
+        page: "automation.dashboard",
       },
     ],
   },
