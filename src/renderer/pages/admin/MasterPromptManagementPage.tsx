@@ -14,7 +14,7 @@ import AdminPromptTable, {
   VideoPromptRow,
 } from "../../components/admin/AdminPromptTable";
 import PromptModal from "../../components/admin/PromptModal";
-import VariablesHint from "../../components/admin/VariablesHint";
+import VariablesHint from "../../components/admin/master-prompt-mng/VariablesHint";
 import electronApi from "../../ipc";
 
 interface MasterPrompt extends VideoPromptRow {
@@ -182,6 +182,9 @@ const MasterPromptManagementPage: React.FC = () => {
         promptTypeId: prompt.promptTypeId,
         description: prompt.description,
         promptTemplate: prompt.promptTemplate,
+        tags: prompt.tags,
+        isActive: prompt.isActive,
+        archived: prompt.archived,
       });
     } else {
       setEditingPrompt({
@@ -189,6 +192,8 @@ const MasterPromptManagementPage: React.FC = () => {
         promptTypeId: undefined,
         description: "",
         promptTemplate: "",
+        tags: [],
+        isActive: true,
       });
     }
     setModalOpen(true);
@@ -311,6 +316,17 @@ const MasterPromptManagementPage: React.FC = () => {
         {/* Toolbar - All Controls in One Row */}
         <div className="mb-6">
           <div className="flex items-center gap-3">
+            {/* Add Button - Far left */}
+            <div>
+              <button
+                onClick={() => handleOpenModal()}
+                className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition-all mr-3"
+                title="Add New Prompt"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
+
             {/* Variables Hint Button */}
             <button
               onClick={() => setShowVariablesHint(!showVariablesHint)}
@@ -422,14 +438,7 @@ const MasterPromptManagementPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Add Button - Circle */}
-            <button
-              onClick={() => handleOpenModal()}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:shadow-md transition-all"
-              title="Add New Prompt"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            {/* (Old add button removed) */}
           </div>
 
           {/* Variables Hint Content */}
