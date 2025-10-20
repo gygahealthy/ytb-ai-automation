@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sqlite3 from "sqlite3";
 import { Logger } from "../../shared/utils/logger";
-import { runMigrations } from "./migrations";
+import { runMigrations } from "./migrations/index";
 
 const logger = new Logger("SQLiteDatabase");
 
@@ -96,7 +96,7 @@ export class SQLiteDatabase {
         // Some schema files referencing later-added columns/indexes can cause exec to fail
         // on older DBs. Don't abort initialization — log and continue to run migrations which
         // will add missing columns/indexes in a safe, incremental way.
-        logger.warn('Schema exec failed, continuing with migrations', err);
+        logger.warn("Schema exec failed, continuing with migrations", err);
       }
 
       // Run migrations to update existing tables
