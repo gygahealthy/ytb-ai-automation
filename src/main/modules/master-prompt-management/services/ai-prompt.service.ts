@@ -7,6 +7,7 @@ import {
 } from "../repository/component-prompt-config.repository";
 import { promptRepository } from "../repository/master-prompt.repository";
 import { sendChatMessage } from "../../gemini-apis/handlers/chat/sendChatMessage";
+import { replacePlaceholders } from "../../../../shared/utils/placeholder.util";
 import {
   GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
   GEMINI_CHAT_NORMAL_MODE_PERSISTENT,
@@ -31,6 +32,8 @@ export interface AIPromptCallRequest {
   data: Record<string, any>;
   stream?: boolean;
   requestId?: string;
+  processedPrompt?: string;
+  conversationContext?: { chatId?: string; replyId?: string; rcId?: string };
 }
 
 /**
@@ -170,49 +173,8 @@ export class AIPromptService {
     template: string,
     data: Record<string, any>
   ): string {
-    let processed = template;
-
-    // Create a lowercase key map for case-insensitive matching
-    const lowerKeyMap: Record<string, string> = {};
-    Object.keys(data).forEach((key) => {
-      lowerKeyMap[key.toLowerCase()] = key;
-    });
-
-    // Replace {key} placeholders
-    processed = processed.replace(/\{([^}]+)\}/g, (match, key) => {
-      const trimmedKey = key.trim();
-      const lowerKey = trimmedKey.toLowerCase();
-      const actualKey = lowerKeyMap[lowerKey];
-
-      if (actualKey && data[actualKey] !== undefined) {
-        const value = data[actualKey];
-        return typeof value === "string" ? value : JSON.stringify(value);
-      }
-
-      logger.warn(
-        `[AIPromptService] Placeholder {${trimmedKey}} not found in data`
-      );
-      return match; // Keep original placeholder if not found
-    });
-
-    // Replace [key] placeholders
-    processed = processed.replace(/\[([^\]]+)\]/g, (match, key) => {
-      const trimmedKey = key.trim();
-      const lowerKey = trimmedKey.toLowerCase();
-      const actualKey = lowerKeyMap[lowerKey];
-
-      if (actualKey && data[actualKey] !== undefined) {
-        const value = data[actualKey];
-        return typeof value === "string" ? value : JSON.stringify(value);
-      }
-
-      logger.warn(
-        `[AIPromptService] Placeholder [${trimmedKey}] not found in data`
-      );
-      return match; // Keep original placeholder if not found
-    });
-
-    return processed;
+    // Delegate to shared placeholder util which normalizes keys to snake_case
+    return replacePlaceholders(template, data || {});
   }
 
   /**
@@ -262,11 +224,15 @@ export class AIPromptService {
         `[AIPromptService] Found prompt: ${prompt.provider} (ID: ${prompt.id})`
       );
 
-      // 3. Process the prompt template with data
-      const processedPrompt = this.processPromptWithData(
-        prompt.promptTemplate,
-        data
-      );
+      // 3. Resolve the final prompt to send
+      // 'data' = user-supplied key-value pairs for placeholder replacement (e.g., { userName: "Alice" })
+      // 'processedPrompt' (from caller) = pre-expanded template (renderer already replaced placeholders)
+      // If caller provided processedPrompt, use it directly (efficiency + consistency).
+      // Otherwise, process template server-side using shared replacer and caller's data.
+      const callerProcessed = (request as any).processedPrompt;
+      const processedPrompt = callerProcessed
+        ? callerProcessed
+        : this.processPromptWithData(prompt.promptTemplate, data || {});
 
       logger.info(
         `[AIPromptService] Processed prompt (first 200 chars): ${processedPrompt.substring(
@@ -288,6 +254,8 @@ export class AIPromptService {
             : config.keepContext === true
             ? GEMINI_CHAT_NORMAL_MODE_PERSISTENT
             : GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
+        // include conversationContext if caller sent one (server will use it to load metadata)
+        conversationContext: (request as any).conversationContext,
       });
 
       logger.info(

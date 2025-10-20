@@ -8,6 +8,7 @@ import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";
 import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
 import { GeminiChatProvider } from "./contexts/GeminiChatContext";
+import { ComponentAIPromptProvider } from "./contexts/ComponentAIPromptContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
@@ -103,7 +104,9 @@ function App() {
             <ToastProvider>
               <DrawerProvider>
                 <GeminiChatProvider>
-                  <AppContent />
+                  <ComponentAIPromptProvider>
+                    <AppContent />
+                  </ComponentAIPromptProvider>
                 </GeminiChatProvider>
               </DrawerProvider>
             </ToastProvider>
