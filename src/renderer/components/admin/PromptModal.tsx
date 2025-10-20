@@ -279,9 +279,14 @@ const PromptModal: React.FC<Props> = ({
     const txt = prompt.promptTemplate || "";
     const endPos = findVariableEnd(txt, pos);
 
+    // Important: Scroll first, THEN set selection to avoid losing selection when scrolling
     editorRef.current.focus();
-    editorRef.current.setSelection(pos, endPos);
     editorRef.current.scrollToPosition(pos);
+
+    // Use requestAnimationFrame to ensure selection is set after scroll completes
+    requestAnimationFrame(() => {
+      editorRef.current?.setSelection(pos, endPos);
+    });
   };
 
   const handleSave = () => {

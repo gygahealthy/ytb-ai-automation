@@ -49,19 +49,54 @@ const PromptEditor = forwardRef<PromptEditorRef, Props>(
       },
       setSelection: (start: number, end: number) => {
         if (textareaRef.current) {
-          textareaRef.current.setSelectionRange(start, end);
+          // Ensure the element is focused before setting selection. Use
+          // requestAnimationFrame to avoid a race where focus causes the
+          // browser to reset selection immediately after we set it.
+          if (document.activeElement !== textareaRef.current) {
+            textareaRef.current.focus();
+            requestAnimationFrame(() => {
+              textareaRef.current?.setSelectionRange(start, end);
+            });
+          } else {
+            textareaRef.current.setSelectionRange(start, end);
+          }
         }
       },
       scrollToPosition: (position: number) => {
-        if (textareaRef.current) {
-          const txt = textareaRef.current.value;
-          const lineHeight = 24; // approximate line height
-          const lines = txt.substring(0, position).split("\n").length;
-          textareaRef.current.scrollTop = Math.max(
-            0,
-            lines * lineHeight - textareaRef.current.clientHeight / 2
-          );
+        if (!textareaRef.current) return;
+
+        const ta = textareaRef.current;
+
+        // Compute line index for the given character position
+        const textBefore = ta.value.substring(0, position);
+        const lineIndex = textBefore.split("\n").length - 1; // zero-based
+
+        // Compute a more accurate line height. Try to read from computed style;
+        // fallback to measurement if not available.
+        const computed = window.getComputedStyle(ta);
+        let lineHeight = parseFloat(computed.lineHeight || "0");
+        if (!lineHeight || Number.isNaN(lineHeight)) {
+          // Create a temporary span to measure single line height using same font
+          const div = document.createElement("div");
+          div.style.position = "absolute";
+          div.style.visibility = "hidden";
+          div.style.whiteSpace = "nowrap";
+          div.style.font =
+            computed.font || `${computed.fontSize} ${computed.fontFamily}`;
+          div.textContent = "A";
+          document.body.appendChild(div);
+          lineHeight = div.getBoundingClientRect().height || 24;
+          document.body.removeChild(div);
         }
+
+        // Compute desired scrollTop so the target line is vertically centered
+        const targetTop = lineIndex * lineHeight;
+        const newScrollTop = Math.max(
+          0,
+          targetTop - ta.clientHeight / 2 + lineHeight / 2
+        );
+
+        ta.scrollTop = newScrollTop;
       },
       getValue: () => {
         return textareaRef.current?.value || value;
