@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 import LogDrawer from "./components/LogDrawer";
 import Sidebar from "./components/Sidebar";
-import SettingsForm from "./components/settings/SettingsForm";
+import SettingsForm from "./components/common/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
 import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";

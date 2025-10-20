@@ -5,7 +5,7 @@ import {
   ColorScheme,
   FontSize,
   useSettingsStore,
-} from "../../store/settings.store";
+} from "../../../store/settings.store";
 
 const colorSchemes: { value: ColorScheme; label: string; color: string }[] = [
   { value: "blue", label: "Blue", color: "bg-blue-500" },

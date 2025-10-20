@@ -5,7 +5,7 @@ import GeneralSettings from "./GeneralSettings";
 import BrowsersSettings from "./BrowsersSettings";
 import KeyboardShortcutsSettings from "./KeyboardShortcutsSettings";
 import FilePathsSettings from "./FilePathsSettings";
-import { useSettingsStore } from "../../store/settings.store";
+import { useSettingsStore } from "../../../store/settings.store";
 
 type SettingsSection = "general" | "browsers" | "keyboard" | "filePaths";
 
@@ -17,9 +17,18 @@ const menuItems: { id: SettingsSection; label: string; icon: any }[] = [
 ];
 
 export default function SettingsForm() {
-  const { addBrowserPath, visibleSections = { general: true, browsers: true, keyboard: true, filePaths: true } } = useSettingsStore();
+  const {
+    addBrowserPath,
+    visibleSections = {
+      general: true,
+      browsers: true,
+      keyboard: true,
+      filePaths: true,
+    },
+  } = useSettingsStore();
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("general");
 
   // Handler passed down to BrowsersSettings which triggers the existing dialog flow
   const handleAddBrowser = async () => {
@@ -34,21 +43,33 @@ export default function SettingsForm() {
         ],
       });
 
-      const dialogResult = (result as any).success ? (result as any).data : result;
+      const dialogResult = (result as any).success
+        ? (result as any).data
+        : result;
       if (dialogResult.canceled) return;
-      if (!dialogResult.filePaths || dialogResult.filePaths.length === 0) return;
+      if (!dialogResult.filePaths || dialogResult.filePaths.length === 0)
+        return;
       const path = dialogResult.filePaths[0];
 
       // Validate via electron API
-      const validationResult = await window.electronAPI.validateBrowserPath(path);
-      const validation = (validationResult as any).success ? (validationResult as any).data : validationResult;
+      const validationResult = await window.electronAPI.validateBrowserPath(
+        path
+      );
+      const validation = (validationResult as any).success
+        ? (validationResult as any).data
+        : validationResult;
       if (!validation.valid) {
         setValidationError(validation.error || "Invalid browser executable");
         return;
       }
 
       // Add to store
-      addBrowserPath({ name: validation.detectedName || "Browser", path, isDefault: false, note: validation.version });
+      addBrowserPath({
+        name: validation.detectedName || "Browser",
+        path,
+        isDefault: false,
+        note: validation.version,
+      });
       setValidationError(null);
     } catch (err) {
       setValidationError(err instanceof Error ? err.message : String(err));
@@ -86,50 +107,54 @@ export default function SettingsForm() {
         <div className="p-6">
           {validationError && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 mb-4">
-              <div className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5">!</div>
-              <p className="text-sm text-red-700 dark:text-red-300">{validationError}</p>
+              <div className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5">
+                !
+              </div>
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {validationError}
+              </p>
             </div>
           )}
 
-          {activeSection === "general" && (
-            visibleSections.general ? (
+          {activeSection === "general" &&
+            (visibleSections.general ? (
               <GeneralSettings />
             ) : (
               <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                This section is hidden. Click the icon in the sidebar to show it.
+                This section is hidden. Click the icon in the sidebar to show
+                it.
               </div>
-            )
-          )}
+            ))}
 
-          {activeSection === "browsers" && (
-            visibleSections.browsers ? (
+          {activeSection === "browsers" &&
+            (visibleSections.browsers ? (
               <BrowsersSettings onAdd={handleAddBrowser} />
             ) : (
               <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                This section is hidden. Click the icon in the sidebar to show it.
+                This section is hidden. Click the icon in the sidebar to show
+                it.
               </div>
-            )
-          )}
+            ))}
 
-          {activeSection === "keyboard" && (
-            visibleSections.keyboard ? (
+          {activeSection === "keyboard" &&
+            (visibleSections.keyboard ? (
               <KeyboardShortcutsSettings />
             ) : (
               <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                This section is hidden. Click the icon in the sidebar to show it.
+                This section is hidden. Click the icon in the sidebar to show
+                it.
               </div>
-            )
-          )}
+            ))}
 
-          {activeSection === "filePaths" && (
-            visibleSections.filePaths ? (
+          {activeSection === "filePaths" &&
+            (visibleSections.filePaths ? (
               <FilePathsSettings />
             ) : (
               <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                This section is hidden. Click the icon in the sidebar to show it.
+                This section is hidden. Click the icon in the sidebar to show
+                it.
               </div>
-            )
-          )}
+            ))}
         </div>
       </div>
     </div>

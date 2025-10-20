@@ -1,7 +1,7 @@
 // JSX runtime does not require explicit React import
 import { Navigate, Route, Routes } from "react-router-dom";
-import MasterPromptManagementPage from "./pages/admin/MasterPromptManagementPage";
-import PromptTypesManagementPage from "./pages/admin/PromptTypesManagementPage";
+import MasterPromptPage from "./pages/admin/MasterPromptPage";
+import PromptTypesPage from "./pages/admin/PromptTypesPage";
 import AIPromptConfigPage from "./components/admin/ai-prompt-config";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
@@ -25,15 +25,9 @@ export default function AppRoutes() {
       <Route path="/automation" element={<AutomationPage />} />
       <Route path="/automation/instance" element={<InstanceDashboard />} />
       <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-      <Route path="/admin/dashboard" element={<MasterPromptManagementPage />} />
-      <Route
-        path="/admin/master-prompts"
-        element={<MasterPromptManagementPage />}
-      />
-      <Route
-        path="/admin/prompt-types"
-        element={<PromptTypesManagementPage />}
-      />
+      <Route path="/admin/dashboard" element={<MasterPromptPage />} />
+      <Route path="/admin/master-prompts" element={<MasterPromptPage />} />
+      <Route path="/admin/prompt-types" element={<PromptTypesPage />} />
       <Route path="/admin/ai-prompt-config" element={<AIPromptConfigPage />} />
       <Route
         path="/video-creation/channels"

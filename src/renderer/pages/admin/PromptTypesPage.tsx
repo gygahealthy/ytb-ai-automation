@@ -21,7 +21,7 @@ interface PromptTypeFormData {
   status: number;
 }
 
-const PromptTypesManagementPage: React.FC = () => {
+const PromptTypesPage: React.FC = () => {
   const alertApi = useAlert();
   const confirm = useConfirm();
 
@@ -503,4 +503,4 @@ const PromptTypesManagementPage: React.FC = () => {
   );
 };
 
-export default PromptTypesManagementPage;
+export default PromptTypesPage;

@@ -39,7 +39,7 @@ interface PromptType {
 type PromptKindFilter = "all" | string;
 type StatusFilter = "all" | "active" | "inactive";
 
-const MasterPromptManagementPage: React.FC = () => {
+const MasterPromptPage: React.FC = () => {
   const alertApi = useAlert();
   const confirm = useConfirm();
 
@@ -524,4 +524,4 @@ const MasterPromptManagementPage: React.FC = () => {
   );
 };
 
-export default MasterPromptManagementPage;
+export default MasterPromptPage;

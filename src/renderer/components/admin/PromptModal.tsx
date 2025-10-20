@@ -9,7 +9,10 @@ import PromptEditor, {
 } from "./master-prompt-mng/PromptEditor";
 import PromptHistoryPanel from "./master-prompt-mng/PromptHistoryPanel";
 import DetectedVariablesPanel from "./master-prompt-mng/DetectedVariablesPanel";
-import { detectVariables, findVariableEnd } from "../../utils/variable-detect";
+import {
+  detectVariables,
+  findVariableEnd,
+} from "../../../shared/utils/variable-detect";
 import { parseTags } from "../../utils/prompt-tag-parse";
 
 type Prompt = {
