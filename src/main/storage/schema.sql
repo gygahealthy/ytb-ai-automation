@@ -219,6 +219,7 @@ CREATE TABLE IF NOT EXISTS master_prompts (
   tags TEXT, -- JSON array of tags
   is_active INTEGER DEFAULT 1,
   archived INTEGER DEFAULT 0,
+  variable_occurrences_config TEXT, -- JSON object tracking which variable occurrences are selected for replacement
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (prompt_type_id) REFERENCES master_prompt_types(id) ON DELETE CASCADE,
@@ -249,6 +250,7 @@ CREATE TABLE IF NOT EXISTS master_prompt_history (
   change_note TEXT, -- Optional note about what changed
   digest TEXT, -- SHA-256 digest of normalized content for duplicate detection
   digest_short TEXT, -- short prefix of digest to speed indexed lookups
+  variable_occurrences_config TEXT, -- JSON object tracking which variable occurrences are selected for replacement
   created_at TEXT NOT NULL,
   FOREIGN KEY (prompt_id) REFERENCES master_prompts(id) ON DELETE CASCADE,
   FOREIGN KEY (prompt_type_id) REFERENCES master_prompt_types(id) ON DELETE CASCADE

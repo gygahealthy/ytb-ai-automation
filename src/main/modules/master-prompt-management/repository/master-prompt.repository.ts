@@ -31,6 +31,7 @@ export interface MasterPrompt {
   tags?: string[];
   isActive?: boolean;
   archived?: boolean;
+  variableOccurrencesConfig?: Record<string, number[]> | null; // JSON object mapping variable names to selected occurrence indices
   createdAt?: string;
   updatedAt?: string;
 }
@@ -44,6 +45,7 @@ export interface CreateMasterPromptInput {
   tags?: string[];
   isActive?: boolean;
   archived?: boolean;
+  variableOccurrencesConfig?: Record<string, number[]> | null;
 }
 
 export interface UpdateMasterPromptInput {
@@ -55,6 +57,7 @@ export interface UpdateMasterPromptInput {
   tags?: string[];
   isActive?: boolean;
   archived?: boolean;
+  variableOccurrencesConfig?: Record<string, number[]> | null;
 }
 
 export class MasterPromptsRepository {
@@ -77,6 +80,7 @@ export class MasterPromptsRepository {
 				mp.tags,
 				mp.is_active as isActive,
 				mp.archived,
+				mp.variable_occurrences_config as variableOccurrencesConfig,
 				mp.created_at as createdAt,
 				mp.updated_at as updatedAt
 			FROM master_prompts mp
@@ -106,6 +110,8 @@ export class MasterPromptsRepository {
           tags: tryParseJson(r.tags) || [],
           isActive: r.isActive === 1 || r.isActive === true,
           archived: r.archived === 1 || r.archived === true,
+          variableOccurrencesConfig:
+            tryParseJson(r.variableOccurrencesConfig) || null,
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         } as MasterPrompt)
@@ -130,6 +136,7 @@ export class MasterPromptsRepository {
 				mp.tags,
 				mp.is_active as isActive,
 				mp.archived,
+				mp.variable_occurrences_config as variableOccurrencesConfig,
 				mp.created_at as createdAt,
 				mp.updated_at as updatedAt
 			FROM master_prompts mp
@@ -160,6 +167,8 @@ export class MasterPromptsRepository {
       tags: tryParseJson(r.tags) || [],
       isActive: r.isActive === 1 || r.isActive === true,
       archived: r.archived === 1 || r.archived === true,
+      variableOccurrencesConfig:
+        tryParseJson(r.variableOccurrencesConfig) || null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     } as MasterPrompt;
@@ -304,9 +313,10 @@ export class MasterPromptsRepository {
 				tags,
 				is_active,
 				archived,
+				variable_occurrences_config,
 				created_at,
 				updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`,
       [
         input.provider,
@@ -321,6 +331,9 @@ export class MasterPromptsRepository {
           : JSON.stringify([]),
         1,
         0,
+        input.variableOccurrencesConfig
+          ? JSON.stringify(input.variableOccurrencesConfig)
+          : null,
         now,
         now,
       ]
@@ -375,6 +388,14 @@ export class MasterPromptsRepository {
     if ((updates as any).archived !== undefined) {
       fields.push("archived = ?");
       values.push((updates as any).archived ? 1 : 0);
+    }
+    if ((updates as any).variableOccurrencesConfig !== undefined) {
+      fields.push("variable_occurrences_config = ?");
+      values.push(
+        (updates as any).variableOccurrencesConfig
+          ? JSON.stringify((updates as any).variableOccurrencesConfig)
+          : null
+      );
     }
 
     if (fields.length === 0) return existing;

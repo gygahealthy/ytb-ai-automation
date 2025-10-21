@@ -217,6 +217,7 @@ const MasterPromptPage: React.FC = () => {
           tags: prompt.tags,
           isActive: prompt.isActive,
           archived: prompt.archived,
+          variableOccurrencesConfig: prompt.variableOccurrencesConfig,
         });
       } else {
         // Create new prompt
@@ -227,6 +228,7 @@ const MasterPromptPage: React.FC = () => {
           promptTemplate: prompt.promptTemplate,
           tags: prompt.tags,
           isActive: prompt.isActive,
+          variableOccurrencesConfig: prompt.variableOccurrencesConfig,
         });
       }
 

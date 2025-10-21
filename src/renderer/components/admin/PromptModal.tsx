@@ -24,6 +24,7 @@ type Prompt = {
   tags?: string[];
   isActive?: boolean;
   archived?: boolean;
+  variableOccurrencesConfig?: Record<string, number[]> | null;
 };
 
 type Props = {
@@ -58,6 +59,12 @@ const PromptModal: React.FC<Props> = ({
 
   const [tags, setTags] = useState<string[]>(() => parseTags(initial?.tags));
   const [tagInput, setTagInput] = useState("");
+
+  // Variable occurrences selection state
+  const [selectedVariableOccurrences, setSelectedVariableOccurrences] =
+    useState<Record<string, number[]>>(() => {
+      return initial?.variableOccurrencesConfig || {};
+    });
 
   // History panel state
   const [showHistory, setShowHistory] = useState(false);
@@ -95,6 +102,7 @@ const PromptModal: React.FC<Props> = ({
     setPrompt(newPrompt);
     setTags(parseTags(initial?.tags));
     setTagInput("");
+    setSelectedVariableOccurrences(initial?.variableOccurrencesConfig || {});
     // Load history if editing existing prompt
     if (open && initial?.id) {
       loadHistory(initial.id);
@@ -289,12 +297,23 @@ const PromptModal: React.FC<Props> = ({
     });
   };
 
+  const handleVariableOccurrenceSelection = (
+    varName: string,
+    selectedIndices: number[]
+  ) => {
+    setSelectedVariableOccurrences({
+      ...selectedVariableOccurrences,
+      [varName]: selectedIndices,
+    });
+  };
+
   const handleSave = () => {
     const currentText = editorRef.current?.getValue() || prompt.promptTemplate;
     const finalPrompt = {
       ...prompt,
       promptTemplate: currentText,
       tags,
+      variableOccurrencesConfig: selectedVariableOccurrences,
     };
     onSave(finalPrompt);
   };
@@ -397,6 +416,8 @@ const PromptModal: React.FC<Props> = ({
           <DetectedVariablesPanel
             variables={detectedVariables}
             onJumpToVariable={focusVariableAt}
+            selectedOccurrences={selectedVariableOccurrences}
+            onSelectionChange={handleVariableOccurrenceSelection}
           />
         </div>
 

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import MasterPromptPage from "./pages/admin/MasterPromptPage";
 import PromptTypesPage from "./pages/admin/PromptTypesPage";
 import AIPromptConfigPage from "./components/admin/ai-prompt-config";
+import PromptPlaygroundPage from "./pages/admin/PromptPlaygroundPage";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
@@ -29,6 +30,10 @@ export default function AppRoutes() {
       <Route path="/admin/master-prompts" element={<MasterPromptPage />} />
       <Route path="/admin/prompt-types" element={<PromptTypesPage />} />
       <Route path="/admin/ai-prompt-config" element={<AIPromptConfigPage />} />
+      <Route
+        path="/admin/prompt-playground"
+        element={<PromptPlaygroundPage />}
+      />
       <Route
         path="/video-creation/channels"
         element={<AllChannelsOverviewPage />}

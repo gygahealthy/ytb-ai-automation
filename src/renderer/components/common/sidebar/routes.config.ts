@@ -9,6 +9,7 @@ import {
   Video,
   Youtube,
   Shield,
+  FlaskConical,
 } from "lucide-react";
 import { RouteConfig } from "../../../types/menu-route.types";
 
@@ -91,6 +92,13 @@ export const routeConfig: RouteConfig[] = [
         icon: Zap,
         path: "/admin/ai-prompt-config",
         page: "admin.ai-prompt-config",
+      },
+      {
+        id: "admin.prompt-playground",
+        label: "Prompt Playground",
+        icon: FlaskConical,
+        path: "/admin/prompt-playground",
+        page: "admin.prompt-playground",
       },
     ],
   },

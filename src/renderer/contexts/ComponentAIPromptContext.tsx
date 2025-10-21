@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import electronApi from "../ipc";
-import { replacePlaceholders as replacePlaceholdersUtil } from "../../shared/utils/placeholder.util";
+import { replaceTemplate } from "../../shared/utils/template-replacement.util";
 
 export interface ComponentAIPromptConfig {
   id: string;
@@ -133,10 +133,15 @@ export function ComponentAIPromptProvider({
     [configs]
   );
 
-  // Replace placeholders using shared utility (normalizes keys to snake_case)
+  // Replace placeholders using shared template replacement utility (normalizes keys to snake_case)
   const replacePlaceholders = useCallback(
-    (template: string, data: Record<string, any>) => {
-      return replacePlaceholdersUtil(template, data || {});
+    (
+      template: string,
+      data: Record<string, any>,
+      occurrenceConfig?: Record<string, number[]>
+    ) => {
+      // Use new template replacement util with optional occurrence config for selective replacement
+      return replaceTemplate(template, data || {}, occurrenceConfig);
     },
     []
   );
@@ -163,7 +168,12 @@ export function ComponentAIPromptProvider({
           return { success: false, error: "prompt-not-found" };
 
         const promptTemplate = mp.data.promptTemplate || mp.data.prompt || "";
-        const processed = replacePlaceholders(promptTemplate, data || {});
+        // Pass occurrence config for selective variable replacement
+        const processed = replacePlaceholders(
+          promptTemplate,
+          data || {},
+          mp.data.variableOccurrencesConfig
+        );
 
         const callViaBackend = true;
         if (callViaBackend) {

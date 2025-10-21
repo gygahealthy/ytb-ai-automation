@@ -26,6 +26,7 @@ import * as m018 from "./modules/018_restructure_master_prompts_table";
 import * as m019 from "./modules/019_populate_master_prompt_types";
 import * as m020 from "./modules/020_add_url_to_cookies";
 import * as m021 from "./modules/021_add_component_prompt_configs";
+import * as m022 from "./modules/022_add_variable_occurrences_config";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -51,6 +52,7 @@ const modules: Migration[] = [
   m019,
   m020,
   m021,
+  m022,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

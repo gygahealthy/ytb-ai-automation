@@ -7,7 +7,7 @@ import {
 } from "../repository/component-prompt-config.repository";
 import { promptRepository } from "../repository/master-prompt.repository";
 import { sendChatMessage } from "../../gemini-apis/handlers/chat/sendChatMessage";
-import { replacePlaceholders } from "../../../../shared/utils/placeholder.util";
+import { replaceTemplate } from "../../../../shared/utils/template-replacement.util";
 import {
   GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
   GEMINI_CHAT_NORMAL_MODE_PERSISTENT,
@@ -168,13 +168,16 @@ export class AIPromptService {
   /**
    * Process prompt template with data
    * Replaces placeholders like {key} or [key] with actual values from data
+   * Respects occurrence config if provided (supports selective replacement)
    */
   private processPromptWithData(
     template: string,
-    data: Record<string, any>
+    data: Record<string, any>,
+    occurrenceConfig?: Record<string, number[]>
   ): string {
-    // Delegate to shared placeholder util which normalizes keys to snake_case
-    return replacePlaceholders(template, data || {});
+    // Delegate to shared template replacement util which normalizes keys to snake_case
+    // With occurrence config, only selected occurrences are replaced
+    return replaceTemplate(template, data || {}, occurrenceConfig);
   }
 
   /**
@@ -229,10 +232,15 @@ export class AIPromptService {
       // 'processedPrompt' (from caller) = pre-expanded template (renderer already replaced placeholders)
       // If caller provided processedPrompt, use it directly (efficiency + consistency).
       // Otherwise, process template server-side using shared replacer and caller's data.
+      // Pass the variableOccurrenceConfig for selective replacement (if user selected specific occurrences)
       const callerProcessed = (request as any).processedPrompt;
       const processedPrompt = callerProcessed
         ? callerProcessed
-        : this.processPromptWithData(prompt.promptTemplate, data || {});
+        : this.processPromptWithData(
+            prompt.promptTemplate,
+            data || {},
+            prompt.variableOccurrencesConfig || undefined
+          );
 
       logger.info(
         `[AIPromptService] Processed prompt (first 200 chars): ${processedPrompt.substring(
@@ -242,21 +250,54 @@ export class AIPromptService {
       );
 
       // 4. Call sendChatMessage with the final prompt
-      const aiResponse = await sendChatMessage({
-        profileId,
-        prompt: processedPrompt,
-        stream: stream || false,
-        requestId: requestId,
-        model: config.aiModel || "GEMINI_2_5_PRO",
-        mode:
-          config.useTempChat === true
-            ? GEMINI_CHAT_TEMPORARY_MODE
-            : config.keepContext === true
-            ? GEMINI_CHAT_NORMAL_MODE_PERSISTENT
-            : GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
-        // include conversationContext if caller sent one (server will use it to load metadata)
-        conversationContext: (request as any).conversationContext,
-      });
+      logger.info(
+        `[AIPromptService] Sending chat message for profile=${profileId} promptId=${
+          config.promptId
+        } model=${config.aiModel || "GEMINI_2_5_PRO"} promptLength=${
+          processedPrompt?.length ?? 0
+        }`
+      );
+
+      let aiResponse: ApiResponse<any>;
+      try {
+        aiResponse = await sendChatMessage({
+          profileId,
+          prompt: processedPrompt,
+          stream: stream || false,
+          requestId: requestId,
+          model: config.aiModel || "GEMINI_2_5_PRO",
+          mode:
+            config.useTempChat === true
+              ? GEMINI_CHAT_TEMPORARY_MODE
+              : config.keepContext === true
+              ? GEMINI_CHAT_NORMAL_MODE_PERSISTENT
+              : GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
+          // include conversationContext if caller sent one (server will use it to load metadata)
+          conversationContext: (request as any).conversationContext,
+        });
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(
+          "[AIPromptService] sendChatMessage threw an exception:",
+          msg
+        );
+        return {
+          success: false,
+          error: `Failed to send chat message: ${msg}`,
+        };
+      }
+
+      // Provide more actionable error message when token/cookie extraction fails
+      if (!aiResponse.success && aiResponse.error) {
+        const lower = String(aiResponse.error).toLowerCase();
+        if (
+          lower.includes("failed to extract gemini token") ||
+          lower.includes("authentication cookies") ||
+          lower.includes("cookies are expired")
+        ) {
+          aiResponse.error = `${aiResponse.error} \n\nSuggestion: open the Profiles tab, select the profile used for this request and click 'Extract Cookies'. If prompted, log into Gemini in the extracted browser session and retry.`;
+        }
+      }
 
       logger.info(
         `[AIPromptService] AI response received, success: ${aiResponse.success}`
