@@ -3,7 +3,7 @@ import { Cookie } from "../shared/types";
 import { logger } from "../../../utils/logger-backend";
 import { ApiResponse } from "../../../../shared/types";
 import { database } from "../../../storage/database";
-import { launchBrowser } from "../helpers/cookie/browser-launcher.helpers";
+import { launchBrowser } from "../helpers/browser/browser-launcher.helpers";
 import {
   navigateAndExtractCookies,
   logCookieExtractionSummary,

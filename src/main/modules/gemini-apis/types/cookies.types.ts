@@ -39,6 +39,9 @@ export interface CookieManagerOptions {
 export interface RotationResult {
   success: boolean;
   newPSIDTS?: string;
+  newSIDCC?: string;
+  newSecure1PSIDCC?: string;
+  newSecure3PSIDCC?: string;
   status?: number;
   error?: string;
   timestamp: number;

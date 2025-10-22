@@ -123,6 +123,7 @@ export function htmlToText(html: string): string {
 /**
  * Extract error information from parsed response
  * Detects BardErrorInfo and returns error code if present
+ * Also handles simple error codes like [4], [2], etc.
  */
 export function extractError(
   parsedData: unknown[]
@@ -131,9 +132,26 @@ export function extractError(
     for (const part of parsedData) {
       if (!Array.isArray(part)) continue;
 
-      // Look for error structure: ["wrb.fr", null, null, null, null, [3, null, [["type.googleapis.com/assistant.boq.bard.application.BardErrorInfo", [errorCode]]]]]
+      // Look for error structure: ["wrb.fr", null, null, null, null, [errorCode, ...]]
       if (part[0] === "wrb.fr" && Array.isArray(part[5])) {
         const errorSection = part[5];
+
+        // Simple error code format: ["wrb.fr", null, null, null, null, [4]]
+        if (
+          typeof errorSection[0] === "number" &&
+          errorSection[0] !== 0 &&
+          errorSection.length === 1
+        ) {
+          const errorCode = errorSection[0];
+          return {
+            code: errorCode,
+            message: `Gemini API Error ${errorCode}: ${getErrorMessage(
+              errorCode
+            )}`,
+          };
+        }
+
+        // Full error structure: ["wrb.fr", null, null, null, null, [3, null, [["BardErrorInfo", [errorCode]]]]]
         if (errorSection[0] === 3 && Array.isArray(errorSection[2])) {
           for (const errorDetail of errorSection[2]) {
             if (
@@ -164,10 +182,12 @@ export function extractError(
  */
 function getErrorMessage(code: number): string {
   const errorMessages: Record<number, string> = {
-    1052: "Account access issue or model not available. This could be due to: rate limiting, region restrictions, or the selected model not being available for your account.",
+    2: "Invalid request or conversation context. This usually means: the conversation ID is invalid, expired, or the request format is incorrect. Try starting a new conversation.",
+    4: "Authentication or authorization failed. Your session may have expired or the token is invalid. Try refreshing cookies or logging in again.",
     1001: "Invalid request format",
     1002: "Authentication failed",
     1003: "Rate limit exceeded",
+    1052: "Account access issue or model not available. This could be due to: rate limiting, region restrictions, or the selected model not being available for your account.",
   };
   return errorMessages[code] || "Unknown error";
 }
@@ -180,38 +200,85 @@ export function extractMessages(parsedData: unknown[]): string[] {
   const messages: string[] = [];
 
   try {
+    logger.debug(`🔍 Extracting messages from ${parsedData.length} part(s)...`);
+
     for (const part of parsedData) {
-      if (!Array.isArray(part)) continue;
+      if (!Array.isArray(part)) {
+        logger.debug(`⚠️ Part is not an array, skipping`);
+        continue;
+      }
+
+      logger.debug(`📋 Part has ${part.length} elements`);
 
       // Look for nested data
       const maybeJson = part[2];
-      if (!maybeJson || typeof maybeJson !== "string") continue;
+      if (!maybeJson || typeof maybeJson !== "string") {
+        logger.debug(
+          `⚠️ Part[2] is not a string (${typeof maybeJson}), skipping`
+        );
+        continue;
+      }
+
+      logger.debug(
+        `📝 Found JSON string at part[2]: ${maybeJson.length} chars`
+      );
 
       let mainData: unknown;
       try {
         mainData = JSON.parse(maybeJson);
-      } catch {
+        logger.debug(
+          `✅ Parsed JSON: ${
+            Array.isArray(mainData)
+              ? `array[${(mainData as unknown[]).length}]`
+              : typeof mainData
+          }`
+        );
+      } catch (err) {
+        logger.debug(`❌ Failed to parse JSON: ${err}`);
         continue;
       }
 
       // Extract candidates from mainData[4]
       if (mainData && Array.isArray(mainData) && mainData[4]) {
+        logger.debug(
+          `🎯 Found mainData[4] with ${
+            Array.isArray(mainData[4]) ? (mainData[4] as unknown[]).length : 0
+          } candidate(s)`
+        );
+
         for (const candidate of mainData[4]) {
           try {
             const text = candidate?.[1]?.[0];
             if (text && typeof text === "string") {
+              logger.debug(
+                `✅ Extracted message: ${text.substring(0, 100)}...`
+              );
               messages.push(text);
+            } else {
+              logger.debug(
+                `⚠️ Candidate[1][0] is not a string: ${typeof text}`
+              );
             }
-          } catch {
+          } catch (err) {
+            logger.debug(`❌ Error processing candidate: ${err}`);
             // Skip invalid candidates
           }
         }
+      } else {
+        logger.debug(
+          `⚠️ mainData[4] not found or not valid: ${
+            mainData && Array.isArray(mainData)
+              ? `mainData is array[${mainData.length}]`
+              : `mainData type: ${typeof mainData}`
+          }`
+        );
       }
     }
   } catch (error) {
     logger.error("Error extracting messages:", error);
   }
 
+  logger.debug(`🏁 Extraction complete: ${messages.length} message(s) found`);
   return messages;
 }
 
@@ -340,9 +407,12 @@ export async function sendChatRequest(
 
     try {
       // Send request with automatic token handling and model headers
+      // FORCE REFRESH token for new conversations to avoid stale token errors (1052)
+      const isNewConversation = !conversationContext;
       const response = await httpService.sendGeminiRequest(fReq, {
         retries: 3,
         headers: modelHeaders,
+        forceRefreshToken: isNewConversation,
       });
 
       if (response.statusCode !== 200) {
@@ -502,8 +572,9 @@ export async function sendChatRequestStreaming(
     const httpService = createHttpService(cookieManager);
 
     try {
-      // Get token
-      const token = await httpService.getToken();
+      // Get token - FORCE REFRESH for new conversations to avoid stale token errors (1052)
+      const isNewConversation = !conversationContext;
+      const token = await httpService.getToken(isNewConversation);
 
       // Send streaming request with model headers
       let metadata: ConversationMetadata | null = null;
@@ -516,6 +587,20 @@ export async function sendChatRequestStreaming(
       })) {
         totalChunks++;
 
+        // DEBUG: Log the actual chunk structure
+        logger.debug(
+          `📦 Chunk ${totalChunks} structure: ${JSON.stringify(
+            streamChunk.chunk
+          ).substring(0, 500)}...`
+        );
+
+        // Check for errors first (e.g. wrb.fr error blocks like 1052)
+        const error = extractError(streamChunk.chunk);
+        if (error) {
+          logger.error(`❌ ${error.message}`);
+          throw new Error(error.message);
+        }
+
         // Extract metadata from first chunk
         if (!metadata) {
           metadata = extractMetadata(streamChunk.chunk);
@@ -523,6 +608,9 @@ export async function sendChatRequestStreaming(
 
         // Extract messages from chunk
         const extracted = extractMessages(streamChunk.chunk);
+        logger.debug(
+          `🔍 Extracted ${extracted.length} HTML message(s) from chunk ${totalChunks}`
+        );
 
         for (const html of extracted) {
           const text = htmlToText(html);

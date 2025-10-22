@@ -7,6 +7,7 @@ import { useLogStore } from "../store/log.store";
 import Logo from "./common/sidebar/Logo";
 import MenuGroup from "./common/sidebar/MenuGroup";
 import { routeConfig } from "./common/sidebar/routes.config";
+import CookieRotationIndicatorInner from "./common/sidebar/cookie-rotation/CookieRotationIndicator";
 
 interface SidebarProps {
   currentPage: Page;
@@ -67,33 +68,31 @@ export default function Sidebar({
 
       {/* System Logs & Settings at bottom */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
-        <button
-          onClick={() => {
-            // If drawer is pinned, ensure we unpin+close when clicking sidebar button
-            closeAndUnpin();
-            // Also toggle in case it was closed
-            toggleDrawer();
-          }}
-          className={clsx(
-            "w-full flex items-center gap-3 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
-            isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5"
-          )}
-          title={isCollapsed ? "System Logs (Ctrl+G)" : undefined}
-        >
-          <Terminal className="w-5 h-5" />
-          {!isCollapsed && <span>System Logs</span>}
-        </button>
-        <button
-          onClick={onSettingsClick}
-          className={clsx(
-            "w-full flex items-center gap-3 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
-            isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5"
-          )}
-          title={isCollapsed ? "Settings" : undefined}
-        >
-          <Settings className="w-5 h-5" />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
+        {/* Cookie Rotation Status Indicator */}
+        {!isCollapsed && <CookieRotationIndicatorInner />}
+
+        {/* Icon-only buttons row for System Logs and Settings */}
+        <div className="flex gap-2 w-full">
+          <button
+            onClick={() => {
+              // If drawer is pinned, ensure we unpin+close when clicking sidebar button
+              closeAndUnpin();
+              // Also toggle in case it was closed
+              toggleDrawer();
+            }}
+            className="flex-1 flex items-center justify-center px-3 py-2.5 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="System Logs (Ctrl+G)"
+          >
+            <Terminal className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onSettingsClick}
+            className="flex-1 flex items-center justify-center px-3 py-2.5 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </aside>
   );

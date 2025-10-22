@@ -50,9 +50,21 @@ export class ChatService {
     // Update session state
     this.lastResponse = response;
 
-    // Update metadata from response if available
-    if (response.metadata) {
+    // Check if response contains an error message from Gemini
+    const isErrorResponse =
+      response.fullText?.includes("Sorry, something went wrong") ||
+      response.fullText?.includes("Please try your request again");
+
+    // Only update metadata if response is successful and not an error message
+    // This prevents corrupting conversation state with invalid reply IDs
+    if (response.metadata && !isErrorResponse) {
       this.metadata = response.metadata;
+    } else if (isErrorResponse) {
+      // Log warning but keep previous valid metadata
+      console.warn(
+        "[ChatService] Gemini returned error response, keeping previous metadata:",
+        this.metadata
+      );
     }
 
     return response;

@@ -10,7 +10,6 @@ import type {
 } from "../../shared/types/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
 import { endpoints, headers } from "../../shared/config/index.js";
-import crypto from "crypto";
 import { cookiesToHeader } from "./cookie-parser.helpers.js";
 
 let gotInstance: any = null;
@@ -36,225 +35,7 @@ export interface RotationControl {
  * @param sapisid - SAPISID cookie value
  * @returns Authorization header value
  */
-function generateSAPISIDHASH(origin: string, sapisid: string): string {
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const hashInput = `${timestamp} ${sapisid} ${origin}`;
-  const hash = crypto.createHash("sha1").update(hashInput).digest("hex");
-  return `SAPISIDHASH ${timestamp}_${hash}`;
-}
-
-/**
- * Refresh credentials using the refreshCreds endpoint
- * This refreshes SIDCC and PSIDCC cookies (session/security cookies)
- * @param cookies - Cookie collection
- * @param options - Refresh options
- * @returns Refresh result with updated cookies
- */
-export async function refreshCreds(
-  cookies: CookieCollection,
-  options: {
-    proxy?: string;
-    skipCache?: boolean;
-    apiKey?: string;
-    gsessionid?: string;
-  } = {}
-): Promise<RotationResult & { updatedCookies?: Record<string, string> }> {
-  const startTime = Date.now();
-
-  try {
-    const got = await getGot();
-    const sapisid = cookies["SAPISID"] || cookies["__Secure-1PAPISID"];
-    if (!sapisid) {
-      throw new Error("SAPISID cookie is required for refreshCreds");
-    }
-
-    const psid = cookies["__Secure-1PSID"];
-    if (!psid) {
-      throw new Error("__Secure-1PSID cookie is required for refreshCreds");
-    }
-
-    // TODO: Implement database-backed cache check instead of file-based cache
-    // Check cache freshness (shorter interval for session cookies)
-
-    // Build cookie jar
-    const jar = new CookieJar();
-    const cookieHeader = cookiesToHeader(cookies);
-
-    for (const part of cookieHeader.split(";")) {
-      const trimmed = part.trim();
-      if (trimmed && trimmed.includes("=")) {
-        try {
-          // Set cookies for both google.com and the signaler domain
-          jar.setCookieSync(trimmed, "https://google.com");
-          jar.setCookieSync(trimmed, "https://accounts.google.com");
-          jar.setCookieSync(trimmed, "https://signaler-pa.clients6.google.com");
-        } catch {
-          // Ignore malformed cookies
-        }
-      }
-    }
-
-    // Generate authorization header
-    const origin = "https://gemini.google.com";
-    const authorization = generateSAPISIDHASH(origin, sapisid);
-
-    // Default values (these might need to be extracted from actual Gemini sessions)
-    const apiKey = options.apiKey || "AIzaSyBWW50ghQ5qHpMg1gxHV7U9t0wHE0qIUk4";
-    const gsessionid = options.gsessionid || generateRandomSessionId();
-
-    const refreshUrl = `https://signaler-pa.clients6.google.com/punctual/v1/refreshCreds?key=${apiKey}&gsessionid=${gsessionid}`;
-
-    logger.debug("Sending refreshCreds request...");
-
-    // Try with authorization header first, fallback to cookie-only approach
-    let response = await got.post(refreshUrl, {
-      http2: true,
-      cookieJar: jar,
-      headers: {
-        accept: "*/*",
-        "accept-language": "en,en-US;q=0.9",
-        authorization: authorization,
-        "cache-control": "no-cache",
-        "content-type": "application/json+protobuf",
-        origin: origin,
-        pragma: "no-cache",
-        priority: "u=1, i",
-        referer: "https://gemini.google.com/",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-site",
-        "user-agent": headers.common["User-Agent"],
-        "x-goog-authuser": "0",
-      },
-      body: '["OGtFFXbB"]',
-      throwHttpErrors: false,
-      ...(options.proxy ? { proxy: options.proxy } : {}),
-    });
-
-    // If 401, try without authorization header (cookie-based auth only)
-    if (response.statusCode === 401) {
-      logger.debug(
-        "Received 401 with authorization header, retrying without it..."
-      );
-      response = await got.post(refreshUrl, {
-        http2: true,
-        cookieJar: jar,
-        headers: {
-          accept: "*/*",
-          "accept-language": "en,en-US;q=0.9",
-          "cache-control": "no-cache",
-          "content-type": "application/json+protobuf",
-          origin: origin,
-          pragma: "no-cache",
-          priority: "u=1, i",
-          referer: "https://gemini.google.com/",
-          "sec-fetch-dest": "empty",
-          "sec-fetch-mode": "cors",
-          "sec-fetch-site": "same-site",
-          "user-agent": headers.common["User-Agent"],
-          "x-goog-authuser": "0",
-        },
-        body: '["OGtFFXbB"]',
-        throwHttpErrors: false,
-        ...(options.proxy ? { proxy: options.proxy } : {}),
-      });
-    }
-
-    logger.debug(`RefreshCreds response: ${response.statusCode}`);
-
-    if (response.statusCode !== 200) {
-      return {
-        success: false,
-        status: response.statusCode,
-        error: `RefreshCreds failed with status ${response.statusCode}`,
-        timestamp: startTime,
-      };
-    }
-
-    // Extract updated cookies from Set-Cookie headers
-    const setCookie = response.headers["set-cookie"];
-    if (!setCookie) {
-      return {
-        success: false,
-        status: response.statusCode,
-        error: "No Set-Cookie headers returned from refreshCreds",
-        timestamp: startTime,
-      };
-    }
-
-    logger.debug(
-      `RefreshCreds Set-Cookie headers: ${JSON.stringify(setCookie)}`
-    );
-
-    const updatedCookies: Record<string, string> = {};
-    const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
-
-    // Extract SIDCC and PSIDCC cookies
-    for (const cookie of cookieArray) {
-      logger.debug(
-        `Checking refreshCreds cookie: ${cookie.substring(0, 100)}...`
-      );
-
-      // Match various SIDCC and PSIDCC patterns
-      const patterns = [
-        /SIDCC=([^;]+)/,
-        /__Secure-1PSIDCC=([^;]+)/,
-        /__Secure-3PSIDCC=([^;]+)/,
-      ];
-
-      for (const pattern of patterns) {
-        const match = cookie.match(pattern);
-        if (match) {
-          const cookieName = pattern.source.split("=")[0].replace(/[\\^]/g, "");
-          updatedCookies[cookieName] = match[1];
-          logger.debug(`Found ${cookieName} in refreshCreds response`);
-        }
-      }
-    }
-
-    if (Object.keys(updatedCookies).length > 0) {
-      logger.info(
-        `✅ RefreshCreds successful: updated ${
-          Object.keys(updatedCookies).length
-        } cookies`
-      );
-
-      return {
-        success: true,
-        status: response.statusCode,
-        timestamp: startTime,
-        updatedCookies,
-      };
-    }
-
-    return {
-      success: false,
-      status: response.statusCode,
-      error: "No SIDCC/PSIDCC cookies found in refreshCreds response",
-      timestamp: startTime,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error(`RefreshCreds error: ${message}`);
-
-    return {
-      success: false,
-      error: message,
-      timestamp: startTime,
-    };
-  }
-}
-
-/**
- * Generate a random session ID for refreshCreds
- */
-function generateRandomSessionId(): string {
-  return crypto
-    .randomBytes(16)
-    .toString("base64")
-    .replace(/[/+=]/g, "")
-    .substring(0, 22);
-}
+// SAPISIDHASH generation moved to refresh-creds.helpers.ts if needed
 
 /**
  * Rotate __Secure-1PSIDTS cookie
@@ -333,6 +114,9 @@ export async function rotate1psidts(
     logger.debug(`Set-Cookie headers: ${JSON.stringify(setCookie)}`);
 
     let newPSIDTS: string | undefined;
+    let newSIDCC: string | undefined;
+    let newSecure1PSIDCC: string | undefined;
+    let newSecure3PSIDCC: string | undefined;
     const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
 
     // Method 1: Check Set-Cookie headers
@@ -340,7 +124,7 @@ export async function rotate1psidts(
       logger.debug(`Checking cookie: ${cookie.substring(0, 100)}...`);
 
       // Try multiple patterns for PSIDTS (including RTS variant)
-      const patterns = [
+      const psidtsPatterns = [
         /__Secure-1PSIDTS=([^;]+)/,
         /__Secure-3PSIDTS=([^;]+)/,
         /__Secure-1PSIDRTS=([^;]+)/, // RTS variant
@@ -348,7 +132,7 @@ export async function rotate1psidts(
         /PSIDTS=([^;]+)/,
       ];
 
-      for (const pattern of patterns) {
+      for (const pattern of psidtsPatterns) {
         const match = cookie.match(pattern);
         if (match) {
           newPSIDTS = match[1];
@@ -357,7 +141,24 @@ export async function rotate1psidts(
         }
       }
 
-      if (newPSIDTS) break;
+      // Extract SIDCC cookies from response
+      const sidccMatch = cookie.match(/^SIDCC=([^;]+)/);
+      if (sidccMatch) {
+        newSIDCC = sidccMatch[1];
+        logger.debug(`Found SIDCC cookie`);
+      }
+
+      const secure1psidccMatch = cookie.match(/__Secure-1PSIDCC=([^;]+)/);
+      if (secure1psidccMatch) {
+        newSecure1PSIDCC = secure1psidccMatch[1];
+        logger.debug(`Found __Secure-1PSIDCC cookie`);
+      }
+
+      const secure3psidccMatch = cookie.match(/__Secure-3PSIDCC=([^;]+)/);
+      if (secure3psidccMatch) {
+        newSecure3PSIDCC = secure3psidccMatch[1];
+        logger.debug(`Found __Secure-3PSIDCC cookie`);
+      }
     }
 
     // Method 2: Check cookie jar (like Python httpx does)
@@ -400,6 +201,9 @@ export async function rotate1psidts(
       return {
         success: true,
         newPSIDTS,
+        newSIDCC,
+        newSecure1PSIDCC,
+        newSecure3PSIDCC,
         status: response.statusCode,
         timestamp: startTime,
       };
@@ -414,6 +218,9 @@ export async function rotate1psidts(
       );
       return {
         success: true,
+        newSIDCC,
+        newSecure1PSIDCC,
+        newSecure3PSIDCC,
         status: response.statusCode,
         timestamp: startTime,
       };
@@ -458,11 +265,25 @@ export function startAutoRotation(
     logger.debug("⏰ Auto-rotation triggered");
     const result = await rotate1psidts(cookies, options);
 
-    if (result.success && result.newPSIDTS) {
-      cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
-      logger.info(
-        `🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`
-      );
+    if (result.success) {
+      if (result.newPSIDTS) {
+        cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
+        logger.info(
+          `🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`
+        );
+      }
+      if (result.newSIDCC) {
+        cookies["SIDCC"] = result.newSIDCC;
+        logger.info(`🔄 Auto-rotated SIDCC`);
+      }
+      if (result.newSecure1PSIDCC) {
+        cookies["__Secure-1PSIDCC"] = result.newSecure1PSIDCC;
+        logger.info(`🔄 Auto-rotated __Secure-1PSIDCC`);
+      }
+      if (result.newSecure3PSIDCC) {
+        cookies["__Secure-3PSIDCC"] = result.newSecure3PSIDCC;
+        logger.info(`🔄 Auto-rotated __Secure-3PSIDCC`);
+      }
     } else {
       logger.warn(
         `⚠️ Auto-rotation failed: ${result.error || "Unknown error"}`

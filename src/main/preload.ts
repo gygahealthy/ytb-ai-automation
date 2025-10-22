@@ -233,6 +233,38 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
   },
 
+  // Cookie Rotation APIs
+  cookieRotation: {
+    getStatus: () => ipcRenderer.invoke("cookie-rotation:get-status"),
+    getProfiles: () => ipcRenderer.invoke("cookie-rotation:get-profiles"),
+    startWorker: (profileId: string, cookieId: string) =>
+      ipcRenderer.invoke("cookie-rotation:start-worker", profileId, cookieId),
+    restartWorker: (profileId: string, cookieId: string) =>
+      ipcRenderer.invoke("cookie-rotation:restart-worker", profileId, cookieId),
+    stopWorker: (profileId: string, cookieId: string) =>
+      ipcRenderer.invoke("cookie-rotation:stop-worker", profileId, cookieId),
+    forceHeadlessRefresh: (profileId: string, cookieId: string) =>
+      ipcRenderer.invoke(
+        "cookie-rotation:force-headless-refresh",
+        profileId,
+        cookieId
+      ),
+    forceVisibleRefresh: (profileId: string, cookieId: string) =>
+      ipcRenderer.invoke(
+        "cookie-rotation:force-visible-refresh",
+        profileId,
+        cookieId
+      ),
+    stopAll: () => ipcRenderer.invoke("cookie-rotation:stop-all"),
+    startAll: () => ipcRenderer.invoke("cookie-rotation:start-all"),
+    onStatusUpdate: (callback: (data: any) => void) => {
+      const channel = "cookie-rotation:status-update";
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
+
   // Generic invoke for other channels
   invoke: (channel: string, ...args: any[]) =>
     ipcRenderer.invoke(channel, ...args),

@@ -1,8 +1,9 @@
-import { collectModuleRegistrations } from './module-loader';
-import { registerAll } from '../../core/ipc/registry';
-import { logger } from '../utils/logger-backend';
-import { IpcRegistration } from '../../core/ipc/types';
-import { registerDevToolsHandlers } from './devtools';
+import { collectModuleRegistrations } from "./module-loader";
+import { registerAll } from "../../core/ipc/registry";
+import { logger } from "../utils/logger-backend";
+import { IpcRegistration } from "../../core/ipc/types";
+import { registerDevToolsHandlers } from "./devtools";
+import { registerCookieRotationHandlers } from "./cookie-rotation";
 
 /**
  * Register all IPC handlers
@@ -18,7 +19,9 @@ export function registerIPCHandlers(): void {
     if (!uniqueMap.has(reg.channel)) {
       uniqueMap.set(reg.channel, reg);
     } else {
-      console.warn(`Duplicate IPC registration for channel '${reg.channel}' detected — ignoring subsequent registration`);
+      console.warn(
+        `Duplicate IPC registration for channel '${reg.channel}' detected — ignoring subsequent registration`
+      );
     }
   }
 
@@ -29,6 +32,9 @@ export function registerIPCHandlers(): void {
 
   // Register devtools handlers
   registerDevToolsHandlers();
+
+  // Register cookie rotation handlers
+  registerCookieRotationHandlers();
 
   // master-prompts handlers are provided by the prompt-management module
 

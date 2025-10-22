@@ -23,17 +23,69 @@ export interface TokenData {
  */
 function extractSnlm0eToken(html: string): string | null {
   const patterns = [
-    /"SNlM0e":"(.*?)"/, // Primary: "SNlM0e":"token"
-    /SNlM0e\s*:\s*"(.*?)"/, // Alternative: SNlM0e : "token"
-    /"SNlM0e"\s*,\s*"(.*?)"/, // Alternative: "SNlM0e" , "token"
+    // Primary patterns for SNlM0e token
+    /"SNlM0e":"(.*?)"/, // "SNlM0e":"token"
+    /SNlM0e\s*:\s*"(.*?)"/, // SNlM0e : "token"
+    /"SNlM0e"\s*,\s*"(.*?)"/, // "SNlM0e" , "token"
     /SNlM0e\\":\\"(.*?)\\"/, // Escaped version
+
+    // Alternative patterns for different Google frontend versions
+    /SNlM0e['"]\s*:\s*['"]([\w\-]+)['"]/, // SNlM0e' : 'token' or SNlM0e" : "token"
+    /\['SNlM0e'\]\s*=\s*['"]([^'"]+)/, // ['SNlM0e'] = 'token'
+    /\["SNlM0e"\]\s*=\s*["']([^"']+)/, // ["SNlM0e"] = "token"
+
+    // Modern JS patterns (from webpack bundles)
+    /[,:]SNlM0e[,:]"([^"]{60,}?)"/, // ,SNlM0e:"longtokenstring"
+    /window\.SNlM0e\s*=\s*['"]([\w\-]+)['"]/, // window.SNlM0e = 'token'
+
+    // Encoded/minified patterns
+    /snlm0e["\']?\s*:\s*["\']?([a-zA-Z0-9\-_]{60,}?)["\']?[,\}]/i, // Case-insensitive minified
   ];
 
   for (const pattern of patterns) {
     const match = html.match(pattern);
     if (match?.[1]) {
-      return match[1];
+      const token = match[1].trim();
+      // Validate token looks reasonable (should be 60+ chars typically)
+      if (token.length > 10) {
+        logger.debug(`✅ Token extracted with pattern: ${pattern.source}`);
+        return token;
+      }
     }
+  }
+
+  // FALLBACK: If standard patterns fail, search for any token-like string
+  // that appears in the HTML. Google may have changed the structure entirely.
+  logger.warn(
+    "⚠️ Standard SNlM0e patterns failed, trying fallback extraction..."
+  );
+
+  // Search for strings that look like tokens (long alphanumeric sequences)
+  const fallbackPattern = /["']([a-zA-Z0-9\-_]{80,300})["']/g;
+  let match;
+  const potentialTokens = [];
+
+  while ((match = fallbackPattern.exec(html)) !== null) {
+    const token = match[1];
+    // Skip known non-token strings
+    if (
+      !token.includes("http") &&
+      !token.includes("css") &&
+      !token.includes("font") &&
+      !token.includes("image") &&
+      token.length > 60
+    ) {
+      potentialTokens.push(token);
+    }
+  }
+
+  // Use the longest token found
+  if (potentialTokens.length > 0) {
+    const longestToken = potentialTokens.sort((a, b) => b.length - a.length)[0];
+    logger.warn(
+      `Found potential token via fallback (length: ${longestToken.length})`
+    );
+    return longestToken;
   }
 
   return null;
@@ -44,32 +96,45 @@ function extractSnlm0eToken(html: string): string | null {
  * Checks database for cached token first, fetches fresh if needed
  * @param cookieManager - Database-integrated cookie manager instance
  * @param cookieEntity - Optional: Cookie entity from database to check for cached token
+ * @param forceRefresh - If true, skip cache and always fetch fresh token from page
  * @returns Token data
  */
 export async function extractTokens(
   cookieManager: CookieManagerDB,
-  cookieEntity?: Cookie
+  cookieEntity?: Cookie,
+  forceRefresh: boolean = false
 ): Promise<TokenData> {
   logger.info("🔍 Extracting tokens from Gemini page...");
 
-  // Step 1: Check if we have a cached token in the database
-  if (cookieEntity?.geminiToken) {
+  // Step 1: Check if we have a cached token in the database (unless force refresh)
+  if (!forceRefresh && cookieEntity?.geminiToken) {
+    // Validate the cached token
+    if (validateToken(cookieEntity.geminiToken)) {
+      logger.info(
+        "✅ Using cached geminiToken from database (gemini_token field)"
+      );
+      logger.debug(
+        `Cached token: ${cookieEntity.geminiToken.substring(0, 40)}...`
+      );
+
+      return {
+        snlm0e: cookieEntity.geminiToken,
+        timestamp: Date.now(),
+      };
+    } else {
+      logger.warn(
+        "⚠️ Cached token in database is invalid, fetching fresh token..."
+      );
+    }
+  } else if (forceRefresh) {
     logger.info(
-      "📦 Found cached geminiToken in database, attempting to use it..."
+      "🔄 Force refresh requested - bypassing cache, fetching fresh token from page..."
     );
-    logger.debug(
-      `Cached token: ${cookieEntity.geminiToken.substring(0, 40)}...`
+  } else {
+    logger.info(
+      "⬇️ No cached token found in database (gemini_token is null), fetching fresh token..."
     );
-
-    return {
-      snlm0e: cookieEntity.geminiToken,
-      timestamp: Date.now(),
-    };
   }
-
-  logger.info(
-    "⬇️ No cached token found, fetching fresh token from Gemini page..."
-  );
 
   // Step 2: Validate cookies before fetching
   const validation = cookieManager.validate();
@@ -127,40 +192,90 @@ export async function extractTokens(
 
     if (!snlm0e) {
       logger.error("Failed to extract SNlM0e token from HTML");
-      logger.debug(
-        `HTML length: ${html.length}, first 500 chars: ${html.substring(
-          0,
-          500
-        )}`
-      );
 
-      // Provide user-friendly error with recovery instructions
+      // Debug: Try to understand why the token isn't found
+      logger.warn("🔍 Debugging token extraction failure...");
+
+      // Write the HTML to a debug file for analysis
+      try {
+        const fs = await import("fs").then((m) => m.promises);
+        const path = await import("path");
+        const debugDir = path.join(process.cwd(), ".debug");
+
+        // Ensure debug directory exists
+        await fs.mkdir(debugDir, { recursive: true });
+
+        // Save the HTML response for manual inspection
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const debugFile = path.join(debugDir, `gemini-html-${timestamp}.txt`);
+        await fs.writeFile(debugFile, html, "utf-8");
+
+        logger.warn(`📄 HTML response saved to: ${debugFile}`);
+        logger.warn(`📝 File size: ${html.length} bytes`);
+      } catch (writeError) {
+        logger.warn(
+          `⚠️ Failed to save debug HTML: ${
+            writeError instanceof Error ? writeError.message : "Unknown error"
+          }`
+        );
+      }
+
+      // Check for various patterns to diagnose
+      const patterns = {
+        hasSnlm0eQuote: html.includes('"SNlM0e"'),
+        hasSnlm0eSingleQuote: html.includes("'SNlM0e'"),
+        hasSnlm0eNoQuote: html.includes("SNlM0e"),
+        count_SNlM0e: (html.match(/SNlM0e/g) || []).length,
+        count_snlm0e: (html.match(/snlm0e/gi) || []).length,
+      };
+
+      logger.debug(`Pattern checks: ${JSON.stringify(patterns)}`);
+
+      // Try to find what long tokens ARE in the HTML
+      const longStrings = html.match(/["'][a-zA-Z0-9\-_]{40,}/g) || [];
+      logger.debug(`Found ${longStrings.length} long strings in HTML`);
+      if (longStrings.length > 0) {
+        logger.debug(
+          `Sample long strings: ${longStrings.slice(0, 3).join(", ")}`
+        );
+      }
+
+      // Check for specific script patterns
+      const scriptMatches =
+        html.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
+      logger.debug(`Found ${scriptMatches.length} script tags`);
+
+      // Look for any "SNlM0e" in ANY context
+      const snlm0eMatches =
+        html.match(/SNlM0e[^,}\]]*["':[a-zA-Z0-9\-_]{20,}['"]/g) || [];
+      if (snlm0eMatches.length > 0) {
+        logger.warn(`❗ Found SNlM0e in these contexts:`);
+        snlm0eMatches.slice(0, 3).forEach((match) => {
+          logger.debug(`  → ${match.substring(0, 100)}`);
+        });
+      } else {
+        logger.error(`❌ SNlM0e not found in ANY context in the HTML`);
+      }
+
+      // Provide user-friendly error with clear recovery instructions
       throw new Error(
-        "Failed to extract Gemini token from page. This usually means your authentication cookies have expired or are invalid.\n\n" +
-          "Please:\n" +
+        "Failed to extract Gemini token - your session may need refresh.\n\n" +
+          "This happens when Google's session expires. Please:\n" +
           "1. Go to the 'Profiles' tab\n" +
-          "2. Select your profile and click 'Extract Cookies' button\n" +
-          "3. Log into Gemini if prompted\n" +
-          "4. Once cookies are extracted, try sending your message again\n\n" +
-          "If this persists, your browser session may need to be refreshed. Try logging out and back into Gemini in your browser."
+          "2. Click 'Extract Cookies' button\n" +
+          "3. A browser window will open - log in if needed\n" +
+          "4. Once extracted, try sending your message again\n\n" +
+          "If you're already logged in, try logging out and back in on that page."
       );
     }
 
     logger.info(`✅ Fresh token extracted: ${snlm0e.substring(0, 40)}...`);
 
-    // Step 5: Update database with new token if cookieEntity provided
-    if (cookieEntity) {
-      try {
-        logger.info("💾 Updating database with new token...");
-        // This will be done by the caller using cookieService.updateRotation()
-        // We just return the token and let the caller handle storage
-      } catch (updateError) {
-        logger.warn(
-          "Failed to update token in database, but returning token anyway",
-          updateError
-        );
-      }
-    }
+    // NOTE: Token will be persisted to database by the HttpService.getToken() method
+    // We just return it here and let the caller handle the storage
+    logger.debug(
+      "Token extracted successfully, caller will persist to database"
+    );
 
     return {
       snlm0e,

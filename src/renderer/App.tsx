@@ -10,6 +10,7 @@ import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
 import { GeminiChatProvider } from "./contexts/GeminiChatContext";
 import { ComponentAIPromptProvider } from "./contexts/ComponentAIPromptContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { OverlayPortalProvider } from "./contexts/OverlayPortalContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -105,7 +106,9 @@ function App() {
               <DrawerProvider>
                 <GeminiChatProvider>
                   <ComponentAIPromptProvider>
-                    <AppContent />
+                    <OverlayPortalProvider>
+                      <AppContent />
+                    </OverlayPortalProvider>
                   </ComponentAIPromptProvider>
                 </GeminiChatProvider>
               </DrawerProvider>

@@ -19,7 +19,6 @@ import {
 import { logger } from "../../../utils/logger-backend.js";
 import {
   rotate1psidts,
-  refreshCreds,
   startAutoRotation,
   type RotationControl,
 } from "../helpers/cookie/cookie-rotation.helpers.js";
@@ -32,7 +31,6 @@ import type { Cookie } from "../shared/types/index.js";
 export interface CookieManagerDBOptions {
   // Rotation intervals
   psidtsIntervalSeconds?: number; // Default: 540 (9 minutes)
-  sidccIntervalSeconds?: number; // Default: 120 (2 minutes)
 
   // Validation options
   autoValidate?: boolean;
@@ -41,15 +39,9 @@ export interface CookieManagerDBOptions {
   // Proxy (optional)
   proxy?: string | undefined;
 
-  // API key for SIDCC refresh
-  apiKey?: string;
-
   // Callbacks
   onPSIDTSRotate?: (result: RotationResult) => void;
-  onSIDCCRefresh?: (
-    result: RotationResult & { updatedCookies?: Record<string, string> }
-  ) => void;
-  onError?: (error: string, type: "PSIDTS" | "SIDCC" | "DB") => void;
+  onError?: (error: string, type: "PSIDTS" | "DB") => void;
   onCookiesSaved?: (count: number) => void;
 
   // Verbose logging
@@ -64,18 +56,12 @@ export interface CookieManagerDBControl {
   isRunning: () => boolean;
   getStats: () => {
     psidtsRotations: number;
-    sidccRefreshes: number;
     psidtsErrors: number;
-    sidccErrors: number;
     dbErrors: number;
     lastPSIDTSRotation?: Date;
-    lastSIDCCRefresh?: Date;
     lastDBSync?: Date;
   };
-  forceRotation: () => Promise<{
-    psidtsResult: RotationResult;
-    sidccResult: RotationResult & { updatedCookies?: Record<string, string> };
-  }>;
+  forceRotation: () => Promise<RotationResult>;
   syncToDatabase: () => Promise<void>;
 }
 
@@ -89,7 +75,6 @@ export class CookieManagerDB {
   private initialized = false;
 
   private psidtsControl: RotationControl | null = null;
-  private sidccInterval: NodeJS.Timeout | null = null;
 
   // Required cookies for Gemini API
   private readonly REQUIRED_COOKIES = ["__Secure-1PSID", "__Secure-1PSIDTS"];
@@ -97,12 +82,9 @@ export class CookieManagerDB {
   // Statistics
   private stats = {
     psidtsRotations: 0,
-    sidccRefreshes: 0,
     psidtsErrors: 0,
-    sidccErrors: 0,
     dbErrors: 0,
     lastPSIDTSRotation: undefined as Date | undefined,
-    lastSIDCCRefresh: undefined as Date | undefined,
     lastDBSync: undefined as Date | undefined,
   };
 
@@ -119,13 +101,10 @@ export class CookieManagerDB {
     this.cookies = { ...cookies };
     this.options = {
       psidtsIntervalSeconds: options.psidtsIntervalSeconds ?? 540,
-      sidccIntervalSeconds: options.sidccIntervalSeconds ?? 120,
       autoValidate: options.autoValidate ?? false,
       validateOnInit: options.validateOnInit ?? true,
       proxy: options.proxy === undefined ? undefined : options.proxy,
-      apiKey: options.apiKey ?? "AIzaSyBWW50ghQ5qHpMg1gxHV7U9t0wHE0qIUk4",
       onPSIDTSRotate: options.onPSIDTSRotate ?? (() => {}),
-      onSIDCCRefresh: options.onSIDCCRefresh ?? (() => {}),
       onError: options.onError ?? (() => {}),
       onCookiesSaved: options.onCookiesSaved ?? (() => {}),
       verbose: options.verbose ?? false,
@@ -134,7 +113,6 @@ export class CookieManagerDB {
     if (this.options.verbose) {
       logger.info("🔧 CookieManagerDB initialized with options", {
         psidtsInterval: this.options.psidtsIntervalSeconds,
-        sidccInterval: this.options.sidccIntervalSeconds,
         profileId,
         domain,
       });
@@ -177,17 +155,32 @@ export class CookieManagerDB {
    */
   private async loadFromDatabase(): Promise<void> {
     try {
-      const entity = await this.cookieRepository.findByProfileAndUrl(
+      // Try to find by profile and service first (more reliable)
+      let entity = await this.cookieRepository.findActiveByProfileAndService(
         this.profileId,
-        this.domain
+        this.service
       );
+
+      // Fallback: Try finding by profile and URL if service lookup fails
+      if (!entity) {
+        logger.debug(
+          `[CookieManagerDB] No entity found by service '${this.service}', trying URL '${this.domain}'`
+        );
+        entity = await this.cookieRepository.findByProfileAndUrl(
+          this.profileId,
+          this.domain
+        );
+      }
 
       if (entity) {
         this.dbEntity = entity;
         logger.debug(`📦 Loaded cookie entity from database:`, {
           id: entity.id,
+          service: entity.service,
+          url: entity.url,
           status: entity.status,
           lastRotated: entity.lastRotatedAt,
+          hasGeminiToken: !!entity.geminiToken,
         });
 
         // Update in-memory cookies with database values
@@ -197,7 +190,7 @@ export class CookieManagerDB {
         }
       } else {
         logger.debug(
-          `⚠️ No cookie entity found in database for profile: ${this.profileId}`
+          `⚠️ No cookie entity found in database for profile: ${this.profileId}, service: ${this.service}`
         );
       }
     } catch (error) {
@@ -238,6 +231,45 @@ export class CookieManagerDB {
    */
   getEntity(): Cookie | null {
     return this.dbEntity;
+  }
+
+  /**
+   * Reload entity from database to get latest updates
+   * Call this after external updates to the database (e.g., token updates)
+   */
+  async reloadEntity(): Promise<void> {
+    try {
+      // Try service-based lookup first
+      let entity = await this.cookieRepository.findActiveByProfileAndService(
+        this.profileId,
+        this.service
+      );
+
+      // Fallback to URL-based lookup
+      if (!entity) {
+        entity = await this.cookieRepository.findByProfileAndUrl(
+          this.profileId,
+          this.domain
+        );
+      }
+
+      if (entity) {
+        this.dbEntity = entity;
+        logger.debug(
+          `🔄 Reloaded cookie entity from database (geminiToken: ${
+            entity.geminiToken ? "present" : "null"
+          })`
+        );
+
+        // Update in-memory cookies with fresh database values
+        if (entity.rawCookieString) {
+          this.mergeDatabaseCookies(entity);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`⚠️ Failed to reload entity from database: ${message}`);
+    }
   }
 
   /**
@@ -288,19 +320,11 @@ export class CookieManagerDB {
       }
     );
 
-    // Start SIDCC auto-refresh
-    this.startSIDCCRefresh();
-
     logger.info(`📊 Cookie manager configuration:`);
     logger.info(
       `   - PSIDTS rotation: every ${
         this.options.psidtsIntervalSeconds
       }s (${Math.round(this.options.psidtsIntervalSeconds / 60)} min)`
-    );
-    logger.info(
-      `   - SIDCC refresh: every ${
-        this.options.sidccIntervalSeconds
-      }s (${Math.round(this.options.sidccIntervalSeconds / 60)} min)`
     );
 
     return {
@@ -329,7 +353,7 @@ export class CookieManagerDB {
           await this.updateDatabaseRotation(
             {
               lastRotatedAt: new Date().toISOString(),
-              geminiToken: result.newPSIDTS,
+              geminiToken: null, // 🔄 Clear token cache so fresh token is fetched
               status: "active",
             },
             "PSIDTS"
@@ -354,123 +378,15 @@ export class CookieManagerDB {
   }
 
   /**
-   * Start SIDCC refresh cycle
+   * Force immediate rotation of PSIDTS cookie
    */
-  private startSIDCCRefresh(): void {
-    this.sidccInterval = setInterval(async () => {
-      if (!this.running) return;
-
-      logger.debug("⏰ SIDCC auto-refresh triggered");
-
-      try {
-        const result = await refreshCreds(this.cookies, {
-          apiKey: this.options.apiKey,
-          proxy: this.options.proxy,
-        });
-
-        if (result.success && result.updatedCookies) {
-          this.stats.sidccRefreshes++;
-          this.stats.lastSIDCCRefresh = new Date();
-
-          // Update in-memory cookies
-          Object.assign(this.cookies, result.updatedCookies);
-
-          logger.info(
-            `✅ SIDCC refreshed: updated ${
-              Object.keys(result.updatedCookies).length
-            } cookies`
-          );
-
-          // Save to database
-          try {
-            await this.updateDatabaseRotation(
-              {
-                lastRotatedAt: new Date().toISOString(),
-                status: "active",
-                rawCookieString: cookiesToHeader(this.cookies),
-              },
-              "SIDCC"
-            );
-          } catch (error) {
-            this.stats.dbErrors++;
-            const message =
-              error instanceof Error ? error.message : String(error);
-            logger.warn(
-              `⚠️ Failed to save SIDCC refresh to database: ${message}`
-            );
-            this.options.onError(message, "DB");
-          }
-        } else {
-          this.stats.sidccErrors++;
-          logger.warn(`⚠️ SIDCC refresh failed: ${result.error}`);
-          this.options.onError(result.error || "Unknown error", "SIDCC");
-        }
-
-        this.options.onSIDCCRefresh(result);
-      } catch (error) {
-        this.stats.sidccErrors++;
-        const message = error instanceof Error ? error.message : String(error);
-        logger.error(`💥 SIDCC refresh error: ${message}`);
-        this.options.onError(message, "SIDCC");
-      }
-    }, this.options.sidccIntervalSeconds * 1000);
-  }
-
-  /**
-   * Update database with rotation data
-   */
-  private async updateDatabaseRotation(
-    data: {
-      lastRotatedAt: string;
-      geminiToken?: string;
-      rawCookieString?: string;
-      status?: "active" | "expired" | "renewal_failed";
-    },
-    rotationType: "PSIDTS" | "SIDCC"
-  ): Promise<void> {
-    if (!this.dbEntity?.id) {
-      logger.debug(
-        `⏭️ Skipping database update - no entity ID for ${rotationType}`
-      );
-      return;
-    }
-
-    try {
-      await this.cookieRepository.updateRotation(this.dbEntity.id, {
-        lastRotatedAt: data.lastRotatedAt,
-        geminiToken: data.geminiToken,
-        rawCookieString: data.rawCookieString,
-        status: data.status,
-      });
-
-      logger.debug(`📝 Database updated for ${rotationType} rotation`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Failed to update database: ${message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Force immediate rotation of both cookie types
-   */
-  async forceRotation(): Promise<{
-    psidtsResult: RotationResult;
-    sidccResult: RotationResult & { updatedCookies?: Record<string, string> };
-  }> {
+  async forceRotation(): Promise<RotationResult> {
     logger.info("🔄 Forcing immediate cookie rotation...");
 
-    const [psidtsResult, sidccResult] = await Promise.all([
-      rotate1psidts(this.cookies, {
-        proxy: this.options.proxy,
-        skipCache: true,
-      }),
-      refreshCreds(this.cookies, {
-        skipCache: true,
-        apiKey: this.options.apiKey,
-        proxy: this.options.proxy,
-      }),
-    ]);
+    const psidtsResult = await rotate1psidts(this.cookies, {
+      proxy: this.options.proxy,
+      skipCache: true,
+    });
 
     // Update cookies and database
     if (psidtsResult.success && psidtsResult.newPSIDTS) {
@@ -482,7 +398,7 @@ export class CookieManagerDB {
         await this.updateDatabaseRotation(
           {
             lastRotatedAt: new Date().toISOString(),
-            geminiToken: psidtsResult.newPSIDTS,
+            geminiToken: null, // 🔄 Clear token cache so fresh token is fetched
             status: "active",
           },
           "PSIDTS"
@@ -492,38 +408,49 @@ export class CookieManagerDB {
       }
     }
 
-    if (sidccResult.success && sidccResult.updatedCookies) {
-      Object.assign(this.cookies, sidccResult.updatedCookies);
-      this.stats.sidccRefreshes++;
-      this.stats.lastSIDCCRefresh = new Date();
-
-      try {
-        await this.updateDatabaseRotation(
-          {
-            lastRotatedAt: new Date().toISOString(),
-            rawCookieString: cookiesToHeader(this.cookies),
-            status: "active",
-          },
-          "SIDCC"
-        );
-      } catch (error) {
-        this.stats.dbErrors++;
-      }
-    }
-
-    logger.info(`📊 Force rotation results:`);
+    logger.info(`📊 Force rotation result:`);
     logger.info(
       `   - PSIDTS: ${
         psidtsResult.success ? "✅ Success" : `❌ ${psidtsResult.error}`
       }`
     );
-    logger.info(
-      `   - SIDCC: ${
-        sidccResult.success ? "✅ Success" : `❌ ${sidccResult.error}`
-      }`
-    );
 
-    return { psidtsResult, sidccResult };
+    return psidtsResult;
+  }
+
+  /**
+   * Update database with rotation data
+   */
+  private async updateDatabaseRotation(
+    data: {
+      lastRotatedAt: string;
+      geminiToken?: string | null;
+      rawCookieString?: string;
+      status?: "active" | "expired" | "renewal_failed";
+    },
+    rotationType: "PSIDTS"
+  ): Promise<void> {
+    if (!this.dbEntity?.id) {
+      logger.debug(
+        `⏭️ Skipping database update - no entity ID for ${rotationType}`
+      );
+      return;
+    }
+
+    try {
+      await this.cookieRepository.updateRotation(this.dbEntity.id, {
+        lastRotatedAt: data.lastRotatedAt,
+        geminiToken: data.geminiToken || undefined, // Convert null to undefined for DB
+        rawCookieString: data.rawCookieString,
+        status: data.status,
+      });
+
+      logger.debug(`📝 Database updated for ${rotationType} rotation`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to update database: ${message}`);
+      throw error;
+    }
   }
 
   /**
@@ -588,15 +515,9 @@ export class CookieManagerDB {
       this.psidtsControl.stop();
     }
 
-    if (this.sidccInterval) {
-      clearInterval(this.sidccInterval);
-      this.sidccInterval = null;
-    }
-
     logger.info("🛑 Cookie manager stopped");
     logger.info(
       `📊 Final stats: PSIDTS(${this.stats.psidtsRotations}/${this.stats.psidtsErrors}) ` +
-        `SIDCC(${this.stats.sidccRefreshes}/${this.stats.sidccErrors}) ` +
         `DB(${this.stats.dbErrors})`
     );
   }

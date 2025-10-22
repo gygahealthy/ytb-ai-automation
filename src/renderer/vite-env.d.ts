@@ -93,6 +93,24 @@ interface Window {
       detectedName?: string;
       version?: string;
     }>;
+    cookieRotation: {
+      getStatus: () => Promise<any>;
+      getProfiles: () => Promise<any>;
+      startWorker: (profileId: string, cookieId: string) => Promise<any>;
+      restartWorker: (profileId: string, cookieId: string) => Promise<any>;
+      stopWorker: (profileId: string, cookieId: string) => Promise<any>;
+      forceHeadlessRefresh: (
+        profileId: string,
+        cookieId: string
+      ) => Promise<any>;
+      forceVisibleRefresh: (
+        profileId: string,
+        cookieId: string
+      ) => Promise<any>;
+      stopAll: () => Promise<any>;
+      startAll: () => Promise<any>;
+      onStatusUpdate: (callback: (data: any) => void) => () => void;
+    };
     invoke: (channel: string, ...args: any[]) => Promise<any>;
     on: (channel: string, callback: (...args: any[]) => void) => () => void;
   };

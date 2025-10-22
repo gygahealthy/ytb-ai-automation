@@ -17,7 +17,6 @@ import type {
 import { logger } from "../../../utils/logger-backend.js";
 import {
   rotate1psidts,
-  refreshCreds,
   startAutoRotation,
   type RotationControl,
 } from "../helpers/cookie/cookie-rotation.helpers.js";
@@ -30,31 +29,18 @@ export interface CookieRotationWorkerConfig {
   // This is the session-sensitive cookie that refreshes Google's session
   rotationInterval?: number;
 
-  // SIDCC/PSIDCC refresh interval in seconds (default: 120 = 2 minutes)
-  // These are security cookies that need frequent refresh
-  refreshInterval?: number;
-
   // Enable verbose logging
   verbose?: boolean;
 
   // HTTP proxy URL (optional)
   proxy?: string;
 
-  // API key for refreshCreds (default: public Gemini API key)
-  apiKey?: string;
-
   // Callbacks for monitoring rotation events
   onRotationStart?: () => void;
   onRotationSuccess?: (result: RotationResult) => void;
   onRotationError?: (error: string) => void;
 
-  onRefreshStart?: () => void;
-  onRefreshSuccess?: (
-    result: RotationResult & { updatedCookies?: Record<string, string> }
-  ) => void;
-  onRefreshError?: (error: string) => void;
-
-  onError?: (type: "PSIDTS" | "SIDCC", error: string) => void;
+  onError?: (type: "PSIDTS", error: string) => void;
 }
 
 /**
@@ -62,21 +48,12 @@ export interface CookieRotationWorkerConfig {
  */
 interface RequiredCookieRotationWorkerConfig {
   rotationInterval: number;
-  refreshInterval: number;
   verbose: boolean;
   proxy?: string;
-  apiKey: string;
   onRotationStart: (() => void) | undefined;
   onRotationSuccess: ((result: RotationResult) => void) | undefined;
   onRotationError: ((error: string) => void) | undefined;
-  onRefreshStart: (() => void) | undefined;
-  onRefreshSuccess:
-    | ((
-        result: RotationResult & { updatedCookies?: Record<string, string> }
-      ) => void)
-    | undefined;
-  onRefreshError: ((error: string) => void) | undefined;
-  onError: ((type: "PSIDTS" | "SIDCC", error: string) => void) | undefined;
+  onError: ((type: "PSIDTS", error: string) => void) | undefined;
 }
 
 /**
@@ -87,7 +64,6 @@ export interface CookieRotationWorkerControl {
   isRunning: () => boolean;
   getStats: () => WorkerStats;
   forceRotation: () => Promise<void>;
-  forceRefresh: () => Promise<void>;
 }
 
 /**
@@ -96,13 +72,9 @@ export interface CookieRotationWorkerControl {
 export interface WorkerStats {
   isRunning: boolean;
   rotations: number;
-  refreshes: number;
   rotationErrors: number;
-  refreshErrors: number;
   lastRotation?: Date;
-  lastRefresh?: Date;
   lastRotationDuration?: number;
-  lastRefreshDuration?: number;
 }
 
 /**
@@ -113,36 +85,22 @@ export class CookieRotationWorker {
   private cookies: CookieCollection;
   private config: Omit<
     RequiredCookieRotationWorkerConfig,
-    | "onRotationStart"
-    | "onRotationSuccess"
-    | "onRotationError"
-    | "onRefreshStart"
-    | "onRefreshSuccess"
-    | "onRefreshError"
-    | "onError"
+    "onRotationStart" | "onRotationSuccess" | "onRotationError" | "onError"
   > & {
     onRotationStart?: () => void;
     onRotationSuccess?: (result: RotationResult) => void;
     onRotationError?: (error: string) => void;
-    onRefreshStart?: () => void;
-    onRefreshSuccess?: (
-      result: RotationResult & { updatedCookies?: Record<string, string> }
-    ) => void;
-    onRefreshError?: (error: string) => void;
-    onError?: (type: "PSIDTS" | "SIDCC", error: string) => void;
+    onError?: (type: "PSIDTS", error: string) => void;
   };
   private running = false;
 
   private rotationControl: RotationControl | null = null;
-  private refreshTimer: NodeJS.Timeout | null = null;
 
   // Statistics
   private stats: WorkerStats = {
     isRunning: false,
     rotations: 0,
-    refreshes: 0,
     rotationErrors: 0,
-    refreshErrors: 0,
   };
 
   constructor(
@@ -152,16 +110,11 @@ export class CookieRotationWorker {
     this.cookies = cookies;
     this.config = {
       rotationInterval: config.rotationInterval ?? 540, // 9 minutes
-      refreshInterval: config.refreshInterval ?? 120, // 2 minutes
       verbose: config.verbose ?? false,
       proxy: config.proxy,
-      apiKey: config.apiKey ?? "AIzaSyBWW50ghQ5qHpMg1gxHV7U9t0wHE0qIUk4",
       onRotationStart: config.onRotationStart,
       onRotationSuccess: config.onRotationSuccess,
       onRotationError: config.onRotationError,
-      onRefreshStart: config.onRefreshStart,
-      onRefreshSuccess: config.onRefreshSuccess,
-      onRefreshError: config.onRefreshError,
       onError: config.onError,
     };
 
@@ -186,19 +139,11 @@ export class CookieRotationWorker {
     // Start PSIDTS rotation
     this.startRotationTask();
 
-    // Start SIDCC refresh
-    this.startRefreshTask();
-
-    logger.info(`✅ Worker started with intervals:`);
+    logger.info(`✅ Worker started with interval:`);
     logger.info(
       `   • PSIDTS rotation: ${
         this.config.rotationInterval
       }s (${this.formatInterval(this.config.rotationInterval)})`
-    );
-    logger.info(
-      `   • SIDCC refresh: ${
-        this.config.refreshInterval
-      }s (${this.formatInterval(this.config.refreshInterval)})`
     );
 
     return this.getControl();
@@ -217,12 +162,6 @@ export class CookieRotationWorker {
     if (this.rotationControl) {
       this.rotationControl.stop();
       this.rotationControl = null;
-    }
-
-    // Stop refresh
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer);
-      this.refreshTimer = null;
     }
 
     logger.info("🛑 Worker stopped");
@@ -261,79 +200,6 @@ export class CookieRotationWorker {
   }
 
   /**
-   * Start refresh task
-   */
-  private startRefreshTask(): void {
-    // NOTE: refreshCreds endpoint from Google appears to not provide useful cookie updates
-    // The RotateCookies endpoint is sufficient for maintaining the session
-    // We keep this task for compatibility but it's mostly a no-op
-    const refreshLoop = async () => {
-      if (!this.running) return;
-
-      this.config.onRefreshStart?.();
-
-      const startTime = Date.now();
-
-      try {
-        const result = await refreshCreds(this.cookies, {
-          apiKey: this.config.apiKey,
-          proxy: this.config.proxy,
-        });
-
-        const duration = Date.now() - startTime;
-        this.stats.lastRefreshDuration = duration;
-
-        if (result.success) {
-          this.stats.refreshes++;
-          this.stats.lastRefresh = new Date();
-
-          // Update cookies if any were returned
-          if (
-            result.updatedCookies &&
-            Object.keys(result.updatedCookies).length > 0
-          ) {
-            Object.assign(this.cookies, result.updatedCookies);
-          }
-
-          if (this.config.verbose) {
-            logger.debug(`✅ SIDCC refresh completed (${duration}ms)`);
-          }
-
-          this.config.onRefreshSuccess?.(result);
-        } else {
-          // Don't count as error since refreshCreds doesn't provide useful updates
-          // Just log debug info
-          if (this.config.verbose) {
-            logger.debug(
-              `ⓘ SIDCC refresh: ${result.error} (${duration}ms) - this is expected behavior`
-            );
-          }
-
-          this.config.onRefreshSuccess?.(result);
-        }
-      } catch (error) {
-        this.stats.refreshErrors++;
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        logger.debug(`ⓘ SIDCC refresh error (expected): ${message}`);
-
-        this.config.onRefreshError?.(message);
-      }
-
-      // Schedule next refresh
-      if (this.running) {
-        this.refreshTimer = setTimeout(
-          refreshLoop,
-          this.config.refreshInterval * 1000
-        );
-      }
-    };
-
-    // Start first refresh with slight delay
-    this.refreshTimer = setTimeout(refreshLoop, 1000);
-  }
-
-  /**
    * Force immediate rotation
    */
   async forceRotation(): Promise<void> {
@@ -368,49 +234,6 @@ export class CookieRotationWorker {
   }
 
   /**
-   * Force immediate refresh
-   */
-  async forceRefresh(): Promise<void> {
-    logger.info("🔄 Forcing immediate SIDCC refresh...");
-
-    const startTime = Date.now();
-
-    try {
-      const result = await refreshCreds(this.cookies, {
-        apiKey: this.config.apiKey,
-        proxy: this.config.proxy,
-        skipCache: true,
-      });
-
-      const duration = Date.now() - startTime;
-      this.stats.lastRefreshDuration = duration;
-
-      // refreshCreds endpoint doesn't return useful cookies,
-      // but if it returns 200, consider it a success
-      if (result.success || (result.status === 200 && !result.error)) {
-        if (result.updatedCookies) {
-          Object.assign(this.cookies, result.updatedCookies);
-        }
-
-        this.stats.refreshes++;
-        this.stats.lastRefresh = new Date();
-
-        logger.info(`✅ Force refresh completed (${duration}ms)`);
-        this.config.onRefreshSuccess?.(result);
-      } else {
-        logger.debug(
-          `ⓘ Force refresh: ${result.error} (${duration}ms) - expected behavior`
-        );
-        this.config.onRefreshSuccess?.(result);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      logger.debug(`ⓘ Force refresh error (expected): ${message}`);
-      this.config.onRefreshError?.(message);
-    }
-  }
-
-  /**
    * Get control interface
    */
   private getControl(): CookieRotationWorkerControl {
@@ -419,7 +242,6 @@ export class CookieRotationWorker {
       isRunning: () => this.running,
       getStats: () => ({ ...this.stats }),
       forceRotation: () => this.forceRotation(),
-      forceRefresh: () => this.forceRefresh(),
     };
   }
 
@@ -430,7 +252,6 @@ export class CookieRotationWorker {
     if (this.config.verbose) {
       logger.debug("🔧 Worker configuration:");
       logger.debug(`   • rotationInterval: ${this.config.rotationInterval}s`);
-      logger.debug(`   • refreshInterval: ${this.config.refreshInterval}s`);
       logger.debug(`   • proxy: ${this.config.proxy || "none"}`);
     }
   }
@@ -443,19 +264,10 @@ export class CookieRotationWorker {
     logger.info(
       `   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`
     );
-    logger.info(
-      `   • Refreshes: ${this.stats.refreshes} (${this.stats.refreshErrors} errors)`
-    );
 
     if (this.stats.lastRotation) {
       logger.info(
         `   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`
-      );
-    }
-
-    if (this.stats.lastRefresh) {
-      logger.info(
-        `   • Last refresh: ${this.stats.lastRefresh.toLocaleTimeString()}`
       );
     }
   }
@@ -505,16 +317,8 @@ export class CookieRotationWorker {
       this.config.rotationInterval = newConfig.rotationInterval;
     }
 
-    if (newConfig.refreshInterval !== undefined) {
-      this.config.refreshInterval = newConfig.refreshInterval;
-    }
-
     if (newConfig.verbose !== undefined) {
       this.config.verbose = newConfig.verbose;
-    }
-
-    if (newConfig.apiKey !== undefined) {
-      this.config.apiKey = newConfig.apiKey;
     }
 
     if (this.config.verbose) {
@@ -544,7 +348,6 @@ export function createDefaultWorker(
 ): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 540, // 9 minutes (Python repo: auto_refresh_interval_minutes = 9)
-    refreshInterval: 120, // 2 minutes (Python repo: refresh request every ~2min)
     verbose: false,
     proxy,
   });
@@ -560,7 +363,6 @@ export function createAggressiveWorker(
 ): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 300, // 5 minutes
-    refreshInterval: 60, // 1 minute
     verbose: false,
     proxy,
   });
@@ -576,7 +378,6 @@ export function createConservativeWorker(
 ): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 900, // 15 minutes
-    refreshInterval: 180, // 3 minutes
     verbose: false,
     proxy,
   });

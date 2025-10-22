@@ -49,8 +49,6 @@ export const endpoints = {
   init: `${config.geminiBaseUrl}/app`,
   generate: config.apiEndpoint,
   rotateCookies: "https://accounts.google.com/RotateCookies",
-  refreshCreds:
-    "https://signaler-pa.clients6.google.com/punctual/v1/refreshCreds",
   upload: "https://content-push.googleapis.com/upload",
 } as const;
 
@@ -72,19 +70,5 @@ export const headers = {
   },
   rotateCookies: {
     "Content-Type": "application/json",
-  },
-  refreshCreds: {
-    "Content-Type": "application/json+protobuf",
-    Accept: "*/*",
-    "Accept-Language": "en,en-US;q=0.9",
-    "Cache-Control": "no-cache",
-    Origin: "https://gemini.google.com",
-    Pragma: "no-cache",
-    Priority: "u=1, i",
-    Referer: "https://gemini.google.com/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
-    "X-Goog-Authuser": "0",
   },
 } as const;

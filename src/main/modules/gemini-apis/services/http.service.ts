@@ -110,9 +110,11 @@ export class HttpService {
     // Get the cookie entity from database to check for cached token
     const cookieEntity = this.cookieManager.getEntity();
 
+    // Pass forceRefresh to extractTokens so it skips the database cache check
     const tokenData = await extractTokens(
       this.cookieManager,
-      cookieEntity || undefined
+      cookieEntity || undefined,
+      forceRefresh
     );
 
     this.cachedToken = tokenData.snlm0e;
@@ -472,9 +474,9 @@ export class HttpService {
    */
   async sendGeminiRequest(
     fReq: string,
-    options?: Partial<HttpRequestOptions>
+    options?: Partial<HttpRequestOptions> & { forceRefreshToken?: boolean }
   ): Promise<HttpResponse> {
-    const token = await this.getToken();
+    const token = await this.getToken(options?.forceRefreshToken);
     return this.post(token, fReq, options);
   }
 

@@ -49,7 +49,6 @@ export {
   mergeCookies,
 } from "./helpers/cookie/cookie-parser.helpers";
 export {
-  refreshCreds,
   rotate1psidts,
   startAutoRotation,
   type RotationControl,
