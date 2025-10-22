@@ -8,17 +8,16 @@ import {
   Users,
   Video,
   Youtube,
-  Shield,
   FlaskConical,
+  Wand2 as Wand,
 } from "lucide-react";
 import { RouteConfig } from "../../../types/menu-route.types";
 
 // Ordered menu per request:
-// Ordered menu per request:
 // 1. Profiles
 // 2. Single Video Creation
 // 3. Channel Management
-// 4. Admin (LayoutDashboard icon)
+// 4. Master Prompt (LayoutDashboard icon)
 // 5. Automation
 export const routeConfig: RouteConfig[] = [
   {
@@ -66,39 +65,39 @@ export const routeConfig: RouteConfig[] = [
     page: "channels" as any,
   },
   {
-    id: "admin",
-    label: "Admin",
-    icon: Shield,
-    page: "admin",
+    id: "master-prompt",
+    label: "Master Prompt",
+    icon: Wand,
+    page: "master-prompt",
     defaultOpen: true,
     children: [
       {
-        id: "admin.prompt-types",
+        id: "master-prompt.prompt-types",
         label: "Prompt Types",
         icon: Sparkles,
-        path: "/admin/prompt-types",
-        page: "admin.prompt-types",
+        path: "/master-prompt/prompt-types",
+        page: "master-prompt.prompt-types",
       },
       {
-        id: "admin.master-prompts",
+        id: "master-prompt.master-prompts",
         label: "Master Prompts",
         icon: LayoutDashboard,
-        path: "/admin/master-prompts",
-        page: "admin.master-prompts",
+        path: "/master-prompt/master-prompts",
+        page: "master-prompt.master-prompts",
       },
       {
-        id: "admin.ai-prompt-config",
+        id: "master-prompt.ai-prompt-config",
         label: "AI Prompt Config",
         icon: Zap,
-        path: "/admin/ai-prompt-config",
-        page: "admin.ai-prompt-config",
+        path: "/master-prompt/ai-prompt-config",
+        page: "master-prompt.ai-prompt-config",
       },
       {
-        id: "admin.prompt-playground",
+        id: "master-prompt.prompt-playground",
         label: "Prompt Playground",
         icon: FlaskConical,
-        path: "/admin/prompt-playground",
-        page: "admin.prompt-playground",
+        path: "/master-prompt/prompt-playground",
+        page: "master-prompt.prompt-playground",
       },
     ],
   },
