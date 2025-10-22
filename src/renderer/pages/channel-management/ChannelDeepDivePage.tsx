@@ -15,25 +15,17 @@ import {
   Plus,
 } from "lucide-react";
 import { ChannelCompleteView } from "../../../main/modules/channel-management/youtube.types";
-import {
-  getChannelCompleteView,
-  upsertChannelDeepDive,
-} from "../../ipc/youtube";
-import {
-  formatNumber,
-  formatRelativeTime,
-} from "../../../shared/utils/formatters";
+import { getChannelCompleteView, upsertChannelDeepDive } from "../../ipc/youtube";
+import { formatNumber, formatRelativeTime } from "../../../shared/utils/formatters";
 import StrategyModal from "../../components/channel-management/channel-deep-dive/StrategyModal";
-import PromptModal from "../../components/admin/PromptModal";
+import PromptModal from "../../components/master-prompt/PromptModal";
 import UpcomingTopics from "../../components/channel-management/channel-deep-dive/UpcomingTopics";
 
 const ChannelDeepDivePage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [channelData, setChannelData] = useState<ChannelCompleteView | null>(
-    null
-  );
+  const [channelData, setChannelData] = useState<ChannelCompleteView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showStrategyModal, setShowStrategyModal] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
@@ -87,9 +79,7 @@ const ChannelDeepDivePage: React.FC = () => {
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Loading channel data...
-          </p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading channel data...</p>
         </div>
       </div>
     );
@@ -111,15 +101,7 @@ const ChannelDeepDivePage: React.FC = () => {
     );
   }
 
-  const {
-    channel,
-    deepDive,
-    performance,
-    competitors,
-    recentVideos,
-    upcomingTopics,
-    assignedPrompts,
-  } = channelData;
+  const { channel, deepDive, performance, competitors, recentVideos, upcomingTopics, assignedPrompts } = channelData;
 
   const promptTypes = [
     { name: "Script Topic", kind: "topic", color: "bg-blue-500" },
@@ -144,10 +126,7 @@ const ChannelDeepDivePage: React.FC = () => {
               <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
             </button>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Channel Deep Dive:{" "}
-              <span className="text-blue-600 dark:text-blue-400">
-                {channel.channelName}
-              </span>
+              Channel Deep Dive: <span className="text-blue-600 dark:text-blue-400">{channel.channelName}</span>
             </h1>
           </div>
 
@@ -160,18 +139,14 @@ const ChannelDeepDivePage: React.FC = () => {
                   <PlayCircle className="w-7 h-7 text-white" strokeWidth={2} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                    {channel.channelName}
-                  </h2>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{channel.channelName}</h2>
                   <div className="flex items-center gap-4">
                     {/* Subscribers */}
                     <div className="flex items-center gap-1.5">
                       <div className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                         {formatNumber(channel.subscriberCount || 0)}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        subscribers
-                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">subscribers</span>
                       {performance && performance.growth.subscribers !== 0 && (
                         <div
                           className={`flex items-center gap-0.5 text-[10px] ${
@@ -200,15 +175,11 @@ const ChannelDeepDivePage: React.FC = () => {
                       <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                         {formatNumber(channel.viewCount || 0)}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        views
-                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">views</span>
                       {performance && performance.growth.views !== 0 && (
                         <div
                           className={`flex items-center gap-0.5 text-[10px] ${
-                            performance.growth.views > 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
+                            performance.growth.views > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                           }`}
                         >
                           {performance.growth.views > 0 ? (
@@ -253,9 +224,7 @@ const ChannelDeepDivePage: React.FC = () => {
                       Strategy
                     </div>
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {deepDive?.strategyMarkdown
-                        ? "Edit Strategy"
-                        : "Define Strategy"}
+                      {deepDive?.strategyMarkdown ? "Edit Strategy" : "Define Strategy"}
                     </div>
                   </div>
                   <Edit2 className="w-3 h-3 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
@@ -263,11 +232,7 @@ const ChannelDeepDivePage: React.FC = () => {
 
                 {/* Competitor Tracking Button */}
                 <button
-                  onClick={() =>
-                    navigate(
-                      `/video-creation/channels/${channelId}/competitors`
-                    )
-                  }
+                  onClick={() => navigate(`/video-creation/channels/${channelId}/competitors`)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 hover:from-orange-100 hover:to-red-100 dark:hover:from-orange-900/30 dark:hover:to-red-900/30 rounded-lg border border-orange-200 dark:border-orange-800 transition-all duration-200 group"
                 >
                   <Users className="w-4 h-4 text-orange-600 dark:text-orange-400" />
@@ -275,9 +240,7 @@ const ChannelDeepDivePage: React.FC = () => {
                     <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Competitors
                     </div>
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {competitors.length} tracked
-                    </div>
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">{competitors.length} tracked</div>
                   </div>
                   <Eye className="w-3 h-3 text-gray-400 dark:text-gray-500 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" />
                 </button>
@@ -302,12 +265,8 @@ const ChannelDeepDivePage: React.FC = () => {
                       <Zap className="w-5 h-5 text-white" strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                        Prompt Config
-                      </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {assignedPrompts} prompts assigned
-                      </p>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Prompt Config</h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{assignedPrompts} prompts assigned</p>
                     </div>
                   </div>
                 </div>
@@ -320,15 +279,9 @@ const ChannelDeepDivePage: React.FC = () => {
                         onClick={() => setShowPromptModal(true)}
                         className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-xl p-3 text-left transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md group"
                       >
-                        <div
-                          className={`w-2.5 h-2.5 ${prompt.color} rounded-full mb-2`}
-                        ></div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">
-                          {prompt.name}
-                        </div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                          Click to configure
-                        </div>
+                        <div className={`w-2.5 h-2.5 ${prompt.color} rounded-full mb-2`}></div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">{prompt.name}</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Click to configure</div>
                       </button>
                     ))}
                   </div>
@@ -337,11 +290,7 @@ const ChannelDeepDivePage: React.FC = () => {
 
               {/* Upcoming Topics Card - Takes remaining height */}
               <div className="flex-1 min-h-0">
-                <UpcomingTopics
-                  channelId={channelId!}
-                  topics={upcomingTopics}
-                  onUpdate={loadChannelData}
-                />
+                <UpcomingTopics channelId={channelId!} topics={upcomingTopics} onUpdate={loadChannelData} />
               </div>
             </div>
 
@@ -352,26 +301,15 @@ const ChannelDeepDivePage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <Video
-                          className="w-5 h-5 text-white"
-                          strokeWidth={2.5}
-                        />
+                        <Video className="w-5 h-5 text-white" strokeWidth={2.5} />
                       </div>
                       <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                          Videos Performance
-                        </h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {recentVideos.length} recent videos
-                        </p>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Videos Performance</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{recentVideos.length} recent videos</p>
                       </div>
                     </div>
                     <button
-                      onClick={() =>
-                        navigate(
-                          `/video-creation/channels/${channelId}/monitoring`
-                        )
-                      }
+                      onClick={() => navigate(`/video-creation/channels/${channelId}/monitoring`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
                     >
                       <Eye className="w-4 h-4" />
@@ -388,18 +326,11 @@ const ChannelDeepDivePage: React.FC = () => {
                       className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 rounded-xl p-6 border-2 border-dashed border-blue-300 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-200 flex flex-col items-center justify-center gap-3 min-h-[200px] group"
                     >
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Plus
-                          className="w-6 h-6 text-white"
-                          strokeWidth={2.5}
-                        />
+                        <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
                       </div>
                       <div className="text-center">
-                        <div className="text-sm font-bold text-gray-900 dark:text-white mb-1">
-                          Create New Video
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Start creating content
-                        </div>
+                        <div className="text-sm font-bold text-gray-900 dark:text-white mb-1">Create New Video</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Start creating content</div>
                       </div>
                     </button>
 
@@ -419,19 +350,13 @@ const ChannelDeepDivePage: React.FC = () => {
                           <div className="space-y-2">
                             <div className="flex items-center gap-1.5 text-xs">
                               <TrendingUp className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {formatNumber(video.views)}
-                              </span>
-                              <span className="text-gray-400 dark:text-gray-500">
-                                views
-                              </span>
+                              <span className="font-medium text-gray-900 dark:text-white">{formatNumber(video.views)}</span>
+                              <span className="text-gray-400 dark:text-gray-500">views</span>
                             </div>
                             <div className="flex items-center gap-3 text-xs">
                               <div className="flex items-center gap-1">
                                 <span>👍</span>
-                                <span className="font-medium text-gray-600 dark:text-gray-400">
-                                  {formatNumber(video.likes)}
-                                </span>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">{formatNumber(video.likes)}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <span>💬</span>
@@ -454,12 +379,8 @@ const ChannelDeepDivePage: React.FC = () => {
                       <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <Video className="w-8 h-8 text-gray-400 dark:text-gray-600" />
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">
-                        No videos yet
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Click the + card to create your first video
-                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">No videos yet</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Click the + card to create your first video</p>
                     </div>
                   )}
                 </div>

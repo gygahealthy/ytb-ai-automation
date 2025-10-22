@@ -2,8 +2,8 @@ import React, { useEffect } from "react";
 import { Loader, Zap } from "lucide-react";
 import { useAIPromptConfig } from "../../hooks/useAIPromptConfig";
 import { useToast } from "../../hooks/useToast";
-import { ConfigTable } from "../../components/admin/ai-prompt-config/ConfigTable";
-import { ComponentSelector } from "../../components/admin/ai-prompt-config/ComponentSelector";
+import { ConfigTable } from "../../components/master-prompt/ai-prompt-config/ConfigTable";
+import { ComponentSelector } from "../../components/master-prompt/ai-prompt-config/ComponentSelector";
 
 export const AIPromptConfigPage: React.FC = () => {
   const toast = useToast();
@@ -49,9 +49,7 @@ export const AIPromptConfigPage: React.FC = () => {
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="flex flex-col items-center gap-4">
           <Loader className="animate-spin text-blue-600" size={40} />
-          <p className="text-gray-600 dark:text-gray-400 font-medium">
-            Loading configurations...
-          </p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading configurations...</p>
         </div>
       </div>
     );
@@ -70,9 +68,7 @@ export const AIPromptConfigPage: React.FC = () => {
               <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400">
                 AI Prompt Configuration
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                Manage AI configurations with precision and ease
-              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Manage AI configurations with precision and ease</p>
             </div>
           </div>
         </div>
@@ -90,13 +86,9 @@ export const AIPromptConfigPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-1.5 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full" />
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Configuration Builder
-                    </h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Configuration Builder</h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {formState.selectedComponent
-                        ? `Component: ${formState.selectedComponent}`
-                        : "Select a component to begin"}
+                      {formState.selectedComponent ? `Component: ${formState.selectedComponent}` : "Select a component to begin"}
                     </p>
                   </div>
                 </div>
@@ -113,9 +105,7 @@ export const AIPromptConfigPage: React.FC = () => {
                     </label>
                     <select
                       value={formState.selectedProfileId}
-                      onChange={(e) =>
-                        updateFormState({ selectedProfileId: e.target.value })
-                      }
+                      onChange={(e) => updateFormState({ selectedProfileId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150"
                     >
                       <option value="">Select Profile</option>
@@ -137,8 +127,7 @@ export const AIPromptConfigPage: React.FC = () => {
                       value={formState.selectedPromptId}
                       onChange={(e) =>
                         updateFormState({
-                          selectedPromptId:
-                            e.target.value === "" ? "" : Number(e.target.value),
+                          selectedPromptId: e.target.value === "" ? "" : Number(e.target.value),
                         })
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150"
@@ -163,9 +152,7 @@ export const AIPromptConfigPage: React.FC = () => {
                   </label>
                   <select
                     value={formState.selectedModel}
-                    onChange={(e) =>
-                      updateFormState({ selectedModel: e.target.value })
-                    }
+                    onChange={(e) => updateFormState({ selectedModel: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150"
                   >
                     <option value="GEMINI_2_5_PRO">Gemini 2.5 Pro</option>
@@ -180,9 +167,7 @@ export const AIPromptConfigPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={formState.enabled}
-                      onChange={(e) =>
-                        updateFormState({ enabled: e.target.checked })
-                      }
+                      onChange={(e) => updateFormState({ enabled: e.target.checked })}
                       className="w-5 h-5 text-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer accent-blue-600"
                     />
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
@@ -194,9 +179,7 @@ export const AIPromptConfigPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={formState.useTempChat}
-                      onChange={(e) =>
-                        updateFormState({ useTempChat: e.target.checked })
-                      }
+                      onChange={(e) => updateFormState({ useTempChat: e.target.checked })}
                       className="w-5 h-5 text-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 cursor-pointer accent-purple-600"
                     />
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
@@ -208,9 +191,7 @@ export const AIPromptConfigPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={formState.keepContext}
-                      onChange={(e) =>
-                        updateFormState({ keepContext: e.target.checked })
-                      }
+                      onChange={(e) => updateFormState({ keepContext: e.target.checked })}
                       className="w-5 h-5 text-pink-600 rounded-lg focus:ring-2 focus:ring-pink-500 cursor-pointer accent-pink-600"
                     />
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
@@ -223,23 +204,15 @@ export const AIPromptConfigPage: React.FC = () => {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={saveConfig}
-                    disabled={
-                      !formState.selectedComponent ||
-                      !formState.selectedProfileId ||
-                      formState.selectedPromptId === ""
-                    }
+                    disabled={!formState.selectedComponent || !formState.selectedProfileId || formState.selectedPromptId === ""}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-bold transition-all duration-150 text-white shadow-sm hover:shadow-md"
                     style={{
                       background:
-                        formState.selectedComponent &&
-                        formState.selectedProfileId &&
-                        formState.selectedPromptId !== ""
+                        formState.selectedComponent && formState.selectedProfileId && formState.selectedPromptId !== ""
                           ? "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)"
                           : "#9ca3af",
                       cursor:
-                        formState.selectedComponent &&
-                        formState.selectedProfileId &&
-                        formState.selectedPromptId !== ""
+                        formState.selectedComponent && formState.selectedProfileId && formState.selectedPromptId !== ""
                           ? "pointer"
                           : "not-allowed",
                     }}
@@ -261,9 +234,7 @@ export const AIPromptConfigPage: React.FC = () => {
             <div className="overflow-y-auto flex-1 pt-2">
               <ComponentSelector
                 selectedComponent={formState.selectedComponent}
-                onComponentSelect={(comp: string) =>
-                  updateFormState({ selectedComponent: comp })
-                }
+                onComponentSelect={(comp: string) => updateFormState({ selectedComponent: comp })}
               />
             </div>
           </div>

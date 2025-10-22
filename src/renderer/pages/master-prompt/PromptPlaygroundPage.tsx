@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
-import { ComponentPromptSelector } from "@/renderer/components/admin/playground/ComponentPromptSelector";
-import { VariableInputForm } from "@/renderer/components/admin/playground/VariableInputForm";
-import { PromptPreview } from "@/renderer/components/admin/playground/PromptPreview";
-import { AIOutputDisplay } from "@/renderer/components/admin/playground/AIOutputDisplay";
+import { ComponentPromptSelector } from "@/renderer/components/master-prompt/playground/ComponentPromptSelector";
+import { VariableInputForm } from "@/renderer/components/master-prompt/playground/VariableInputForm";
+import { PromptPreview } from "@/renderer/components/master-prompt/playground/PromptPreview";
+import { AIOutputDisplay } from "@/renderer/components/master-prompt/playground/AIOutputDisplay";
 import { ComponentAIPromptConfig } from "@/renderer/contexts/ComponentAIPromptContext";
 import { replaceTemplate } from "@/shared/utils/template-replacement.util";
 
 const electronApi = (window as any).electronAPI;
 
 export default function PromptPlaygroundPage() {
-  const [selectedConfig, setSelectedConfig] =
-    useState<ComponentAIPromptConfig | null>(null);
+  const [selectedConfig, setSelectedConfig] = useState<ComponentAIPromptConfig | null>(null);
   const [masterPrompt, setMasterPrompt] = useState<any | null>(null);
-  const [variableValues, setVariableValues] = useState<Record<string, string>>(
-    {}
-  );
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [aiOutput, setAiOutput] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,12 +122,7 @@ export default function PromptPlaygroundPage() {
       <div className="border-b border-gray-200 dark:border-gray-700 px-8 py-6 bg-white dark:bg-gray-800 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -140,9 +132,7 @@ export default function PromptPlaygroundPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Prompt Playground
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Prompt Playground</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
               Test and preview AI prompt replacements in real-time
             </p>
@@ -157,10 +147,7 @@ export default function PromptPlaygroundPage() {
           {/* Component Selector (Top) */}
           <div className="h-1/2 overflow-hidden p-4">
             <div className="h-full rounded-lg shadow-md bg-white dark:bg-gray-800 p-4">
-              <ComponentPromptSelector
-                selectedConfig={selectedConfig}
-                onSelect={setSelectedConfig}
-              />
+              <ComponentPromptSelector selectedConfig={selectedConfig} onSelect={setSelectedConfig} />
             </div>
           </div>
 
@@ -170,15 +157,11 @@ export default function PromptPlaygroundPage() {
               {loadingPrompt ? (
                 <div className="h-full flex flex-col items-center justify-center">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Loading prompt...
-                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Loading prompt...</div>
                 </div>
               ) : (
                 <VariableInputForm
-                  variableOccurrenceConfig={
-                    masterPrompt?.variableOccurrencesConfig || null
-                  }
+                  variableOccurrenceConfig={masterPrompt?.variableOccurrencesConfig || null}
                   values={variableValues}
                   onValueChange={handleVariableChange}
                 />
@@ -193,12 +176,8 @@ export default function PromptPlaygroundPage() {
           <div className="h-1/2 overflow-hidden p-4">
             <div className="h-full rounded-lg shadow-md bg-white dark:bg-gray-800 p-4">
               <PromptPreview
-                template={
-                  masterPrompt?.promptTemplate || masterPrompt?.prompt || ""
-                }
-                variableOccurrenceConfig={
-                  masterPrompt?.variableOccurrencesConfig || null
-                }
+                template={masterPrompt?.promptTemplate || masterPrompt?.prompt || ""}
+                variableOccurrenceConfig={masterPrompt?.variableOccurrencesConfig || null}
                 values={variableValues}
                 onSendToAI={handleSendToAI}
                 isSending={isSending}
@@ -209,11 +188,7 @@ export default function PromptPlaygroundPage() {
           {/* AI Output (Bottom) */}
           <div className="h-1/2 overflow-hidden p-4">
             <div className="h-full rounded-lg shadow-md bg-white dark:bg-gray-800 p-4">
-              <AIOutputDisplay
-                output={aiOutput}
-                isLoading={isSending}
-                error={error}
-              />
+              <AIOutputDisplay output={aiOutput} isLoading={isSending} error={error} />
             </div>
           </div>
         </div>

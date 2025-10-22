@@ -42,7 +42,7 @@ The Prompt Playground is an interactive testing and preview tool for the AI Prom
 
 ### Components
 
-All components are located in `src/renderer/components/admin/playground/`:
+All components are located in `src/renderer/components/master-prompt/playground/`:
 
 #### ComponentPromptSelector.tsx
 
@@ -75,7 +75,7 @@ All components are located in `src/renderer/components/admin/playground/`:
 
 ### Main Page
 
-**Location**: `src/renderer/pages/admin/PromptPlaygroundPage.tsx`
+**Location**: `src/renderer/pages/master-prompt/PromptPlaygroundPage.tsx`
 
 **Layout**:
 
@@ -166,7 +166,7 @@ Uses shared utility: `src/shared/utils/template-replacement.util.ts`
 
 **Menu Location**: Admin → Prompt Playground (at the end of admin section)
 
-**Route**: `/admin/prompt-playground`
+**Route**: `/master-prompt/prompt-playground`
 
 **Configuration**:
 

@@ -1,9 +1,9 @@
 // JSX runtime does not require explicit React import
 import { Navigate, Route, Routes } from "react-router-dom";
-import MasterPromptPage from "./pages/admin/MasterPromptPage";
-import PromptTypesPage from "./pages/admin/PromptTypesPage";
-import AIPromptConfigPage from "./components/admin/ai-prompt-config";
-import PromptPlaygroundPage from "./pages/admin/PromptPlaygroundPage";
+import MasterPromptPage from "./pages/master-prompt/MasterPromptPage";
+import PromptTypesPage from "./pages/master-prompt/PromptTypesPage";
+import AIPromptConfigPage from "./components/master-prompt/ai-prompt-config";
+import PromptPlaygroundPage from "./pages/master-prompt/PromptPlaygroundPage";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
@@ -26,34 +26,16 @@ export default function AppRoutes() {
       <Route path="/automation" element={<AutomationPage />} />
       <Route path="/automation/instance" element={<InstanceDashboard />} />
       <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-      <Route path="/admin/dashboard" element={<MasterPromptPage />} />
-      <Route path="/admin/master-prompts" element={<MasterPromptPage />} />
-      <Route path="/admin/prompt-types" element={<PromptTypesPage />} />
-      <Route path="/admin/ai-prompt-config" element={<AIPromptConfigPage />} />
-      <Route
-        path="/admin/prompt-playground"
-        element={<PromptPlaygroundPage />}
-      />
-      <Route
-        path="/video-creation/channels"
-        element={<AllChannelsOverviewPage />}
-      />
-      <Route
-        path="/video-creation/channels/:channelId"
-        element={<ChannelDeepDivePage />}
-      />
-      <Route
-        path="/video-creation/channels/:channelId/monitoring"
-        element={<ChannelMonitoringPage />}
-      />
-      <Route
-        path="/video-creation/channels/:channelId/competitors"
-        element={<CompetitorMonitoringPage />}
-      />
-      <Route
-        path="/video-creation/single"
-        element={<SingleVideoCreationPage />}
-      />
+      <Route path="/master-prompt/dashboard" element={<MasterPromptPage />} />
+      <Route path="/master-prompt/master-prompts" element={<MasterPromptPage />} />
+      <Route path="/master-prompt/prompt-types" element={<PromptTypesPage />} />
+      <Route path="/master-prompt/ai-prompt-config" element={<AIPromptConfigPage />} />
+      <Route path="/master-prompt/prompt-playground" element={<PromptPlaygroundPage />} />
+      <Route path="/video-creation/channels" element={<AllChannelsOverviewPage />} />
+      <Route path="/video-creation/channels/:channelId" element={<ChannelDeepDivePage />} />
+      <Route path="/video-creation/channels/:channelId/monitoring" element={<ChannelMonitoringPage />} />
+      <Route path="/video-creation/channels/:channelId/competitors" element={<CompetitorMonitoringPage />} />
+      <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
       <Route
         path="/video-creation/script-create"
         element={
@@ -62,10 +44,7 @@ export default function AppRoutes() {
           </VideoCreationProvider>
         }
       />
-      <Route
-        path="/video-creation/script-editor"
-        element={<ScriptEditorPage />}
-      />
+      <Route path="/video-creation/script-editor" element={<ScriptEditorPage />} />
       <Route path="/video-creation/history" element={<VideoHistoryPage />} />
     </Routes>
   );

@@ -1,8 +1,5 @@
 // Export all AI Prompt Config components
-export {
-  AIPromptConfigPage,
-  default,
-} from "../../../pages/admin/AIPromptConfigPage";
+export { AIPromptConfigPage, default } from "../../../pages/master-prompt/AIPromptConfigPage";
 export { ConfigForm } from "./ConfigForm";
 export { ConfigTable } from "./ConfigTable";
 export { ComponentSelector } from "./ComponentSelector";

@@ -1,20 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  Plus,
-  Search,
-  Sparkles,
-  AlertCircle,
-  ChevronDown,
-  Grid3x3,
-  List,
-} from "lucide-react";
+import { Plus, Search, Sparkles, AlertCircle, ChevronDown, Grid3x3, List } from "lucide-react";
 import { useAlert } from "../../hooks/useAlert";
 import { useConfirm } from "../../hooks/useConfirm";
-import AdminPromptTable, {
-  VideoPromptRow,
-} from "../../components/admin/AdminPromptTable";
-import PromptModal from "../../components/admin/PromptModal";
-import VariablesHint from "../../components/admin/master-prompt-mng/VariablesHint";
+import AdminPromptTable, { VideoPromptRow } from "../../components/master-prompt/AdminPromptTable";
+import PromptModal from "../../components/master-prompt/PromptModal";
+import VariablesHint from "../../components/master-prompt/master-prompt-mng/VariablesHint";
 import electronApi from "../../ipc";
 
 interface MasterPrompt extends VideoPromptRow {
@@ -54,9 +44,7 @@ const MasterPromptPage: React.FC = () => {
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<MasterPrompt | undefined>(
-    undefined
-  );
+  const [editingPrompt, setEditingPrompt] = useState<MasterPrompt | undefined>(undefined);
 
   const promptKindOptions: { value: PromptKindFilter; label: string }[] = [
     { value: "all", label: "All Types" },
@@ -87,10 +75,7 @@ const MasterPromptPage: React.FC = () => {
         const enriched = (result.data as MasterPrompt[]).map((p) => ({
           ...p,
           promptKind:
-            p.promptKind ||
-            (promptTypes.find((pt: PromptType) => pt.id === p.promptTypeId)
-              ?.typeCode as any) ||
-            undefined,
+            p.promptKind || (promptTypes.find((pt: PromptType) => pt.id === p.promptTypeId)?.typeCode as any) || undefined,
         }));
         setPrompts(enriched);
       } else {
@@ -115,9 +100,7 @@ const MasterPromptPage: React.FC = () => {
       const result = await electronApi.promptTypes.getAll();
       if (result.success && result.data) {
         // Filter to only active prompt types
-        const activeTypes = result.data.filter(
-          (pt: PromptType) => pt.status === 1
-        );
+        const activeTypes = result.data.filter((pt: PromptType) => pt.status === 1);
         setPromptTypes(activeTypes);
 
         // Enrich any already-loaded prompts with the corresponding type code
@@ -125,10 +108,7 @@ const MasterPromptPage: React.FC = () => {
           prev.map((p) => ({
             ...p,
             promptKind:
-              p.promptKind ||
-              (activeTypes.find((pt: PromptType) => pt.id === p.promptTypeId)
-                ?.typeCode as any) ||
-              undefined,
+              p.promptKind || (activeTypes.find((pt: PromptType) => pt.id === p.promptTypeId)?.typeCode as any) || undefined,
           }))
         );
       } else {
@@ -234,9 +214,7 @@ const MasterPromptPage: React.FC = () => {
 
       if (result.success) {
         alertApi.show({
-          message: prompt.id
-            ? "Prompt updated successfully"
-            : "Prompt created successfully",
+          message: prompt.id ? "Prompt updated successfully" : "Prompt created successfully",
           title: "Success",
         });
         await loadAllPrompts();
@@ -305,12 +283,8 @@ const MasterPromptPage: React.FC = () => {
 
             {/* Prompt Count */}
             <div className="text-right">
-              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium uppercase tracking-wide">
-                Total Prompts
-              </p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                {prompts.length}
-              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium uppercase tracking-wide">Total Prompts</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{prompts.length}</p>
             </div>
           </div>
         </div>
@@ -335,11 +309,7 @@ const MasterPromptPage: React.FC = () => {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap"
             >
               <span>📌 Using Variables in Prompts</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showVariablesHint ? "rotate-180" : ""
-                }`}
-              />
+              <ChevronDown className={`w-4 h-4 transition-transform ${showVariablesHint ? "rotate-180" : ""}`} />
             </button>
 
             {/* Show Archived Checkbox */}
@@ -364,14 +334,10 @@ const MasterPromptPage: React.FC = () => {
 
             {/* Type Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                Type:
-              </span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">Type:</span>
               <select
                 value={kindFilter}
-                onChange={(e) =>
-                  setKindFilter(e.target.value as PromptKindFilter)
-                }
+                onChange={(e) => setKindFilter(e.target.value as PromptKindFilter)}
                 className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {promptKindOptions.map((opt) => (
@@ -384,14 +350,10 @@ const MasterPromptPage: React.FC = () => {
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                Status:
-              </span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">Status:</span>
               <select
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as StatusFilter)
-                }
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                 className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {statusOptions.map((opt) => (
@@ -452,10 +414,7 @@ const MasterPromptPage: React.FC = () => {
         </div>
 
         {/* Clear Filters Button - Show only if filters are active */}
-        {(kindFilter !== "all" ||
-          statusFilter !== "all" ||
-          searchTerm ||
-          showArchived) && (
+        {(kindFilter !== "all" || statusFilter !== "all" || searchTerm || showArchived) && (
           <div className="mb-4">
             <button
               onClick={() => {
@@ -477,18 +436,14 @@ const MasterPromptPage: React.FC = () => {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Loading prompts...
-                </p>
+                <p className="text-slate-600 dark:text-slate-400">Loading prompts...</p>
               </div>
             </div>
           ) : filteredPrompts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
               <AlertCircle className="w-12 h-12 text-slate-400 mb-3" />
               <p className="text-slate-600 dark:text-slate-400 mb-2">
-                {prompts.length === 0
-                  ? "No prompts found"
-                  : "No prompts match your filters"}
+                {prompts.length === 0 ? "No prompts found" : "No prompts match your filters"}
               </p>
               {prompts.length === 0 && (
                 <button
