@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS cookies (
   profile_id TEXT NOT NULL,
   url TEXT NOT NULL,
   service TEXT NOT NULL, -- e.g., 'flow', 'gemini', etc.
-  gemini_token TEXT,
   raw_cookie_string TEXT,
   last_rotated_at TEXT,
   spid_expiration TEXT,

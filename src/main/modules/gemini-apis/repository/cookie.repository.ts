@@ -154,7 +154,6 @@ export class CookieRepository extends BaseRepository<Cookie> {
     id: string,
     data: {
       lastRotatedAt: string;
-      geminiToken?: string;
       rawCookieString?: string;
       rotationData?: string;
       status?: "active" | "expired" | "renewal_failed";
@@ -163,7 +162,6 @@ export class CookieRepository extends BaseRepository<Cookie> {
     const now = new Date().toISOString();
     const updates = [
       data.lastRotatedAt,
-      data.geminiToken,
       data.rawCookieString,
       data.rotationData,
       data.status || "active",
@@ -174,7 +172,6 @@ export class CookieRepository extends BaseRepository<Cookie> {
     await this.db.run(
       `UPDATE ${this.tableName} 
        SET last_rotated_at = ?, 
-           gemini_token = COALESCE(?, gemini_token),
            raw_cookie_string = COALESCE(?, raw_cookie_string),
            rotation_data = COALESCE(?, rotation_data),
            status = ?,

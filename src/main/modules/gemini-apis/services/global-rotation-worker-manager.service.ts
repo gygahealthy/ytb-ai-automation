@@ -450,7 +450,6 @@ export class GlobalRotationWorkerManager {
       await this.cookieRepository.updateRotation(cookie.id, {
         lastRotatedAt: new Date().toISOString(),
         rawCookieString: cookieString,
-        geminiToken: undefined, // 🔄 Clear token cache so fresh token is fetched
         status: "active",
       });
 

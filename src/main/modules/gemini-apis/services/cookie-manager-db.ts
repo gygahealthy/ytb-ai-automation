@@ -353,7 +353,6 @@ export class CookieManagerDB {
           await this.updateDatabaseRotation(
             {
               lastRotatedAt: new Date().toISOString(),
-              geminiToken: null, // 🔄 Clear token cache so fresh token is fetched
               status: "active",
             },
             "PSIDTS"
@@ -398,7 +397,6 @@ export class CookieManagerDB {
         await this.updateDatabaseRotation(
           {
             lastRotatedAt: new Date().toISOString(),
-            geminiToken: null, // 🔄 Clear token cache so fresh token is fetched
             status: "active",
           },
           "PSIDTS"
@@ -424,7 +422,6 @@ export class CookieManagerDB {
   private async updateDatabaseRotation(
     data: {
       lastRotatedAt: string;
-      geminiToken?: string | null;
       rawCookieString?: string;
       status?: "active" | "expired" | "renewal_failed";
     },
@@ -440,7 +437,6 @@ export class CookieManagerDB {
     try {
       await this.cookieRepository.updateRotation(this.dbEntity.id, {
         lastRotatedAt: data.lastRotatedAt,
-        geminiToken: data.geminiToken || undefined, // Convert null to undefined for DB
         rawCookieString: data.rawCookieString,
         status: data.status,
       });

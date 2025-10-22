@@ -98,7 +98,7 @@ export class HttpService {
   async getToken(forceRefresh: boolean = false): Promise<string> {
     // Check cache
     if (!forceRefresh && this.cachedToken && this.isTokenValid()) {
-      logger.debug(
+      logger.info(
         `✅ Using cached token: ${this.cachedToken.substring(0, 20)}...`
       );
       return this.cachedToken;
@@ -107,43 +107,13 @@ export class HttpService {
     // Extract fresh token
     logger.info("🔄 Extracting fresh token from Gemini page...");
 
-    // Get the cookie entity from database to check for cached token
-    const cookieEntity = this.cookieManager.getEntity();
-
-    // Pass forceRefresh to extractTokens so it skips the database cache check
-    const tokenData = await extractTokens(
-      this.cookieManager,
-      cookieEntity || undefined,
-      forceRefresh
-    );
+    const tokenData = await extractTokens(this.cookieManager);
 
     this.cachedToken = tokenData.snlm0e;
     this.tokenTimestamp = tokenData.timestamp;
 
     if (!validateToken(this.cachedToken)) {
-      throw new Error("Extracted token failed validation");
-    }
-
-    // Update database with new token if it was freshly extracted
-    if (cookieEntity && cookieEntity.geminiToken !== this.cachedToken) {
-      try {
-        logger.debug("💾 Storing new token in database...");
-        const { getCookieService } = await import("./cookie.service.js");
-        const cookieService = getCookieService();
-
-        await cookieService.updateRotation(cookieEntity.id, {
-          lastRotatedAt: new Date().toISOString(),
-          geminiToken: this.cachedToken,
-        });
-
-        logger.debug("✅ Token updated in database");
-      } catch (updateError) {
-        logger.warn(
-          "⚠️ Failed to update token in database, but continuing with chat",
-          updateError
-        );
-        // Don't throw - token is valid even if we couldn't store it
-      }
+      throw new Error("Extracted token is invalid.");
     }
 
     logger.info(`✅ Token ready: ${this.cachedToken.substring(0, 20)}...`);

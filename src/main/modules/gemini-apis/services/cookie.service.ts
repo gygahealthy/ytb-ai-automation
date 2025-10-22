@@ -400,7 +400,6 @@ export class CookieService {
     id: string,
     data: {
       lastRotatedAt: string;
-      geminiToken?: string;
       rawCookieString?: string;
       rotationData?: string;
       status?: "active" | "expired" | "renewal_failed";
