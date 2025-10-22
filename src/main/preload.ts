@@ -243,18 +243,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("cookie-rotation:restart-worker", profileId, cookieId),
     stopWorker: (profileId: string, cookieId: string) =>
       ipcRenderer.invoke("cookie-rotation:stop-worker", profileId, cookieId),
-    forceHeadlessRefresh: (profileId: string, cookieId: string) =>
-      ipcRenderer.invoke(
-        "cookie-rotation:force-headless-refresh",
-        profileId,
-        cookieId
-      ),
-    forceVisibleRefresh: (profileId: string, cookieId: string) =>
-      ipcRenderer.invoke(
-        "cookie-rotation:force-visible-refresh",
-        profileId,
-        cookieId
-      ),
     stopAll: () => ipcRenderer.invoke("cookie-rotation:stop-all"),
     startAll: () => ipcRenderer.invoke("cookie-rotation:start-all"),
     onStatusUpdate: (callback: (data: any) => void) => {

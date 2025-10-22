@@ -3,6 +3,20 @@ import { useAlert } from "@/renderer/hooks/useAlert";
 import { useOverlayPortal } from "@/renderer/contexts/OverlayPortalContext";
 import CookieRotationPanel from "./CookieRotationPanel";
 import type { RotationStatus, ProfileWithCookies } from "./types";
+import type { ApiResponse, Cookie } from "@/shared/types";
+
+type ElectronCookiesBridge = {
+  extractAndCreateCookie: (
+    profileId: string,
+    service: string,
+    url: string,
+    headless: boolean
+  ) => Promise<ApiResponse<Cookie>>;
+};
+
+type ElectronAPIWithCookies = Window["electronAPI"] & {
+  cookies?: ElectronCookiesBridge;
+};
 
 export function CookieRotationIndicatorInner() {
   // All state and hooks MUST be declared unconditionally at the top
@@ -105,64 +119,120 @@ export function CookieRotationIndicatorInner() {
     }
   };
 
-  const handleForceHeadlessRefresh = async (
+  const performCookieExtraction = async (
     profileId: string,
-    cookieId: string
+    cookieId: string,
+    service: string,
+    url: string,
+    headlessMode: boolean,
+    profileName?: string
   ) => {
+    const titleBase = headlessMode ? "Headless Refresh" : "Visible Refresh";
+    const modeDescription = headlessMode ? "headless" : "visible";
+    const electronCookies = (window.electronAPI as ElectronAPIWithCookies)
+      .cookies;
+    const profileLabel = profileName || profileId;
+    const shortCookieId =
+      cookieId.length > 8 ? `${cookieId.slice(0, 8)}…` : cookieId;
+
     try {
-      const result =
-        await window.electronAPI.cookieRotation.forceHeadlessRefresh(
-          profileId,
-          cookieId
-        );
-      if (!result || !result.success) {
-        const msg = result?.error || "Failed to perform headless refresh";
+      if (
+        !electronCookies ||
+        typeof electronCookies.extractAndCreateCookie !== "function"
+      ) {
         show({
-          title: "Headless Refresh",
-          message: String(msg),
-          severity: "warning",
+          title: `${titleBase} Unavailable`,
+          message: "Cookie extraction IPC bridge is not available.",
+          severity: "error",
+        });
+        return;
+      }
+
+      const response: ApiResponse<Cookie> =
+        await electronCookies.extractAndCreateCookie(
+          profileId,
+          service,
+          url,
+          headlessMode
+        );
+
+      if (response.success) {
+        const raw = response.data?.rawCookieString ?? "";
+        const cookieCount = raw
+          ? raw.split(";").filter((c) => c.trim()).length
+          : 0;
+        const cookieCountLabel =
+          cookieCount > 0
+            ? `${cookieCount} cookie${cookieCount === 1 ? "" : "s"}`
+            : "cookies";
+
+        show({
+          title: `${titleBase} Successful`,
+          message: `Extracted ${cookieCountLabel} for ${service} cookie ${shortCookieId} on ${profileLabel} in ${modeDescription} mode.`,
+          severity: "success",
+          duration: 4000,
+        });
+      } else {
+        show({
+          title: `${titleBase} Failed`,
+          message:
+            response.error ||
+            `Failed to extract cookies for ${service} cookie ${shortCookieId}.`,
+          severity: "error",
         });
       }
-      await fetchStatus();
-      await fetchProfiles();
     } catch (err) {
-      console.error("Failed to perform headless refresh", err);
+      console.error("Failed to extract cookies", {
+        profileId,
+        cookieId,
+        service,
+        err,
+      });
       show({
-        title: "Headless Refresh",
-        message: String(err),
+        title: `${titleBase} Error`,
+        message: `Error extracting cookies for ${service} cookie ${shortCookieId}: ${String(
+          err
+        )}`,
         severity: "error",
       });
+    } finally {
+      await fetchStatus();
+      await fetchProfiles();
     }
+  };
+
+  const handleForceHeadlessRefresh = async (
+    profileId: string,
+    cookieId: string,
+    service: string,
+    url: string,
+    profileName?: string
+  ) => {
+    return performCookieExtraction(
+      profileId,
+      cookieId,
+      service,
+      url,
+      true,
+      profileName
+    );
   };
 
   const handleForceVisibleRefresh = async (
     profileId: string,
-    cookieId: string
+    cookieId: string,
+    service: string,
+    url: string,
+    profileName?: string
   ) => {
-    try {
-      const result =
-        await window.electronAPI.cookieRotation.forceVisibleRefresh(
-          profileId,
-          cookieId
-        );
-      if (!result || !result.success) {
-        const msg = result?.error || "Failed to perform visible refresh";
-        show({
-          title: "Visible Refresh",
-          message: String(msg),
-          severity: "warning",
-        });
-      }
-      await fetchStatus();
-      await fetchProfiles();
-    } catch (err) {
-      console.error("Failed to perform visible refresh", err);
-      show({
-        title: "Visible Refresh",
-        message: String(err),
-        severity: "error",
-      });
-    }
+    return performCookieExtraction(
+      profileId,
+      cookieId,
+      service,
+      url,
+      false,
+      profileName
+    );
   };
 
   // Memoize panel node to prevent constant re-creation of overlay
@@ -196,6 +266,8 @@ export function CookieRotationIndicatorInner() {
       handleStopWorker,
       handleForceHeadlessRefresh,
       handleForceVisibleRefresh,
+      fetchStatus,
+      fetchProfiles,
     ]
   );
 
@@ -338,22 +410,34 @@ export function CookieRotationIndicatorInner() {
       <button
         ref={buttonRef}
         onClick={() => setShowDetails(!showDetails)}
-        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+        className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
         title={statusLabels[healthStatus]}
       >
-        <div
-          className={`w-2 h-2 rounded-full ${statusColors[healthStatus]} ${
-            s.isRunning ? "animate-pulse" : ""
-          }`}
-        />
-        <span className="text-gray-700 dark:text-gray-300">
-          Cookie Rotation
-        </span>
-        {s.workersCount > 0 && (
-          <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-medium">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-3 h-3 rounded-full ${statusColors[healthStatus]} ${
+              s.isRunning ? "animate-pulse" : ""
+            }`}
+          />
+          <div className="flex flex-col leading-tight text-left">
+            <span className="text-sm text-gray-700 dark:text-gray-200">
+              Cookie Rotation
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {statusLabels[healthStatus]}
+            </span>
+          </div>
+        </div>
+
+        <div className="ml-2 flex items-center gap-2">
+          <div className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded font-medium">
             {s.workersCount}
-          </span>
-        )}
+          </div>
+          <div className="text-xs text-gray-500">|</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {s.running}/{s.total}
+          </div>
+        </div>
       </button>
     </div>
   );

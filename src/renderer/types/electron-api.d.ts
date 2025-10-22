@@ -109,14 +109,6 @@ declare global {
         startWorker: (profileId: string, cookieId: string) => Promise<any>;
         restartWorker: (profileId: string, cookieId: string) => Promise<any>;
         stopWorker: (profileId: string, cookieId: string) => Promise<any>;
-        forceHeadlessRefresh: (
-          profileId: string,
-          cookieId: string
-        ) => Promise<any>;
-        forceVisibleRefresh: (
-          profileId: string,
-          cookieId: string
-        ) => Promise<any>;
         stopAll: () => Promise<any>;
         startAll: () => Promise<any>;
         onStatusUpdate: (callback: (data: any) => void) => () => void;

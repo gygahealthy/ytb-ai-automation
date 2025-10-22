@@ -82,52 +82,6 @@ export function registerCookieRotationHandlers(): void {
   );
 
   /**
-   * Force headless refresh for a specific profile/cookie
-   */
-  ipcMain.handle(
-    "cookie-rotation:force-headless-refresh",
-    async (_event, profileId: string, cookieId: string) => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.forceHeadlessRefresh(profileId, cookieId);
-        return { success: true };
-      } catch (error) {
-        logger.error(
-          "[cookie-rotation] Failed to force headless refresh",
-          error
-        );
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    }
-  );
-
-  /**
-   * Force visible browser refresh for a specific profile/cookie
-   */
-  ipcMain.handle(
-    "cookie-rotation:force-visible-refresh",
-    async (_event, profileId: string, cookieId: string) => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.forceVisibleRefresh(profileId, cookieId);
-        return { success: true };
-      } catch (error) {
-        logger.error(
-          "[cookie-rotation] Failed to force visible refresh",
-          error
-        );
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    }
-  );
-
-  /**
    * Stop worker for a specific profile/cookie
    */
   ipcMain.handle(

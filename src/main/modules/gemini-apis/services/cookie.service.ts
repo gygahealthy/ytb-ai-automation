@@ -323,7 +323,6 @@ export class CookieService {
         profileId,
         url,
         service,
-        geminiToken: data.geminiToken,
         rawCookieString: data.rawCookieString,
         lastRotatedAt: data.lastRotatedAt,
         spidExpiration: data.spidExpiration,

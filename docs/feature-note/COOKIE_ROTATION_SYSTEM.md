@@ -123,8 +123,10 @@ Located in sidebar, shows:
 Exposed to renderer via `window.electronAPI.cookieRotation`:
 
 - `getStatus()`: Get current rotation status
+- `getProfiles()`: List profiles + cookies for overlay
+- `startWorker(profileId, cookieId)`: Start specific worker on demand
 - `restartWorker(profileId, cookieId)`: Restart specific worker
-- `forceHeadlessRefresh(profileId, cookieId)`: Force headless refresh
+- `stopWorker(profileId, cookieId)`: Stop specific worker
 - `stopAll()`: Stop all workers
 - `startAll()`: Start all workers
 - `onStatusUpdate(callback)`: Listen for status updates
@@ -165,12 +167,18 @@ useEffect(() => {
 }, []);
 ```
 
-### Force headless refresh
+### Force headless or visible refresh
+
+The renderer now reuses the unified cookie extraction handler exposed via
+`window.electronAPI.cookies.extractAndCreateCookie`. Pass the desired mode
+through the `headless` flag (defaults to `true`).
 
 ```typescript
-await window.electronAPI.cookieRotation.forceHeadlessRefresh(
+await window.electronAPI.cookies.extractAndCreateCookie(
   profileId,
-  cookieId
+  "gemini",
+  "https://gemini.google.com",
+  /* headless */ true
 );
 ```
 

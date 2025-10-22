@@ -180,7 +180,6 @@ export class CookieManagerDB {
           url: entity.url,
           status: entity.status,
           lastRotated: entity.lastRotatedAt,
-          hasGeminiToken: !!entity.geminiToken,
         });
 
         // Update in-memory cookies with database values
@@ -219,10 +218,10 @@ export class CookieManagerDB {
       }
     }
 
-    // Update from structured fields if available
-    if (entity.geminiToken) {
-      this.cookies["__Secure-1PSIDTS"] = entity.geminiToken;
-    }
+    // Do NOT seed __Secure-1PSIDTS from stored geminiToken here.
+    // The rotation worker is the single source of truth for PSIDTS values.
+    // If rawCookieString exists we parse and merge it above; avoid overriding
+    // the runtime rotation with the persisted geminiToken.
   }
 
   /**
@@ -474,7 +473,6 @@ export class CookieManagerDB {
           profileId: this.profileId,
           url: this.domain,
           service: this.service,
-          geminiToken: this.cookies["__Secure-1PSIDTS"],
           rawCookieString: cookieHeader,
           lastRotatedAt: now,
           rotationIntervalMinutes: this.options.psidtsIntervalSeconds / 60,
