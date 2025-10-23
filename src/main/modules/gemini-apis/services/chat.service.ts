@@ -3,17 +3,9 @@
  * Handles chat requests to Gemini API using shared services
  */
 
-import type {
-  ChatOptions,
-  ChatResponse,
-  ConversationMetadata,
-} from "../types/gemini-chat.types.js";
+import type { ChatOptions, ChatResponse, ConversationMetadata } from "../types/gemini-chat.types.js";
 import { CookieManagerDB } from "./cookie-manager-db.js";
-import {
-  sendChatRequest,
-  createEmptyMetadata,
-  extractConversationContext,
-} from "../helpers/chat.helpers.js";
+import { sendChatRequest, createEmptyMetadata, extractConversationContext } from "../helpers/chat.helpers.js";
 
 /**
  * ChatService class for managing Gemini API chat operations
@@ -34,10 +26,7 @@ export class ChatService {
    * @param options - Optional chat options
    * @returns The chat response
    */
-  async sendMessage(
-    prompt: string,
-    options: Omit<ChatOptions, "conversationContext"> = {}
-  ): Promise<ChatResponse> {
+  async sendMessage(prompt: string, options: Omit<ChatOptions, "conversationContext"> = {}): Promise<ChatResponse> {
     // Extract conversation context from metadata if available
     const conversationContext = extractConversationContext(this.metadata);
 
@@ -52,8 +41,7 @@ export class ChatService {
 
     // Check if response contains an error message from Gemini
     const isErrorResponse =
-      response.fullText?.includes("Sorry, something went wrong") ||
-      response.fullText?.includes("Please try your request again");
+      response.fullText?.includes("Sorry, something went wrong") || response.fullText?.includes("Please try your request again");
 
     // Only update metadata if response is successful and not an error message
     // This prevents corrupting conversation state with invalid reply IDs
@@ -61,24 +49,10 @@ export class ChatService {
       this.metadata = response.metadata;
     } else if (isErrorResponse) {
       // Log warning but keep previous valid metadata
-      console.warn(
-        "[ChatService] Gemini returned error response, keeping previous metadata:",
-        this.metadata
-      );
+      console.warn("[ChatService] Gemini returned error response, keeping previous metadata:", this.metadata);
     }
 
     return response;
-  }
-
-  /**
-   * Send a message without updating session metadata
-   * Useful for one-off requests
-   */
-  async sendRequestOnce(
-    prompt: string,
-    options: ChatOptions = {}
-  ): Promise<ChatResponse> {
-    return sendChatRequest(this.cookieManager, prompt, options);
   }
 
   /**

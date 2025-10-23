@@ -16,7 +16,7 @@ import { CookieManagerDB } from "./cookie-manager-db.js";
 import { database } from "../../../storage/database.js";
 import { CookieRepository } from "../repository/cookie.repository.js";
 import { logger } from "../../../utils/logger-backend.js";
-import type { CookieCollection } from "../types/cookies.types.js";
+import { parseCookieHeader } from "../helpers/cookie/cookie-parser.helpers.js";
 
 interface CookieManagerEntry {
   manager: CookieManagerDB;
@@ -37,48 +37,6 @@ const cookieManagers = new Map<string, CookieManagerEntry>();
 const chatServices = new Map<string, ChatServiceEntry>();
 
 /**
- * Parse raw cookie string into CookieCollection object
- */
-function parseCookieString(
-  rawCookieString: string | null | undefined
-): CookieCollection {
-  const collection: CookieCollection = {} as CookieCollection;
-
-  if (!rawCookieString) {
-    logger.debug("[chat.registry] No rawCookieString provided for parsing");
-    return collection;
-  }
-
-  try {
-    for (const part of rawCookieString.split(";")) {
-      const trimmed = part.trim();
-      if (trimmed && trimmed.includes("=")) {
-        const [name, ...valueParts] = trimmed.split("=");
-        const value = valueParts.join("=").trim();
-
-        // Only add cookies that have non-empty values
-        if (value) {
-          collection[name.trim()] = value;
-          logger.debug(`[chat.registry] Parsed cookie: ${name.trim()}`);
-        }
-      }
-    }
-  } catch (error) {
-    logger.warn(`[chat.registry] Failed to parse cookie string: ${error}`, {
-      rawCookieStringLength: rawCookieString?.length,
-    });
-  }
-
-  logger.debug(
-    `[chat.registry] Parsed ${
-      Object.keys(collection).length
-    } cookies from string`
-  );
-
-  return collection;
-}
-
-/**
  * Get or create a CookieManagerDB for a profile
  * Returns existing manager if cookie string hasn't changed
  * Creates new manager if cookies were updated
@@ -93,21 +51,16 @@ export async function getOrCreateCookieManager(
   // Return existing if cookie string hasn't changed
   if (existing && existing.cookieString === (rawCookieString || "")) {
     existing.lastAccessed = new Date();
-    logger.debug(
-      `[chat.registry] Reusing CookieManager for profile ${profileId}`
-    );
+    logger.debug(`[chat.registry] Reusing CookieManager for profile ${profileId}`);
     return existing.manager;
   }
 
-  logger.info(
-    `[chat.registry] Creating new CookieManager for profile ${profileId}`,
-    {
-      rawCookieStringLength: rawCookieString?.length || 0,
-    }
-  );
+  logger.info(`[chat.registry] Creating new CookieManager for profile ${profileId}`, {
+    rawCookieStringLength: rawCookieString?.length || 0,
+  });
 
   // Parse cookies into CookieCollection
-  const cookieCollection = parseCookieString(rawCookieString);
+  const cookieCollection = parseCookieHeader(rawCookieString || "");
 
   // Log what cookies were parsed
   const cookieNames = Object.keys(cookieCollection);
@@ -119,41 +72,28 @@ export async function getOrCreateCookieManager(
     cookieNames,
     hasRequiredPSID,
     hasPSIDTS,
-    psidValue: cookieCollection["__Secure-1PSID"]
-      ? `${cookieCollection["__Secure-1PSID"].substring(0, 20)}...`
-      : "MISSING",
-    psidtsValue: cookieCollection["__Secure-1PSIDTS"]
-      ? `${cookieCollection["__Secure-1PSIDTS"].substring(0, 20)}...`
-      : "MISSING",
+    psidValue: cookieCollection["__Secure-1PSID"] ? `${cookieCollection["__Secure-1PSID"].substring(0, 20)}...` : "MISSING",
+    psidtsValue: cookieCollection["__Secure-1PSIDTS"] ? `${cookieCollection["__Secure-1PSIDTS"].substring(0, 20)}...` : "MISSING",
   });
 
   // Create repository and manager
   const db = database.getSQLiteDatabase();
   const cookieRepository = new CookieRepository(db);
 
-  const manager = new CookieManagerDB(
-    cookieCollection,
-    cookieRepository,
-    profileId,
-    "gemini.google.com",
-    {
-      autoValidate: false,
-      validateOnInit: false,
-      verbose: false,
-    }
-  );
+  const manager = new CookieManagerDB(cookieCollection, cookieRepository, profileId, "gemini.google.com", {
+    autoValidate: false,
+    validateOnInit: false,
+    verbose: false,
+  });
 
   // Initialize manager
   try {
     await manager.init();
-    logger.info(
-      `[chat.registry] CookieManager initialized for profile ${profileId}`
-    );
+    logger.info(`[chat.registry] CookieManager initialized for profile ${profileId}`);
   } catch (err) {
-    logger.error(
-      `[chat.registry] CookieManager init failed for profile ${profileId}: ${err}`,
-      { errorMessage: err instanceof Error ? err.message : String(err) }
-    );
+    logger.error(`[chat.registry] CookieManager init failed for profile ${profileId}: ${err}`, {
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
     // Continue even if init fails - but log the error for debugging
   }
 
@@ -166,9 +106,7 @@ export async function getOrCreateCookieManager(
 
   // If ChatService exists for this profile, reset it so it uses new manager
   if (chatServices.has(profileId)) {
-    logger.info(
-      `[chat.registry] Resetting ChatService for profile ${profileId} due to cookie change`
-    );
+    logger.info(`[chat.registry] Resetting ChatService for profile ${profileId} due to cookie change`);
     chatServices.delete(profileId);
   }
 
@@ -180,23 +118,16 @@ export async function getOrCreateCookieManager(
  * Uses singleton pattern - same instance handles all requests for a profile
  * Preserves conversation metadata across multiple calls
  */
-export function getOrCreateChatService(
-  profileId: string,
-  cookieManager: CookieManagerDB
-): ChatService {
+export function getOrCreateChatService(profileId: string, cookieManager: CookieManagerDB): ChatService {
   const existing = chatServices.get(profileId);
 
   if (existing) {
     existing.lastAccessed = new Date();
-    logger.debug(
-      `[chat.registry] Reusing ChatService for profile ${profileId}`
-    );
+    logger.debug(`[chat.registry] Reusing ChatService for profile ${profileId}`);
     return existing.service;
   }
 
-  logger.info(
-    `[chat.registry] Creating new ChatService singleton for profile ${profileId}`
-  );
+  logger.info(`[chat.registry] Creating new ChatService singleton for profile ${profileId}`);
 
   const service = new ChatService(cookieManager);
 
@@ -215,9 +146,7 @@ export function getOrCreateChatService(
  */
 export function resetChatService(profileId: string): void {
   if (chatServices.has(profileId)) {
-    logger.info(
-      `[chat.registry] Resetting ChatService for profile ${profileId}`
-    );
+    logger.info(`[chat.registry] Resetting ChatService for profile ${profileId}`);
     chatServices.delete(profileId);
   }
 }
@@ -229,9 +158,7 @@ export function resetChatService(profileId: string): void {
  */
 export function resetCookieManager(profileId: string): void {
   if (cookieManagers.has(profileId)) {
-    logger.info(
-      `[chat.registry] Resetting CookieManager for profile ${profileId}`
-    );
+    logger.info(`[chat.registry] Resetting CookieManager for profile ${profileId}`);
     cookieManagers.delete(profileId);
   }
   resetChatService(profileId);
@@ -242,9 +169,7 @@ export function resetCookieManager(profileId: string): void {
  * Useful for cleanup or testing
  */
 export function clearAll(): void {
-  logger.info(
-    `[chat.registry] Clearing all registries (${cookieManagers.size} managers, ${chatServices.size} services)`
-  );
+  logger.info(`[chat.registry] Clearing all registries (${cookieManagers.size} managers, ${chatServices.size} services)`);
   cookieManagers.clear();
   chatServices.clear();
 }

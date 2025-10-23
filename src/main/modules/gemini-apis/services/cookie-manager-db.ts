@@ -4,24 +4,11 @@
  * Integrates cookie lifecycle management with the database repository
  */
 
-import type {
-  CookieCollection,
-  RotationResult,
-  ValidationResult,
-  CookieService,
-} from "../shared/types/index.js";
+import type { CookieCollection, RotationResult, ValidationResult, CookieService } from "../shared/types/index.js";
 import { COOKIE_SERVICES } from "../shared/types/index.js";
-import {
-  cookiesToHeader,
-  validateRequiredCookies,
-  mergeCookies,
-} from "../helpers/cookie/cookie-parser.helpers.js";
+import { cookiesToHeader, validateRequiredCookies, mergeCookies } from "../helpers/cookie/cookie-parser.helpers.js";
 import { logger } from "../../../utils/logger-backend.js";
-import {
-  rotate1psidts,
-  startAutoRotation,
-  type RotationControl,
-} from "../helpers/cookie/cookie-rotation.helpers.js";
+import { startAutoRotation, type RotationControl } from "../helpers/cookie/cookie-rotation.helpers.js";
 import type { CookieRepository } from "../repository/cookie.repository.js";
 import type { Cookie } from "../shared/types/index.js";
 
@@ -61,8 +48,6 @@ export interface CookieManagerDBControl {
     lastPSIDTSRotation?: Date;
     lastDBSync?: Date;
   };
-  forceRotation: () => Promise<RotationResult>;
-  syncToDatabase: () => Promise<void>;
 }
 
 /**
@@ -156,20 +141,12 @@ export class CookieManagerDB {
   private async loadFromDatabase(): Promise<void> {
     try {
       // Try to find by profile and service first (more reliable)
-      let entity = await this.cookieRepository.findActiveByProfileAndService(
-        this.profileId,
-        this.service
-      );
+      let entity = await this.cookieRepository.findActiveByProfileAndService(this.profileId, this.service);
 
       // Fallback: Try finding by profile and URL if service lookup fails
       if (!entity) {
-        logger.debug(
-          `[CookieManagerDB] No entity found by service '${this.service}', trying URL '${this.domain}'`
-        );
-        entity = await this.cookieRepository.findByProfileAndUrl(
-          this.profileId,
-          this.domain
-        );
+        logger.debug(`[CookieManagerDB] No entity found by service '${this.service}', trying URL '${this.domain}'`);
+        entity = await this.cookieRepository.findByProfileAndUrl(this.profileId, this.domain);
       }
 
       if (entity) {
@@ -188,9 +165,7 @@ export class CookieManagerDB {
           this.mergeDatabaseCookies(entity);
         }
       } else {
-        logger.debug(
-          `⚠️ No cookie entity found in database for profile: ${this.profileId}, service: ${this.service}`
-        );
+        logger.debug(`⚠️ No cookie entity found in database for profile: ${this.profileId}, service: ${this.service}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -222,53 +197,6 @@ export class CookieManagerDB {
     // The rotation worker is the single source of truth for PSIDTS values.
     // If rawCookieString exists we parse and merge it above; avoid overriding
     // the runtime rotation with the persisted geminiToken.
-  }
-
-  /**
-   * Get the cookie entity from database
-   * Used to access cached tokens and metadata
-   */
-  getEntity(): Cookie | null {
-    return this.dbEntity;
-  }
-
-  /**
-   * Reload entity from database to get latest updates
-   * Call this after external updates to the database (e.g., token updates)
-   */
-  async reloadEntity(): Promise<void> {
-    try {
-      // Try service-based lookup first
-      let entity = await this.cookieRepository.findActiveByProfileAndService(
-        this.profileId,
-        this.service
-      );
-
-      // Fallback to URL-based lookup
-      if (!entity) {
-        entity = await this.cookieRepository.findByProfileAndUrl(
-          this.profileId,
-          this.domain
-        );
-      }
-
-      if (entity) {
-        this.dbEntity = entity;
-        logger.debug(
-          `🔄 Reloaded cookie entity from database (geminiToken: ${
-            entity.geminiToken ? "present" : "null"
-          })`
-        );
-
-        // Update in-memory cookies with fresh database values
-        if (entity.rawCookieString) {
-          this.mergeDatabaseCookies(entity);
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.warn(`⚠️ Failed to reload entity from database: ${message}`);
-    }
   }
 
   /**
@@ -308,30 +236,24 @@ export class CookieManagerDB {
     logger.info("🚀 Starting cookie manager with database integration...");
 
     // Start PSIDTS auto-rotation
-    this.psidtsControl = startAutoRotation(
-      this.cookies,
-      this.options.psidtsIntervalSeconds,
-      {
-        proxy: this.options.proxy,
-        onRotate: (result: RotationResult) => {
-          this.handlePSIDTSRotation(result);
-        },
-      }
-    );
+    this.psidtsControl = startAutoRotation(this.cookies, this.options.psidtsIntervalSeconds, {
+      proxy: this.options.proxy,
+      onRotate: (result: RotationResult) => {
+        this.handlePSIDTSRotation(result);
+      },
+    });
 
     logger.info(`📊 Cookie manager configuration:`);
     logger.info(
-      `   - PSIDTS rotation: every ${
-        this.options.psidtsIntervalSeconds
-      }s (${Math.round(this.options.psidtsIntervalSeconds / 60)} min)`
+      `   - PSIDTS rotation: every ${this.options.psidtsIntervalSeconds}s (${Math.round(
+        this.options.psidtsIntervalSeconds / 60
+      )} min)`
     );
 
     return {
       stop: () => this.stop(),
       isRunning: () => this.running,
       getStats: () => ({ ...this.stats }),
-      forceRotation: () => this.forceRotation(),
-      syncToDatabase: () => this.syncToDatabase(),
     };
   }
 
@@ -358,11 +280,8 @@ export class CookieManagerDB {
           );
         } catch (error) {
           this.stats.dbErrors++;
-          const message =
-            error instanceof Error ? error.message : String(error);
-          logger.warn(
-            `⚠️ Failed to save PSIDTS rotation to database: ${message}`
-          );
+          const message = error instanceof Error ? error.message : String(error);
+          logger.warn(`⚠️ Failed to save PSIDTS rotation to database: ${message}`);
           this.options.onError(message, "DB");
         }
       }
@@ -373,46 +292,6 @@ export class CookieManagerDB {
     }
 
     this.options.onPSIDTSRotate(result);
-  }
-
-  /**
-   * Force immediate rotation of PSIDTS cookie
-   */
-  async forceRotation(): Promise<RotationResult> {
-    logger.info("🔄 Forcing immediate cookie rotation...");
-
-    const psidtsResult = await rotate1psidts(this.cookies, {
-      proxy: this.options.proxy,
-      skipCache: true,
-    });
-
-    // Update cookies and database
-    if (psidtsResult.success && psidtsResult.newPSIDTS) {
-      this.cookies["__Secure-1PSIDTS"] = psidtsResult.newPSIDTS;
-      this.stats.psidtsRotations++;
-      this.stats.lastPSIDTSRotation = new Date();
-
-      try {
-        await this.updateDatabaseRotation(
-          {
-            lastRotatedAt: new Date().toISOString(),
-            status: "active",
-          },
-          "PSIDTS"
-        );
-      } catch (error) {
-        this.stats.dbErrors++;
-      }
-    }
-
-    logger.info(`📊 Force rotation result:`);
-    logger.info(
-      `   - PSIDTS: ${
-        psidtsResult.success ? "✅ Success" : `❌ ${psidtsResult.error}`
-      }`
-    );
-
-    return psidtsResult;
   }
 
   /**
@@ -427,9 +306,7 @@ export class CookieManagerDB {
     rotationType: "PSIDTS"
   ): Promise<void> {
     if (!this.dbEntity?.id) {
-      logger.debug(
-        `⏭️ Skipping database update - no entity ID for ${rotationType}`
-      );
+      logger.debug(`⏭️ Skipping database update - no entity ID for ${rotationType}`);
       return;
     }
 
@@ -449,55 +326,6 @@ export class CookieManagerDB {
   }
 
   /**
-   * Sync all cookies to database
-   */
-  async syncToDatabase(): Promise<void> {
-    try {
-      const cookieHeader = cookiesToHeader(this.cookies);
-
-      if (this.dbEntity?.id) {
-        // Update existing entity
-        await this.cookieRepository.updateRotation(this.dbEntity.id, {
-          lastRotatedAt: new Date().toISOString(),
-          rawCookieString: cookieHeader,
-          status: "active",
-        });
-        logger.info(`✅ Synced cookies to database (updated)`);
-      } else {
-        // Create new entity
-        const { v4: uuidv4 } = await import("uuid");
-        const now = new Date().toISOString();
-
-        const newEntity: Cookie = {
-          id: uuidv4(),
-          profileId: this.profileId,
-          url: this.domain,
-          service: this.service,
-          rawCookieString: cookieHeader,
-          lastRotatedAt: now,
-          rotationIntervalMinutes: this.options.psidtsIntervalSeconds / 60,
-          status: "active",
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        await this.cookieRepository.insert(newEntity);
-        this.dbEntity = newEntity;
-        logger.info(`✅ Synced cookies to database (created)`);
-      }
-
-      this.stats.lastDBSync = new Date();
-      this.options.onCookiesSaved(Object.keys(this.cookies).length);
-    } catch (error) {
-      this.stats.dbErrors++;
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error(`❌ Failed to sync cookies to database: ${message}`);
-      this.options.onError(message, "DB");
-      throw error;
-    }
-  }
-
-  /**
    * Stop all rotation and refresh activities
    */
   stop(): void {
@@ -511,8 +339,7 @@ export class CookieManagerDB {
 
     logger.info("🛑 Cookie manager stopped");
     logger.info(
-      `📊 Final stats: PSIDTS(${this.stats.psidtsRotations}/${this.stats.psidtsErrors}) ` +
-        `DB(${this.stats.dbErrors})`
+      `📊 Final stats: PSIDTS(${this.stats.psidtsRotations}/${this.stats.psidtsErrors}) ` + `DB(${this.stats.dbErrors})`
     );
   }
 
@@ -537,24 +364,8 @@ export class CookieManagerDB {
     this.cookies = mergeCookies(this.cookies, newCookies);
 
     if (this.options.verbose) {
-      logger.debug(
-        `🔄 Updated in-memory cookies: ${Object.keys(newCookies).join(", ")}`
-      );
+      logger.debug(`🔄 Updated in-memory cookies: ${Object.keys(newCookies).join(", ")}`);
     }
-  }
-
-  /**
-   * Get specific cookie value
-   */
-  getCookie(name: keyof CookieCollection): string | undefined {
-    return this.cookies[name];
-  }
-
-  /**
-   * Set specific cookie value
-   */
-  setCookie(name: keyof CookieCollection, value: string): void {
-    this.cookies[name] = value;
   }
 
   /**
@@ -603,14 +414,7 @@ export async function createCookieManagerDB(
   options?: CookieManagerDBOptions,
   service?: CookieService
 ): Promise<CookieManagerDB> {
-  const manager = new CookieManagerDB(
-    cookies,
-    cookieRepository,
-    profileId,
-    domain,
-    options,
-    service
-  );
+  const manager = new CookieManagerDB(cookies, cookieRepository, profileId, domain, options, service);
   await manager.init();
   return manager;
 }
