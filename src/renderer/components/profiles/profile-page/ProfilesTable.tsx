@@ -1,15 +1,5 @@
-import {
-  Calendar,
-  Cookie,
-  DollarSign,
-  Edit,
-  Folder,
-  Globe,
-  Tag,
-  Trash2,
-  User,
-  MessageSquare,
-} from "lucide-react";
+import { Calendar, Cookie, DollarSign, Folder, Globe, Tag, User } from "lucide-react";
+import ProfileActionButtons from "./ProfileActionButtons";
 
 interface Profile {
   id: string;
@@ -44,7 +34,6 @@ interface ProfilesTableProps {
   columnVisibility: ColumnVisibility;
   onEditProfile: (profile: Profile) => void;
   onDeleteProfile: (id: string) => void;
-  onOpenCookieModal?: (profileId: string) => void;
   onOpenChatModal?: (profileId: string) => void;
 }
 
@@ -54,7 +43,6 @@ export default function ProfilesTable({
   columnVisibility,
   onEditProfile,
   onDeleteProfile,
-  onOpenCookieModal,
   onOpenChatModal,
 }: ProfilesTableProps) {
   const formatDate = (dateString: string) => {
@@ -144,66 +132,24 @@ export default function ProfilesTable({
                     </div>
                     <div>
                       <p className="text-gray-600 dark:text-gray-300 font-semibold">
-                        {profiles.length === 0
-                          ? "No profiles yet"
-                          : "No profiles match"}
+                        {profiles.length === 0 ? "No profiles yet" : "No profiles match"}
                       </p>
                       <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-                        {profiles.length === 0
-                          ? "Click 'New Profile' to create one"
-                          : "Try adjusting your filters"}
+                        {profiles.length === 0 ? "Click 'New Profile' to create one" : "Try adjusting your filters"}
                       </p>
                     </div>
                   </div>
                 </td>
               </tr>
             ) : (
-              filteredProfiles.map((profile) => (
-                <tr
-                  key={profile.id}
-                  className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-all duration-150"
-                >
+              filteredProfiles.map((profile) => [
+                <tr key={profile.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-all duration-150">
                   <td className="px-4 py-3.5 whitespace-nowrap w-36">
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => onEditProfile(profile)}
-                        className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      </button>
-                      <button
-                        className="p-1.5 opacity-0 group-hover:opacity-100 hidden"
-                        title="Login-disabled"
-                      >
-                        {/* Login removed */}
-                      </button>
-                      <button
-                        onClick={() => onDeleteProfile(profile.id)}
-                        className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                      </button>
-                      {onOpenCookieModal && (
-                        <button
-                          onClick={() => onOpenCookieModal(profile.id)}
-                          className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                          title="Manage Cookies"
-                        >
-                          <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        </button>
-                      )}
-                      {onOpenChatModal && (
-                        <button
-                          onClick={() => onOpenChatModal(profile.id)}
-                          className="p-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                          title="Test Chat"
-                        >
-                          <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        </button>
-                      )}
-                    </div>
+                    <ProfileActionButtons
+                      onEdit={() => onEditProfile(profile)}
+                      onDelete={() => onDeleteProfile(profile.id)}
+                      onOpenChatModal={onOpenChatModal ? () => onOpenChatModal(profile.id) : undefined}
+                    />
                   </td>
                   {columnVisibility.id && (
                     <td className="px-4 py-3.5 whitespace-nowrap w-40">
@@ -221,10 +167,7 @@ export default function ProfilesTable({
                         <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                           <User className="w-4 h-4 text-white" />
                         </div>
-                        <span
-                          className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
-                          title={profile.name}
-                        >
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" title={profile.name}>
                           {profile.name}
                         </span>
                       </div>
@@ -239,10 +182,7 @@ export default function ProfilesTable({
                           title={profile.browserPath || "Chrome"}
                         >
                           {profile.browserPath
-                            ? profile.browserPath
-                                .split("\\")
-                                .pop()
-                                ?.replace(".exe", "") || "Chrome"
+                            ? profile.browserPath.split("\\").pop()?.replace(".exe", "") || "Chrome"
                             : "Chrome"}
                         </span>
                       </div>
@@ -252,12 +192,8 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 w-48">
                       <div className="flex items-center gap-2">
                         <Folder className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <span
-                          className="text-xs text-gray-600 dark:text-gray-400 truncate"
-                          title={profile.userDataDir}
-                        >
-                          {profile.userDataDir.split("\\").pop() ||
-                            profile.userDataDir}
+                        <span className="text-xs text-gray-600 dark:text-gray-400 truncate" title={profile.userDataDir}>
+                          {profile.userDataDir.split("\\").pop() || profile.userDataDir}
                         </span>
                       </div>
                     </td>
@@ -266,13 +202,8 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 w-56">
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <span
-                          className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1"
-                          title={profile.userAgent}
-                        >
-                          {profile.userAgent
-                            ? profile.userAgent.slice(0, 40) + "..."
-                            : "Default"}
+                        <span className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1" title={profile.userAgent}>
+                          {profile.userAgent ? profile.userAgent.slice(0, 40) + "..." : "Default"}
                         </span>
                       </div>
                     </td>
@@ -302,9 +233,7 @@ export default function ProfilesTable({
                           <span className="text-xs text-gray-400">—</span>
                         )}
                         {profile.tags && profile.tags.length > 2 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            +{profile.tags.length - 2}
-                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">+{profile.tags.length - 2}</span>
                         )}
                       </div>
                     </td>
@@ -313,9 +242,7 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 whitespace-nowrap w-44">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-500" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {formatDate(profile.createdAt)}
-                        </span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{formatDate(profile.createdAt)}</span>
                       </div>
                     </td>
                   )}
@@ -323,11 +250,7 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 whitespace-nowrap w-40">
                       <div className="flex items-center gap-2">
                         <Cookie
-                          className={`w-4 h-4 ${
-                            isCookieExpired(profile.cookieExpires)
-                              ? "text-red-500"
-                              : "text-green-500"
-                          }`}
+                          className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`}
                         />
                         {profile.cookieExpires ? (
                           <span
@@ -337,14 +260,10 @@ export default function ProfilesTable({
                                 : "text-green-600 dark:text-green-400"
                             }`}
                           >
-                            {isCookieExpired(profile.cookieExpires)
-                              ? "Expired"
-                              : "Valid"}
+                            {isCookieExpired(profile.cookieExpires) ? "Expired" : "Valid"}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            None
-                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">None</span>
                         )}
                       </div>
                     </td>
@@ -358,17 +277,13 @@ export default function ProfilesTable({
                             : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                         }`}
                       >
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            profile.isLoggedIn ? "bg-green-600" : "bg-gray-500"
-                          }`}
-                        />
+                        <div className={`w-2 h-2 rounded-full ${profile.isLoggedIn ? "bg-green-600" : "bg-gray-500"}`} />
                         {profile.isLoggedIn ? "Logged In" : "Logged Out"}
                       </span>
                     </td>
                   )}
-                </tr>
-              ))
+                </tr>,
+              ])
             )}
           </tbody>
         </table>

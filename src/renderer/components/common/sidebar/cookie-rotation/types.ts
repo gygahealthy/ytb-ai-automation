@@ -1,3 +1,13 @@
+export type RotationMethod = "refreshCreds" | "rotateCookie" | "headless";
+
+export interface CookieRotationConfig {
+  cookieId: string;
+  launchWorkerOnStartup: boolean;
+  enabledRotationMethods: RotationMethod[];
+  rotationMethodOrder: RotationMethod[];
+  rotationIntervalMinutes: number;
+}
+
 export interface ProfileWithCookies {
   profileId: string;
   profileName?: string;
@@ -9,6 +19,7 @@ export interface ProfileWithCookies {
     workerStatus?: string;
     sessionHealth?: string;
     lastRotatedAt?: string;
+    config?: CookieRotationConfig;
   }>;
 }
 

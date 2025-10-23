@@ -10,10 +10,7 @@ import {
   toCookieString,
   logCookieExtractionSuccess,
 } from "../helpers/cookie/cookie-extraction.helpers";
-import {
-  containsDtsCookie,
-  hasCookieChanged,
-} from "../helpers/cookie/cookie-check.helpers";
+import { containsDtsCookie, hasCookieChanged } from "../helpers/cookie/cookie-check.helpers";
 
 /**
  * Service for managing cookies
@@ -48,26 +45,20 @@ export class CookieService {
         };
       }
 
-      logger.info(
-        "[cookie.service] Extracting ALL cookies from browser profile",
-        {
-          profileId: profile.id,
-          userDataDir: profile.userDataDir,
-          targetUrl,
-          mode: headless ? "HEADLESS (background)" : "NON-HEADLESS (visible)",
-          note: "Will extract ALL cookies from ALL domains on the page",
-        }
-      );
+      logger.info("[cookie.service] Extracting ALL cookies from browser profile", {
+        profileId: profile.id,
+        userDataDir: profile.userDataDir,
+        targetUrl,
+        mode: headless ? "HEADLESS (background)" : "NON-HEADLESS (visible)",
+        note: "Will extract ALL cookies from ALL domains on the page",
+      });
 
       // Launch browser (headless or visible) with profile's user-data-dir
       try {
-        logger.info(
-          "[cookie.service] Launching browser with profile user-data-dir",
-          {
-            userDataDir: profile.userDataDir,
-            headless,
-          }
-        );
+        logger.info("[cookie.service] Launching browser with profile user-data-dir", {
+          userDataDir: profile.userDataDir,
+          headless,
+        });
         const launchResult = await launchBrowser(profile, headless);
         // launchBrowser now returns { browser, chromeProcess }
         browser = launchResult.browser;
@@ -76,11 +67,7 @@ export class CookieService {
         logger.error("[cookie.service] Failed to launch browser", launchError);
         return {
           success: false,
-          error: `Failed to launch browser: ${
-            launchError instanceof Error
-              ? launchError.message
-              : String(launchError)
-          }`,
+          error: `Failed to launch browser: ${launchError instanceof Error ? launchError.message : String(launchError)}`,
         };
       }
 
@@ -93,24 +80,17 @@ export class CookieService {
         headless,
         targetUrl,
       });
-      let allCookies = await navigateAndExtractCookies(
-        page,
-        targetUrl,
-        headless
-      );
+      let allCookies = await navigateAndExtractCookies(page, targetUrl, headless);
 
       // If running in visible (interactive) mode, wait for the DTS cookie
       // or until 30s of inactivity (no cookie changes). This prevents the
       // browser from being closed before the user finishes interactive login/2FA.
       if (!headless) {
         if (!containsDtsCookie(allCookies)) {
-          logger.info(
-            "[cookie.service] DTS cookie not present yet. Waiting for interactive login/rotation...",
-            {
-              checkIntervalMs: 1000,
-              inactivityThresholdMs: 30000,
-            }
-          );
+          logger.info("[cookie.service] DTS cookie not present yet. Waiting for interactive login/rotation...", {
+            checkIntervalMs: 1000,
+            inactivityThresholdMs: 30000,
+          });
 
           const inactivityThresholdMs = 30000; // 30s
           const maxOverallWaitMs = 5 * 60 * 1000; // 5 minutes max as safety
@@ -128,12 +108,9 @@ export class CookieService {
 
               // If we now have DTS, break and use the new cookies
               if (containsDtsCookie(currentCookies)) {
-                logger.info(
-                  "[cookie.service] DTS cookie detected during wait",
-                  {
-                    cookieNames: currentCookies.map((c: any) => c.name),
-                  }
-                );
+                logger.info("[cookie.service] DTS cookie detected during wait", {
+                  cookieNames: currentCookies.map((c: any) => c.name),
+                });
                 allCookies = currentCookies;
                 break;
               }
@@ -144,18 +121,13 @@ export class CookieService {
               if (changed) {
                 lastChangeAt = Date.now();
                 lastCookies = currentCookies;
-                logger.debug(
-                  "[cookie.service] Cookie jar changed, continuing to wait...",
-                  {
-                    cookieCount: currentCookies.length,
-                  }
-                );
+                logger.debug("[cookie.service] Cookie jar changed, continuing to wait...", {
+                  cookieCount: currentCookies.length,
+                });
               } else {
                 // No change - check inactivity
                 if (Date.now() - lastChangeAt >= inactivityThresholdMs) {
-                  logger.info(
-                    "[cookie.service] No cookie activity for 30s, proceeding with extraction."
-                  );
+                  logger.info("[cookie.service] No cookie activity for 30s, proceeding with extraction.");
                   allCookies = currentCookies;
                   break;
                 }
@@ -208,10 +180,7 @@ export class CookieService {
         },
       };
     } catch (error) {
-      logger.error(
-        "[cookie.service] Failed to extract cookies from browser",
-        error
-      );
+      logger.error("[cookie.service] Failed to extract cookies from browser", error);
 
       // Cleanup on error
       try {
@@ -234,9 +203,7 @@ export class CookieService {
 
       return {
         success: false,
-        error: `Failed to extract cookies: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        error: `Failed to extract cookies: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -261,10 +228,7 @@ export class CookieService {
   /**
    * Get a specific cookie by profile and url
    */
-  async getCookie(
-    profileId: string,
-    url: string
-  ): Promise<ApiResponse<Cookie | null>> {
+  async getCookie(profileId: string, url: string): Promise<ApiResponse<Cookie | null>> {
     try {
       if (!profileId || profileId.trim() === "") {
         return { success: false, error: "Profile ID is required" };
@@ -273,10 +237,7 @@ export class CookieService {
         return { success: false, error: "URL is required" };
       }
 
-      const cookie = await this.cookieRepository.findByProfileAndUrl(
-        profileId,
-        url
-      );
+      const cookie = await this.cookieRepository.findByProfileAndUrl(profileId, url);
       return { success: true, data: cookie };
     } catch (error) {
       logger.error("[cookie.service] Failed to get cookie", error);
@@ -287,12 +248,7 @@ export class CookieService {
   /**
    * Create a new cookie
    */
-  async createCookie(
-    profileId: string,
-    url: string,
-    service: string,
-    data: Partial<Cookie>
-  ): Promise<ApiResponse<Cookie>> {
+  async createCookie(profileId: string, url: string, service: string, data: Partial<Cookie>): Promise<ApiResponse<Cookie>> {
     try {
       if (!profileId || profileId.trim() === "") {
         return { success: false, error: "Profile ID is required" };
@@ -305,10 +261,7 @@ export class CookieService {
       }
 
       // Check if cookie already exists
-      const exists = await this.cookieRepository.existsByProfileAndUrl(
-        profileId,
-        url
-      );
+      const exists = await this.cookieRepository.existsByProfileAndUrl(profileId, url);
       if (exists) {
         return {
           success: false,
@@ -329,6 +282,9 @@ export class CookieService {
         rotationData: data.rotationData,
         rotationIntervalMinutes: data.rotationIntervalMinutes ?? 1440, // Default 24 hours
         status: "active",
+        launchWorkerOnStartup: data.launchWorkerOnStartup ?? 0,
+        enabledRotationMethods: data.enabledRotationMethods ?? '["refreshCreds","rotateCookie"]',
+        rotationMethodOrder: data.rotationMethodOrder ?? '["refreshCreds","rotateCookie","headless"]',
         createdAt: now,
         updatedAt: now,
       };
@@ -351,10 +307,7 @@ export class CookieService {
   /**
    * Update cookie rotation interval
    */
-  async updateRotationInterval(
-    id: string,
-    rotationIntervalMinutes: number
-  ): Promise<ApiResponse<void>> {
+  async updateRotationInterval(id: string, rotationIntervalMinutes: number): Promise<ApiResponse<void>> {
     try {
       if (!id || id.trim() === "") {
         return { success: false, error: "Cookie ID is required" };
@@ -384,10 +337,7 @@ export class CookieService {
 
       return { success: true };
     } catch (error) {
-      logger.error(
-        "[cookie.service] Failed to update rotation interval",
-        error
-      );
+      logger.error("[cookie.service] Failed to update rotation interval", error);
       return { success: false, error: "Failed to update rotation interval" };
     }
   }
@@ -431,10 +381,7 @@ export class CookieService {
   /**
    * Update cookie status
    */
-  async updateStatus(
-    id: string,
-    status: "active" | "expired" | "renewal_failed"
-  ): Promise<ApiResponse<void>> {
+  async updateStatus(id: string, status: "active" | "expired" | "renewal_failed"): Promise<ApiResponse<void>> {
     try {
       if (!id || id.trim() === "") {
         return { success: false, error: "Cookie ID is required" };
@@ -511,10 +458,7 @@ export class CookieService {
       const cookies = await this.cookieRepository.findCookiesDueForRotation();
       return { success: true, data: cookies };
     } catch (error) {
-      logger.error(
-        "[cookie.service] Failed to get cookies due for rotation",
-        error
-      );
+      logger.error("[cookie.service] Failed to get cookies due for rotation", error);
       return {
         success: false,
         error: "Failed to retrieve cookies due for rotation",
@@ -525,9 +469,7 @@ export class CookieService {
   /**
    * Get cookies by status
    */
-  async getCookiesByStatus(
-    status: "active" | "expired" | "renewal_failed"
-  ): Promise<ApiResponse<Cookie[]>> {
+  async getCookiesByStatus(status: "active" | "expired" | "renewal_failed"): Promise<ApiResponse<Cookie[]>> {
     try {
       const cookies = await this.cookieRepository.findByStatus(status);
       return { success: true, data: cookies };
@@ -578,22 +520,17 @@ export class CookieService {
       // Get unique domains from cookies
       const domains = [...new Set(cookies.map((c) => c.domain))];
 
-      logger.info(
-        "[cookie.service] Storing ALL cookies from page (all domains)",
-        {
-          profileId,
-          pageUrl,
-          totalCookies: cookies.length,
-          domains: domains,
-          domainCount: domains.length,
-        }
-      );
+      logger.info("[cookie.service] Storing ALL cookies from page (all domains)", {
+        profileId,
+        pageUrl,
+        totalCookies: cookies.length,
+        domains: domains,
+        domainCount: domains.length,
+      });
 
       // ✅ Store ALL cookies without any filtering - convert to cookie string
       // Format: "name=value; name2=value2"
-      const cookieString = cookies
-        .map((cookie) => `${cookie.name}=${cookie.value}`)
-        .join("; ");
+      const cookieString = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 
       logger.info("[cookie.service] Extracted cookie string from ALL domains", {
         profileId,
@@ -607,18 +544,12 @@ export class CookieService {
       });
 
       // Find the earliest expiry date among the cookies
-      const expiryDates = cookies
-        .filter((c) => c.expires && c.expires > 0)
-        .map((c) => c.expires! * 1000);
+      const expiryDates = cookies.filter((c) => c.expires && c.expires > 0).map((c) => c.expires! * 1000);
 
-      const earliestExpiry =
-        expiryDates.length > 0 ? new Date(Math.min(...expiryDates)) : undefined;
+      const earliestExpiry = expiryDates.length > 0 ? new Date(Math.min(...expiryDates)) : undefined;
 
       // Check if a cookie already exists for this profile and pageUrl (full URL)
-      const existingCookie = await this.cookieRepository.findByProfileAndUrl(
-        profileId,
-        pageUrl
-      );
+      const existingCookie = await this.cookieRepository.findByProfileAndUrl(profileId, pageUrl);
 
       const now = new Date().toISOString();
 
@@ -633,14 +564,11 @@ export class CookieService {
 
         await this.cookieRepository.update(existingCookie.id, updates);
 
-        logger.info(
-          "[cookie.service] Updated existing cookie with ALL cookies from page",
-          {
-            cookieId: existingCookie.id,
-            cookieCount: cookies.length,
-            domains: domains,
-          }
-        );
+        logger.info("[cookie.service] Updated existing cookie with ALL cookies from page", {
+          cookieId: existingCookie.id,
+          cookieCount: cookies.length,
+          domains: domains,
+        });
 
         return {
           success: true,
@@ -661,42 +589,36 @@ export class CookieService {
           spidExpiration: earliestExpiry?.toISOString(),
           rotationIntervalMinutes: 1440, // Default 24 hours
           status: "active",
+          launchWorkerOnStartup: 0,
+          enabledRotationMethods: '["refreshCreds","rotateCookie"]',
+          rotationMethodOrder: '["refreshCreds","rotateCookie","headless"]',
           createdAt: now,
           updatedAt: now,
         };
 
-        logger.info(
-          "[cookie.service] Creating new cookie with ALL cookies from page",
-          {
-            cookieId: newCookie.id,
-            profileId: newCookie.profileId,
-            service: newCookie.service,
-            pageUrl: newCookie.url,
-            cookieCount: cookies.length,
-            domains: domains,
-          }
-        );
+        logger.info("[cookie.service] Creating new cookie with ALL cookies from page", {
+          cookieId: newCookie.id,
+          profileId: newCookie.profileId,
+          service: newCookie.service,
+          pageUrl: newCookie.url,
+          cookieCount: cookies.length,
+          domains: domains,
+        });
 
         await this.cookieRepository.insert(newCookie);
 
-        logger.info(
-          "[cookie.service] Created new cookie from page extraction (ALL domains)",
-          {
-            cookieId: newCookie.id,
-            profileId,
-            pageUrl,
-            cookieCount: cookies.length,
-            domains: domains,
-          }
-        );
+        logger.info("[cookie.service] Created new cookie from page extraction (ALL domains)", {
+          cookieId: newCookie.id,
+          profileId,
+          pageUrl,
+          cookieCount: cookies.length,
+          domains: domains,
+        });
 
         return { success: true, data: newCookie };
       }
     } catch (error) {
-      logger.error(
-        "[cookie.service] Failed to extract and store cookies from page",
-        error
-      );
+      logger.error("[cookie.service] Failed to extract and store cookies from page", error);
       return {
         success: false,
         error: "Failed to extract and store cookies from page",

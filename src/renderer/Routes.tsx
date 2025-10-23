@@ -1,23 +1,23 @@
 // JSX runtime does not require explicit React import
 import { Navigate, Route, Routes } from "react-router-dom";
-import MasterPromptPage from "./pages/master-prompt/MasterPromptPage";
-import PromptTypesPage from "./pages/master-prompt/PromptTypesPage";
-import AIPromptConfigPage from "./components/master-prompt/ai-prompt-config";
-import PromptPlaygroundPage from "./pages/master-prompt/PromptPlaygroundPage";
-import AutomationPage from "./pages/AutomationPage";
-import ProfilesPage from "./pages/ProfilesPage";
-import CookieRotationConfigPage from "./pages/CookieRotationConfigPage";
-import ChatAutomation from "./pages/automation/ChatAutomation";
-import InstanceDashboard from "./pages/automation/InstanceDashboard";
-import AllChannelsOverviewPage from "./pages/channel-management/AllChannelsOverviewPage";
-import SingleVideoCreationPage from "./pages/video-creation/SingleVideoCreationPage";
-import VideoHistoryPage from "./pages/video-creation/VideoHistoryPage";
-import StoryCreatePage from "./pages/video-creation/ScriptCreatePage";
-import ScriptEditorPage from "./pages/video-creation/ScriptEditorPage";
-import ChannelDeepDivePage from "./pages/channel-management/ChannelDeepDivePage";
-import ChannelMonitoringPage from "./pages/channel-management/ChannelMonitoringPage";
-import CompetitorMonitoringPage from "./pages/channel-management/CompetitorMonitoringPage";
-import { VideoCreationProvider } from "./contexts/VideoCreationContext";
+import MasterPromptPage from "@pages/master-prompt/MasterPromptPage";
+import PromptTypesPage from "@pages/master-prompt/PromptTypesPage";
+import AIPromptConfigPage from "@components/master-prompt/ai-prompt-config";
+import PromptPlaygroundPage from "@pages/master-prompt/PromptPlaygroundPage";
+import AutomationPage from "@pages/AutomationPage";
+import ProfilesPage from "@pages/profiles/ProfilesPage";
+import CookieRotationConfigPage from "@pages/profiles/CookieRotationConfigPage";
+import ChatAutomation from "@pages/automation/ChatAutomation";
+import InstanceDashboard from "@pages/automation/InstanceDashboard";
+import AllChannelsOverviewPage from "@pages/channel-management/AllChannelsOverviewPage";
+import SingleVideoCreationPage from "@pages/video-creation/SingleVideoCreationPage";
+import VideoHistoryPage from "@pages/video-creation/VideoHistoryPage";
+import StoryCreatePage from "@pages/video-creation/ScriptCreatePage";
+import ScriptEditorPage from "@pages/video-creation/ScriptEditorPage";
+import ChannelDeepDivePage from "@pages/channel-management/ChannelDeepDivePage";
+import ChannelMonitoringPage from "@pages/channel-management/ChannelMonitoringPage";
+import CompetitorMonitoringPage from "@pages/channel-management/CompetitorMonitoringPage";
+import { VideoCreationProvider } from "@contexts/VideoCreationContext";
 
 export default function AppRoutes() {
   return (

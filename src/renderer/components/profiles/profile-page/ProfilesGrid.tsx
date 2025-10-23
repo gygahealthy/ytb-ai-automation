@@ -1,13 +1,4 @@
-import {
-  Calendar,
-  Cookie,
-  DollarSign,
-  Edit,
-  Tag,
-  Trash2,
-  User,
-  MessageSquare,
-} from "lucide-react";
+import { Calendar, Cookie, DollarSign, Edit, Tag, Trash2, User, MessageSquare } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -118,10 +109,7 @@ export default function ProfilesGrid({
             </div>
 
             {/* Profile Name */}
-            <h3
-              className="text-lg font-bold mb-2 truncate"
-              title={profile.name}
-            >
+            <h3 className="text-lg font-bold mb-2 truncate" title={profile.name}>
               {profile.name}
             </h3>
 
@@ -153,18 +141,10 @@ export default function ProfilesGrid({
 
             {/* Cookie Status */}
             <div className="mb-3 flex items-center gap-2">
-              <Cookie
-                className={`w-4 h-4 ${
-                  isCookieExpired(profile.cookieExpires)
-                    ? "text-red-500"
-                    : "text-green-500"
-                }`}
-              />
+              <Cookie className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`} />
               <span
                 className={`text-xs ${
-                  isCookieExpired(profile.cookieExpires)
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-green-600 dark:text-green-400"
+                  isCookieExpired(profile.cookieExpires) ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
                 }`}
               >
                 {profile.cookieExpires

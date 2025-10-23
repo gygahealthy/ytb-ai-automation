@@ -1,5 +1,5 @@
 import { X, Copy, Download } from "lucide-react";
-import { Cookie } from "../../../../shared/types";
+import { Cookie } from "@/shared/types";
 import { useState } from "react";
 
 interface CookieDetailModalProps {
@@ -8,11 +8,7 @@ interface CookieDetailModalProps {
   onClose: () => void;
 }
 
-export default function CookieDetailModal({
-  isOpen,
-  cookie,
-  onClose,
-}: CookieDetailModalProps) {
+export default function CookieDetailModal({ isOpen, cookie, onClose }: CookieDetailModalProps) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!isOpen || !cookie) return null;
@@ -44,11 +40,7 @@ export default function CookieDetailModal({
     };
 
     const element = document.createElement("a");
-    element.setAttribute(
-      "href",
-      "data:text/json;charset=utf-8," +
-        encodeURIComponent(JSON.stringify(cookieData, null, 2))
-    );
+    element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cookieData, null, 2)));
     element.setAttribute("download", `${cookie.service}-cookies.json`);
     element.style.display = "none";
     document.body.appendChild(element);
@@ -81,30 +73,22 @@ export default function CookieDetailModal({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Cookie Metadata */}
           <div className="mb-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
-              Metadata
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">Metadata</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
-                  Service
-                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Service</p>
                 <p className="text-sm font-mono bg-white dark:bg-gray-800 mt-1 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                   {cookie.service}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
-                  URL
-                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">URL</p>
                 <p className="text-sm font-mono bg-white dark:bg-gray-800 mt-1 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white break-all">
                   {cookie.url}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
-                  Created
-                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Created</p>
                 <p className="text-sm font-mono bg-white dark:bg-gray-800 mt-1 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                   {new Date(cookie.createdAt).toLocaleString("en-US", {
                     month: "short",
@@ -118,9 +102,7 @@ export default function CookieDetailModal({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
-                  Expiration
-                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Expiration</p>
                 <p className="text-sm font-mono bg-white dark:bg-gray-800 mt-1 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                   {cookie.spidExpiration
                     ? new Date(cookie.spidExpiration).toLocaleString("en-US", {
@@ -161,9 +143,7 @@ export default function CookieDetailModal({
                 >
                   {/* Cookie Key */}
                   <div className="mb-3">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide mb-1">
-                      Key
-                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide mb-1">Key</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-sm font-mono bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-blue-600 dark:text-blue-400 break-all">
                         {cookie.key}
@@ -184,17 +164,13 @@ export default function CookieDetailModal({
 
                   {/* Cookie Value */}
                   <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide mb-1">
-                      Value
-                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide mb-1">Value</p>
                     <div className="flex items-start gap-2">
                       <code className="flex-1 text-sm font-mono bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-amber-600 dark:text-amber-400 break-all max-h-24 overflow-auto">
                         {cookie.value}
                       </code>
                       <button
-                        onClick={() =>
-                          handleCopy(cookie.value, `value-${index}`)
-                        }
+                        onClick={() => handleCopy(cookie.value, `value-${index}`)}
                         className={`p-1.5 rounded transition-all flex-shrink-0 ${
                           copiedKey === `value-${index}`
                             ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
@@ -212,9 +188,7 @@ export default function CookieDetailModal({
 
             {cookies.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">
-                  No cookies found in the cookie string
-                </p>
+                <p className="text-gray-500 dark:text-gray-400">No cookies found in the cookie string</p>
               </div>
             )}
           </div>

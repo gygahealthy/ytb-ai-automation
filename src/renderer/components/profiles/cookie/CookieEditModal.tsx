@@ -1,6 +1,6 @@
 import { Zap } from "lucide-react";
 import { useState } from "react";
-import { Cookie, ApiResponse } from "../../../../shared/types";
+import { Cookie, ApiResponse } from "@/shared/types";
 
 interface AddCookieModalProps {
   profileId: string | null;
@@ -9,12 +9,7 @@ interface AddCookieModalProps {
   onSuccess: () => void;
 }
 
-export function AddCookieModal({
-  profileId,
-  mode,
-  onClose,
-  onSuccess,
-}: AddCookieModalProps) {
+export function CookieEditModal({ profileId, mode, onClose, onSuccess }: AddCookieModalProps) {
   const [domain, setDomain] = useState("");
   const [rawCookieString, setRawCookieString] = useState("");
   const [service, setService] = useState("gemini");
@@ -33,14 +28,9 @@ export function AddCookieModal({
     setLoading(true);
     try {
       // Convert domain to full URL if not already a URL
-      const fullUrl =
-        domain.startsWith("http://") || domain.startsWith("https://")
-          ? domain
-          : `https://${domain}`;
+      const fullUrl = domain.startsWith("http://") || domain.startsWith("https://") ? domain : `https://${domain}`;
 
-      const response: ApiResponse<Cookie> = await (
-        window as any
-      ).electronAPI.cookies.createCookie(profileId, fullUrl, {
+      const response: ApiResponse<Cookie> = await (window as any).electronAPI.cookies.createCookie(profileId, fullUrl, {
         rawCookieString,
         service,
       });
@@ -67,14 +57,9 @@ export function AddCookieModal({
     setError("");
     try {
       // Ensure URL has protocol
-      const fullUrl =
-        url.startsWith("http://") || url.startsWith("https://")
-          ? url
-          : `https://${url}`;
+      const fullUrl = url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
 
-      const response: ApiResponse<Cookie> = await (
-        window as any
-      ).electronAPI.cookies.extractAndCreateCookie(
+      const response: ApiResponse<Cookie> = await (window as any).electronAPI.cookies.extractAndCreateCookie(
         profileId,
         service,
         fullUrl,
@@ -96,11 +81,7 @@ export function AddCookieModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full mx-4 p-6 shadow-lg">
-        <h3 className="text-lg font-bold mb-4">
-          {mode === "manual"
-            ? "Add Cookie Manually"
-            : "Extract Cookie from URL"}
-        </h3>
+        <h3 className="text-lg font-bold mb-4">{mode === "manual" ? "Add Cookie Manually" : "Extract Cookie from URL"}</h3>
         {mode === "manual" ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -128,9 +109,7 @@ export function AddCookieModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Cookie String
-              </label>
+              <label className="block text-sm font-medium mb-1">Cookie String</label>
               <textarea
                 value={rawCookieString}
                 onChange={(e) => setRawCookieString(e.target.value)}
@@ -186,8 +165,8 @@ export function AddCookieModal({
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3 text-xs text-blue-800 dark:text-blue-300">
               <p className="font-semibold mb-1">How it works:</p>
               <p>
-                This will open the URL in your browser profile and automatically
-                extract cookies. Make sure you're logged in to the service.
+                This will open the URL in your browser profile and automatically extract cookies. Make sure you're logged in to
+                the service.
               </p>
             </div>
 

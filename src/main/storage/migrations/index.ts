@@ -1,10 +1,6 @@
 import { Logger } from "../../../shared/utils/logger";
 import type { SQLiteDatabase } from "../sqlite-database";
-import {
-  runMigrationsFromModules,
-  Migration,
-  getCurrentVersion,
-} from "./runner";
+import { runMigrationsFromModules, Migration, getCurrentVersion } from "./runner";
 import * as m001 from "./modules/001_add_user_agent_and_tags";
 import * as m002 from "./modules/002_add_is_logged_in";
 import * as m003 from "./modules/003_add_master_prompts";
@@ -28,6 +24,7 @@ import * as m020 from "./modules/020_add_url_to_cookies";
 import * as m021 from "./modules/021_add_component_prompt_configs";
 import * as m022 from "./modules/022_add_variable_occurrences_config";
 import * as m023 from "./modules/023_remove_gemini_token_column";
+import * as m024 from "./modules/024_add_cookie_rotation_config_columns";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -55,6 +52,7 @@ const modules: Migration[] = [
   m021,
   m022,
   m023,
+  m024,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

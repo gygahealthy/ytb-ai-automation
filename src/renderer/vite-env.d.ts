@@ -68,9 +68,7 @@ interface Window {
       generateUserAgent: () => Promise<any>;
       getDefaultChromePath: () => Promise<any>;
       selectBrowserExecutable: () => Promise<any>;
-      showOpenDialog: (
-        options: any
-      ) => Promise<{ canceled: boolean; filePaths: string[] }>;
+      showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
     };
     masterPrompts: {
       getAll: () => Promise<any>;
@@ -96,6 +94,9 @@ interface Window {
     cookieRotation: {
       getStatus: () => Promise<any>;
       getProfiles: () => Promise<any>;
+      getProfilesConfig: () => Promise<any>;
+      updateCookieConfig: (cookieId: string, config: any) => Promise<any>;
+      getCookieConfig: (cookieId: string) => Promise<any>;
       startWorker: (profileId: string, cookieId: string) => Promise<any>;
       restartWorker: (profileId: string, cookieId: string) => Promise<any>;
       stopWorker: (profileId: string, cookieId: string) => Promise<any>;

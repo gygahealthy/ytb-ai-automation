@@ -1,6 +1,6 @@
 import { Cookie, DollarSign, Folder, Globe, Plus, RefreshCw, Tag, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSettingsStore, BrowserPath } from "../../store/settings.store";
+import { useSettingsStore, BrowserPath } from "@store/settings.store";
 
 interface Profile {
   id: string;
@@ -36,11 +36,11 @@ interface ProfileFormProps {
 export default function ProfileForm({ isEditMode, editingProfile, onSave, onCancel }: ProfileFormProps) {
   // Helper to unwrap IPC responses which might be { success, data } or plain string
   const unwrap = (val: any): string => {
-    if (!val && val !== 0) return '';
-    if (typeof val === 'string') return val;
-    if (typeof val === 'object') {
-      if ('data' in val) return typeof val.data === 'string' ? val.data : String(val.data ?? '');
-      if ('filePaths' in val && Array.isArray(val.filePaths)) return val.filePaths[0] ?? '';
+    if (!val && val !== 0) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "object") {
+      if ("data" in val) return typeof val.data === "string" ? val.data : String(val.data ?? "");
+      if ("filePaths" in val && Array.isArray(val.filePaths)) return val.filePaths[0] ?? "";
     }
     return String(val);
   };
@@ -243,13 +243,11 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
                   key={bp.id}
                   onClick={() => setFormData((prev) => ({ ...prev, browserPath: bp.path }))}
                   title={bp.path}
-                  className={
-                    `inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs border transition-colors ${
-                      isSelected
-                        ? 'bg-primary-500 text-white border-primary-500'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`
-                  }
+                  className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs border transition-colors ${
+                    isSelected
+                      ? "bg-primary-500 text-white border-primary-500"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
                 >
                   <Globe className="w-3 h-3" />
                   <span className="max-w-[12rem] truncate">{bp.name || bp.path}</span>
@@ -284,9 +282,7 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
             Browse
           </button>
         </div>
-        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-          Default: {defaultProfilePath || "Loading..."}
-        </p>
+        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Default: {defaultProfilePath || "Loading..."}</p>
       </div>
 
       {/* User Agent Field */}
@@ -333,9 +329,7 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
           className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
           placeholder="0.00"
         />
-        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-          Set the initial credit balance for this profile
-        </p>
+        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Set the initial credit balance for this profile</p>
       </div>
 
       {/* Cookies Field */}

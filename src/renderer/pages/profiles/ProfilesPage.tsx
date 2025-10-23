@@ -1,15 +1,15 @@
 import { Plus, Search, Tag, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import ProfileForm, { ProfileFormData } from "../components/profiles/ProfileForm";
-import ProfilesTable from "../components/profiles/ProfilesTable";
-import ProfilesGrid from "../components/profiles/ProfilesGrid";
-import ProfilesToolbar from "../components/profiles/ProfilesToolbar";
-import CookieModal from "../components/profiles/CookieModal";
-import ChatModal from "../components/profiles/ChatModal";
-import { useModal } from "../hooks/useModal";
-import { useAlert } from "../hooks/useAlert";
-import { useConfirm } from "../hooks/useConfirm";
-import electronApi from "../ipc";
+import ProfileForm, { ProfileFormData } from "@components/profiles/profile-page/ProfileForm";
+import ProfilesTable from "@components/profiles/profile-page/ProfilesTable";
+import ProfilesGrid from "@/renderer/components/profiles/profile-page/ProfilesGrid";
+import ProfilesToolbar from "@components/profiles/profile-page/ProfilesToolbar";
+import CookieModal from "@components/profiles/CookieModal";
+import ChatModal from "@components/profiles/ChatModal";
+import { useModal } from "@hooks/useModal";
+import { useAlert } from "@hooks/useAlert";
+import { useConfirm } from "@hooks/useConfirm";
+import electronApi from "@renderer/ipc";
 
 interface Profile {
   id: string;
@@ -320,7 +320,6 @@ export default function ProfilesPage() {
             columnVisibility={columnVisibility}
             onEditProfile={handleEditProfile}
             onDeleteProfile={handleDeleteProfile}
-            onOpenCookieModal={handleOpenCookieModal}
             onOpenChatModal={handleOpenChatModal}
           />
         )}

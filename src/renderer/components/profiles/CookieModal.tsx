@@ -1,7 +1,7 @@
 import { Plus, AlertCircle, Zap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Cookie, ApiResponse } from "../../../shared/types";
-import { CookieCard, AddCookieModal, CookieDetailModal } from "./cookie";
+import { CookieCard, CookieEditModal, CookieDetailModal } from "./cookie";
 import { useAlert } from "../../hooks/useAlert";
 
 interface CookieManagementModalProps {
@@ -10,11 +10,7 @@ interface CookieManagementModalProps {
   onClose: () => void;
 }
 
-export default function CookieModal({
-  isOpen,
-  profileId,
-  onClose,
-}: CookieManagementModalProps) {
+export default function CookieModal({ isOpen, profileId, onClose }: CookieManagementModalProps) {
   const alert = useAlert();
   const [cookies, setCookies] = useState<Cookie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,17 +19,13 @@ export default function CookieModal({
   const [selectedCookie, setSelectedCookie] = useState<Cookie | null>(null);
   const [rotationInterval, setRotationInterval] = useState(1440);
   const [addMode, setAddMode] = useState<"manual" | "extract">("manual");
-  const [extractingCookieId, setExtractingCookieId] = useState<string | null>(
-    null
-  );
+  const [extractingCookieId, setExtractingCookieId] = useState<string | null>(null);
 
   const loadCookies = useCallback(async () => {
     if (!profileId) return;
     setLoading(true);
     try {
-      const response: ApiResponse<Cookie[]> = await (
-        window as any
-      ).electronAPI.cookies.getCookiesByProfile(profileId);
+      const response: ApiResponse<Cookie[]> = await (window as any).electronAPI.cookies.getCookiesByProfile(profileId);
       if (response.success && response.data) {
         setCookies(response.data);
       }
@@ -81,9 +73,7 @@ export default function CookieModal({
     if (!confirm("Are you sure you want to delete this cookie?")) return;
 
     try {
-      const response: ApiResponse<void> = await (
-        window as any
-      ).electronAPI.cookies.deleteCookie(cookieId);
+      const response: ApiResponse<void> = await (window as any).electronAPI.cookies.deleteCookie(cookieId);
       if (response.success) {
         await loadCookies();
       } else {
@@ -103,14 +93,9 @@ export default function CookieModal({
     }
   };
 
-  const handleUpdateInterval = async (
-    cookieId: string,
-    newInterval: number
-  ) => {
+  const handleUpdateInterval = async (cookieId: string, newInterval: number) => {
     try {
-      const response: ApiResponse<void> = await (
-        window as any
-      ).electronAPI.cookies.updateRotationInterval(cookieId, newInterval);
+      const response: ApiResponse<void> = await (window as any).electronAPI.cookies.updateRotationInterval(cookieId, newInterval);
       if (response.success) {
         await loadCookies();
       } else {
@@ -124,8 +109,7 @@ export default function CookieModal({
       console.error("Failed to update rotation interval:", error);
       alert.show({
         title: "Update Error",
-        message:
-          "An unexpected error occurred while updating rotation interval",
+        message: "An unexpected error occurred while updating rotation interval",
         severity: "error",
       });
     }
@@ -133,8 +117,7 @@ export default function CookieModal({
 
   const getStatusColor = (status: string, cookie?: Cookie) => {
     if (cookie && status === "active") {
-      const isExpired =
-        cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
+      const isExpired = cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
       if (isExpired) return "text-red-600 dark:text-red-400";
       return "text-green-600 dark:text-green-400";
     }
@@ -152,8 +135,7 @@ export default function CookieModal({
 
   const getStatusBg = (status: string, cookie?: Cookie) => {
     if (cookie && status === "active") {
-      const isExpired =
-        cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
+      const isExpired = cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
       if (isExpired) return "bg-red-100 dark:bg-red-900/30";
       return "bg-green-100 dark:bg-green-900/30";
     }
@@ -171,8 +153,7 @@ export default function CookieModal({
 
   const getStatusLabel = (status: string, cookie?: Cookie) => {
     if (cookie && status === "active") {
-      const isExpired =
-        cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
+      const isExpired = cookie.spidExpiration && new Date(cookie.spidExpiration) < new Date();
       if (isExpired) return "Expired";
       return "Active";
     }
@@ -186,9 +167,7 @@ export default function CookieModal({
       const cookie = cookies.find((c) => c.id === cookieId);
       if (!cookie) return;
 
-      const response: ApiResponse<Cookie> = await (
-        window as any
-      ).electronAPI.cookies.extractAndCreateCookie(
+      const response: ApiResponse<Cookie> = await (window as any).electronAPI.cookies.extractAndCreateCookie(
         profileId,
         cookie.service,
         cookie.url,
@@ -198,15 +177,14 @@ export default function CookieModal({
       if (response.success) {
         // Count cookies from rawCookieString
         const cookieCount = response.data?.rawCookieString
-          ? response.data.rawCookieString.split(";").filter((c) => c.trim())
-              .length
+          ? response.data.rawCookieString.split(";").filter((c) => c.trim()).length
           : 0;
 
         alert.show({
           title: "Cookie Extraction Successful",
-          message: `Successfully extracted ${cookieCount} cookie${
-            cookieCount !== 1 ? "s" : ""
-          } in ${headless ? "headless" : "visible"} mode`,
+          message: `Successfully extracted ${cookieCount} cookie${cookieCount !== 1 ? "s" : ""} in ${
+            headless ? "headless" : "visible"
+          } mode`,
           severity: "success",
           duration: 4000,
         });
@@ -246,9 +224,7 @@ export default function CookieModal({
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Cookie Management
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Manage authentication cookies for your profiles
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage authentication cookies for your profiles</p>
           </div>
           <button
             onClick={onClose}
@@ -290,24 +266,15 @@ export default function CookieModal({
                 <div className="absolute inset-0 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-blue-600 dark:border-blue-400 rounded-full border-t-transparent animate-spin"></div>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
-                Loading cookies...
-              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Loading cookies...</p>
             </div>
           ) : cookies.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center mb-4">
-                <AlertCircle
-                  size={40}
-                  className="text-blue-600 dark:text-blue-400"
-                />
+                <AlertCircle size={40} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No cookies found
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Add a cookie to get started with authentication
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No cookies found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Add a cookie to get started with authentication</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -333,7 +300,7 @@ export default function CookieModal({
 
         {/* Add/Edit Cookie Modal */}
         {showAddModal && (
-          <AddCookieModal
+          <CookieEditModal
             profileId={profileId}
             mode={addMode}
             onClose={() => setShowAddModal(false)}

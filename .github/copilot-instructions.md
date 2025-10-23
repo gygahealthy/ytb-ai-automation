@@ -1,12 +1,48 @@
 # VS Code Copilot Custom Instructions (Project-tailored)
 
-These instructions are tuned for the VEO3 / ytb-ai-automation Electron + React + TypeScript project in this repository. They guide code generation so suggestions align with the project's architecture, safety rules, and developer workflow.
+These instructions are tuned for the **VEO3 / ytb-ai-automation** Electron + React + TypeScript project. They guide AI code generation to align with the project's modular architecture, service boundaries, database patterns, and developer workflow.
 
-Principles:
+## Project Overview
 
-- Keep the main process minimal and push heavy work into services.
-- Renderer code is React + TypeScript (strict mode) using Tailwind for styles.
-- Follow the repository/service patterns: repositories handle DB access, services orchestrate business logic, pages/components handle UI.
+- **Desktop App**: Electron + React 18 + TypeScript (strict mode)
+- **Architecture**: Feature modules with isolated domain services and repositories
+- **Database**: SQLite with versioned migrations (not one-shot schema files)
+- **Styling**: Tailwind CSS with dark mode support
+- **Communication**: IPC via preload bridge (not direct `ipcRenderer`)
+
+### Core Principles
+
+1. Keep the main process minimal; push heavy work into modular services under `src/main/modules/`.
+2. Repositories own all database access (no raw SQL in services or UI).
+3. Migrations are applied incrementally in order; always register new migrations in `src/main/storage/migrations/index.ts`.
+4. Renderer is React with functional components, context for shared state, and Tailwind utilities.
+
+## Module Architecture (Critical Pattern)
+
+Each feature lives as a **module** under `src/main/modules/<module-name>/` with a standard structure:
+
+```
+src/main/modules/gemini-apis/          # Example module
+├── manifest.json                      # Module metadata (enable/disable)
+├── index.ts                          # Module entry + optional registerModule()
+├── handlers/
+│   ├── registrations.ts              # Export IpcRegistration[] array
+│   ├── cookie-rotation.ts            # Individual handler files
+│   └── ...
+├── services/                         # Business logic (accepts repositories)
+│   ├── cookie-rotation.service.ts
+│   └── ...
+├── repository/                       # Data access (singleton instances)
+│   ├── cookie.repository.ts
+│   └── ...
+├── types/                            # Module-specific types
+├── helpers/                          # Pure utilities
+└── workers/                          # Background workers if needed
+```
+
+**IPC Registration Flow**: Module handlers export `IpcRegistration[]` from `handlers/registrations.ts` → module-loader dynamically discovers and registers → handlers accept IPC calls → handlers delegate to services.
+
+**Module Manifest**: Each module has `manifest.json`. Set `disabled: true` to skip loading the module entirely (useful for feature flags).
 
 ## Documentation & Files
 
@@ -18,17 +54,150 @@ Do not create new top-level documentation files unless explicitly requested. If 
 - Avoid `any`. If necessary, add a short comment explaining why and prefer `unknown` with validation.
 - Use Promises/async-await and proper try/catch error handling. Bubble clear errors with context. Log using `src/core/logging` logger utilities when relevant.
 
-## Project Patterns (must follow)
+## Database & Migrations (CRITICAL Pattern)
 
-- Database access: always go through repository classes in `src/main/storage/repositories/` or other repo files. Do not access `sqlite-database` or write raw SQL inside services or UI code.
-- Services: live under `src/main/modules/*` or `src/main/services` and accept repositories via dependency injection when possible.
-- IPC: use `preload.ts` exported bridge (e.g., `electronAPI`) rather than direct `ipcRenderer` in the renderer. All IPC handlers should be defined in `src/main/handlers/`.
+**Never** edit `schema.sql` directly for production changes. Schema is only a bootstrap reference.
 
-## React / Renderer Guidelines
+### Migrations are Modular
 
-- Use functional components with hooks. Type props and return types.
-- Keep components focused and composable. Lift state into contexts under `src/renderer/contexts/` when needed.
-- Styling: Tailwind utilities are used across the app. Support dark mode by using `dark:` classes.
+All schema changes go through versioned migration **modules** in `src/main/storage/migrations/modules/`:
+
+```typescript
+// File: 024_add_cookie_rotation_config_columns.ts
+export const version = 24;
+export const description = "Add cookie rotation config columns";
+
+export async function up(db: SQLiteDatabase, logger?: Logger): Promise<void> {
+  const columns = await db.all("PRAGMA table_info(cookies)");
+  const hasColumn = columns.some((c) => c.name === "launch_worker_on_startup");
+  if (!hasColumn) {
+    await db.run("ALTER TABLE cookies ADD COLUMN launch_worker_on_startup INTEGER DEFAULT 0");
+    // ... add more columns
+  }
+}
+```
+
+**Must register** in `src/main/storage/migrations/index.ts`:
+
+```typescript
+import * as m024 from "./modules/024_add_cookie_rotation_config_columns";
+const modules: Migration[] = [/*...*/ m023, m024];
+```
+
+**Why modular migrations?**
+
+- Safe incremental updates (migrations run in transaction order)
+- Easy rollback and debugging
+- Avoids two-phase schema updates (create → populate → drop old table)
+- Works with existing databases at any version
+
+### Repository Pattern (Mandatory)
+
+All database access through repositories. Example:
+
+```typescript
+// src/main/modules/profile-management/repository/profile.repository.ts
+export class ProfileRepository extends BaseRepository<Profile> {
+  async findById(id: string): Promise<Profile | null> {
+    /* ... */
+  }
+  async create(data: CreateProfileInput): Promise<Profile> {
+    /* ... */
+  }
+}
+
+export const profileRepository = new ProfileRepository();
+```
+
+**Never** use raw SQL in services or renderer—always delegate to repository.
+
+## IPC & Service Communication
+
+**IPC Handler Pattern**: Handlers bridge renderer and main process.
+
+```typescript
+// src/main/modules/gemini-apis/handlers/registrations.ts
+import { IpcRegistration } from "@core/ipc/types";
+
+const handler: IpcRegistration = {
+  channel: "cookie-rotation:update-config",
+  handler: async (event, cookieId: string, config: Partial<CookieRotationConfig>) => {
+    return await cookieService.updateConfig(cookieId, config);
+  },
+};
+
+export const registrations: IpcRegistration[] = [handler];
+```
+
+**Renderer side**: Use the preload bridge:
+
+```typescript
+// React component in src/renderer/components/
+const result = await(window as any).electronAPI.invoke("cookie-rotation:update-config", cookieId, config);
+```
+
+**Never use direct `ipcRenderer`** in renderer—always go through the `electronAPI` bridge defined in `src/main/preload.ts`.
+
+## Service Layer
+
+- Services accept repositories via constructor injection
+- Services are singletons exported from their module
+- Services call repository methods, never raw DB
+
+Example:
+
+```typescript
+export class CookieRotationService {
+  constructor(private cookieRepository: CookieRepository) {}
+
+  async updateConfig(cookieId: string, config: Partial<CookieRotationConfig>) {
+    return this.cookieRepository.update(cookieId, config);
+  }
+}
+
+export const cookieService = new CookieRotationService(cookieRepository);
+```
+
+## React & Renderer Guidelines
+
+- Use functional components with hooks. Type all props and return types explicitly.
+- Keep components focused and composable. Lift state into contexts under `src/renderer/contexts/` for cross-component sharing.
+- For complex forms, extract into separate components to match the pattern used in profiles (e.g., `CookieRotationConfigList`, `ProfileCookieConfigRow`).
+- Styling: Tailwind utilities throughout; always support dark mode with `dark:` prefixes.
+- IPC communication: Call `(window as any).electronAPI.invoke(channel, ...args)` with typed channel names; never use `ipcRenderer` directly.
+- State management: Use React context for UI state (modals, drawers, expanded/collapsed). Export singleton services/repositories for domain logic.
+
+## Development Workflow & Build Commands
+
+**Development**:
+
+```
+npm run dev        # Start dev server with hot reload (Vite + Electron watch)
+npm run dev:vite   # Vite dev server only (for rapid renderer iteration)
+npm run dev:electron:watch  # Watch-compile main process only
+npm run dev:electron:run    # Run Electron (starts after Vite is ready)
+```
+
+**Production Build**:
+
+```
+npm run build       # Build everything (Vite + TypeScript main)
+npm run build:electron  # Build Electron main process only
+npm run package    # Full package for distribution
+```
+
+**Quality**:
+
+```
+npm run lint       # ESLint (must pass before committing)
+npm run rebuild    # Rebuild native sqlite3 module (if needed)
+```
+
+**Key build side effects**:
+
+- `copy:sql` task copies `src/main/storage/schema.sql` → `dist/main/storage/schema.sql` (migrations read from compiled path)
+- Migrations run automatically on DB initialization; check logs for migration errors
+- Always run `npm run build` before committing to catch TypeScript errors
 
 ## Naming Conventions
 
