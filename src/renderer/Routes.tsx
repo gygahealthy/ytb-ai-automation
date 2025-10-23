@@ -6,6 +6,7 @@ import AIPromptConfigPage from "./components/master-prompt/ai-prompt-config";
 import PromptPlaygroundPage from "./pages/master-prompt/PromptPlaygroundPage";
 import AutomationPage from "./pages/AutomationPage";
 import ProfilesPage from "./pages/ProfilesPage";
+import CookieRotationConfigPage from "./pages/CookieRotationConfigPage";
 import ChatAutomation from "./pages/automation/ChatAutomation";
 import InstanceDashboard from "./pages/automation/InstanceDashboard";
 import AllChannelsOverviewPage from "./pages/channel-management/AllChannelsOverviewPage";
@@ -22,7 +23,11 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/profiles" replace />} />
+
+      {/* Profiles routes */}
       <Route path="/profiles" element={<ProfilesPage />} />
+      <Route path="/profiles/cookie-rotation" element={<CookieRotationConfigPage />} />
+
       <Route path="/automation" element={<AutomationPage />} />
       <Route path="/automation/instance" element={<InstanceDashboard />} />
       <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />

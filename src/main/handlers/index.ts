@@ -3,7 +3,6 @@ import { registerAll } from "../../core/ipc/registry";
 import { logger } from "../utils/logger-backend";
 import { IpcRegistration } from "../../core/ipc/types";
 import { registerDevToolsHandlers } from "./devtools";
-import { registerCookieRotationHandlers } from "./cookie-rotation";
 
 /**
  * Register all IPC handlers
@@ -32,9 +31,6 @@ export function registerIPCHandlers(): void {
 
   // Register devtools handlers
   registerDevToolsHandlers();
-
-  // Register cookie rotation handlers
-  registerCookieRotationHandlers();
 
   // master-prompts handlers are provided by the prompt-management module
 

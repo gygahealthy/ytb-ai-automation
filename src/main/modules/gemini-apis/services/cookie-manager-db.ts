@@ -8,7 +8,7 @@ import type { CookieCollection, RotationResult, ValidationResult, CookieService 
 import { COOKIE_SERVICES } from "../shared/types/index.js";
 import { cookiesToHeader, validateRequiredCookies, mergeCookies } from "../helpers/cookie/cookie-parser.helpers.js";
 import { logger } from "../../../utils/logger-backend.js";
-import { startAutoRotation, type RotationControl } from "../helpers/cookie/cookie-rotation.helpers.js";
+import { startAutoRotation, type RotationControl } from "../helpers/cookie-rotation/cookie-rotation.helpers.js";
 import type { CookieRepository } from "../repository/cookie.repository.js";
 import type { Cookie } from "../shared/types/index.js";
 

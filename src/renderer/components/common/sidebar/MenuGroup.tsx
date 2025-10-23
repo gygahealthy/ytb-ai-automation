@@ -8,37 +8,42 @@ const MenuGroup: React.FC<MenuGroupProps> = ({ route, currentPage, currentPath, 
   const [isOpen, setIsOpen] = useState(route.defaultOpen ?? true);
   const Icon = route.icon;
 
-  // Check if this group or any of its children are active
-  const isActive = React.useMemo(() => {
-    const checkActive = (r: typeof route): boolean => {
-      if (r.page && currentPage?.toString().startsWith(r.page.toString())) {
-        return true;
-      }
-      if (r.path && currentPath === r.path) {
-        return true;
-      }
+  // Determine whether any child (recursively) is active - used to auto-open groups
+  const hasActiveChild = React.useMemo(() => {
+    const checkActiveRecursive = (r: typeof route): boolean => {
       if (r.children) {
-        return r.children.some(checkActive);
+        return r.children.some((child) => {
+          if (child.page && currentPage?.toString().startsWith(child.page.toString())) return true;
+          if (child.path && currentPath === child.path) return true;
+          return checkActiveRecursive(child);
+        });
       }
       return false;
     };
-    return checkActive(route);
+    return checkActiveRecursive(route);
+  }, [route, currentPage, currentPath]);
+
+  // Highlight the group button only when the group's own route exactly matches current path/page
+  const isActive = React.useMemo(() => {
+    if (route.page && currentPage?.toString() === route.page.toString()) return true;
+    if (route.path && currentPath === route.path) return true;
+    return false;
   }, [route, currentPage, currentPath]);
 
   // Auto-open if active child exists
   useEffect(() => {
-    if (isActive && !isOpen) {
+    // Auto-open if any child is active (but don't rely on group highlight)
+    if (hasActiveChild && !isOpen) {
       setIsOpen(true);
     }
-  }, [isActive]);
+  }, [hasActiveChild]);
 
   const hasChildren = route.children && route.children.length > 0;
 
   if (!hasChildren) {
     // Leaf node - render as MenuItem
-    const itemIsActive = route.page 
-      ? currentPage?.toString().startsWith(route.page.toString()) 
-      : route.path === currentPath;
+    // Use exact equality so child pages don't cause parent pages to be highlighted
+    const itemIsActive = route.page ? currentPage?.toString() === route.page.toString() : route.path === currentPath;
 
     return (
       <MenuItem route={route} isActive={itemIsActive} isCollapsed={isCollapsed} onNavigate={onNavigate} isChild={level > 0} />
@@ -53,9 +58,7 @@ const MenuGroup: React.FC<MenuGroupProps> = ({ route, currentPage, currentPath, 
         className={clsx(
           "w-full flex items-center gap-3 rounded-lg font-medium transition-colors text-left",
           isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
-          isActive
-            ? "bg-primary-500 text-white"
-            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          isActive ? "bg-primary-500 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
         )}
         title={isCollapsed ? route.label : undefined}
       >

@@ -1,8 +1,6 @@
 import { Plus, Search, Tag, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import ProfileForm, {
-  ProfileFormData,
-} from "../components/profiles/ProfileForm";
+import ProfileForm, { ProfileFormData } from "../components/profiles/ProfileForm";
 import ProfilesTable from "../components/profiles/ProfilesTable";
 import ProfilesGrid from "../components/profiles/ProfilesGrid";
 import ProfilesToolbar from "../components/profiles/ProfilesToolbar";
@@ -58,13 +56,9 @@ export default function ProfilesPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [showCookieModal, setShowCookieModal] = useState(false);
-  const [cookieModalProfileId, setCookieModalProfileId] = useState<
-    string | null
-  >(null);
+  const [cookieModalProfileId, setCookieModalProfileId] = useState<string | null>(null);
   const [showChatModal, setShowChatModal] = useState(false);
-  const [chatModalProfileId, setChatModalProfileId] = useState<string | null>(
-    null
-  );
+  const [chatModalProfileId, setChatModalProfileId] = useState<string | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     id: false,
     name: true,
@@ -84,9 +78,7 @@ export default function ProfilesPage() {
 
   const loadProfiles = async () => {
     try {
-      const response = (await electronApi.profile.getAll()) as ApiResponse<
-        Profile[]
-      >;
+      const response = (await electronApi.profile.getAll()) as ApiResponse<Profile[]>;
       if (response.success && response.data) {
         setProfiles(response.data);
       }
@@ -101,9 +93,7 @@ export default function ProfilesPage() {
       profile.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       profile.userDataDir?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesTags =
-      selectedTags.length === 0 ||
-      (profile.tags && profile.tags.some((tag) => selectedTags.includes(tag)));
+    const matchesTags = selectedTags.length === 0 || (profile.tags && profile.tags.some((tag) => selectedTags.includes(tag)));
 
     return matchesSearch && matchesTags;
   });
@@ -118,12 +108,7 @@ export default function ProfilesPage() {
       title: "Create New Profile",
       icon: <User className="w-6 h-6 text-indigo-500" />,
       content: (
-        <ProfileForm
-          isEditMode={false}
-          editingProfile={null}
-          onSave={handleSaveProfile}
-          onCancel={() => modal.closeModal()}
-        />
+        <ProfileForm isEditMode={false} editingProfile={null} onSave={handleSaveProfile} onCancel={() => modal.closeModal()} />
       ),
       size: "lg",
       closeOnEscape: true,
@@ -139,12 +124,7 @@ export default function ProfilesPage() {
       title: "Edit Profile",
       icon: <User className="w-6 h-6 text-indigo-500" />,
       content: (
-        <ProfileForm
-          isEditMode={true}
-          editingProfile={profile}
-          onSave={handleSaveProfile}
-          onCancel={() => modal.closeModal()}
-        />
+        <ProfileForm isEditMode={true} editingProfile={profile} onSave={handleSaveProfile} onCancel={() => modal.closeModal()} />
       ),
       size: "lg",
       closeOnEscape: true,
@@ -213,9 +193,7 @@ export default function ProfilesPage() {
     }
 
     try {
-      const response = (await electronApi.profile.delete(
-        id
-      )) as ApiResponse<boolean>;
+      const response = (await electronApi.profile.delete(id)) as ApiResponse<boolean>;
       if (response.success) {
         await loadProfiles();
       } else {
@@ -233,16 +211,12 @@ export default function ProfilesPage() {
     }
   };
 
-  // Login flow removed
-
   const toggleColumnVisibility = (column: keyof ColumnVisibility) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
   };
 
   const toggleTagFilter = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
   const handleOpenCookieModal = (profileId: string) => {
@@ -275,12 +249,8 @@ export default function ProfilesPage() {
               <User className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                Profiles
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Manage your browser profiles efficiently
-              </p>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Profiles</h1>
+              <p className="text-gray-500 dark:text-gray-400">Manage your browser profiles efficiently</p>
             </div>
           </div>
           <button
@@ -301,9 +271,7 @@ export default function ProfilesPage() {
         toggleTagFilter={toggleTagFilter}
         allTags={allTags}
         columnVisibility={columnVisibility}
-        toggleColumnVisibility={(c) =>
-          toggleColumnVisibility(c as keyof ColumnVisibility)
-        }
+        toggleColumnVisibility={(c) => toggleColumnVisibility(c as keyof ColumnVisibility)}
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
@@ -311,9 +279,7 @@ export default function ProfilesPage() {
       {/* Active Filters Display */}
       {(searchQuery || selectedTags.length > 0) && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            Active filters:
-          </span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Active filters:</span>
           {searchQuery && (
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
               <Search className="w-3.5 h-3.5" />
@@ -375,18 +341,10 @@ export default function ProfilesPage() {
       </div>
 
       {/* Cookie Management Modal */}
-      <CookieModal
-        isOpen={showCookieModal}
-        profileId={cookieModalProfileId}
-        onClose={handleCloseCookieModal}
-      />
+      <CookieModal isOpen={showCookieModal} profileId={cookieModalProfileId} onClose={handleCloseCookieModal} />
 
       {/* Chat Modal */}
-      <ChatModal
-        isOpen={showChatModal}
-        profileId={chatModalProfileId}
-        onClose={handleCloseChatModal}
-      />
+      <ChatModal isOpen={showChatModal} profileId={chatModalProfileId} onClose={handleCloseChatModal} />
     </div>
   );
 }

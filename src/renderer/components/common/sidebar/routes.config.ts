@@ -10,11 +10,12 @@ import {
   Youtube,
   FlaskConical,
   Wand2 as Wand,
+  Zap as ZapIcon,
 } from "lucide-react";
 import { RouteConfig } from "../../../types/menu-route.types";
 
 // Ordered menu per request:
-// 1. Profiles
+// 1. Profiles (with submenu: Profiles, Cookie Rotation Config)
 // 2. Single Video Creation
 // 3. Channel Management
 // 4. Master Prompt (LayoutDashboard icon)
@@ -24,8 +25,24 @@ export const routeConfig: RouteConfig[] = [
     id: "profiles",
     label: "Profiles",
     icon: Users,
-    path: "/profiles",
     page: "profiles",
+    defaultOpen: true,
+    children: [
+      {
+        id: "profiles.main",
+        label: "Profiles",
+        icon: Users,
+        path: "/profiles",
+        page: "profiles",
+      },
+      {
+        id: "profiles.cookie-rotation",
+        label: "Cookie Config",
+        icon: ZapIcon,
+        path: "/profiles/cookie-rotation",
+        page: "profiles.cookie-rotation",
+      },
+    ],
   },
   {
     id: "video-creation",
