@@ -1,0 +1,7 @@
+{
+  "id": "cookie-rotation",
+  "name": "Cookie Rotation",
+  "version": "0.1.0",
+  "disabled": false,
+  "description": "Background cookie rotation workers and config management"
+}

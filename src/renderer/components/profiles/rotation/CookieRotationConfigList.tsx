@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import ProfileCookieConfigRow from "./ProfileCookieConfigRow";
+import CookieConfigCard from "./CookieConfigCard";
+import AddCookieCard from "./AddCookieCard";
 import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
 
 interface ProfileWithCookieConfig {
@@ -13,15 +14,29 @@ interface ProfileWithCookieConfig {
     status: string;
     lastRotatedAt?: string;
     config: CookieRotationConfig;
+    workerStatus?: string;
   }>;
 }
 
 interface CookieRotationConfigListProps {
   profiles: ProfileWithCookieConfig[];
   onUpdateConfig: (cookieId: string, config: Partial<CookieRotationConfig>) => Promise<void>;
+  onAddCookie?: (profileId: string) => void;
+  onForceHeadlessRefresh?: (profileId: string, cookieId: string) => Promise<void>;
+  onForceVisibleRefresh?: (profileId: string, cookieId: string) => Promise<void>;
+  onStartWorker?: (profileId: string, cookieId: string) => Promise<void>;
+  onStopWorker?: (profileId: string, cookieId: string) => Promise<void>;
 }
 
-export default function CookieRotationConfigList({ profiles, onUpdateConfig }: CookieRotationConfigListProps) {
+export default function CookieRotationConfigList({
+  profiles,
+  onUpdateConfig,
+  onAddCookie,
+  onForceHeadlessRefresh,
+  onForceVisibleRefresh,
+  onStartWorker,
+  onStopWorker,
+}: CookieRotationConfigListProps) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
 
   const toggleProfile = (profileId: string) => {
@@ -88,13 +103,23 @@ export default function CookieRotationConfigList({ profiles, onUpdateConfig }: C
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-850 dark:to-gray-800 rounded-b-xl border border-t-0 border-gray-200 dark:border-gray-700 shadow-sm p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {profile.cookies.map((cookie) => (
-                    <ProfileCookieConfigRow
+                    <CookieConfigCard
                       key={cookie.cookieId}
                       cookie={cookie}
                       profileName={profile.profileName || profile.profileId}
                       onUpdateConfig={onUpdateConfig}
+                      onForceHeadlessRefresh={
+                        onForceHeadlessRefresh ? (cookieId) => onForceHeadlessRefresh(profile.profileId, cookieId) : undefined
+                      }
+                      onForceVisibleRefresh={
+                        onForceVisibleRefresh ? (cookieId) => onForceVisibleRefresh(profile.profileId, cookieId) : undefined
+                      }
+                      onStartWorker={onStartWorker ? (cookieId) => onStartWorker(profile.profileId, cookieId) : undefined}
+                      onStopWorker={onStopWorker ? (cookieId) => onStopWorker(profile.profileId, cookieId) : undefined}
+                      workerStatus={cookie.workerStatus}
                     />
                   ))}
+                  {onAddCookie && <AddCookieCard profileId={profile.profileId} onClick={onAddCookie} />}
                 </div>
               </div>
             )}

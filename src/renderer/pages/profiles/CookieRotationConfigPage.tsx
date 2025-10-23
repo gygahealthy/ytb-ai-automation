@@ -1,7 +1,17 @@
 import { Zap, RotateCcw, Save, X } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import CookieRotationConfigList from "../../components/profiles/rotation/CookieRotationConfigList";
+import { CookieEditModal } from "../../components/profiles/cookie/CookieEditModal";
 import type { CookieRotationConfig } from "../../components/common/sidebar/cookie-rotation/types";
+import type { ApiResponse } from "@/shared/types";
+
+type ElectronCookiesBridge = {
+  extractAndCreateCookie: (profileId: string, service: string, url: string, headless: boolean) => Promise<ApiResponse<unknown>>;
+};
+
+type ElectronAPIWithCookies = Window["electronAPI"] & {
+  cookies?: ElectronCookiesBridge;
+};
 
 interface ProfileWithCookieConfig {
   profileId: string;
@@ -22,6 +32,8 @@ export default function CookieRotationConfigPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showCookieModal, setShowCookieModal] = useState(false);
+  const [selectedProfileForCookie, setSelectedProfileForCookie] = useState<string | null>(null);
 
   // Check if there are unsaved changes
   const hasChanges = useMemo(() => {
@@ -69,6 +81,118 @@ export default function CookieRotationConfigPage() {
         ),
       }))
     );
+  };
+
+  const handleAddCookie = (profileId: string) => {
+    setSelectedProfileForCookie(profileId);
+    setShowCookieModal(true);
+  };
+
+  const handleCookieModalClose = () => {
+    setShowCookieModal(false);
+    setSelectedProfileForCookie(null);
+  };
+
+  const handleCookieModalSuccess = async () => {
+    handleCookieModalClose();
+    // Reload profiles to reflect the new cookie
+    await loadProfiles();
+  };
+
+  const handleForceHeadlessRefresh = async (profileId: string, cookieId: string) => {
+    try {
+      const profile = profiles.find((p) => p.profileId === profileId);
+      const cookie = profile?.cookies.find((c) => c.cookieId === cookieId);
+      if (!cookie) return;
+
+      const electronCookies = (window.electronAPI as ElectronAPIWithCookies).cookies;
+      const result = await electronCookies?.extractAndCreateCookie(profileId, cookie.service, cookie.url, true); // headless = true
+      if (!result?.success) {
+        setSaveMessage({
+          type: "error",
+          text: `Failed to refresh: ${result?.error || "unknown error"}`,
+        });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        setSaveMessage({ type: "success", text: "Headless refresh started" });
+        setTimeout(() => setSaveMessage(null), 2000);
+      }
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: `Error: ${String(error)}`,
+      });
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+  };
+
+  const handleForceVisibleRefresh = async (profileId: string, cookieId: string) => {
+    try {
+      const profile = profiles.find((p) => p.profileId === profileId);
+      const cookie = profile?.cookies.find((c) => c.cookieId === cookieId);
+      if (!cookie) return;
+
+      const electronCookies = (window.electronAPI as ElectronAPIWithCookies).cookies;
+      const result = await electronCookies?.extractAndCreateCookie(profileId, cookie.service, cookie.url, false); // headless = false
+      if (!result?.success) {
+        setSaveMessage({
+          type: "error",
+          text: `Failed to refresh: ${result?.error || "unknown error"}`,
+        });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        setSaveMessage({ type: "success", text: "Visible refresh started" });
+        setTimeout(() => setSaveMessage(null), 2000);
+      }
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: `Error: ${String(error)}`,
+      });
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+  };
+
+  const handleStartWorker = async (profileId: string, cookieId: string) => {
+    try {
+      const result = await window.electronAPI.cookieRotation.startWorker(profileId, cookieId);
+      if (!result?.success) {
+        setSaveMessage({
+          type: "error",
+          text: `Failed to start worker: ${result?.error || "unknown error"}`,
+        });
+      } else {
+        setSaveMessage({ type: "success", text: "Worker started" });
+      }
+      setTimeout(() => setSaveMessage(null), 2000);
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: `Error: ${String(error)}`,
+      });
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+  };
+
+  const handleStopWorker = async (profileId: string, cookieId: string) => {
+    try {
+      const result = await window.electronAPI.cookieRotation.stopWorker(profileId, cookieId);
+      if (!result?.success) {
+        setSaveMessage({
+          type: "error",
+          text: `Failed to stop worker: ${result?.error || "unknown error"}`,
+        });
+      } else {
+        setSaveMessage({ type: "success", text: "Worker stopped" });
+      }
+      setTimeout(() => setSaveMessage(null), 2000);
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: `Error: ${String(error)}`,
+      });
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
   };
 
   const handleSaveAll = async () => {
@@ -236,8 +360,26 @@ export default function CookieRotationConfigPage() {
 
       {/* Profile/Cookie Configuration List */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-        <CookieRotationConfigList profiles={profiles} onUpdateConfig={handleUpdateConfig} />
+        <CookieRotationConfigList
+          profiles={profiles}
+          onUpdateConfig={handleUpdateConfig}
+          onAddCookie={handleAddCookie}
+          onForceHeadlessRefresh={handleForceHeadlessRefresh}
+          onForceVisibleRefresh={handleForceVisibleRefresh}
+          onStartWorker={handleStartWorker}
+          onStopWorker={handleStopWorker}
+        />
       </div>
+
+      {/* Cookie Edit Modal */}
+      {showCookieModal && (
+        <CookieEditModal
+          profileId={selectedProfileForCookie}
+          mode="extract"
+          onClose={handleCookieModalClose}
+          onSuccess={handleCookieModalSuccess}
+        />
+      )}
     </div>
   );
 }
