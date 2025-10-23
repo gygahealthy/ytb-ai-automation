@@ -1,3 +1,3 @@
 export { default as CookieCard } from "./CookieCard";
-export { CookieEditModal } from "./CookieEditModal";
+export { CookieAddModal } from "../rotation-config/CookieAddModal";
 export { default as CookieDetailModal } from "./CookieDetailModal";

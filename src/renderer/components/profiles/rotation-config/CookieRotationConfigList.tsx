@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CookieConfigCard from "./CookieConfigCard";
 import AddCookieCard from "./AddCookieCard";
 import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
@@ -26,6 +26,7 @@ interface CookieRotationConfigListProps {
   onForceVisibleRefresh?: (profileId: string, cookieId: string) => Promise<void>;
   onStartWorker?: (profileId: string, cookieId: string) => Promise<void>;
   onStopWorker?: (profileId: string, cookieId: string) => Promise<void>;
+  allExpanded?: boolean;
 }
 
 export default function CookieRotationConfigList({
@@ -36,6 +37,7 @@ export default function CookieRotationConfigList({
   onForceVisibleRefresh,
   onStartWorker,
   onStopWorker,
+  allExpanded = false,
 }: CookieRotationConfigListProps) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
 
@@ -50,6 +52,16 @@ export default function CookieRotationConfigList({
       return next;
     });
   };
+
+  // Handle allExpanded prop changes
+  useEffect(() => {
+    if (allExpanded && profiles.length > 0) {
+      const allProfileIds = new Set(profiles.map((p) => p.profileId));
+      setExpandedProfiles(allProfileIds);
+    } else if (!allExpanded) {
+      setExpandedProfiles(new Set());
+    }
+  }, [allExpanded, profiles]);
 
   if (profiles.length === 0) {
     return (
@@ -73,7 +85,7 @@ export default function CookieRotationConfigList({
             {/* Profile Header Card (always visible) */}
             <button
               onClick={() => toggleProfile(profile.profileId)}
-              className="w-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 rounded-t-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all px-4 py-3 flex items-center justify-between"
+              className="w-full bg-white dark:bg-gray-800 rounded-t-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all px-4 py-3 flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <div className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}>
@@ -100,7 +112,7 @@ export default function CookieRotationConfigList({
 
             {/* Expanded Cookie Grid (3-column card layout) */}
             {isExpanded && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-850 dark:to-gray-800 rounded-b-xl border border-t-0 border-gray-200 dark:border-gray-700 shadow-sm p-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-b-xl border border-t-0 border-gray-200 dark:border-gray-700 shadow-sm p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {profile.cookies.map((cookie) => (
                     <CookieConfigCard

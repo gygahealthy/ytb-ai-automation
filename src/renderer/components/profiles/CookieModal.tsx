@@ -1,7 +1,7 @@
 import { Plus, AlertCircle, Zap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Cookie, ApiResponse } from "../../../shared/types";
-import { CookieCard, CookieEditModal, CookieDetailModal } from "./cookie";
+import { CookieCard, CookieAddModal, CookieDetailModal } from "./cookie";
 import { useAlert } from "../../hooks/useAlert";
 
 interface CookieManagementModalProps {
@@ -299,17 +299,16 @@ export default function CookieModal({ isOpen, profileId, onClose }: CookieManage
         </div>
 
         {/* Add/Edit Cookie Modal */}
-        {showAddModal && (
-          <CookieEditModal
-            profileId={profileId}
-            mode={addMode}
-            onClose={() => setShowAddModal(false)}
-            onSuccess={() => {
-              setShowAddModal(false);
-              loadCookies();
-            }}
-          />
-        )}
+        <CookieAddModal
+          isOpen={showAddModal}
+          profileId={profileId}
+          mode={addMode}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => {
+            setShowAddModal(false);
+            loadCookies();
+          }}
+        />
 
         {/* Cookie Detail Modal */}
         <CookieDetailModal
