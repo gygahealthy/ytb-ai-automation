@@ -24,6 +24,7 @@ export interface ProfileWithCookieConfig {
     service: string;
     url: string;
     status: string;
+    rawCookieString?: string | null;
     workerStatus?: string;
     sessionHealth?: string;
     lastRotatedAt?: string;
@@ -54,45 +55,35 @@ export class CookieRotationConfigService {
         cookieId: cookie.id,
         service: cookie.service,
         url: cookie.url,
+        rawCookieString: cookie.rawCookieString,
         status: cookie.status,
         lastRotatedAt: cookie.lastRotatedAt,
         config: {
           cookieId: cookie.id,
           launchWorkerOnStartup: cookie.launchWorkerOnStartup === 1,
-          enabledRotationMethods: this.parseJsonArray(
-            cookie.enabledRotationMethods
-          ),
+          enabledRotationMethods: this.parseJsonArray(cookie.enabledRotationMethods),
           rotationMethodOrder: this.parseJsonArray(cookie.rotationMethodOrder),
           rotationIntervalMinutes: cookie.rotationIntervalMinutes,
         },
       });
     }
 
-    const { profileRepository } = await import(
-      "../../profile-management/repository/profile.repository.js"
-    );
+    const { profileRepository } = await import("../../profile-management/repository/profile.repository.js");
     for (const profile of profileMap.values()) {
       try {
-        const profileEntity = await profileRepository.findById(
-          profile.profileId
-        );
+        const profileEntity = await profileRepository.findById(profile.profileId);
         if (profileEntity?.name) {
           profile.profileName = profileEntity.name;
         }
       } catch (error) {
-        logger.warn(
-          `[CookieRotationConfigService] Failed to fetch profile name for ${profile.profileId}`
-        );
+        logger.warn(`[CookieRotationConfigService] Failed to fetch profile name for ${profile.profileId}`);
       }
     }
 
     return Array.from(profileMap.values());
   }
 
-  async updateCookieConfig(
-    cookieId: string,
-    config: Partial<Omit<CookieRotationConfig, "cookieId">>
-  ): Promise<void> {
+  async updateCookieConfig(cookieId: string, config: Partial<Omit<CookieRotationConfig, "cookieId">>): Promise<void> {
     const updateData: any = {};
 
     if (config.launchWorkerOnStartup !== undefined) {
@@ -100,15 +91,11 @@ export class CookieRotationConfigService {
     }
 
     if (config.enabledRotationMethods !== undefined) {
-      updateData.enabledRotationMethods = JSON.stringify(
-        config.enabledRotationMethods
-      );
+      updateData.enabledRotationMethods = JSON.stringify(config.enabledRotationMethods);
     }
 
     if (config.rotationMethodOrder !== undefined) {
-      updateData.rotationMethodOrder = JSON.stringify(
-        config.rotationMethodOrder
-      );
+      updateData.rotationMethodOrder = JSON.stringify(config.rotationMethodOrder);
     }
 
     if (config.rotationIntervalMinutes !== undefined) {
@@ -117,14 +104,10 @@ export class CookieRotationConfigService {
 
     await this.cookieRepository.updateRotationConfig(cookieId, updateData);
 
-    logger.info(
-      `[CookieRotationConfigService] Updated config for cookie ${cookieId}`
-    );
+    logger.info(`[CookieRotationConfigService] Updated config for cookie ${cookieId}`);
   }
 
-  async getCookieConfig(
-    cookieId: string
-  ): Promise<CookieRotationConfig | null> {
+  async getCookieConfig(cookieId: string): Promise<CookieRotationConfig | null> {
     const cookie = await this.cookieRepository.findById(cookieId);
     if (!cookie) {
       return null;
@@ -133,9 +116,7 @@ export class CookieRotationConfigService {
     return {
       cookieId: cookie.id,
       launchWorkerOnStartup: cookie.launchWorkerOnStartup === 1,
-      enabledRotationMethods: this.parseJsonArray(
-        cookie.enabledRotationMethods
-      ),
+      enabledRotationMethods: this.parseJsonArray(cookie.enabledRotationMethods),
       rotationMethodOrder: this.parseJsonArray(cookie.rotationMethodOrder),
       rotationIntervalMinutes: cookie.rotationIntervalMinutes,
     };
@@ -148,9 +129,7 @@ export class CookieRotationConfigService {
         return parsed as RotationMethod[];
       }
     } catch (error) {
-      logger.warn(
-        `[CookieRotationConfigService] Failed to parse JSON array: ${jsonString}`
-      );
+      logger.warn(`[CookieRotationConfigService] Failed to parse JSON array: ${jsonString}`);
     }
     return ["refreshCreds", "rotateCookie"];
   }
@@ -176,8 +155,7 @@ class CookieRotationConfigServiceHolder {
   }
 
   async update(id: string, patch: any) {
-    if (!this.impl)
-      throw new Error("CookieRotationConfigService not initialized");
+    if (!this.impl) throw new Error("CookieRotationConfigService not initialized");
     return this.impl.updateCookieConfig(id, patch);
   }
 
@@ -187,5 +165,4 @@ class CookieRotationConfigServiceHolder {
   }
 }
 
-export const cookieRotationConfigService =
-  new CookieRotationConfigServiceHolder();
+export const cookieRotationConfigService = new CookieRotationConfigServiceHolder();

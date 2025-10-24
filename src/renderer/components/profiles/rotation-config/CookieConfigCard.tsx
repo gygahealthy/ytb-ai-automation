@@ -9,6 +9,7 @@ interface CookieConfigCardProps {
     service: string;
     url: string;
     status: string;
+    rawCookieString?: string | null;
     lastRotatedAt?: string;
     config?: CookieRotationConfig;
   };
@@ -398,7 +399,7 @@ export default function CookieConfigCard({
           profileId: "", // Will need to come from parent if available
           service: cookie.service,
           url: cookie.url,
-          rawCookieString: "", // Will be populated from actual data
+          rawCookieString: cookie.rawCookieString || "",
           lastRotatedAt: cookie.lastRotatedAt,
           spidExpiration: undefined,
           rotationData: "",

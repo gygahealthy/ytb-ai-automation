@@ -6,14 +6,8 @@
 
 import { logger } from "../../../utils/logger-backend.js";
 import { CookieRepository } from "../../gemini-apis/repository/cookie.repository.js";
-import {
-  CookieRotationMonitorRepository,
-  type CookieRotationMonitor,
-} from "../repository/cookie-rotation-monitor.repository.js";
-import {
-  createCookieManagerDB,
-  type CookieManagerDB,
-} from "../../gemini-apis/services/cookie-manager-db.js";
+import { CookieRotationMonitorRepository, type CookieRotationMonitor } from "../repository/cookie-rotation-monitor.repository.js";
+import { createCookieManagerDB, type CookieManagerDB } from "../../gemini-apis/services/cookie-manager-db.js";
 import type { CookieCollection } from "../../gemini-apis/shared/types/index.js";
 import { parseCookieHeader } from "../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
 import { extractAndCreateHandler } from "../../gemini-apis/handlers/cookie/extractAndCreate.js";
@@ -39,19 +33,14 @@ export class GlobalRotationWorkerManager {
   private running = false;
   private monitorInterval: NodeJS.Timeout | null = null;
 
-  constructor(
-    private cookieRepository: CookieRepository,
-    private monitorRepository: CookieRotationMonitorRepository
-  ) {}
+  constructor(private cookieRepository: CookieRepository, private monitorRepository: CookieRotationMonitorRepository) {}
 
   /**
    * Initialize the manager
    * Resets stale running worker statuses from previous app sessions
    */
   async init(): Promise<void> {
-    logger.info(
-      "[rotation-manager] Initializing global rotation worker manager"
-    );
+    logger.info("[rotation-manager] Initializing global rotation worker manager");
 
     // Reset all running statuses on app startup
     // This ensures stale "running" status doesn't persist if the app crashed
@@ -67,29 +56,19 @@ export class GlobalRotationWorkerManager {
       const runningMonitors = await this.monitorRepository.findRunning();
 
       if (runningMonitors.length > 0) {
-        logger.info(
-          `[rotation-manager] 🔄 Resetting ${runningMonitors.length} stale running worker(s) to stopped state`
-        );
+        logger.info(`[rotation-manager] 🔄 Resetting ${runningMonitors.length} stale running worker(s) to stopped state`);
 
         for (const monitor of runningMonitors) {
-          await this.monitorRepository.updateWorkerStatus(
-            monitor.id,
-            "stopped"
-          );
+          await this.monitorRepository.updateWorkerStatus(monitor.id, "stopped");
           logger.debug(
             `[rotation-manager] Reset monitor ${monitor.id} (profile: ${monitor.profileId}, cookie: ${monitor.cookieId})`
           );
         }
 
-        logger.info(
-          `[rotation-manager] ✅ All stale running workers reset to stopped`
-        );
+        logger.info(`[rotation-manager] ✅ All stale running workers reset to stopped`);
       }
     } catch (error) {
-      logger.error(
-        "[rotation-manager] Failed to reset running worker statuses",
-        error
-      );
+      logger.error("[rotation-manager] Failed to reset running worker statuses", error);
     }
   }
 
@@ -107,9 +86,7 @@ export class GlobalRotationWorkerManager {
     }
 
     this.running = true;
-    logger.info(
-      "[rotation-manager] 🚀 Starting global cookie rotation manager"
-    );
+    logger.info("[rotation-manager] 🚀 Starting global cookie rotation manager");
 
     // Scan for active cookies and start workers
     await this.scanAndStartWorkers();
@@ -119,9 +96,7 @@ export class GlobalRotationWorkerManager {
       await this.monitorHealth();
     }, 5 * 60 * 1000);
 
-    logger.info(
-      `[rotation-manager] ✅ Manager started with ${this.workers.size} workers`
-    );
+    logger.info(`[rotation-manager] ✅ Manager started with ${this.workers.size} workers`);
   }
 
   /**
@@ -134,19 +109,14 @@ export class GlobalRotationWorkerManager {
       // Find all active cookies
       const activeCookies = await this.cookieRepository.findByStatus("active");
 
-      logger.info(
-        `[rotation-manager] Found ${activeCookies.length} active cookies`
-      );
+      logger.info(`[rotation-manager] Found ${activeCookies.length} active cookies`);
 
       // Start worker for each active cookie
       for (const cookie of activeCookies) {
         try {
           await this.startWorkerForCookie(cookie);
         } catch (error) {
-          logger.error(
-            `[rotation-manager] Failed to start worker for cookie ${cookie.id}`,
-            error
-          );
+          logger.error(`[rotation-manager] Failed to start worker for cookie ${cookie.id}`, error);
         }
       }
     } catch (error) {
@@ -168,59 +138,43 @@ export class GlobalRotationWorkerManager {
 
     try {
       // Parse cookies
-      const cookies: CookieCollection = parseCookieHeader(
-        cookie.rawCookieString || ""
-      );
+      const cookies: CookieCollection = parseCookieHeader(cookie.rawCookieString || "");
 
       // Check if session is expired
       const isExpired = await this.detectExpiredSession(cookies);
 
       if (isExpired) {
-        logger.warn(
-          `[rotation-manager] ⚠️ Detected expired session for ${key}`
-        );
+        logger.warn(`[rotation-manager] ⚠️ Detected expired session for ${key}`);
 
         // Session expired - worker will recover through health monitoring
         // which triggers performHeadlessRefresh via performHeadlessRefreshForMonitor
       }
 
       // Find or create monitor
-      let monitor = await this.monitorRepository.findByProfileAndCookie(
-        cookie.profileId,
-        cookie.id
-      );
+      let monitor = await this.monitorRepository.findByProfileAndCookie(cookie.profileId, cookie.id);
 
       if (!monitor) {
         monitor = await this.createMonitor(cookie.profileId, cookie.id);
       }
 
       // Update monitor status to initializing
-      await this.monitorRepository.updateWorkerStatus(
-        monitor.id,
-        "initializing"
-      );
+      await this.monitorRepository.updateWorkerStatus(monitor.id, "initializing");
 
       // Create cookie manager with rotation worker
-      const cookieManagerDB = await createCookieManagerDB(
-        cookies,
-        this.cookieRepository,
-        cookie.profileId,
-        cookie.url,
-        {
-          psidtsIntervalSeconds: 540, // 9 minutes
-          verbose: false,
-          onPSIDTSRotate: async (result) => {
-            await this.handlePSIDTSRotation(monitor!.id, result);
-          },
-          onError: async (error, type) => {
-            // CookieManagerDB now reports only PSIDTS or DB errors
-            if (type !== "DB") {
-              // type is "PSIDTS" here
-              await this.handleRotationError(monitor!.id, error, "PSIDTS");
-            }
-          },
-        }
-      );
+      const cookieManagerDB = await createCookieManagerDB(cookies, this.cookieRepository, cookie.profileId, cookie.url, {
+        psidtsIntervalSeconds: 540, // 9 minutes
+        verbose: false,
+        onPSIDTSRotate: async (result) => {
+          await this.handlePSIDTSRotation(monitor!.id, result);
+        },
+        onError: async (error, type) => {
+          // CookieManagerDB now reports only PSIDTS or DB errors
+          if (type !== "DB") {
+            // type is "PSIDTS" here
+            await this.handleRotationError(monitor!.id, error, "PSIDTS");
+          }
+        },
+      });
 
       // Start the rotation worker
       cookieManagerDB.start();
@@ -240,10 +194,7 @@ export class GlobalRotationWorkerManager {
 
       logger.info(`[rotation-manager] ✅ Started worker for ${key}`);
     } catch (error) {
-      logger.error(
-        `[rotation-manager] ❌ Failed to start worker for ${key}`,
-        error
-      );
+      logger.error(`[rotation-manager] ❌ Failed to start worker for ${key}`, error);
       throw error;
     }
   }
@@ -251,10 +202,7 @@ export class GlobalRotationWorkerManager {
   /**
    * Stop worker for a specific cookie
    */
-  async stopWorkerForCookie(
-    profileId: string,
-    cookieId: string
-  ): Promise<void> {
+  async stopWorkerForCookie(profileId: string, cookieId: string): Promise<void> {
     const key = `${profileId}-${cookieId}`;
     const worker = this.workers.get(key);
 
@@ -268,32 +216,20 @@ export class GlobalRotationWorkerManager {
       this.workers.delete(key);
 
       // Update monitor
-      await this.monitorRepository.updateWorkerStatus(
-        worker.monitorId,
-        "stopped"
-      );
+      await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
 
       logger.info(`[rotation-manager] 🛑 Stopped worker for ${key}`);
     } catch (error) {
-      logger.error(
-        `[rotation-manager] Failed to stop worker for ${key}`,
-        error
-      );
+      logger.error(`[rotation-manager] Failed to stop worker for ${key}`, error);
     }
   }
 
   /**
    * Handle PSIDTS rotation result
    */
-  private async handlePSIDTSRotation(
-    monitorId: string,
-    result: any
-  ): Promise<void> {
+  private async handlePSIDTSRotation(monitorId: string, result: any): Promise<void> {
     try {
-      await this.monitorRepository.recordPSIDTSRotation(
-        monitorId,
-        result.success
-      );
+      await this.monitorRepository.recordPSIDTSRotation(monitorId, result.success);
 
       if (!result.success) {
         const monitor = await this.monitorRepository.findById(monitorId);
@@ -308,21 +244,14 @@ export class GlobalRotationWorkerManager {
         }
       }
     } catch (error) {
-      logger.error(
-        `[rotation-manager] Failed to record PSIDTS rotation`,
-        error
-      );
+      logger.error(`[rotation-manager] Failed to record PSIDTS rotation`, error);
     }
   }
 
   /**
    * Handle rotation error
    */
-  private async handleRotationError(
-    monitorId: string,
-    error: string,
-    type: "PSIDTS" | "SIDCC"
-  ): Promise<void> {
+  private async handleRotationError(monitorId: string, error: string, type: "PSIDTS" | "SIDCC"): Promise<void> {
     try {
       await this.monitorRepository.recordError(monitorId, `${type}: ${error}`);
     } catch (err) {
@@ -339,13 +268,10 @@ export class GlobalRotationWorkerManager {
       logger.debug("[rotation-manager] Running health check...");
 
       // Find monitors requiring headless refresh
-      const requiresHeadless =
-        await this.monitorRepository.findRequiringHeadlessRefresh();
+      const requiresHeadless = await this.monitorRepository.findRequiringHeadlessRefresh();
 
       if (requiresHeadless.length > 0) {
-        logger.info(
-          `[rotation-manager] Found ${requiresHeadless.length} sessions requiring headless refresh`
-        );
+        logger.info(`[rotation-manager] Found ${requiresHeadless.length} sessions requiring headless refresh`);
 
         for (const monitor of requiresHeadless) {
           await this.performHeadlessRefreshForMonitor(monitor);
@@ -363,25 +289,18 @@ export class GlobalRotationWorkerManager {
    * Perform headless refresh for a monitor
    * Uses the unified extractAndCreateHandler instead of separate refresh logic
    */
-  private async performHeadlessRefreshForMonitor(
-    monitor: CookieRotationMonitor
-  ): Promise<void> {
+  private async performHeadlessRefreshForMonitor(monitor: CookieRotationMonitor): Promise<void> {
     try {
       // Get cookie entity
       const cookie = await this.cookieRepository.findById(monitor.cookieId);
       if (!cookie) {
-        logger.error(
-          `[rotation-manager] Cannot find cookie ${monitor.cookieId} for refresh`
-        );
+        logger.error(`[rotation-manager] Cannot find cookie ${monitor.cookieId} for refresh`);
         return;
       }
 
       await this.performHeadlessRefresh(cookie, monitor.id);
     } catch (error) {
-      logger.error(
-        `[rotation-manager] Failed headless refresh for monitor ${monitor.id}`,
-        error
-      );
+      logger.error(`[rotation-manager] Failed headless refresh for monitor ${monitor.id}`, error);
       await this.monitorRepository.recordHeadlessRefresh(monitor.id, false);
     }
   }
@@ -394,13 +313,8 @@ export class GlobalRotationWorkerManager {
    * - Cookie extraction and storage
    * - Database updates
    */
-  private async performHeadlessRefresh(
-    cookie: any,
-    monitorId: string
-  ): Promise<void> {
-    logger.info(
-      `[rotation-manager] 🌐 Starting headless refresh for cookie ${cookie.id} using unified extraction`
-    );
+  private async performHeadlessRefresh(cookie: any, monitorId: string): Promise<void> {
+    logger.info(`[rotation-manager] 🌐 Starting headless refresh for cookie ${cookie.id} using unified extraction`);
 
     try {
       // Call unified extraction handler with headless=true (background mode)
@@ -412,9 +326,7 @@ export class GlobalRotationWorkerManager {
       });
 
       if (result.success) {
-        logger.info(
-          `[rotation-manager] ✅ Headless refresh successful via unified extraction`
-        );
+        logger.info(`[rotation-manager] ✅ Headless refresh successful via unified extraction`);
 
         // Record successful refresh
         await this.monitorRepository.recordHeadlessRefresh(monitorId, true);
@@ -423,16 +335,11 @@ export class GlobalRotationWorkerManager {
         await this.stopWorkerForCookie(cookie.profileId, cookie.id);
         await this.startWorkerForCookie(cookie);
       } else {
-        logger.error(
-          `[rotation-manager] ❌ Headless refresh failed: ${result.error}`
-        );
+        logger.error(`[rotation-manager] ❌ Headless refresh failed: ${result.error}`);
         await this.monitorRepository.recordHeadlessRefresh(monitorId, false);
       }
     } catch (error) {
-      logger.error(
-        `[rotation-manager] ❌ Unexpected error during headless refresh`,
-        error
-      );
+      logger.error(`[rotation-manager] ❌ Unexpected error during headless refresh`, error);
       await this.monitorRepository.recordHeadlessRefresh(monitorId, false);
     }
   }
@@ -440,9 +347,7 @@ export class GlobalRotationWorkerManager {
   /**
    * Detect if a session is expired
    */
-  private async detectExpiredSession(
-    cookies: CookieCollection
-  ): Promise<boolean> {
+  private async detectExpiredSession(cookies: CookieCollection): Promise<boolean> {
     const requiredCookies = ["__Secure-1PSID", "__Secure-1PSIDTS"];
 
     for (const key of requiredCookies) {
@@ -457,10 +362,7 @@ export class GlobalRotationWorkerManager {
   /**
    * Create a new monitor entry
    */
-  private async createMonitor(
-    profileId: string,
-    cookieId: string
-  ): Promise<CookieRotationMonitor> {
+  private async createMonitor(profileId: string, cookieId: string): Promise<CookieRotationMonitor> {
     const now = new Date().toISOString();
     // Use dynamic import for uuid to avoid ESM require errors in CJS runtime
     const { v4: uuidv4 } = await import("uuid");
@@ -492,9 +394,7 @@ export class GlobalRotationWorkerManager {
     try {
       const { database } = await import("../../../storage/database.js");
       const db = database.getSQLiteDatabase();
-      const row = await db.get("SELECT * FROM profiles WHERE id = ?", [
-        profileId,
-      ]);
+      const row = await db.get("SELECT * FROM profiles WHERE id = ?", [profileId]);
 
       if (!row) {
         logger.warn(`[rotation-manager] Profile ${profileId} not found`);
@@ -517,10 +417,7 @@ export class GlobalRotationWorkerManager {
         updatedAt: row.updated_at,
       };
     } catch (error) {
-      logger.error(
-        `[rotation-manager] Failed to get profile ${profileId}`,
-        error
-      );
+      logger.error(`[rotation-manager] Failed to get profile ${profileId}`, error);
       return null;
     }
   }
@@ -582,10 +479,7 @@ export class GlobalRotationWorkerManager {
     for (const [key, worker] of this.workers.entries()) {
       try {
         worker.cookieManagerDB.stop();
-        await this.monitorRepository.updateWorkerStatus(
-          worker.monitorId,
-          "stopped"
-        );
+        await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
       } catch (error) {
         logger.error(`[rotation-manager] Failed to stop worker ${key}`, error);
       }
@@ -642,15 +536,13 @@ export class GlobalRotationWorkerManager {
       }
 
       // Get monitor info if exists
-      const monitor = await this.monitorRepository.findByProfileAndCookie(
-        cookie.profileId,
-        cookie.id
-      );
+      const monitor = await this.monitorRepository.findByProfileAndCookie(cookie.profileId, cookie.id);
 
       profileMap.get(cookie.profileId).cookies.push({
         cookieId: cookie.id,
         service: cookie.service,
         url: cookie.url,
+        rawCookieString: cookie.rawCookieString,
         status: cookie.status,
         workerStatus: monitor?.workerStatus,
         sessionHealth: monitor?.sessionHealth,
@@ -671,9 +563,7 @@ export class GlobalRotationWorkerManager {
     }
 
     if (cookie.profileId !== profileId) {
-      throw new Error(
-        `Cookie ${cookieId} does not belong to profile ${profileId}`
-      );
+      throw new Error(`Cookie ${cookieId} does not belong to profile ${profileId}`);
     }
 
     await this.startWorkerForCookie(cookie);
@@ -698,10 +588,7 @@ export async function getGlobalRotationWorkerManager(): Promise<GlobalRotationWo
       logger.debug("cookieRotationConfigService init skipped or failed", err);
     }
 
-    managerInstance = new GlobalRotationWorkerManager(
-      cookieRepository,
-      monitorRepository
-    );
+    managerInstance = new GlobalRotationWorkerManager(cookieRepository, monitorRepository);
 
     await managerInstance.init();
   }

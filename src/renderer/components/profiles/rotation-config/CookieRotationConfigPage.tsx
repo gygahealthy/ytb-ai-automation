@@ -21,6 +21,7 @@ interface ProfileWithCookieConfig {
     service: string;
     url: string;
     status: string;
+    rawCookieString?: string | null;
     lastRotatedAt?: string;
     config: CookieRotationConfig;
   }>;
