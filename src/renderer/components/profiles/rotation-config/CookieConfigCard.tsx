@@ -42,13 +42,15 @@ export default function CookieConfigCard({
     rotationIntervalMinutes: 60,
   };
 
-  const handleToggleLaunchOnStartup = () => {
+  const handleToggleLaunchOnStartup = (e: React.MouseEvent | React.ChangeEvent) => {
+    e.stopPropagation();
     onUpdateConfig(cookie.cookieId, {
       launchWorkerOnStartup: !config.launchWorkerOnStartup,
     });
   };
 
-  const handleToggleMethod = (method: RotationMethod) => {
+  const handleToggleMethod = (e: React.MouseEvent | React.ChangeEvent, method: RotationMethod) => {
+    e.stopPropagation();
     const enabled = config.enabledRotationMethods.includes(method);
     const newMethods = enabled
       ? config.enabledRotationMethods.filter((m: RotationMethod) => m !== method)
@@ -117,7 +119,10 @@ export default function CookieConfigCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-gray-300 dark:hover:border-gray-600 transition-all flex flex-col h-full">
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-gray-300 dark:hover:border-gray-600 transition-all flex flex-col h-full"
+    >
       {/* Card Header with Profile Name and Service */}
       <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -144,7 +149,10 @@ export default function CookieConfigCard({
           <div className="flex items-center gap-1">
             {onForceHeadlessRefresh && (
               <button
-                onClick={() => onForceHeadlessRefresh(cookie.cookieId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onForceHeadlessRefresh(cookie.cookieId);
+                }}
                 className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                 title="Force headless refresh"
               >
@@ -153,7 +161,10 @@ export default function CookieConfigCard({
             )}
             {onForceVisibleRefresh && (
               <button
-                onClick={() => onForceVisibleRefresh(cookie.cookieId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onForceVisibleRefresh(cookie.cookieId);
+                }}
                 className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
                 title="Force visible refresh"
               >
@@ -161,7 +172,10 @@ export default function CookieConfigCard({
               </button>
             )}
             <button
-              onClick={() => setShowDetailModal(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDetailModal(true);
+              }}
               className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               title="View cookie details"
             >
@@ -171,7 +185,10 @@ export default function CookieConfigCard({
               <>
                 {isWorkerRunning ? (
                   <button
-                    onClick={() => onStopWorker?.(cookie.cookieId)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStopWorker?.(cookie.cookieId);
+                    }}
                     className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Stop worker"
                   >
@@ -179,7 +196,10 @@ export default function CookieConfigCard({
                   </button>
                 ) : (
                   <button
-                    onClick={() => onStartWorker?.(cookie.cookieId)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStartWorker?.(cookie.cookieId);
+                    }}
                     className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
                     title="Start worker"
                   >
@@ -188,8 +208,7 @@ export default function CookieConfigCard({
                 )}
               </>
             ) : null}
-          </div>
-
+          </div>{" "}
           {/* Worker Status Indicator - Right Side */}
           <div
             className="flex items-center gap-2 px-2 py-1 rounded border text-xs font-medium"
@@ -216,7 +235,7 @@ export default function CookieConfigCard({
               <span className="text-xs font-bold text-gray-900 dark:text-white">Launch At Startup</span>
             </div>
             <div className="flex items-center justify-end">
-              <label className="inline-flex items-center cursor-pointer">
+              <label className="inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={config.launchWorkerOnStartup}
@@ -240,13 +259,17 @@ export default function CookieConfigCard({
                 { method: "refreshCreds" as RotationMethod, label: "Refresh" },
                 { method: "rotateCookie" as RotationMethod, label: "Rotate" },
               ].map(({ method, label }) => (
-                <div key={method} className="flex items-center justify-between cursor-pointer">
+                <div
+                  key={method}
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <span className="text-xs text-gray-600 dark:text-gray-400">{label}</span>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={config.enabledRotationMethods.includes(method)}
-                      onChange={() => handleToggleMethod(method)}
+                      onChange={(e) => handleToggleMethod(e, method)}
                       className="sr-only peer"
                     />
                     <div className="relative w-6 h-3.5 bg-gray-300 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-2.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-purple-500 dark:peer-checked:bg-purple-600" />
@@ -282,7 +305,10 @@ export default function CookieConfigCard({
                   </div>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
-                      onClick={() => handleMoveMethodUp(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveMethodUp(index);
+                      }}
                       disabled={index === 0}
                       className={`p-0.5 rounded ${
                         index === 0
@@ -293,7 +319,10 @@ export default function CookieConfigCard({
                       <ChevronUp className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => handleMoveMethodDown(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveMethodDown(index);
+                      }}
                       disabled={index === config.rotationMethodOrder.length - 1}
                       className={`p-0.5 rounded ${
                         index === config.rotationMethodOrder.length - 1
@@ -321,6 +350,7 @@ export default function CookieConfigCard({
               max={1440}
               value={config.rotationIntervalMinutes}
               onChange={(e) => handleIntervalChange(parseInt(e.target.value) || 1)}
+              onClick={(e) => e.stopPropagation()}
               className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 mb-1"
             />
             {/* Preset Buttons */}
@@ -333,7 +363,10 @@ export default function CookieConfigCard({
               ].map(({ value, label }) => (
                 <button
                   key={value}
-                  onClick={() => handleIntervalChange(value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIntervalChange(value);
+                  }}
                   className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
                     config.rotationIntervalMinutes === value
                       ? "bg-green-500 dark:bg-green-600 text-white"

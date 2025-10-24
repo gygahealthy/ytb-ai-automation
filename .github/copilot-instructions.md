@@ -246,6 +246,23 @@ If a requested change is small and clearly improves code quality or consistency 
 
 When adding or changing aliases, update all three files above to avoid resolution mismatches between dev, build, and main-process compilation.
 
+Note about the `@` alias (project convention):
+
+- The project uses the `@` root alias heavily (for example `import X from "@/foo"`). Keep this alias in sync across the three places below to avoid confusing TypeScript, Vite, and the Electron build:
+
+  - `vite.config.ts` (renderer dev server/build) — the file at `vite.config.ts` contains the Vite alias mapping used at build/dev time. Example from this repo:
+    - `"@": path.resolve(__dirname, "./src")`
+  - `tsconfig.json` (editor / renderer TS language server) — add/update the same mapping in the `paths` section so imports in the editor resolve correctly. Example entry:
+    - `"@/*": ["./src/*"]`
+  - `tsconfig.electron.json` (main/electron build) — update this file too so main-process compilation resolves the same alias. Example entry:
+    - `"@/*": ["./src/*"]`
+
+- Quick checklist when changing aliases:
+  1. Edit `vite.config.ts`, `tsconfig.json`, and `tsconfig.electron.json` together.
+  2. Restart the TS language server (or your editor) after changing `tsconfig.json` so the editor picks up updates.
+  3. Run `npm run build` (or the relevant build task) to validate both renderer and main/electron builds.
+  4. If you add a new alias, update any project documentation that references path aliases.
+
 ## Quick checklist for Copilot-generated changes
 
 - [ ] Types added and `strict` respected

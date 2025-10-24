@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CookieConfigCard from "./CookieConfigCard";
 import AddCookieCard from "./AddCookieCard";
 import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
@@ -40,6 +40,7 @@ export default function CookieRotationConfigList({
   allExpanded = false,
 }: CookieRotationConfigListProps) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
+  const prevAllExpandedRef = useRef<boolean>(allExpanded);
 
   const toggleProfile = (profileId: string) => {
     setExpandedProfiles((prev) => {
@@ -53,13 +54,18 @@ export default function CookieRotationConfigList({
     });
   };
 
-  // Handle allExpanded prop changes
+  // Handle allExpanded prop changes - only when allExpanded actually changes, not when profiles update
   useEffect(() => {
-    if (allExpanded && profiles.length > 0) {
-      const allProfileIds = new Set(profiles.map((p) => p.profileId));
-      setExpandedProfiles(allProfileIds);
-    } else if (!allExpanded) {
-      setExpandedProfiles(new Set());
+    // Only update if allExpanded prop actually changed
+    if (prevAllExpandedRef.current !== allExpanded) {
+      prevAllExpandedRef.current = allExpanded;
+
+      if (allExpanded && profiles.length > 0) {
+        const allProfileIds = new Set(profiles.map((p) => p.profileId));
+        setExpandedProfiles(allProfileIds);
+      } else if (!allExpanded) {
+        setExpandedProfiles(new Set());
+      }
     }
   }, [allExpanded, profiles]);
 
