@@ -3,7 +3,7 @@ import * as path from "path";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 import { veo3PollingService } from "./modules/ai-video-creation/services/veo3.service";
-import { getGlobalRotationWorkerManager } from "./modules/gemini-apis/services/global-rotation-worker-manager.service";
+import { getGlobalRotationWorkerManager } from "./modules/cookie-rotation/services/global-rotation-worker-manager.service";
 
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;

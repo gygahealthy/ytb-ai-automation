@@ -1,9 +1,12 @@
 import { ipcMain } from "electron";
 import { IpcRegistration } from "../../../core/ipc/types";
-import { cookieRegistrations, chatRegistrations, cookieRotationRegistrations } from "./handlers/registrations";
+import { cookieRegistrations, chatRegistrations } from "./handlers/registrations";
 
-// Export IPC registrations
-export { cookieRegistrations, chatRegistrations, cookieRotationRegistrations } from "./handlers/registrations";
+// Export IPC registrations for module-loader to collect
+export { cookieRegistrations, chatRegistrations } from "./handlers/registrations";
+
+// Export combined registrations array for easier access
+export const registrations: IpcRegistration[] = [...cookieRegistrations, ...chatRegistrations];
 
 // Export services
 export { ChatService } from "./services/chat.service";
@@ -38,7 +41,7 @@ export {
   validateRequiredCookies,
   mergeCookies,
 } from "./helpers/cookie/cookie-parser.helpers";
-export { rotate1psidts, startAutoRotation, type RotationControl } from "./helpers/cookie-rotation/cookie-rotation.helpers";
+export { rotate1psidts, startAutoRotation, type RotationControl } from "../cookie-rotation/helpers/cookie-rotation.helpers";
 export {
   createHttpCommonHeaders,
   createGeminiHeaders,
@@ -51,21 +54,19 @@ export { extractTokens, validateToken, type TokenData } from "./helpers/token.he
 
 export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
   const allRegistrations = [...cookieRegistrations, ...chatRegistrations];
-  // include cookie rotation regs if present
-  // (placed after chat to keep ordering stable)
-  if (typeof (cookieRotationRegistrations as any) !== "undefined") {
-    allRegistrations.push(...(cookieRotationRegistrations as any));
-  }
 
   if (registrar) {
     registrar(allRegistrations);
     return;
   }
 
+  // Register handlers directly when called without a registrar (fallback)
   for (const reg of allRegistrations) {
     ipcMain.handle(reg.channel, async (_event, ...args) => {
       const req = args.length <= 1 ? args[0] : args;
       return await reg.handler(req as any);
     });
   }
+
+  console.log("✅ Gemini APIs module registered (src/main/modules/gemini-apis/index.ts)");
 }

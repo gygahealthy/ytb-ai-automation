@@ -4,10 +4,13 @@
  */
 
 import { CookieJar } from "tough-cookie";
-import type { CookieCollection, RotationResult } from "../../shared/types/index.js";
-import { logger } from "../../../../utils/logger-backend.js";
-import { endpoints, headers } from "../../shared/config/index.js";
-import { cookiesToHeader } from "../cookie/cookie-parser.helpers.js";
+import type {
+  CookieCollection,
+  RotationResult,
+} from "../../gemini-apis/shared/types/index.js";
+import { logger } from "../../../utils/logger-backend.js";
+import { endpoints, headers } from "../../gemini-apis/shared/config/index.js";
+import { cookiesToHeader } from "../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
 
 let gotInstance: any = null;
 
@@ -18,28 +21,11 @@ async function getGot() {
   return gotInstance;
 }
 
-/**
- * Rotation control interface
- */
 export interface RotationControl {
   stop: () => void;
   isRunning: () => boolean;
 }
 
-/**
- * Generate SAPISIDHASH authorization header
- * @param origin - Origin URL (e.g., "https://gemini.google.com")
- * @param sapisid - SAPISID cookie value
- * @returns Authorization header value
- */
-// SAPISIDHASH generation moved to refresh-creds.helpers.ts if needed
-
-/**
- * Rotate __Secure-1PSIDTS cookie
- * @param cookies - Cookie collection
- * @param options - Rotation options
- * @returns Rotation result with new PSIDTS if successful
- */
 export async function rotate1psidts(
   cookies: CookieCollection,
   options: { proxy?: string; skipCache?: boolean } = {}
@@ -53,10 +39,6 @@ export async function rotate1psidts(
       throw new Error("__Secure-1PSID cookie is required for rotation");
     }
 
-    // TODO: Implement database-backed cache check instead of file-based cache
-    // Check cache freshness to avoid 429 Too Many Requests
-
-    // Build cookie jar for got
     const jar = new CookieJar();
     const cookieHeader = cookiesToHeader(cookies);
 
@@ -73,7 +55,6 @@ export async function rotate1psidts(
 
     logger.debug("Sending rotation request...");
 
-    // Make rotation request
     const response = await got.post(endpoints.rotateCookies, {
       http2: true,
       cookieJar: jar,
@@ -97,7 +78,6 @@ export async function rotate1psidts(
       };
     }
 
-    // Extract new PSIDTS from Set-Cookie headers
     const setCookie = response.headers["set-cookie"];
     if (!setCookie) {
       return {
@@ -116,16 +96,14 @@ export async function rotate1psidts(
     let newSecure3PSIDCC: string | undefined;
     const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
 
-    // Method 1: Check Set-Cookie headers
     for (const cookie of cookieArray) {
       logger.debug(`Checking cookie: ${cookie.substring(0, 100)}...`);
 
-      // Try multiple patterns for PSIDTS (including RTS variant)
       const psidtsPatterns = [
         /__Secure-1PSIDTS=([^;]+)/,
         /__Secure-3PSIDTS=([^;]+)/,
-        /__Secure-1PSIDRTS=([^;]+)/, // RTS variant
-        /__Secure-3PSIDRTS=([^;]+)/, // RTS variant
+        /__Secure-1PSIDRTS=([^;]+)/,
+        /__Secure-3PSIDRTS=([^;]+)/,
         /PSIDTS=([^;]+)/,
       ];
 
@@ -138,7 +116,6 @@ export async function rotate1psidts(
         }
       }
 
-      // Extract SIDCC cookies from response
       const sidccMatch = cookie.match(/^SIDCC=([^;]+)/);
       if (sidccMatch) {
         newSIDCC = sidccMatch[1];
@@ -158,7 +135,6 @@ export async function rotate1psidts(
       }
     }
 
-    // Method 2: Check cookie jar (like Python httpx does)
     if (!newPSIDTS) {
       logger.debug("Not found in Set-Cookie headers, checking cookie jar...");
       try {
@@ -166,9 +142,10 @@ export async function rotate1psidts(
         logger.debug(`Cookie jar has ${jarCookies.length} cookies`);
 
         for (const cookie of jarCookies) {
-          logger.debug(`Jar cookie: ${cookie.key}=${cookie.value.substring(0, 30)}...`);
+          logger.debug(
+            `Jar cookie: ${cookie.key}=${cookie.value.substring(0, 30)}...`
+          );
 
-          // Check for various PSIDTS cookie names
           if (
             cookie.key === "__Secure-1PSIDTS" ||
             cookie.key === "__Secure-3PSIDTS" ||
@@ -181,12 +158,15 @@ export async function rotate1psidts(
           }
         }
       } catch (error) {
-        logger.debug(`Error reading cookie jar: ${error instanceof Error ? error.message : "Unknown"}`);
+        logger.debug(
+          `Error reading cookie jar: ${
+            error instanceof Error ? error.message : "Unknown"
+          }`
+        );
       }
     }
 
     if (newPSIDTS) {
-      // TODO: Persist to database instead of file cache
       logger.info("✅ Cookie rotated successfully");
 
       return {
@@ -200,11 +180,10 @@ export async function rotate1psidts(
       };
     }
 
-    // If no PSIDTS found in response but status is 200,
-    // the rotation likely succeeded server-side (Google doesn't return the rotated value)
-    // This is expected behavior - Google rotates the cookie on their end
     if (response.statusCode === 200) {
-      logger.info("✅ Cookie rotation succeeded (server-side rotation - no value returned)");
+      logger.info(
+        "✅ Cookie rotation succeeded (server-side rotation - no value returned)"
+      );
       return {
         success: true,
         newSIDCC,
@@ -233,13 +212,6 @@ export async function rotate1psidts(
   }
 }
 
-/**
- * Start automatic cookie rotation
- * @param cookies - Cookie collection (will be updated in place)
- * @param intervalSeconds - Rotation interval in seconds (default: 540 = 9 minutes)
- * @param options - Rotation options
- * @returns Control object to stop rotation
- */
 export function startAutoRotation(
   cookies: CookieCollection,
   intervalSeconds = 540,
@@ -257,7 +229,9 @@ export function startAutoRotation(
     if (result.success) {
       if (result.newPSIDTS) {
         cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
-        logger.info(`🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`);
+        logger.info(
+          `🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`
+        );
       }
       if (result.newSIDCC) {
         cookies["SIDCC"] = result.newSIDCC;
@@ -272,20 +246,20 @@ export function startAutoRotation(
         logger.info(`🔄 Auto-rotated __Secure-3PSIDCC`);
       }
     } else {
-      logger.warn(`⚠️ Auto-rotation failed: ${result.error || "Unknown error"}`);
+      logger.warn(
+        `⚠️ Auto-rotation failed: ${result.error || "Unknown error"}`
+      );
     }
 
     if (options.onRotate) {
       options.onRotate(result);
     }
 
-    // Schedule next rotation
     if (running) {
       timeoutId = setTimeout(rotate, intervalSeconds * 1000);
     }
   };
 
-  // Start first rotation
   timeoutId = setTimeout(rotate, intervalSeconds * 1000);
   logger.info(`🔄 Auto-rotation started (interval: ${intervalSeconds}s)`);
 
@@ -299,5 +273,12 @@ export function startAutoRotation(
       logger.info("🛑 Auto-rotation stopped");
     },
     isRunning: () => running,
+  };
+}
+export function formatMonitorRow(row: any) {
+  return {
+    id: row.id,
+    cookieId: row.cookieId,
+    lastRunAt: row.lastRunAt,
   };
 }

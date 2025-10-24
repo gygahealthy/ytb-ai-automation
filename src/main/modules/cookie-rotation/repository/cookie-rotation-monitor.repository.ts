@@ -364,3 +364,7 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
     };
   }
 }
+
+// Note: repository instances are created at runtime when a real SQLiteDatabase
+// is available (see getGlobalRotationWorkerManager). Exporting a live instance
+// with a null DB causes runtime/type issues and was removed.

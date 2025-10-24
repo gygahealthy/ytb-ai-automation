@@ -2,11 +2,7 @@ import { IpcRegistration } from "../../../../core/ipc/types";
 import { cookieService } from "../services/cookie.service";
 import { sendChatMessage } from "./chat/sendChatMessage";
 import { extractAndCreateHandler } from "./cookie/extractAndCreate";
-import { getGlobalRotationWorkerManager } from "../services/global-rotation-worker-manager.service";
-import { CookieRotationConfigService } from "../services/cookie-rotation-config.service";
-import { CookieRepository } from "../repository/cookie.repository";
-import { database } from "../../../storage/database";
-import { logger } from "../../../utils/logger-backend";
+// cookie-rotation handlers moved to separate module: src/main/modules/cookie-rotation
 
 export const cookieRegistrations: IpcRegistration[] = [
   {
@@ -38,13 +34,19 @@ export const cookieRegistrations: IpcRegistration[] = [
     description: "Update cookie rotation interval",
     handler: async (req: { id: string; rotationIntervalMinutes: number }) => {
       const { id, rotationIntervalMinutes } = req as any;
-      return await cookieService.updateRotationInterval(id, rotationIntervalMinutes);
+      return await cookieService.updateRotationInterval(
+        id,
+        rotationIntervalMinutes
+      );
     },
   },
   {
     channel: "gemini:cookies:updateStatus",
     description: "Update cookie status",
-    handler: async (req: { id: string; status: "active" | "expired" | "renewal_failed" }) => {
+    handler: async (req: {
+      id: string;
+      status: "active" | "expired" | "renewal_failed";
+    }) => {
       const { id, status } = req as any;
       return await cookieService.updateStatus(id, status);
     },
@@ -75,15 +77,22 @@ export const cookieRegistrations: IpcRegistration[] = [
   {
     channel: "gemini:cookies:getByStatus",
     description: "Get cookies by status",
-    handler: async (req: { status: "active" | "expired" | "renewal_failed" }) => {
+    handler: async (req: {
+      status: "active" | "expired" | "renewal_failed";
+    }) => {
       const { status } = req as any;
       return await cookieService.getCookiesByStatus(status);
     },
   },
   {
     channel: "gemini:cookies:extractAndStore",
-    description: "Extract cookies from page and store in database (DEPRECATED - use extractAndCreate)",
-    handler: async (req: { profileId: string; service: string; url: string }) => {
+    description:
+      "Extract cookies from page and store in database (DEPRECATED - use extractAndCreate)",
+    handler: async (req: {
+      profileId: string;
+      service: string;
+      url: string;
+    }) => {
       // Redirect to unified extractAndCreate handler
       return await extractAndCreateHandler(req as any);
     },
@@ -91,14 +100,23 @@ export const cookieRegistrations: IpcRegistration[] = [
   {
     channel: "gemini:cookies:extractAndCreate",
     description: "Extract cookies from URL for a profile",
-    handler: async (req: { profileId: string; service: string; url: string }) => {
+    handler: async (req: {
+      profileId: string;
+      service: string;
+      url: string;
+    }) => {
       return await extractAndCreateHandler(req as any);
     },
   },
   {
     channel: "gemini:cookies:extractFromBrowser",
-    description: "Extract cookies from browser user data directory (DEPRECATED - use extractAndCreate)",
-    handler: async (req: { profileId: string; service: string; url: string }) => {
+    description:
+      "Extract cookies from browser user data directory (DEPRECATED - use extractAndCreate)",
+    handler: async (req: {
+      profileId: string;
+      service: string;
+      url: string;
+    }) => {
       // Redirect to unified extractAndCreate handler
       return await extractAndCreateHandler(req as any);
     },
@@ -115,195 +133,4 @@ export const chatRegistrations: IpcRegistration[] = [
   },
 ];
 
-export const cookieRotationRegistrations: IpcRegistration[] = [
-  {
-    channel: "cookie-rotation:get-status",
-    description: "Get current rotation status",
-    handler: async () => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        const status = await manager.getStatus();
-        return { success: true, data: status };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to get status", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:get-profiles",
-    description: "Get list of profiles with active cookies",
-    handler: async () => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        const profiles = await manager.getProfilesWithCookies();
-        return { success: true, data: profiles };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to get profiles", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:start-worker",
-    description: "Start worker for a specific profile/cookie",
-    handler: async (req: any) => {
-      try {
-        const profileId = Array.isArray(req) ? req[0] : req?.profileId;
-        const cookieId = Array.isArray(req) ? req[1] : req?.cookieId;
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.startWorkerByIds(profileId, cookieId);
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to start worker", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:restart-worker",
-    description: "Restart worker for a specific profile/cookie",
-    handler: async (req: any) => {
-      try {
-        const profileId = Array.isArray(req) ? req[0] : req?.profileId;
-        const cookieId = Array.isArray(req) ? req[1] : req?.cookieId;
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.restartWorker(profileId, cookieId);
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to restart worker", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:stop-worker",
-    description: "Stop worker for a specific profile/cookie",
-    handler: async (req: any) => {
-      try {
-        const profileId = Array.isArray(req) ? req[0] : req?.profileId;
-        const cookieId = Array.isArray(req) ? req[1] : req?.cookieId;
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.stopWorkerForCookie(profileId, cookieId);
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to stop worker", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:stop-all",
-    description: "Stop all workers",
-    handler: async () => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.stop();
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to stop workers", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:start-all",
-    description: "Start all workers",
-    handler: async () => {
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        await manager.start();
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to start workers", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  // Cookie rotation configuration handlers
-  {
-    channel: "cookie-rotation:get-profiles-config",
-    description: "Get profiles with cookie rotation configs",
-    handler: async () => {
-      try {
-        const db = database.getSQLiteDatabase();
-        const cookieRepository = new CookieRepository(db);
-        const configService = new CookieRotationConfigService(cookieRepository);
-        const profiles = await configService.getProfilesWithConfigs();
-        return { success: true, data: profiles };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to get profiles config", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:update-cookie-config",
-    description: "Update rotation config for a specific cookie",
-    handler: async (req: any) => {
-      try {
-        const cookieId = Array.isArray(req) ? req[0] : req?.cookieId;
-        const config = Array.isArray(req) ? req[1] : req?.config;
-
-        const db = database.getSQLiteDatabase();
-        const cookieRepository = new CookieRepository(db);
-        const configService = new CookieRotationConfigService(cookieRepository);
-
-        await configService.updateCookieConfig(cookieId, config);
-        return { success: true };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to update cookie config", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-  {
-    channel: "cookie-rotation:get-cookie-config",
-    description: "Get rotation config for a specific cookie",
-    handler: async (req: any) => {
-      try {
-        const cookieId = Array.isArray(req) ? req[0] : req?.cookieId;
-
-        const db = database.getSQLiteDatabase();
-        const cookieRepository = new CookieRepository(db);
-        const configService = new CookieRotationConfigService(cookieRepository);
-
-        const config = await configService.getCookieConfig(cookieId);
-        return { success: true, data: config };
-      } catch (error) {
-        logger.error("[cookie-rotation] Failed to get cookie config", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
-  },
-];
+// cookie-rotation handlers have been moved into `src/main/modules/cookie-rotation`
