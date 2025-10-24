@@ -41,7 +41,11 @@ export {
   validateRequiredCookies,
   mergeCookies,
 } from "./helpers/cookie/cookie-parser.helpers";
-export { rotate1psidts, startAutoRotation, type RotationControl } from "../cookie-rotation/helpers/cookie-rotation.helpers";
+export {
+  rotate1psidts,
+  startAutoRotation,
+  type RotationControl,
+} from "../common/cookie-rotation/helpers/cookie-rotation.helpers";
 export {
   createHttpCommonHeaders,
   createGeminiHeaders,

@@ -3,8 +3,8 @@
  * Manages per-cookie rotation configuration settings
  */
 
-import { CookieRepository } from "../../gemini-apis/repository/cookie.repository.js";
-import { logger } from "../../../utils/logger-backend.js";
+import { CookieRepository } from "../../../gemini-apis/repository/cookie.repository.js";
+import { logger } from "../../../../utils/logger-backend.js";
 
 export type RotationMethod = "refreshCreds" | "rotateCookie" | "headless";
 
@@ -68,7 +68,7 @@ export class CookieRotationConfigService {
       });
     }
 
-    const { profileRepository } = await import("../../profile-management/repository/profile.repository.js");
+    const { profileRepository } = await import("../../../profile-management/repository/profile.repository.js");
     for (const profile of profileMap.values()) {
       try {
         const profileEntity = await profileRepository.findById(profile.profileId);

@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { registrations } from "./handlers/registrations";
-import { IpcRegistration } from "../../../core/ipc/types";
+import { IpcRegistration } from "../../../../core/ipc/types";
 import manifest from "./manifest.json";
 
 // Export manifest and registrations for the module-loader to consume.

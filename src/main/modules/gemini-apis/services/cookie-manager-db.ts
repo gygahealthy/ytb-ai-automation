@@ -4,23 +4,11 @@
  * Integrates cookie lifecycle management with the database repository
  */
 
-import type {
-  CookieCollection,
-  RotationResult,
-  ValidationResult,
-  CookieService,
-} from "../shared/types/index.js";
+import type { CookieCollection, RotationResult, ValidationResult, CookieService } from "../shared/types/index.js";
 import { COOKIE_SERVICES } from "../shared/types/index.js";
-import {
-  cookiesToHeader,
-  validateRequiredCookies,
-  mergeCookies,
-} from "../helpers/cookie/cookie-parser.helpers.js";
+import { cookiesToHeader, validateRequiredCookies, mergeCookies } from "../helpers/cookie/cookie-parser.helpers.js";
 import { logger } from "../../../utils/logger-backend.js";
-import {
-  startAutoRotation,
-  type RotationControl,
-} from "../../cookie-rotation/helpers/cookie-rotation.helpers.js";
+import { startAutoRotation, type RotationControl } from "../../common/cookie-rotation/helpers/cookie-rotation.helpers.js";
 import type { CookieRepository } from "../repository/cookie.repository.js";
 import type { Cookie } from "../shared/types/index.js";
 
@@ -153,20 +141,12 @@ export class CookieManagerDB {
   private async loadFromDatabase(): Promise<void> {
     try {
       // Try to find by profile and service first (more reliable)
-      let entity = await this.cookieRepository.findActiveByProfileAndService(
-        this.profileId,
-        this.service
-      );
+      let entity = await this.cookieRepository.findActiveByProfileAndService(this.profileId, this.service);
 
       // Fallback: Try finding by profile and URL if service lookup fails
       if (!entity) {
-        logger.debug(
-          `[CookieManagerDB] No entity found by service '${this.service}', trying URL '${this.domain}'`
-        );
-        entity = await this.cookieRepository.findByProfileAndUrl(
-          this.profileId,
-          this.domain
-        );
+        logger.debug(`[CookieManagerDB] No entity found by service '${this.service}', trying URL '${this.domain}'`);
+        entity = await this.cookieRepository.findByProfileAndUrl(this.profileId, this.domain);
       }
 
       if (entity) {
@@ -185,9 +165,7 @@ export class CookieManagerDB {
           this.mergeDatabaseCookies(entity);
         }
       } else {
-        logger.debug(
-          `⚠️ No cookie entity found in database for profile: ${this.profileId}, service: ${this.service}`
-        );
+        logger.debug(`⚠️ No cookie entity found in database for profile: ${this.profileId}, service: ${this.service}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -258,22 +236,18 @@ export class CookieManagerDB {
     logger.info("🚀 Starting cookie manager with database integration...");
 
     // Start PSIDTS auto-rotation
-    this.psidtsControl = startAutoRotation(
-      this.cookies,
-      this.options.psidtsIntervalSeconds,
-      {
-        proxy: this.options.proxy,
-        onRotate: (result: RotationResult) => {
-          this.handlePSIDTSRotation(result);
-        },
-      }
-    );
+    this.psidtsControl = startAutoRotation(this.cookies, this.options.psidtsIntervalSeconds, {
+      proxy: this.options.proxy,
+      onRotate: (result: RotationResult) => {
+        this.handlePSIDTSRotation(result);
+      },
+    });
 
     logger.info(`📊 Cookie manager configuration:`);
     logger.info(
-      `   - PSIDTS rotation: every ${
-        this.options.psidtsIntervalSeconds
-      }s (${Math.round(this.options.psidtsIntervalSeconds / 60)} min)`
+      `   - PSIDTS rotation: every ${this.options.psidtsIntervalSeconds}s (${Math.round(
+        this.options.psidtsIntervalSeconds / 60
+      )} min)`
     );
 
     return {
@@ -306,11 +280,8 @@ export class CookieManagerDB {
           );
         } catch (error) {
           this.stats.dbErrors++;
-          const message =
-            error instanceof Error ? error.message : String(error);
-          logger.warn(
-            `⚠️ Failed to save PSIDTS rotation to database: ${message}`
-          );
+          const message = error instanceof Error ? error.message : String(error);
+          logger.warn(`⚠️ Failed to save PSIDTS rotation to database: ${message}`);
           this.options.onError(message, "DB");
         }
       }
@@ -335,9 +306,7 @@ export class CookieManagerDB {
     rotationType: "PSIDTS"
   ): Promise<void> {
     if (!this.dbEntity?.id) {
-      logger.debug(
-        `⏭️ Skipping database update - no entity ID for ${rotationType}`
-      );
+      logger.debug(`⏭️ Skipping database update - no entity ID for ${rotationType}`);
       return;
     }
 
@@ -370,8 +339,7 @@ export class CookieManagerDB {
 
     logger.info("🛑 Cookie manager stopped");
     logger.info(
-      `📊 Final stats: PSIDTS(${this.stats.psidtsRotations}/${this.stats.psidtsErrors}) ` +
-        `DB(${this.stats.dbErrors})`
+      `📊 Final stats: PSIDTS(${this.stats.psidtsRotations}/${this.stats.psidtsErrors}) ` + `DB(${this.stats.dbErrors})`
     );
   }
 
@@ -396,9 +364,7 @@ export class CookieManagerDB {
     this.cookies = mergeCookies(this.cookies, newCookies);
 
     if (this.options.verbose) {
-      logger.debug(
-        `🔄 Updated in-memory cookies: ${Object.keys(newCookies).join(", ")}`
-      );
+      logger.debug(`🔄 Updated in-memory cookies: ${Object.keys(newCookies).join(", ")}`);
     }
   }
 
@@ -448,14 +414,7 @@ export async function createCookieManagerDB(
   options?: CookieManagerDBOptions,
   service?: CookieService
 ): Promise<CookieManagerDB> {
-  const manager = new CookieManagerDB(
-    cookies,
-    cookieRepository,
-    profileId,
-    domain,
-    options,
-    service
-  );
+  const manager = new CookieManagerDB(cookies, cookieRepository, profileId, domain, options, service);
   await manager.init();
   return manager;
 }

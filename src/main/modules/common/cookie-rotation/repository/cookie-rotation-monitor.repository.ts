@@ -1,5 +1,5 @@
-import { BaseRepository } from "../../../storage/repositories/base.repository";
-import { SQLiteDatabase } from "../../../storage/sqlite-database";
+import { BaseRepository } from "../../../../storage/repositories/base.repository";
+import { SQLiteDatabase } from "../../../../storage/sqlite-database";
 
 /**
  * Cookie rotation monitor entity
@@ -87,9 +87,7 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
     };
   }
 
-  protected entityToRow(
-    entity: Partial<CookieRotationMonitor>
-  ): Record<string, unknown> {
+  protected entityToRow(entity: Partial<CookieRotationMonitor>): Record<string, unknown> {
     return {
       id: entity.id,
       profile_id: entity.profileId,
@@ -117,14 +115,11 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
   /**
    * Find monitor by profile and cookie
    */
-  async findByProfileAndCookie(
-    profileId: string,
-    cookieId: string
-  ): Promise<CookieRotationMonitor | null> {
-    const row = await this.db.get(
-      `SELECT * FROM ${this.tableName} WHERE profile_id = ? AND cookie_id = ?`,
-      [profileId, cookieId]
-    );
+  async findByProfileAndCookie(profileId: string, cookieId: string): Promise<CookieRotationMonitor | null> {
+    const row = await this.db.get(`SELECT * FROM ${this.tableName} WHERE profile_id = ? AND cookie_id = ?`, [
+      profileId,
+      cookieId,
+    ]);
     return row ? this.rowToEntity(row) : null;
   }
 
@@ -132,10 +127,7 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
    * Find all monitors by profile
    */
   async findByProfileId(profileId: string): Promise<CookieRotationMonitor[]> {
-    const rows = await this.db.all(
-      `SELECT * FROM ${this.tableName} WHERE profile_id = ?`,
-      [profileId]
-    );
+    const rows = await this.db.all(`SELECT * FROM ${this.tableName} WHERE profile_id = ?`, [profileId]);
     return rows.map((row) => this.rowToEntity(row));
   }
 
@@ -143,23 +135,15 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
    * Find monitors that require headless refresh
    */
   async findRequiringHeadlessRefresh(): Promise<CookieRotationMonitor[]> {
-    const rows = await this.db.all(
-      `SELECT * FROM ${this.tableName} WHERE requires_headless_refresh = 1`,
-      []
-    );
+    const rows = await this.db.all(`SELECT * FROM ${this.tableName} WHERE requires_headless_refresh = 1`, []);
     return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * Find monitors by health status
    */
-  async findByHealth(
-    health: CookieRotationMonitor["sessionHealth"]
-  ): Promise<CookieRotationMonitor[]> {
-    const rows = await this.db.all(
-      `SELECT * FROM ${this.tableName} WHERE session_health = ?`,
-      [health]
-    );
+  async findByHealth(health: CookieRotationMonitor["sessionHealth"]): Promise<CookieRotationMonitor[]> {
+    const rows = await this.db.all(`SELECT * FROM ${this.tableName} WHERE session_health = ?`, [health]);
     return rows.map((row) => this.rowToEntity(row));
   }
 
@@ -167,39 +151,24 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
    * Find all running monitors
    */
   async findRunning(): Promise<CookieRotationMonitor[]> {
-    const rows = await this.db.all(
-      `SELECT * FROM ${this.tableName} WHERE worker_status = 'running'`,
-      []
-    );
+    const rows = await this.db.all(`SELECT * FROM ${this.tableName} WHERE worker_status = 'running'`, []);
     return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * Update worker status
    */
-  async updateWorkerStatus(
-    id: string,
-    status: CookieRotationMonitor["workerStatus"]
-  ): Promise<void> {
+  async updateWorkerStatus(id: string, status: CookieRotationMonitor["workerStatus"]): Promise<void> {
     const now = new Date().toISOString();
-    await this.db.run(
-      `UPDATE ${this.tableName} SET worker_status = ?, updated_at = ? WHERE id = ?`,
-      [status, now, id]
-    );
+    await this.db.run(`UPDATE ${this.tableName} SET worker_status = ?, updated_at = ? WHERE id = ?`, [status, now, id]);
   }
 
   /**
    * Update session health
    */
-  async updateSessionHealth(
-    id: string,
-    health: CookieRotationMonitor["sessionHealth"]
-  ): Promise<void> {
+  async updateSessionHealth(id: string, health: CookieRotationMonitor["sessionHealth"]): Promise<void> {
     const now = new Date().toISOString();
-    await this.db.run(
-      `UPDATE ${this.tableName} SET session_health = ?, updated_at = ? WHERE id = ?`,
-      [health, now, id]
-    );
+    await this.db.run(`UPDATE ${this.tableName} SET session_health = ?, updated_at = ? WHERE id = ?`, [health, now, id]);
   }
 
   /**
@@ -319,10 +288,7 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
    */
   async markRequiresHeadlessRefresh(id: string): Promise<void> {
     const now = new Date().toISOString();
-    await this.db.run(
-      `UPDATE ${this.tableName} SET requires_headless_refresh = 1, updated_at = ? WHERE id = ?`,
-      [now, id]
-    );
+    await this.db.run(`UPDATE ${this.tableName} SET requires_headless_refresh = 1, updated_at = ? WHERE id = ?`, [now, id]);
   }
 
   /**

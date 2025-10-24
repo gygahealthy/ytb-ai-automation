@@ -4,13 +4,10 @@
  */
 
 import { CookieJar } from "tough-cookie";
-import type {
-  CookieCollection,
-  RotationResult,
-} from "../../gemini-apis/shared/types/index.js";
-import { logger } from "../../../utils/logger-backend.js";
-import { endpoints, headers } from "../../gemini-apis/shared/config/index.js";
-import { cookiesToHeader } from "../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
+import type { CookieCollection, RotationResult } from "../../../gemini-apis/shared/types/index.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { endpoints, headers } from "../../../gemini-apis/shared/config/index.js";
+import { cookiesToHeader } from "../../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
 
 let gotInstance: any = null;
 
@@ -142,9 +139,7 @@ export async function rotate1psidts(
         logger.debug(`Cookie jar has ${jarCookies.length} cookies`);
 
         for (const cookie of jarCookies) {
-          logger.debug(
-            `Jar cookie: ${cookie.key}=${cookie.value.substring(0, 30)}...`
-          );
+          logger.debug(`Jar cookie: ${cookie.key}=${cookie.value.substring(0, 30)}...`);
 
           if (
             cookie.key === "__Secure-1PSIDTS" ||
@@ -158,11 +153,7 @@ export async function rotate1psidts(
           }
         }
       } catch (error) {
-        logger.debug(
-          `Error reading cookie jar: ${
-            error instanceof Error ? error.message : "Unknown"
-          }`
-        );
+        logger.debug(`Error reading cookie jar: ${error instanceof Error ? error.message : "Unknown"}`);
       }
     }
 
@@ -181,9 +172,7 @@ export async function rotate1psidts(
     }
 
     if (response.statusCode === 200) {
-      logger.info(
-        "✅ Cookie rotation succeeded (server-side rotation - no value returned)"
-      );
+      logger.info("✅ Cookie rotation succeeded (server-side rotation - no value returned)");
       return {
         success: true,
         newSIDCC,
@@ -229,9 +218,7 @@ export function startAutoRotation(
     if (result.success) {
       if (result.newPSIDTS) {
         cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
-        logger.info(
-          `🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`
-        );
+        logger.info(`🔄 Auto-rotated PSIDTS: ${result.newPSIDTS.substring(0, 30)}...`);
       }
       if (result.newSIDCC) {
         cookies["SIDCC"] = result.newSIDCC;
@@ -246,9 +233,7 @@ export function startAutoRotation(
         logger.info(`🔄 Auto-rotated __Secure-3PSIDCC`);
       }
     } else {
-      logger.warn(
-        `⚠️ Auto-rotation failed: ${result.error || "Unknown error"}`
-      );
+      logger.warn(`⚠️ Auto-rotation failed: ${result.error || "Unknown error"}`);
     }
 
     if (options.onRotate) {

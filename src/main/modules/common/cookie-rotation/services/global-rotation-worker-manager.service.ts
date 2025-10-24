@@ -4,13 +4,13 @@
  * Handles session health monitoring, auto-recovery, and headless fallback
  */
 
-import { logger } from "../../../utils/logger-backend.js";
-import { CookieRepository } from "../../gemini-apis/repository/cookie.repository.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { CookieRepository } from "../../../gemini-apis/repository/cookie.repository.js";
 import { CookieRotationMonitorRepository, type CookieRotationMonitor } from "../repository/cookie-rotation-monitor.repository.js";
-import { createCookieManagerDB, type CookieManagerDB } from "../../gemini-apis/services/cookie-manager-db.js";
-import type { CookieCollection } from "../../gemini-apis/shared/types/index.js";
-import { parseCookieHeader } from "../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
-import { extractAndCreateHandler } from "../../gemini-apis/handlers/cookie/extractAndCreate.js";
+import { createCookieManagerDB, type CookieManagerDB } from "../../../gemini-apis/services/cookie-manager-db.js";
+import type { CookieCollection } from "../../../gemini-apis/shared/types/index.js";
+import { parseCookieHeader } from "../../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
+import { extractAndCreateHandler } from "../../../gemini-apis/handlers/cookie/extractAndCreate.js";
 import { BrowserWindow } from "electron";
 import { cookieRotationConfigService } from "./cookie-rotation-config.service.js";
 
@@ -392,7 +392,7 @@ export class GlobalRotationWorkerManager {
    */
   private async getProfile(profileId: string): Promise<any> {
     try {
-      const { database } = await import("../../../storage/database.js");
+      const { database } = await import("../../../../storage/database.js");
       const db = database.getSQLiteDatabase();
       const row = await db.get("SELECT * FROM profiles WHERE id = ?", [profileId]);
 
@@ -575,7 +575,7 @@ let managerInstance: GlobalRotationWorkerManager | null = null;
 
 export async function getGlobalRotationWorkerManager(): Promise<GlobalRotationWorkerManager> {
   if (!managerInstance) {
-    const { database } = await import("../../../storage/database.js");
+    const { database } = await import("../../../../storage/database.js");
     const db = database.getSQLiteDatabase();
     const cookieRepository = new CookieRepository(db);
     const monitorRepository = new CookieRotationMonitorRepository(db);

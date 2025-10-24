@@ -10,16 +10,9 @@
  *   control.stop();
  */
 
-import type {
-  CookieCollection,
-  RotationResult,
-} from "../../gemini-apis/shared/types/index.js";
-import { logger } from "../../../utils/logger-backend.js";
-import {
-  rotate1psidts,
-  startAutoRotation,
-  type RotationControl,
-} from "../helpers/cookie-rotation.helpers.js";
+import type { CookieCollection, RotationResult } from "../../../gemini-apis/shared/types/index.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { rotate1psidts, startAutoRotation, type RotationControl } from "../helpers/cookie-rotation.helpers.js";
 
 /**
  * Worker configuration options
@@ -102,10 +95,7 @@ export class CookieRotationWorker {
     rotationErrors: 0,
   };
 
-  constructor(
-    cookies: CookieCollection,
-    config: CookieRotationWorkerConfig = {}
-  ) {
+  constructor(cookies: CookieCollection, config: CookieRotationWorkerConfig = {}) {
     this.cookies = cookies;
     this.config = {
       rotationInterval: config.rotationInterval ?? 540, // 9 minutes
@@ -139,11 +129,7 @@ export class CookieRotationWorker {
     this.startRotationTask();
 
     logger.info(`✅ Worker started with interval:`);
-    logger.info(
-      `   • PSIDTS rotation: ${
-        this.config.rotationInterval
-      }s (${this.formatInterval(this.config.rotationInterval)})`
-    );
+    logger.info(`   • PSIDTS rotation: ${this.config.rotationInterval}s (${this.formatInterval(this.config.rotationInterval)})`);
 
     return this.getControl();
   }
@@ -171,31 +157,27 @@ export class CookieRotationWorker {
    * Start rotation task
    */
   private startRotationTask(): void {
-    this.rotationControl = startAutoRotation(
-      this.cookies,
-      this.config.rotationInterval,
-      {
-        proxy: this.config.proxy,
-        onRotate: (result: RotationResult) => {
-          if (result.success) {
-            this.stats.rotations++;
-            this.stats.lastRotation = new Date();
+    this.rotationControl = startAutoRotation(this.cookies, this.config.rotationInterval, {
+      proxy: this.config.proxy,
+      onRotate: (result: RotationResult) => {
+        if (result.success) {
+          this.stats.rotations++;
+          this.stats.lastRotation = new Date();
 
-            if (this.config.verbose) {
-              logger.debug(`✅ PSIDTS rotation successful`);
-            }
-
-            this.config.onRotationSuccess?.(result);
-          } else {
-            this.stats.rotationErrors++;
-            logger.warn(`⚠️ PSIDTS rotation failed: ${result.error}`);
-
-            this.config.onRotationError?.(result.error || "Unknown error");
-            this.config.onError?.("PSIDTS", result.error || "Unknown error");
+          if (this.config.verbose) {
+            logger.debug(`✅ PSIDTS rotation successful`);
           }
-        },
-      }
-    );
+
+          this.config.onRotationSuccess?.(result);
+        } else {
+          this.stats.rotationErrors++;
+          logger.warn(`⚠️ PSIDTS rotation failed: ${result.error}`);
+
+          this.config.onRotationError?.(result.error || "Unknown error");
+          this.config.onError?.("PSIDTS", result.error || "Unknown error");
+        }
+      },
+    });
   }
 
   /**
@@ -260,14 +242,10 @@ export class CookieRotationWorker {
    */
   private logStats(): void {
     logger.info("📊 Worker statistics:");
-    logger.info(
-      `   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`
-    );
+    logger.info(`   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`);
 
     if (this.stats.lastRotation) {
-      logger.info(
-        `   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`
-      );
+      logger.info(`   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`);
     }
   }
 
@@ -277,9 +255,7 @@ export class CookieRotationWorker {
   private formatInterval(seconds: number): string {
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-    return `${Math.floor(seconds / 3600)}h ${Math.floor(
-      (seconds % 3600) / 60
-    )}m`;
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
   }
 
   /**
@@ -341,10 +317,7 @@ export async function createCookieRotationWorker(
  * Pre-configured worker with default intervals
  * Suitable for always-on services
  */
-export function createDefaultWorker(
-  cookies: CookieCollection,
-  proxy?: string
-): CookieRotationWorker {
+export function createDefaultWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 540, // 9 minutes (Python repo: auto_refresh_interval_minutes = 9)
     verbose: false,
@@ -356,10 +329,7 @@ export function createDefaultWorker(
  * Pre-configured aggressive worker for high-traffic services
  * Rotates more frequently to maintain fresh sessions
  */
-export function createAggressiveWorker(
-  cookies: CookieCollection,
-  proxy?: string
-): CookieRotationWorker {
+export function createAggressiveWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 300, // 5 minutes
     verbose: false,
@@ -371,10 +341,7 @@ export function createAggressiveWorker(
  * Pre-configured conservative worker for low-traffic services
  * Reduces rotation frequency to minimize server hits
  */
-export function createConservativeWorker(
-  cookies: CookieCollection,
-  proxy?: string
-): CookieRotationWorker {
+export function createConservativeWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
   return new CookieRotationWorker(cookies, {
     rotationInterval: 900, // 15 minutes
     verbose: false,

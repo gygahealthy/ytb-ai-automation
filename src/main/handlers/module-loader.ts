@@ -2,7 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Recursively find all module directories with manifest.json in a given folder
+ * Recursively find all module directories in a given folder
+ * A module is identified by having manifest.json, handlers/, or index.js
  */
 function findModulesInFolder(folderPath: string): string[] {
   const modules: string[] = [];
@@ -11,10 +12,16 @@ function findModulesInFolder(folderPath: string): string[] {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const fullPath = path.join(folderPath, entry.name);
-      const manifestPath = path.join(fullPath, "manifest.json");
 
-      // If this directory has manifest.json, it's a module
-      if (fs.existsSync(manifestPath)) {
+      // Check if this is a module by looking for manifest.json, handlers/, or index.js
+      const manifestPath = path.join(fullPath, "manifest.json");
+      const handlersPath = path.join(fullPath, "handlers");
+      const indexPath = path.join(fullPath, "index.js");
+
+      const isModule = fs.existsSync(manifestPath) || fs.existsSync(handlersPath) || fs.existsSync(indexPath);
+
+      // If this directory is a module, add it
+      if (isModule) {
         modules.push(fullPath);
       }
     }
@@ -51,19 +58,25 @@ export function collectModuleRegistrations(): any[] {
     return allRegistrations;
   }
 
-  // First, collect top-level modules (direct children with manifest.json)
+  // First, collect top-level modules (direct children with manifest.json OR handlers/index.js)
   const allModulePaths: string[] = [];
 
   for (const d of entries) {
     if (!d.isDirectory()) continue;
     const modulePath = path.join(modulesDir, d.name);
+
+    // Check if this is a module by looking for manifest.json, handlers/, or index.js
     const manifestPath = path.join(modulePath, "manifest.json");
+    const handlersPath = path.join(modulePath, "handlers");
+    const indexPath = path.join(modulePath, "index.js");
+
+    const isModule = fs.existsSync(manifestPath) || fs.existsSync(handlersPath) || fs.existsSync(indexPath);
 
     // Top-level: check if this directory itself is a module
-    if (fs.existsSync(manifestPath)) {
+    if (isModule) {
       allModulePaths.push(modulePath);
     } else {
-      // For folders without manifest (like 'common'), recursively find modules inside
+      // For folders without module indicators (like 'common'), recursively find modules inside
       const nestedModules = findModulesInFolder(modulePath);
       allModulePaths.push(...nestedModules);
     }

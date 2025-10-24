@@ -3,7 +3,7 @@ import * as path from "path";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 import { veo3PollingService } from "./modules/ai-video-creation/services/veo3.service";
-import { getGlobalRotationWorkerManager } from "./modules/cookie-rotation/services/global-rotation-worker-manager.service";
+import { getGlobalRotationWorkerManager } from "./modules/common/cookie-rotation/services/global-rotation-worker-manager.service";
 
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;
@@ -25,9 +25,7 @@ class ElectronApp {
       // User will manually start workers from the UI
       try {
         await getGlobalRotationWorkerManager();
-        console.log(
-          "✅ Cookie rotation manager initialized (workers not started)"
-        );
+        console.log("✅ Cookie rotation manager initialized (workers not started)");
       } catch (error) {
         console.error("❌ Failed to initialize cookie rotation manager", error);
       }
