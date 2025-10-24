@@ -44,6 +44,8 @@ src/main/modules/gemini-apis/          # Example module
 
 **Module Manifest**: Each module has `manifest.json`. Set `disabled: true` to skip loading the module entirely (useful for feature flags).
 
+**Module loader note (compiled/runtime)**: The module loader runs against the compiled `dist/main/modules/` at runtime. TypeScript's build does not automatically copy JSON files (like `manifest.json`) into `dist/`, so module discovery should not rely only on the presence of `manifest.json` in the compiled output. Prefer detecting modules by one or more compiled indicators instead, for example: `manifest.json` OR a `handlers/` directory OR an `index.js` file. Also ensure the loader supports nested modules (for example `common/<module>/`) and normalizes their registration path (e.g., `common/cookie-rotation`). If you prefer to keep using `manifest.json`, add an explicit build step to copy all `manifest.json` files into `dist/`.
+
 ## Documentation & Files
 
 Do not create new top-level documentation files unless explicitly requested. If asked to update docs under `docs/`, confirm the scope and intended audience before modifying.
