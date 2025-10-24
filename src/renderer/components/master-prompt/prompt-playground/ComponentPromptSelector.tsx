@@ -23,7 +23,7 @@ export function ComponentPromptSelector({ onSelect, selectedConfig }: ComponentP
     setLoading(true);
     setError(null);
     try {
-      const res = await electronApi.aiPrompt.getAllConfigs();
+      const res = await electronApi.aiPromptConf.getAllConfigs();
       if (res?.success && res.data) {
         setConfigs(res.data);
 

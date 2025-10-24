@@ -21,6 +21,7 @@ export default defineConfig({
       "@ipc": path.resolve(__dirname, "./src/renderer/ipc"),
       "@pages": path.resolve(__dirname, "./src/renderer/pages"),
       "@store": path.resolve(__dirname, "./src/renderer/store"),
+      "@shared": path.resolve(__dirname, "./src/shared"),
     },
   },
   build: {

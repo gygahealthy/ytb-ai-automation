@@ -36,7 +36,8 @@
       "@hooks/*": ["./src/renderer/hooks/*"],
       "@ipc/*": ["./src/renderer/ipc/*"],
       "@pages/*": ["./src/renderer/pages/*"],
-      "@store/*": ["./src/renderer/store/*"]
+      "@store/*": ["./src/renderer/store/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src"],

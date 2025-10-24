@@ -78,7 +78,7 @@ interface Window {
       update: (id: number, prompt: any) => Promise<any>;
       delete: (id: number) => Promise<any>;
     };
-    aiPrompt: {
+    aiPromptConf: {
       getConfig: (componentName: string) => Promise<any>;
       getAllConfigs: () => Promise<any>;
       saveConfig: (request: any) => Promise<any>;

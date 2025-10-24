@@ -97,7 +97,7 @@ export default function PromptPlaygroundPage() {
       );
 
       // Call AI via IPC
-      const response = await electronApi.aiPrompt.callAI({
+      const response = await electronApi.aiPromptConf.callAI({
         componentName: selectedConfig.componentName,
         profileId: selectedConfig.profileId || "default",
         data: variableValues,

@@ -8,3 +8,4 @@ export { VisualStyleSelector } from "./VisualStyleSelector";
 export type { VisualStyle } from "./VisualStyleSelector";
 export { VideoPromptGenerator } from "./VideoPromptGenerator";
 export type { VideoPrompt } from "./VideoPromptGenerator";
+export { StepNavigationButtons } from "./StepNavigationButtons";

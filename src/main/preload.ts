@@ -126,12 +126,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // AI Prompt Config APIs
-  aiPrompt: {
-    getConfig: (componentName: string) => ipcRenderer.invoke("aiPrompt:getConfig", componentName),
-    getAllConfigs: () => ipcRenderer.invoke("aiPrompt:getAllConfigs"),
-    saveConfig: (request: any) => ipcRenderer.invoke("aiPrompt:saveConfig", request),
-    deleteConfig: (componentName: string) => ipcRenderer.invoke("aiPrompt:deleteConfig", componentName),
-    callAI: (request: any) => ipcRenderer.invoke("aiPrompt:callAI", request),
+  aiPromptConf: {
+    getConfig: (componentName: string) => ipcRenderer.invoke("aiPromptConf:getConfig", componentName),
+    getAllConfigs: () => ipcRenderer.invoke("aiPromptConf:getAllConfigs"),
+    saveConfig: (request: any) => ipcRenderer.invoke("aiPromptConf:saveConfig", request),
+    deleteConfig: (componentName: string) => ipcRenderer.invoke("aiPromptConf:deleteConfig", componentName),
+    callAI: (request: any) => ipcRenderer.invoke("aiPromptChat:callAI", request),
   },
 
   // Component Discovery APIs

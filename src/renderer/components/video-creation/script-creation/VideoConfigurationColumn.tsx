@@ -140,31 +140,16 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
     setIsGeneratingTopics(true);
     try {
-      // Directly call IPC to get config for AITopicSuggestions (like PromptPlaygroundPage does)
-      console.log("[handleGenerateTopicsFromHint] Fetching config directly from IPC for AITopicSuggestions");
-      const configResponse = await electronApi.aiPrompt.getConfig("AITopicSuggestions");
-      console.log("[handleGenerateTopicsFromHint] Config response:", configResponse);
+      const configResponse = await electronApi.aiPromptConf.getConfig("AITopicSuggestions");
 
       if (!configResponse?.success || !configResponse.data) {
         console.error("AITopicSuggestions config not found:", configResponse?.error);
-        // Fallback to mock suggestions
-        const mockSuggestions = [
-          `Video about ${hintInput} - Complete guide for beginners`,
-          `How to master ${hintInput} - Tips and tricks`,
-          `${hintInput} - Expert interview and insights`,
-          `Top 10 things about ${hintInput}`,
-        ];
-        setTopicSuggestions(mockSuggestions);
-        setSelectedTopicId(null);
         return;
       }
 
       const config = configResponse.data;
 
-      // Load the master prompt
-      console.log("[handleGenerateTopicsFromHint] Loading master prompt ID:", config.promptId);
       const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-      console.log("[handleGenerateTopicsFromHint] Master prompt response:", promptResponse);
 
       if (!promptResponse?.success || !promptResponse.data) {
         console.error("Failed to load master prompt:", promptResponse);
@@ -173,9 +158,7 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
       const masterPrompt = promptResponse.data;
       const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
-      console.log("[handleGenerateTopicsFromHint] Prompt template loaded, length:", promptTemplate.length);
 
-      // Prepare variables for template replacement
       const variables = {
         user_input_keywords: hintInput,
         video_topic: hintInput,
@@ -183,24 +166,17 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
         number_of_topics: "4",
       };
 
-      // Replace template variables
       const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
-      console.log("[handleGenerateTopicsFromHint] Processed prompt length:", processedPrompt.length);
 
-      // Call AI via backend
-      console.log("[handleGenerateTopicsFromHint] Calling AI...");
-      const response = await electronApi.aiPrompt.callAI({
+      const response = await electronApi.aiPromptConf.callAI({
         componentName: config.componentName,
         profileId: config.profileId || "default",
         data: variables,
         processedPrompt,
         stream: false,
       });
-      console.log("[handleGenerateTopicsFromHint] AI response:", response);
 
       if (response?.success) {
-        console.log("[handleGenerateTopicsFromHint] AI call successful");
-        // Extract text from response
         let outputText = "";
         if (typeof response.data === "string") {
           outputText = response.data;
@@ -211,35 +187,18 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
         } else {
           outputText = JSON.stringify(response.data, null, 2);
         }
-        console.log("[handleGenerateTopicsFromHint] Output text extracted, length:", outputText.length);
 
-        // Parse the AI response to extract topics
-        // Assuming AI returns topics in a list format (numbered or bullet points)
         const topics = parseTopicsFromAIResponse(outputText);
         setTopicSuggestions(topics);
         setSelectedTopicId(null);
       } else {
         console.error("AI call failed:", response?.error);
-        // Fallback to mock suggestions
-        const mockSuggestions = [
-          `Video about ${hintInput} - Complete guide for beginners`,
-          `How to master ${hintInput} - Tips and tricks`,
-          `${hintInput} - Expert interview and insights`,
-          `Top 10 things about ${hintInput}`,
-        ];
-        setTopicSuggestions(mockSuggestions);
+        setTopicSuggestions([]);
         setSelectedTopicId(null);
       }
     } catch (error) {
       console.error("Failed to generate topics:", error);
-      // Fallback to mock suggestions
-      const mockSuggestions = [
-        `Video about ${hintInput} - Complete guide for beginners`,
-        `How to master ${hintInput} - Tips and tricks`,
-        `${hintInput} - Expert interview and insights`,
-        `Top 10 things about ${hintInput}`,
-      ];
-      setTopicSuggestions(mockSuggestions);
+      setTopicSuggestions([]);
       setSelectedTopicId(null);
     } finally {
       setIsGeneratingTopics(false);
@@ -318,40 +277,16 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
     setIsGeneratingScript(true);
     try {
-      // Directly call IPC to get config for ScriptStyleSelector (like PromptPlaygroundPage does)
-      console.log("[handleGenerateScript] Fetching config directly from IPC for ScriptStyleSelector");
-      const configResponse = await electronApi.aiPrompt.getConfig("ScriptStyleSelector");
-      console.log("[handleGenerateScript] Config response:", configResponse);
+      const configResponse = await electronApi.aiPromptConf.getConfig("ScriptStyleSelector");
 
       if (!configResponse?.success || !configResponse.data) {
         console.error("ScriptStyleSelector config not found:", configResponse?.error);
-        // Fallback to mock script
-        const mockScript = `# ${topic}
-
-## Scene 1: Introduction
-Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
-
-## Scene 2: Background
-To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
-
-## Scene 3: Main Content
-Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
-
-## Scene 4: Practical Tips
-Let's discuss some practical ways to apply ${topic} in your daily life or business.
-
-## Scene 5: Conclusion
-Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
-        onScriptChange?.(mockScript);
         return;
       }
 
       const config = configResponse.data;
 
-      // Load the master prompt
-      console.log("[handleGenerateScript] Loading master prompt ID:", config.promptId);
       const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-      console.log("[handleGenerateScript] Master prompt response:", promptResponse);
 
       if (!promptResponse?.success || !promptResponse.data) {
         console.error("Failed to load master prompt:", promptResponse);
@@ -360,9 +295,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
 
       const masterPrompt = promptResponse.data;
       const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
-      console.log("[handleGenerateScript] Prompt template loaded, length:", promptTemplate.length);
 
-      // Prepare variables for template replacement
       const presetInfo = getPresetInfo(scriptLengthPreset);
       const variables = {
         topic: topic,
@@ -375,24 +308,17 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
         custom_word_count: String(customWordCount),
       };
 
-      // Replace template variables
       const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
-      console.log("[handleGenerateScript] Processed prompt length:", processedPrompt.length);
 
-      // Call AI via backend
-      console.log("[handleGenerateScript] Calling AI...");
-      const response = await electronApi.aiPrompt.callAI({
+      const response = await electronApi.aiPromptConf.callAI({
         componentName: config.componentName,
         profileId: config.profileId || "default",
         data: variables,
         processedPrompt,
         stream: false,
       });
-      console.log("[handleGenerateScript] AI response:", response);
 
       if (response?.success) {
-        console.log("[handleGenerateScript] AI call successful");
-        // Extract text from response
         let outputText = "";
         if (typeof response.data === "string") {
           outputText = response.data;
@@ -403,49 +329,12 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
         } else {
           outputText = JSON.stringify(response.data, null, 2);
         }
-        console.log("[handleGenerateScript] Script generated, length:", outputText.length);
         onScriptChange?.(outputText);
       } else {
         console.error("AI call failed:", response?.error);
-        // Fallback to mock script
-        const mockScript = `# ${topic}
-
-## Scene 1: Introduction
-Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
-
-## Scene 2: Background
-To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
-
-## Scene 3: Main Content
-Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
-
-## Scene 4: Practical Tips
-Let's discuss some practical ways to apply ${topic} in your daily life or business.
-
-## Scene 5: Conclusion
-Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
-        onScriptChange?.(mockScript);
       }
     } catch (error) {
       console.error("Failed to generate script:", error);
-      // Fallback to mock script
-      const mockScript = `# ${topic}
-
-## Scene 1: Introduction
-Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
-
-## Scene 2: Background
-To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
-
-## Scene 3: Main Content
-Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
-
-## Scene 4: Practical Tips
-Let's discuss some practical ways to apply ${topic} in your daily life or business.
-
-## Scene 5: Conclusion
-Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
-      onScriptChange?.(mockScript);
     } finally {
       setIsGeneratingScript(false);
     }

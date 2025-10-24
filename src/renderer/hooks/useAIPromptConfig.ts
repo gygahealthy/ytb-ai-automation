@@ -1,8 +1,5 @@
 import { useState, useCallback } from "react";
-import type {
-  ComponentPromptConfig,
-  SaveConfigRequest,
-} from "../../shared/types";
+import type { ComponentPromptConfig, SaveConfigRequest } from "../../shared/types";
 
 interface MasterPrompt {
   id: number;
@@ -54,7 +51,7 @@ export const useAIPromptConfig = () => {
 
       const [profilesResult, configsResult, promptsResult] = await Promise.all([
         window.electronAPI.profile.getAll(),
-        window.electronAPI.aiPrompt.getAllConfigs(),
+        window.electronAPI.aiPromptConf.getAllConfigs(),
         window.electronAPI.masterPrompts.getAll(),
       ]);
 
@@ -95,11 +92,7 @@ export const useAIPromptConfig = () => {
   }, []);
 
   const saveConfig = useCallback(async () => {
-    if (
-      !formState.selectedComponent ||
-      !formState.selectedProfileId ||
-      formState.selectedPromptId === ""
-    ) {
+    if (!formState.selectedComponent || !formState.selectedProfileId || formState.selectedPromptId === "") {
       setError("Please select component, profile, and prompt");
       return false;
     }
@@ -119,13 +112,11 @@ export const useAIPromptConfig = () => {
         keepContext: formState.keepContext,
       };
 
-      const result = await window.electronAPI.aiPrompt.saveConfig(request);
+      const result = await window.electronAPI.aiPromptConf.saveConfig(request);
 
       if (result.success) {
         const displayedName = componentSuffix(formState.selectedComponent);
-        setSuccess(
-          `Configuration saved for ${displayedName} (Profile: ${formState.selectedProfileId})`
-        );
+        setSuccess(`Configuration saved for ${displayedName} (Profile: ${formState.selectedProfileId})`);
         await loadData();
         resetFormState();
         return true;
@@ -152,7 +143,7 @@ export const useAIPromptConfig = () => {
         setSuccess(null);
 
         const suffix = componentSuffix(componentName);
-        const result = await window.electronAPI.aiPrompt.deleteConfig(suffix);
+        const result = await window.electronAPI.aiPromptConf.deleteConfig(suffix);
 
         if (result.success) {
           setSuccess(`Configuration deleted for ${suffix}`);

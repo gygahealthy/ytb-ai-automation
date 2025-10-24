@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { Sparkles, ChevronRight, ChevronLeft, Edit3, Wand2, Layers, List } from "lucide-react";
-import { TopicInput } from "../../components/video-creation/script-creation/TopicInput";
-import { ScriptStyleSelector } from "../../components/video-creation/script-creation/ScriptStyleSelector";
-import { VisualStyleSelector } from "../../components/video-creation/script-creation/VisualStyleSelector";
-import { VideoPromptGenerator, VideoPrompt } from "../../components/video-creation/script-creation/VideoPromptGenerator";
-import { useVideoCreation } from "../../contexts/VideoCreationContext";
-import { useAlert } from "../../hooks/useAlert";
-import { replaceTemplate } from "../../../shared/utils/template-replacement.util";
+import { ChevronRight, ChevronLeft, Wand2 } from "lucide-react";
+import { VideoPromptGenerator, VideoPrompt } from "@components/video-creation/script-creation/VideoPromptGenerator";
+import { Step1_TopicAndStyle } from "@components/video-creation/script-creation/step-by-step/Step1_TopicAndStyle";
+import { Step2_EditScriptAndVisualStyle } from "@components/video-creation/script-creation/step-by-step/Step2_EditScriptAndVisualStyle";
+import { Step3_GeneratePrompts } from "@components/video-creation/script-creation/step-by-step/Step3_GeneratePrompts";
+import { ScriptCreatePageToolbar } from "@components/video-creation/script-creation/ScriptCreatePageToolbar";
+import { useVideoCreation } from "@contexts/VideoCreationContext";
+import { useAlert } from "@hooks/useAlert";
+import { replaceTemplate } from "@shared/utils/template-replacement.util";
 
 const electronApi = (window as any).electronAPI;
 
@@ -98,49 +99,25 @@ const ScriptCreatePage: React.FC = () => {
 
     setIsGeneratingTopics(true);
     try {
-      // Directly call IPC to get config for AITopicSuggestions (like PromptPlaygroundPage does)
-      console.log("[handleSuggestTopics] Fetching config directly from IPC");
-      const configResponse = await electronApi.aiPrompt.getConfig("AITopicSuggestions");
-      console.log("[handleSuggestTopics] Config response:", configResponse);
+      const configResponse = await electronApi.aiPromptConf.getConfig("AITopicSuggestions");
 
       if (!configResponse?.success || !configResponse.data) {
         console.error("AITopicSuggestions config not found:", configResponse?.error);
-        // Fallback to mock suggestions
-        const allMockSuggestions = [
-          "Complete guide to creating engaging short form video content for social media platforms like TikTok Instagram and YouTube Shorts with trending formats and techniques",
-          "How to start and grow a successful YouTube channel from zero subscribers including content strategy equipment setup and monetization methods for beginners",
-          "Effective digital marketing strategies for small business success including social media SEO content marketing and email campaigns to boost sales and brand awareness",
-          "Top productivity tools and apps for remote workers to improve efficiency collaboration task management and work life balance in distributed teams and environments",
-        ];
-        const selectedSuggestions = allMockSuggestions.slice(0, numberOfTopics);
-        setTopicSuggestions(selectedSuggestions);
         return;
       }
 
       const config = configResponse.data;
 
-      // Load the master prompt
-      console.log("[handleSuggestTopics] Loading master prompt ID:", config.promptId);
       const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-      console.log("[handleSuggestTopics] Master prompt response:", promptResponse);
 
       if (!promptResponse?.success || !promptResponse.data) {
-        console.error("Failed to load master prompt, using mock data");
-        // Fallback
-        const allMockSuggestions = [
-          `Video about ${topic} - Complete guide for beginners`,
-          `How to master ${topic} - Tips and tricks`,
-          `${topic} - Expert interview and insights`,
-          `Top 10 things about ${topic}`,
-        ];
-        setTopicSuggestions(allMockSuggestions.slice(0, numberOfTopics));
+        console.error("Failed to load master prompt");
         return;
       }
 
       const masterPrompt = promptResponse.data;
       const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
 
-      // Prepare variables for template replacement
       const variables = {
         user_input_keywords: topic,
         video_topic: topic,
@@ -148,11 +125,9 @@ const ScriptCreatePage: React.FC = () => {
         number_of_topics: String(numberOfTopics),
       };
 
-      // Replace template variables
       const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
 
-      // Call AI via backend
-      const response = await electronApi.aiPrompt.callAI({
+      const response = await electronApi.aiPromptConf.callAI({
         componentName: config.componentName,
         profileId: config.profileId || "default",
         data: variables,
@@ -161,7 +136,6 @@ const ScriptCreatePage: React.FC = () => {
       });
 
       if (response?.success) {
-        // Extract text from response
         let outputText = "";
         if (typeof response.data === "string") {
           outputText = response.data;
@@ -173,26 +147,16 @@ const ScriptCreatePage: React.FC = () => {
           outputText = JSON.stringify(response.data, null, 2);
         }
 
-        // Parse the AI response to extract topics
         const topics = parseTopicsFromAIResponse(outputText, numberOfTopics);
         setTopicSuggestions(topics);
       } else {
         console.error("AI call failed:", response?.error);
-        // Show user-friendly error alert with cookie refresh hint
         const errorMessage = response?.error || "Failed to generate topics";
         showAlert({
           title: "Topic Generation Failed",
           message: errorMessage,
           severity: "error",
         });
-        // Fallback to mock suggestions
-        const allMockSuggestions = [
-          `Video about ${topic} - Complete guide for beginners`,
-          `How to master ${topic} - Tips and tricks`,
-          `${topic} - Expert interview and insights`,
-          `Top 10 things about ${topic}`,
-        ];
-        setTopicSuggestions(allMockSuggestions.slice(0, numberOfTopics));
       }
     } catch (error) {
       console.error("Failed to generate topics:", error);
@@ -202,14 +166,6 @@ const ScriptCreatePage: React.FC = () => {
         message: `Failed to generate topics: ${errorMsg}`,
         severity: "error",
       });
-      // Fallback to mock suggestions
-      const allMockSuggestions = [
-        `Video about ${topic} - Complete guide for beginners`,
-        `How to master ${topic} - Tips and tricks`,
-        `${topic} - Expert interview and insights`,
-        `Top 10 things about ${topic}`,
-      ];
-      setTopicSuggestions(allMockSuggestions.slice(0, numberOfTopics));
     } finally {
       setIsGeneratingTopics(false);
     }
@@ -244,7 +200,7 @@ const ScriptCreatePage: React.FC = () => {
     setIsGenerating(true);
     try {
       // First, get the config for ScriptStyleSelector to retrieve the profile
-      const configResponse = await electronApi.aiPrompt.getConfig("ScriptStyleSelector");
+      const configResponse = await electronApi.aiPromptConf.getConfig("ScriptStyleSelector");
       if (!configResponse?.success || !configResponse.data) {
         throw new Error(configResponse?.error || "No configuration found for ScriptStyleSelector component");
       }
@@ -253,8 +209,8 @@ const ScriptCreatePage: React.FC = () => {
       const profileId = componentConfig.profileId || "default";
 
       // Call AI service with real parameters using the profile from config
-      const response = await electronApi.aiPrompt.callAI({
-        componentName: "VideoPromptGenerator",
+      const response = await electronApi.aiPromptConf.callAI({
+        componentName: "ScriptStyleSelector",
         profileId: profileId,
         data: {
           video_topic: topicToUse,
@@ -329,215 +285,59 @@ const ScriptCreatePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 z-10">
-        <div className="w-full px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-blue-500" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Story Generator</h1>
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode("step-by-step")}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                    viewMode === "step-by-step"
-                      ? "bg-white dark:bg-gray-800 text-blue-500 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                  }`}
-                >
-                  <Layers className="w-4 h-4" />
-                  Step-by-Step
-                </button>
-                <button
-                  onClick={() => setViewMode("simple")}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                    viewMode === "simple"
-                      ? "bg-white dark:bg-gray-800 text-blue-500 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                  }`}
-                >
-                  <List className="w-4 h-4" />
-                  Simple
-                </button>
-              </div>
-
-              {/* Step Navigation - Only show in step-by-step mode */}
-              {viewMode === "step-by-step" && (
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    disabled={currentStep === 1}
-                    className={`flex items-center gap-2 transition-all ${currentStep >= 1 ? "text-blue-500" : "text-gray-400"} ${
-                      currentStep === 1 ? "cursor-default" : "cursor-pointer hover:opacity-80"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        currentStep >= 1 ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"
-                      }`}
-                    >
-                      1
-                    </div>
-                    <span className="text-sm font-medium">Topic & Style</span>
-                  </button>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                  <button
-                    onClick={() => currentStep >= 2 && setCurrentStep(2)}
-                    disabled={currentStep < 2}
-                    className={`flex items-center gap-2 transition-all ${currentStep >= 2 ? "text-blue-500" : "text-gray-400"} ${
-                      currentStep < 2
-                        ? "cursor-not-allowed"
-                        : currentStep === 2
-                        ? "cursor-default"
-                        : "cursor-pointer hover:opacity-80"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        currentStep >= 2 ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"
-                      }`}
-                    >
-                      2
-                    </div>
-                    <span className="text-sm font-medium">Edit Script & Visual Style</span>
-                  </button>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                  <button
-                    onClick={() => currentStep >= 3 && setCurrentStep(3)}
-                    disabled={currentStep < 3}
-                    className={`flex items-center gap-2 transition-all ${currentStep >= 3 ? "text-blue-500" : "text-gray-400"} ${
-                      currentStep < 3 ? "cursor-not-allowed" : "cursor-pointer hover:opacity-80"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        currentStep >= 3 ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"
-                      }`}
-                    >
-                      3
-                    </div>
-                    <span className="text-sm font-medium">Generate Prompts</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScriptCreatePageToolbar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
+      />
       <div className="flex-1 overflow-hidden">
         {/* Step-by-Step Mode */}
         {viewMode === "step-by-step" && (
           <>
             {currentStep === 1 && (
-              <div className="h-full overflow-auto px-6 py-8">
-                <div className="space-y-6 animate-fadeIn">
-                  <TopicInput
-                    topic={topic}
-                    onTopicChange={setTopic}
-                    numberOfTopics={numberOfTopics}
-                    onNumberOfTopicsChange={setNumberOfTopics}
-                    onGenerateTopics={handleSuggestTopics}
-                    suggestions={topicSuggestions}
-                    selectedTopicId={selectedTopicId}
-                    onSelectSuggestion={handleSelectSuggestion}
-                    onSelectHintTopic={handleSelectHintTopic}
-                    onClearSuggestions={handleClearSuggestions}
-                    isGenerating={isGeneratingTopics}
-                  />
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                    <ScriptStyleSelector
-                      selectedStyle={videoStyle}
-                      onStyleChange={setVideoStyle}
-                      scriptLengthPreset={scriptLengthPreset}
-                      onScriptLengthChange={setScriptLengthPreset}
-                      customWordCount={customWordCount}
-                      onCustomWordCountChange={setCustomWordCount}
-                    />
-                  </div>
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">How It Works</h3>
-                    <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                      <p>
-                        <strong>1.</strong> Enter your video topic or idea (just a few words is enough)
-                      </p>
-                      <p>
-                        <strong>2.</strong> Choose a tone/style that matches your content
-                      </p>
-                      <p>
-                        <strong>3.</strong> AI generates a complete script divided into scenes
-                      </p>
-                      <p>
-                        <strong>4.</strong> Edit the script and choose visual style for the video
-                      </p>
-                      <p>
-                        <strong>5.</strong> Generate 8-second video prompts optimized for your chosen styles
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Step1_TopicAndStyle
+                topic={topic}
+                onTopicChange={setTopic}
+                numberOfTopics={numberOfTopics}
+                onNumberOfTopicsChange={setNumberOfTopics}
+                onGenerateTopics={handleSuggestTopics}
+                suggestions={topicSuggestions}
+                selectedTopicId={selectedTopicId}
+                onSelectSuggestion={handleSelectSuggestion}
+                onSelectHintTopic={handleSelectHintTopic}
+                onClearSuggestions={handleClearSuggestions}
+                isGenerating={isGeneratingTopics}
+                videoStyle={videoStyle}
+                onVideoStyleChange={setVideoStyle}
+                scriptLengthPreset={scriptLengthPreset}
+                onScriptLengthChange={setScriptLengthPreset}
+                customWordCount={customWordCount}
+                onCustomWordCountChange={setCustomWordCount}
+              />
             )}
 
             {currentStep === 2 && (
-              <div className="h-full overflow-auto px-6 py-8">
-                <div className="space-y-6 animate-fadeIn">
-                  {/* Script Editor */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Edit3 className="w-6 h-6 text-blue-500" />
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Review & Edit Script</h2>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Review the generated script and make any edits if necessary. The script is divided into 8 scenes for optimal
-                      video creation.
-                    </p>
-                    <textarea
-                      value={editedScript}
-                      onChange={(e) => setEditedScript(e.target.value)}
-                      className="w-full h-96 px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      placeholder="Your generated script will appear here..."
-                    />
-                  </div>
-
-                  {/* Visual Style Selector */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Choose Visual/Artistic Style</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                      Select the artistic style that will be used to generate the visual prompts for your video. This determines
-                      the look and feel of your final video.
-                    </p>
-                    <VisualStyleSelector selectedStyle={visualStyle} onStyleChange={setVisualStyle} />
-                  </div>
-                </div>
-              </div>
+              <Step2_EditScriptAndVisualStyle
+                editedScript={editedScript}
+                onScriptChange={setEditedScript}
+                visualStyle={visualStyle}
+                onVisualStyleChange={setVisualStyle}
+              />
             )}
 
             {currentStep === 3 && (
-              <div className="h-full px-6 py-8">
-                <VideoPromptGenerator
-                  script={editedScript}
-                  style={`${videoStyle} with ${visualStyle} visual style`}
-                  topic={topic}
-                  selectedTopic={selectedTopic} // ✅ Pass selectedTopic
-                  videoStyle={videoStyle}
-                  visualStyle={visualStyle}
-                  scriptLengthPreset={scriptLengthPreset}
-                  customWordCount={customWordCount}
-                  onPromptsGenerated={handlePromptsGenerated}
-                  onBackToEdit={() => setCurrentStep(2)}
-                  onScriptLengthChange={setScriptLengthPreset}
-                  onCustomWordCountChange={setCustomWordCount}
-                  onTopicChange={setTopic}
-                  onVideoStyleChange={setVideoStyle}
-                  onVisualStyleChange={setVisualStyle}
-                  onScriptChange={setEditedScript}
-                />
-              </div>
+              <Step3_GeneratePrompts
+                script={editedScript}
+                topic={topic}
+                selectedTopic={selectedTopic}
+                videoStyle={videoStyle}
+                visualStyle={visualStyle}
+                scriptLengthPreset={scriptLengthPreset}
+                customWordCount={customWordCount}
+                onPromptsGenerated={handlePromptsGenerated}
+                onBackToEdit={() => setCurrentStep(2)}
+              />
             )}
           </>
         )}

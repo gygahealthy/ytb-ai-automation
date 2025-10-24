@@ -40,7 +40,6 @@ interface VideoPromptGeneratorProps {
 
 export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
   script,
-  style,
   topic,
   selectedTopic,
   videoStyle,
@@ -121,7 +120,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
     setIsGenerating(true);
     try {
       // First, get the config for VideoConfigurationColumn to retrieve the profile
-      const configResponse = await electronApi.aiPrompt.getConfig("VideoConfigurationColumn");
+      const configResponse = await electronApi.aiPromptConf.getConfig("VideoConfigurationColumn");
       if (!configResponse?.success || !configResponse.data) {
         throw new Error(configResponse?.error || "No configuration found for VideoConfigurationColumn component");
       }
@@ -130,7 +129,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
       const profileId = componentConfig.profileId || "default";
 
       // Call AI service with real parameters using the profile from config
-      const response = await electronApi.aiPrompt.callAI({
+      const response = await electronApi.aiPromptConf.callAI({
         componentName: "VideoConfigurationColumn",
         profileId: profileId,
         data: {

@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useCallback,
-} from "react";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import electronApi from "../ipc";
 import { replaceTemplate } from "../../shared/utils/template-replacement.util";
 
@@ -26,10 +20,7 @@ export interface ComponentAIPromptState {
   error: string | null;
   config?: ComponentAIPromptConfig | null;
   refresh: () => Promise<void>;
-  sendPrompt: (
-    data: Record<string, any>,
-    options?: { stream?: boolean; requestId?: string; model?: string }
-  ) => Promise<any>;
+  sendPrompt: (data: Record<string, any>, options?: { stream?: boolean; requestId?: string; model?: string }) => Promise<any>;
 }
 
 // Context holds per-component cached state and helpers. Mount provider at App level.
@@ -41,9 +32,7 @@ export interface PerComponentState {
 
 export interface ComponentAIPromptContextState {
   // accessors
-  fetchConfig: (
-    componentName: string
-  ) => Promise<ComponentAIPromptConfig | null>;
+  fetchConfig: (componentName: string) => Promise<ComponentAIPromptConfig | null>;
   getCachedConfig: (componentName: string) => PerComponentState | undefined;
   sendPromptFor: (
     componentName: string,
@@ -58,19 +47,11 @@ export interface ComponentAIPromptContextState {
   clearConversation?: (componentName: string) => void;
 }
 
-const ComponentAIPromptContext = createContext<
-  ComponentAIPromptContextState | undefined
->(undefined);
+const ComponentAIPromptContext = createContext<ComponentAIPromptContextState | undefined>(undefined);
 
-export function ComponentAIPromptProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function ComponentAIPromptProvider({ children }: { children: ReactNode }) {
   // maps per-component
-  const [configs, setConfigs] = useState<
-    Record<string, ComponentAIPromptConfig | null>
-  >({});
+  const [configs, setConfigs] = useState<Record<string, ComponentAIPromptConfig | null>>({});
   // per-component stored conversation metadata (client-side persistence)
   const [conversationMap, setConversationMap] = useState<
     Record<
@@ -85,12 +66,9 @@ export function ComponentAIPromptProvider({
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [errorMap, setErrorMap] = useState<Record<string, string | null>>({});
 
-  const setLoadingFor = (name: string, v: boolean) =>
-    setLoadingMap((s) => ({ ...s, [name]: v }));
-  const setErrorFor = (name: string, v: string | null) =>
-    setErrorMap((s) => ({ ...s, [name]: v }));
-  const setConfigFor = (name: string, cfg: ComponentAIPromptConfig | null) =>
-    setConfigs((s) => ({ ...s, [name]: cfg }));
+  const setLoadingFor = (name: string, v: boolean) => setLoadingMap((s) => ({ ...s, [name]: v }));
+  const setErrorFor = (name: string, v: string | null) => setErrorMap((s) => ({ ...s, [name]: v }));
+  const setConfigFor = (name: string, cfg: ComponentAIPromptConfig | null) => setConfigs((s) => ({ ...s, [name]: cfg }));
 
   const setConversationFor = (
     name: string,
@@ -101,8 +79,7 @@ export function ComponentAIPromptProvider({
     } | null
   ) => setConversationMap((s) => ({ ...s, [name]: v }));
 
-  const clearConversationFor = (name: string) =>
-    setConversationMap((s) => ({ ...s, [name]: null }));
+  const clearConversationFor = (name: string) => setConversationMap((s) => ({ ...s, [name]: null }));
 
   const fetchConfig = useCallback(
     async (name: string) => {
@@ -114,7 +91,7 @@ export function ComponentAIPromptProvider({
       setLoadingFor(name, true);
       setErrorFor(name, null);
       try {
-        const res = await (electronApi as any).aiPrompt.getConfig(name);
+        const res = await (electronApi as any).aiPromptConf.getConfig(name);
         if (!res || !res.success) {
           setConfigFor(name, null);
           setErrorFor(name, res?.error || "failed-to-load-config");
@@ -135,26 +112,18 @@ export function ComponentAIPromptProvider({
 
   // Replace placeholders using shared template replacement utility (normalizes keys to snake_case)
   const replacePlaceholders = useCallback(
-    (
-      template: string,
-      data: Record<string, any>,
-      occurrenceConfig?: Record<string, number[]>
-    ) => {
+    (template: string, data: Record<string, any>, occurrenceConfig?: Record<string, number[]>) => {
       // Use new template replacement util with optional occurrence config for selective replacement
       return replaceTemplate(template, data || {}, occurrenceConfig);
     },
     []
   );
 
-  // sendPrompt: either route via backend aiPrompt.callAI (preferred for server-side control)
+  // sendPrompt: either route via backend aiPromptConf.callAI (preferred for server-side control)
   // or send directly to gemini.chat.send when config.useTempChat indicates ephemeral/local behaviour.
   // sendPrompt for named component. Ensures config is loaded first.
   const sendPromptFor = useCallback(
-    async (
-      name: string,
-      data: Record<string, any>,
-      options?: { stream?: boolean; requestId?: string; model?: string }
-    ) => {
+    async (name: string, data: Record<string, any>, options?: { stream?: boolean; requestId?: string; model?: string }) => {
       // ensure config
       let cfg = configs[name];
       if (cfg === undefined) {
@@ -164,23 +133,16 @@ export function ComponentAIPromptProvider({
 
       try {
         const mp = await electronApi.masterPrompts.getById(cfg.promptId);
-        if (!mp || !mp.success || !mp.data)
-          return { success: false, error: "prompt-not-found" };
+        if (!mp || !mp.success || !mp.data) return { success: false, error: "prompt-not-found" };
 
         const promptTemplate = mp.data.promptTemplate || mp.data.prompt || "";
         // Pass occurrence config for selective variable replacement
-        const processed = replacePlaceholders(
-          promptTemplate,
-          data || {},
-          mp.data.variableOccurrencesConfig
-        );
+        const processed = replacePlaceholders(promptTemplate, data || {}, mp.data.variableOccurrencesConfig);
 
         const callViaBackend = true;
         if (callViaBackend) {
           // include conversationContext only when component config asks to keepContext
-          const conversationContext = cfg.keepContext
-            ? conversationMap[name] || undefined
-            : undefined;
+          const conversationContext = cfg.keepContext ? conversationMap[name] || undefined : undefined;
 
           const req: any = {
             componentName: cfg.componentName,
@@ -199,7 +161,7 @@ export function ComponentAIPromptProvider({
             };
           }
 
-          const resp = await (electronApi as any).aiPrompt.callAI(req);
+          const resp = await (electronApi as any).aiPromptConf.callAI(req);
 
           // Update client-side conversation metadata if config requests persistence
           if (cfg.keepContext && resp?.storedMetadata) {
@@ -265,11 +227,7 @@ export function ComponentAIPromptProvider({
     clearConversation: (name: string) => clearConversationFor(name),
   };
 
-  return (
-    <ComponentAIPromptContext.Provider value={state}>
-      {children}
-    </ComponentAIPromptContext.Provider>
-  );
+  return <ComponentAIPromptContext.Provider value={state}>{children}</ComponentAIPromptContext.Provider>;
 }
 
 /**
@@ -278,10 +236,7 @@ export function ComponentAIPromptProvider({
  */
 export function useComponentAIPromptContext() {
   const ctx = useContext(ComponentAIPromptContext);
-  if (!ctx)
-    throw new Error(
-      "useComponentAIPromptContext must be used within ComponentAIPromptProvider"
-    );
+  if (!ctx) throw new Error("useComponentAIPromptContext must be used within ComponentAIPromptProvider");
   return ctx;
 }
 

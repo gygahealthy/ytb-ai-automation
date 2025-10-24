@@ -16,6 +16,7 @@ interface MasterPrompt extends VideoPromptRow {
   status?: number;
   createdAt?: string;
   updatedAt?: string;
+  variableOccurrencesConfig?: any;
 }
 
 interface PromptType {
