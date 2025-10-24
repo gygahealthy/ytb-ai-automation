@@ -1,10 +1,22 @@
 import { useState, useEffect } from "react";
-import { ComponentPromptSelector } from "@/renderer/components/master-prompt/playground/ComponentPromptSelector";
-import { VariableInputForm } from "@/renderer/components/master-prompt/playground/VariableInputForm";
-import { PromptPreview } from "@/renderer/components/master-prompt/playground/PromptPreview";
-import { AIOutputDisplay } from "@/renderer/components/master-prompt/playground/AIOutputDisplay";
-import { ComponentAIPromptConfig } from "@/renderer/contexts/ComponentAIPromptContext";
+import { ComponentPromptSelector } from "@/renderer/components/master-prompt/prompt-playground/ComponentPromptSelector";
+import { VariableInputForm } from "@/renderer/components/master-prompt/prompt-playground/VariableInputForm";
+import { PromptPreview } from "@/renderer/components/master-prompt/prompt-playground/PromptPreview";
+import { AIOutputDisplay } from "@/renderer/components/master-prompt/prompt-playground/AIOutputDisplay";
 import { replaceTemplate } from "@/shared/utils/template-replacement.util";
+
+export interface ComponentAIPromptConfig {
+  id: string;
+  componentName: string;
+  profileId: string;
+  promptId: number;
+  aiModel?: string;
+  enabled?: boolean;
+  useTempChat?: boolean;
+  keepContext?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 const electronApi = (window as any).electronAPI;
 

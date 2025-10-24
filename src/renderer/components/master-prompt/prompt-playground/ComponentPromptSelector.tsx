@@ -8,10 +8,7 @@ interface ComponentPromptSelectorProps {
   selectedConfig: ComponentAIPromptConfig | null;
 }
 
-export function ComponentPromptSelector({
-  onSelect,
-  selectedConfig,
-}: ComponentPromptSelectorProps) {
+export function ComponentPromptSelector({ onSelect, selectedConfig }: ComponentPromptSelectorProps) {
   const [configs, setConfigs] = useState<ComponentAIPromptConfig[]>([]);
   const [promptNames, setPromptNames] = useState<Record<number, string>>({});
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
@@ -34,18 +31,14 @@ export function ComponentPromptSelector({
         try {
           const names: Record<number, string> = {};
           const profiles: Record<string, string> = {};
-          const profileIds = [
-            ...new Set(res.data.map((c: any) => c.profileId)),
-          ];
+          const profileIds = [...new Set(res.data.map((c: any) => c.profileId))];
 
           // Fetch all prompts in parallel
           await Promise.all(
             res.data.map(async (c: any) => {
               try {
                 const p = await electronApi.masterPrompts.getById(c.promptId);
-                if (p?.success && p.data)
-                  names[c.promptId] =
-                    p.data.name || p.data.title || `Prompt ${c.promptId}`;
+                if (p?.success && p.data) names[c.promptId] = p.data.name || p.data.title || `Prompt ${c.promptId}`;
               } catch (e) {
                 // ignore
               }
@@ -57,12 +50,9 @@ export function ComponentPromptSelector({
             profileIds.map(async (profileId: unknown) => {
               if (!profileId) return;
               try {
-                const p = await electronApi.profile.getById(
-                  profileId as string
-                );
+                const p = await electronApi.profile.getById(profileId as string);
                 if (p?.success && p.data) {
-                  profiles[profileId as string] =
-                    p.data.name || (profileId as string);
+                  profiles[profileId as string] = p.data.name || (profileId as string);
                 }
               } catch (e) {
                 // ignore profile fetch errors
@@ -88,32 +78,22 @@ export function ComponentPromptSelector({
   return (
     <div className="h-full flex flex-col border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-800">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Component Prompts
-        </h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-          Select a component to load its master prompt
-        </p>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Component Prompts</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Select a component to load its master prompt</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Loading configurations...
-            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Loading configurations...</div>
           </div>
         )}
 
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div className="text-sm font-medium text-red-800 dark:text-red-400">
-              Error loading configs
-            </div>
-            <div className="text-xs text-red-700 dark:text-red-300 mt-1">
-              {error}
-            </div>
+            <div className="text-sm font-medium text-red-800 dark:text-red-400">Error loading configs</div>
+            <div className="text-xs text-red-700 dark:text-red-300 mt-1">{error}</div>
           </div>
         )}
 
@@ -132,9 +112,7 @@ export function ComponentPromptSelector({
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              No component prompts configured yet
-            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">No component prompts configured yet</div>
           </div>
         )}
 
@@ -152,9 +130,7 @@ export function ComponentPromptSelector({
               >
                 <div
                   className={`font-semibold text-sm ${
-                    selectedConfig?.id === config.id
-                      ? "text-blue-900 dark:text-blue-100"
-                      : "text-gray-900 dark:text-gray-100"
+                    selectedConfig?.id === config.id ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
                   {config.componentName}
@@ -162,22 +138,15 @@ export function ComponentPromptSelector({
                 <div className={`flex items-center justify-between mt-2`}>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     <div className="inline-block text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                      {promptNames[config.promptId] ||
-                        `Prompt ${config.promptId}`}
+                      {promptNames[config.promptId] || `Prompt ${config.promptId}`}
                     </div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Model: {config.aiModel || "Default"}
-                    </div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Model: {config.aiModel || "Default"}</div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      Profile
-                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Profile</div>
                     <div className="text-xs font-medium bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded mt-1">
-                      {profileNames[config.profileId] ||
-                        config.profileId ||
-                        "default"}
+                      {profileNames[config.profileId] || config.profileId || "default"}
                     </div>
                   </div>
                 </div>

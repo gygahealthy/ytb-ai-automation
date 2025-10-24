@@ -128,7 +128,7 @@ export function collectModuleRegistrations(): any[] {
     };
 
     // Candidate paths (prefer compiled dist when available)
-    let candidates = [] as string[];
+    const candidates = [] as string[];
     const cwd = process.cwd();
     const srcPrefix = path.join(cwd, "src");
 

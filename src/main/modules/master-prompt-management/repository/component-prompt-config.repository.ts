@@ -90,9 +90,9 @@ export class ComponentPromptConfigRepository {
   /**
    * Get configuration by component name
    */
-  async getByComponentName(
-    componentName: string
-  ): Promise<ComponentPromptConfig | undefined> {
+  async getByComponentName(componentName: string): Promise<ComponentPromptConfig | undefined> {
+    console.log(`[ComponentPromptConfigRepository] Searching for component: "${componentName}"`);
+
     // Try exact match first
     let row = await this.db.get<any>(
       `
@@ -113,11 +113,14 @@ export class ComponentPromptConfigRepository {
       [componentName]
     );
 
+    console.log(`[ComponentPromptConfigRepository] Exact match result for "${componentName}":`, row ? "found" : "not found");
+
     if (!row) {
       // If the provided name is likely a suffix (no '-' or '|'), try matching any stored
       // component_name that ends with '-suffix' or '|suffix'. This allows the UI to send
       // only the suffix while still finding previously stored full names.
       if (!componentName.includes("-") && !componentName.includes("|")) {
+        console.log(`[ComponentPromptConfigRepository] Trying suffix match for: "${componentName}"`);
         row = await this.db.get<any>(
           `
         SELECT 
@@ -136,10 +139,11 @@ export class ComponentPromptConfigRepository {
       `,
           [`%-${componentName}`, `%|${componentName}`]
         );
+        console.log(`[ComponentPromptConfigRepository] Suffix match result:`, row ? "found" : "not found");
       } else {
         // if it contains a separator, try both dash and pipe variants
-        const alternatives =
-          this.generateComponentNameAlternatives(componentName);
+        const alternatives = this.generateComponentNameAlternatives(componentName);
+        console.log(`[ComponentPromptConfigRepository] Trying alternatives:`, alternatives);
         for (const alt of alternatives) {
           row = await this.db.get<any>(
             `
@@ -159,13 +163,20 @@ export class ComponentPromptConfigRepository {
       `,
             [alt]
           );
-          if (row) break;
+          if (row) {
+            console.log(`[ComponentPromptConfigRepository] Found with alternative: "${alt}"`);
+            break;
+          }
         }
       }
     }
 
-    if (!row) return undefined;
+    if (!row) {
+      console.log(`[ComponentPromptConfigRepository] No configuration found for: "${componentName}"`);
+      return undefined;
+    }
 
+    console.log(`[ComponentPromptConfigRepository] Returning config for: "${row.componentName}"`);
     return {
       id: row.id,
       componentName: row.componentName,
@@ -257,10 +268,7 @@ export class ComponentPromptConfigRepository {
   /**
    * Update configuration by component name
    */
-  async updateByComponentName(
-    componentName: string,
-    updates: UpdateConfigInput
-  ): Promise<ComponentPromptConfig | undefined> {
+  async updateByComponentName(componentName: string, updates: UpdateConfigInput): Promise<ComponentPromptConfig | undefined> {
     const existing = await this.getByComponentName(componentName);
     if (!existing) return undefined;
 
@@ -345,10 +353,7 @@ export class ComponentPromptConfigRepository {
     const existing = await this.getByComponentName(componentName);
     if (!existing) return false;
 
-    const result = await this.db.run(
-      "DELETE FROM component_prompt_configs WHERE component_name = ?",
-      [existing.componentName]
-    );
+    const result = await this.db.run("DELETE FROM component_prompt_configs WHERE component_name = ?", [existing.componentName]);
 
     return (result.changes || 0) > 0;
   }
@@ -357,15 +362,11 @@ export class ComponentPromptConfigRepository {
    * Delete configuration by ID
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.db.run(
-      "DELETE FROM component_prompt_configs WHERE id = ?",
-      [id]
-    );
+    const result = await this.db.run("DELETE FROM component_prompt_configs WHERE id = ?", [id]);
 
     return (result.changes || 0) > 0;
   }
 }
 
 // Singleton instance
-export const componentPromptConfigRepository =
-  new ComponentPromptConfigRepository(database.getSQLiteDatabase());
+export const componentPromptConfigRepository = new ComponentPromptConfigRepository(database.getSQLiteDatabase());

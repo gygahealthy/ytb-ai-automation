@@ -4,7 +4,7 @@ import { useAlert } from "../../hooks/useAlert";
 import { useConfirm } from "../../hooks/useConfirm";
 import AdminPromptTable, { VideoPromptRow } from "../../components/master-prompt/AdminPromptTable";
 import PromptModal from "../../components/master-prompt/PromptModal";
-import VariablesHint from "../../components/master-prompt/master-prompt-mng/VariablesHint";
+import VariablesHint from "../../components/master-prompt/master-prompt/VariablesHint";
 import electronApi from "../../ipc";
 
 interface MasterPrompt extends VideoPromptRow {
@@ -165,6 +165,7 @@ const MasterPromptPage: React.FC = () => {
         tags: prompt.tags,
         isActive: prompt.isActive,
         archived: prompt.archived,
+        variableOccurrencesConfig: prompt.variableOccurrencesConfig,
       });
     } else {
       setEditingPrompt({

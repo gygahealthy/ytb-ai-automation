@@ -34,7 +34,7 @@ export const TopicInput: React.FC<TopicInputProps> = ({
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <label className="block text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-blue-500" />
-        What is your video's topic?
+        What is your video's topic IDEA?
       </label>
 
       {/* Input Row: Topic Input + Number of Topics + Generate Button */}
@@ -50,11 +50,7 @@ export const TopicInput: React.FC<TopicInputProps> = ({
           <input
             type="number"
             value={numberOfTopics}
-            onChange={(e) =>
-              onNumberOfTopicsChange(
-                Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
-              )
-            }
+            onChange={(e) => onNumberOfTopicsChange(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
             min="1"
             max="20"
             className="w-16 px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"

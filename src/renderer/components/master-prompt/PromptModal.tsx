@@ -3,16 +3,11 @@ import { Save, Archive } from "lucide-react";
 import electronApi from "../../ipc";
 import { useAlert } from "../../hooks/useAlert";
 import { useConfirm } from "../../hooks/useConfirm";
-import PromptMetadataForm from "./master-prompt-mng/PromptMetadataForm";
-import PromptEditor, {
-  PromptEditorRef,
-} from "./master-prompt-mng/PromptEditor";
-import PromptHistoryPanel from "./master-prompt-mng/PromptHistoryPanel";
-import DetectedVariablesPanel from "./master-prompt-mng/DetectedVariablesPanel";
-import {
-  detectVariables,
-  findVariableEnd,
-} from "../../../shared/utils/variable-detect";
+import PromptMetadataForm from "./master-prompt/PromptMetadataForm";
+import PromptEditor, { PromptEditorRef } from "./master-prompt/PromptEditor";
+import PromptHistoryPanel from "./master-prompt/PromptHistoryPanel";
+import DetectedVariablesPanel from "./master-prompt/DetectedVariablesPanel";
+import { detectVariables, findVariableEnd } from "../../../shared/utils/variable-detect";
 import { parseTags } from "../../utils/prompt-tag-parse";
 
 type Prompt = {
@@ -52,19 +47,16 @@ const PromptModal: React.FC<Props> = ({
   });
 
   const [prompt, setPrompt] = useState<Prompt>(() =>
-    initial
-      ? { ...makeDefaultPrompt(providers), ...initial }
-      : makeDefaultPrompt(providers)
+    initial ? { ...makeDefaultPrompt(providers), ...initial } : makeDefaultPrompt(providers)
   );
 
   const [tags, setTags] = useState<string[]>(() => parseTags(initial?.tags));
   const [tagInput, setTagInput] = useState("");
 
   // Variable occurrences selection state
-  const [selectedVariableOccurrences, setSelectedVariableOccurrences] =
-    useState<Record<string, number[]>>(() => {
-      return initial?.variableOccurrencesConfig || {};
-    });
+  const [selectedVariableOccurrences, setSelectedVariableOccurrences] = useState<Record<string, number[]>>(() => {
+    return initial?.variableOccurrencesConfig || {};
+  });
 
   // History panel state
   const [showHistory, setShowHistory] = useState(false);
@@ -89,16 +81,11 @@ const PromptModal: React.FC<Props> = ({
   if (prompt.promptTemplate === undefined) prompt.promptTemplate = "";
 
   // Detect variables in template
-  const detectedVariables = useMemo(
-    () => detectVariables(prompt.promptTemplate || ""),
-    [prompt.promptTemplate]
-  );
+  const detectedVariables = useMemo(() => detectVariables(prompt.promptTemplate || ""), [prompt.promptTemplate]);
 
   // Update prompt when initial changes
   useEffect(() => {
-    const newPrompt = initial
-      ? { ...makeDefaultPrompt(providers), ...initial }
-      : makeDefaultPrompt(providers);
+    const newPrompt = initial ? { ...makeDefaultPrompt(providers), ...initial } : makeDefaultPrompt(providers);
     setPrompt(newPrompt);
     setTags(parseTags(initial?.tags));
     setTagInput("");
@@ -142,14 +129,13 @@ const PromptModal: React.FC<Props> = ({
     };
 
     loadPromptTypes();
-  }, [open]);
+  }, [open, initial]);
 
   // Focus trap inside modal when open
   useEffect(() => {
     if (!open || !modalRef.current) return;
     const el = modalRef.current;
-    const focusable =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusable = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const nodes = Array.from(el.querySelectorAll(focusable)) as HTMLElement[];
     if (nodes.length === 0) return;
     const first = nodes[0];
@@ -173,16 +159,12 @@ const PromptModal: React.FC<Props> = ({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const update = (field: keyof Prompt, value: any) =>
-    setPrompt({ ...prompt, [field]: value });
+  const update = (field: keyof Prompt, value: any) => setPrompt({ ...prompt, [field]: value });
 
   const loadHistory = async (promptId: number) => {
     setLoadingHistory(true);
     try {
-      const result = await electronApi.promptHistory.getByPromptId(
-        promptId,
-        20
-      );
+      const result = await electronApi.promptHistory.getByPromptId(promptId, 20);
       if (result.success && result.data) {
         setPromptHistory(result.data);
       }
@@ -203,8 +185,7 @@ const PromptModal: React.FC<Props> = ({
     }
 
     try {
-      const currentText =
-        editorRef.current?.getValue() || prompt.promptTemplate;
+      const currentText = editorRef.current?.getValue() || prompt.promptTemplate;
       const result = await electronApi.promptHistory.create({
         promptId: prompt.id,
         provider: prompt.provider || "",
@@ -225,8 +206,7 @@ const PromptModal: React.FC<Props> = ({
         });
       } else if (result.error === "duplicate") {
         alertApi.show({
-          message:
-            "This version is identical to the latest archived version. No new archive created.",
+          message: "This version is identical to the latest archived version. No new archive created.",
           title: "No changes",
         });
       } else {
@@ -297,10 +277,7 @@ const PromptModal: React.FC<Props> = ({
     });
   };
 
-  const handleVariableOccurrenceSelection = (
-    varName: string,
-    selectedIndices: number[]
-  ) => {
+  const handleVariableOccurrenceSelection = (varName: string, selectedIndices: number[]) => {
     setSelectedVariableOccurrences({
       ...selectedVariableOccurrences,
       [varName]: selectedIndices,

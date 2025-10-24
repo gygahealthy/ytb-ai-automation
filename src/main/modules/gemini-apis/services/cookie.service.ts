@@ -492,7 +492,7 @@ export class CookieService {
    */
   async extractAndStoreCookiesFromPage(
     profileId: string,
-    _url: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    _url: string,  
     service: string,
     pageUrl: string,
     cookies: Array<{

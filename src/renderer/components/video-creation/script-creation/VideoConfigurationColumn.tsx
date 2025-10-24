@@ -1,33 +1,15 @@
 import React, { useState } from "react";
-import {
-  BookOpen,
-  ChevronDown,
-  Sparkles,
-  Briefcase,
-  TrendingUp,
-  Film,
-  Zap,
-  Cpu,
-  Palette,
-  Crown,
-  Heart,
-  Coffee,
-  Smile,
-  Image,
-  Layers,
-  Camera,
-  Grid,
-  Star,
-  Wand2,
-  X,
-  Lightbulb,
-  FileText,
-} from "lucide-react";
+import { ChevronDown, Wand2, X, Lightbulb, FileText, BookOpen, Sparkles } from "lucide-react";
 import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
 import { VideoPrompt } from "./VideoPromptGenerator";
 import { HintForTopicPrompt } from "./HintForTopicPrompt";
 import { AITopicSuggestions } from "./AITopicSuggestions";
+import { replaceTemplate } from "@/shared/utils/template-replacement.util";
+import { VIDEO_STYLE_OPTIONS } from "@/shared/constants/video-style.constants";
+import { VISUAL_STYLE_OPTIONS } from "@/shared/constants/visual-style.constants";
+
+const electronApi = (window as any).electronAPI;
 
 interface VideoConfigurationColumnProps {
   topic: string;
@@ -47,9 +29,7 @@ interface VideoConfigurationColumnProps {
   onScriptChange?: (script: string) => void;
 }
 
-export const VideoConfigurationColumn: React.FC<
-  VideoConfigurationColumnProps
-> = ({
+export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> = ({
   topic,
   videoStyle,
   visualStyle,
@@ -89,110 +69,9 @@ export const VideoConfigurationColumn: React.FC<
     return config;
   };
 
-  // Style option lists (icons + labels)
-  const videoStyleOptions = [
-    {
-      id: "explainer",
-      label: "Explainer",
-      icon: <BookOpen className="w-4 h-4" />,
-    },
-    {
-      id: "corporate",
-      label: "Corporate",
-      icon: <Briefcase className="w-4 h-4" />,
-    },
-    {
-      id: "marketing",
-      label: "Marketing",
-      icon: <TrendingUp className="w-4 h-4" />,
-    },
-    {
-      id: "documentary",
-      label: "Documentary",
-      icon: <Film className="w-4 h-4" />,
-    },
-    { id: "modern", label: "Modern", icon: <Sparkles className="w-4 h-4" /> },
-    { id: "dynamic", label: "Dynamic", icon: <Zap className="w-4 h-4" /> },
-    { id: "tech", label: "Tech", icon: <Cpu className="w-4 h-4" /> },
-    { id: "organic", label: "Organic", icon: <Palette className="w-4 h-4" /> },
-    { id: "luxury", label: "Luxury", icon: <Crown className="w-4 h-4" /> },
-    {
-      id: "inspirational",
-      label: "Inspirational",
-      icon: <Heart className="w-4 h-4" />,
-    },
-    { id: "calm", label: "Calm", icon: <Coffee className="w-4 h-4" /> },
-    { id: "playful", label: "Playful", icon: <Smile className="w-4 h-4" /> },
-  ] as const;
-
-  const visualStyleOptions = [
-    {
-      id: "2d-cartoon",
-      label: "2D Cartoon",
-      icon: <Image className="w-4 h-4" />,
-    },
-    {
-      id: "3d-cartoon",
-      label: "3D Cartoon",
-      icon: <Grid className="w-4 h-4" />,
-    },
-    { id: "anime", label: "Anime", icon: <Star className="w-4 h-4" /> },
-    {
-      id: "motion-graphics",
-      label: "Motion Graphics",
-      icon: <Layers className="w-4 h-4" />,
-    },
-    {
-      id: "whiteboard",
-      label: "Whiteboard",
-      icon: <Image className="w-4 h-4" />,
-    },
-    {
-      id: "stop-motion",
-      label: "Stop Motion",
-      icon: <Camera className="w-4 h-4" />,
-    },
-    {
-      id: "paper-cutout",
-      label: "Paper Cutout",
-      icon: <Grid className="w-4 h-4" />,
-    },
-    { id: "pixel-art", label: "Pixel Art", icon: <Star className="w-4 h-4" /> },
-    { id: "cinematic", label: "Cinematic", icon: <Film className="w-4 h-4" /> },
-    { id: "noir", label: "Noir", icon: <Film className="w-4 h-4" /> },
-    {
-      id: "documentary",
-      label: "Documentary",
-      icon: <Film className="w-4 h-4" />,
-    },
-    { id: "vintage", label: "Vintage", icon: <Image className="w-4 h-4" /> },
-    {
-      id: "found-footage",
-      label: "Found Footage",
-      icon: <Camera className="w-4 h-4" />,
-    },
-    { id: "cyberpunk", label: "Cyberpunk", icon: <Cpu className="w-4 h-4" /> },
-    { id: "low-poly", label: "Low Poly", icon: <Grid className="w-4 h-4" /> },
-    { id: "isometric", label: "Isometric", icon: <Grid className="w-4 h-4" /> },
-    { id: "glitch", label: "Glitch", icon: <Zap className="w-4 h-4" /> },
-    { id: "surreal", label: "Surreal", icon: <Star className="w-4 h-4" /> },
-    {
-      id: "watercolor",
-      label: "Watercolor",
-      icon: <Image className="w-4 h-4" />,
-    },
-    {
-      id: "comic-book",
-      label: "Comic Book",
-      icon: <Image className="w-4 h-4" />,
-    },
-    { id: "doodle", label: "Doodle", icon: <Star className="w-4 h-4" /> },
-    {
-      id: "impressionistic",
-      label: "Impressionistic",
-      icon: <Image className="w-4 h-4" />,
-    },
-  ] as const;
+  // Style option lists (icons + labels) - imported from constants
+  const videoStyleOptions = VIDEO_STYLE_OPTIONS;
+  const visualStyleOptions = VISUAL_STYLE_OPTIONS;
 
   // Icon-enabled custom select used in simple mode
   const IconSelect: React.FC<{
@@ -261,8 +140,99 @@ export const VideoConfigurationColumn: React.FC<
 
     setIsGeneratingTopics(true);
     try {
-      // TODO: Call API to generate topics based on hint
-      // For now, we'll use placeholder suggestions
+      // Directly call IPC to get config for AITopicSuggestions (like PromptPlaygroundPage does)
+      console.log("[handleGenerateTopicsFromHint] Fetching config directly from IPC for AITopicSuggestions");
+      const configResponse = await electronApi.aiPrompt.getConfig("AITopicSuggestions");
+      console.log("[handleGenerateTopicsFromHint] Config response:", configResponse);
+
+      if (!configResponse?.success || !configResponse.data) {
+        console.error("AITopicSuggestions config not found:", configResponse?.error);
+        // Fallback to mock suggestions
+        const mockSuggestions = [
+          `Video about ${hintInput} - Complete guide for beginners`,
+          `How to master ${hintInput} - Tips and tricks`,
+          `${hintInput} - Expert interview and insights`,
+          `Top 10 things about ${hintInput}`,
+        ];
+        setTopicSuggestions(mockSuggestions);
+        setSelectedTopicId(null);
+        return;
+      }
+
+      const config = configResponse.data;
+
+      // Load the master prompt
+      console.log("[handleGenerateTopicsFromHint] Loading master prompt ID:", config.promptId);
+      const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
+      console.log("[handleGenerateTopicsFromHint] Master prompt response:", promptResponse);
+
+      if (!promptResponse?.success || !promptResponse.data) {
+        console.error("Failed to load master prompt:", promptResponse);
+        return;
+      }
+
+      const masterPrompt = promptResponse.data;
+      const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
+      console.log("[handleGenerateTopicsFromHint] Prompt template loaded, length:", promptTemplate.length);
+
+      // Prepare variables for template replacement
+      const variables = {
+        user_input_keywords: hintInput,
+        video_topic: hintInput,
+        topic_hint: hintInput,
+        number_of_topics: "4",
+      };
+
+      // Replace template variables
+      const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
+      console.log("[handleGenerateTopicsFromHint] Processed prompt length:", processedPrompt.length);
+
+      // Call AI via backend
+      console.log("[handleGenerateTopicsFromHint] Calling AI...");
+      const response = await electronApi.aiPrompt.callAI({
+        componentName: config.componentName,
+        profileId: config.profileId || "default",
+        data: variables,
+        processedPrompt,
+        stream: false,
+      });
+      console.log("[handleGenerateTopicsFromHint] AI response:", response);
+
+      if (response?.success) {
+        console.log("[handleGenerateTopicsFromHint] AI call successful");
+        // Extract text from response
+        let outputText = "";
+        if (typeof response.data === "string") {
+          outputText = response.data;
+        } else if (response.data?.text) {
+          outputText = response.data.text;
+        } else if (response.data?.response) {
+          outputText = response.data.response;
+        } else {
+          outputText = JSON.stringify(response.data, null, 2);
+        }
+        console.log("[handleGenerateTopicsFromHint] Output text extracted, length:", outputText.length);
+
+        // Parse the AI response to extract topics
+        // Assuming AI returns topics in a list format (numbered or bullet points)
+        const topics = parseTopicsFromAIResponse(outputText);
+        setTopicSuggestions(topics);
+        setSelectedTopicId(null);
+      } else {
+        console.error("AI call failed:", response?.error);
+        // Fallback to mock suggestions
+        const mockSuggestions = [
+          `Video about ${hintInput} - Complete guide for beginners`,
+          `How to master ${hintInput} - Tips and tricks`,
+          `${hintInput} - Expert interview and insights`,
+          `Top 10 things about ${hintInput}`,
+        ];
+        setTopicSuggestions(mockSuggestions);
+        setSelectedTopicId(null);
+      }
+    } catch (error) {
+      console.error("Failed to generate topics:", error);
+      // Fallback to mock suggestions
       const mockSuggestions = [
         `Video about ${hintInput} - Complete guide for beginners`,
         `How to master ${hintInput} - Tips and tricks`,
@@ -271,11 +241,54 @@ export const VideoConfigurationColumn: React.FC<
       ];
       setTopicSuggestions(mockSuggestions);
       setSelectedTopicId(null);
-    } catch (error) {
-      console.error("Failed to generate topics:", error);
     } finally {
       setIsGeneratingTopics(false);
     }
+  };
+
+  // Helper function to parse topics from AI response
+  const parseTopicsFromAIResponse = (text: string): string[] => {
+    // Try to parse as JSON first (AI may return structured data)
+    try {
+      const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/m);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed)) {
+          const topics = parsed
+            .map((item: any) => {
+              if (typeof item === "string") return item;
+              if (item.title) return item.title;
+              if (item.description) return item.description;
+              if (item.name) return item.name;
+              return null;
+            })
+            .filter((t: any) => t && typeof t === "string" && t.length > 0)
+            .slice(0, 10);
+          if (topics.length > 0) return topics;
+        }
+      }
+    } catch (e) {
+      // Not JSON, continue to text parsing
+    }
+
+    // Fall back to text parsing
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith("{") && !l.startsWith("["));
+
+    const topics: string[] = [];
+    for (const line of lines) {
+      const cleaned = line
+        .replace(/^[\d]+[\.\)]\s*|^[-*•]\s*/, "")
+        .replace(/^['"]|['"]$/g, "")
+        .trim();
+      if (cleaned && !cleaned.startsWith("{") && !cleaned.startsWith("[")) {
+        topics.push(cleaned);
+      }
+    }
+
+    return topics.slice(0, 10);
   };
 
   const handleSelectSuggestedTopic = (topic: string, id: string) => {
@@ -305,8 +318,117 @@ export const VideoConfigurationColumn: React.FC<
 
     setIsGeneratingScript(true);
     try {
-      // TODO: Call API to generate script based on topic and settings
-      // For now, we'll use placeholder script
+      // Directly call IPC to get config for ScriptStyleSelector (like PromptPlaygroundPage does)
+      console.log("[handleGenerateScript] Fetching config directly from IPC for ScriptStyleSelector");
+      const configResponse = await electronApi.aiPrompt.getConfig("ScriptStyleSelector");
+      console.log("[handleGenerateScript] Config response:", configResponse);
+
+      if (!configResponse?.success || !configResponse.data) {
+        console.error("ScriptStyleSelector config not found:", configResponse?.error);
+        // Fallback to mock script
+        const mockScript = `# ${topic}
+
+## Scene 1: Introduction
+Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
+
+## Scene 2: Background
+To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
+
+## Scene 3: Main Content
+Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
+
+## Scene 4: Practical Tips
+Let's discuss some practical ways to apply ${topic} in your daily life or business.
+
+## Scene 5: Conclusion
+Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
+        onScriptChange?.(mockScript);
+        return;
+      }
+
+      const config = configResponse.data;
+
+      // Load the master prompt
+      console.log("[handleGenerateScript] Loading master prompt ID:", config.promptId);
+      const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
+      console.log("[handleGenerateScript] Master prompt response:", promptResponse);
+
+      if (!promptResponse?.success || !promptResponse.data) {
+        console.error("Failed to load master prompt:", promptResponse);
+        return;
+      }
+
+      const masterPrompt = promptResponse.data;
+      const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
+      console.log("[handleGenerateScript] Prompt template loaded, length:", promptTemplate.length);
+
+      // Prepare variables for template replacement
+      const presetInfo = getPresetInfo(scriptLengthPreset);
+      const variables = {
+        topic: topic,
+        video_topic: topic,
+        video_style: videoStyle,
+        tone_style: videoStyle,
+        script_length_preset: scriptLengthPreset,
+        word_count: String(presetInfo.words),
+        duration_minutes: String(presetInfo.mins),
+        custom_word_count: String(customWordCount),
+      };
+
+      // Replace template variables
+      const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
+      console.log("[handleGenerateScript] Processed prompt length:", processedPrompt.length);
+
+      // Call AI via backend
+      console.log("[handleGenerateScript] Calling AI...");
+      const response = await electronApi.aiPrompt.callAI({
+        componentName: config.componentName,
+        profileId: config.profileId || "default",
+        data: variables,
+        processedPrompt,
+        stream: false,
+      });
+      console.log("[handleGenerateScript] AI response:", response);
+
+      if (response?.success) {
+        console.log("[handleGenerateScript] AI call successful");
+        // Extract text from response
+        let outputText = "";
+        if (typeof response.data === "string") {
+          outputText = response.data;
+        } else if (response.data?.text) {
+          outputText = response.data.text;
+        } else if (response.data?.response) {
+          outputText = response.data.response;
+        } else {
+          outputText = JSON.stringify(response.data, null, 2);
+        }
+        console.log("[handleGenerateScript] Script generated, length:", outputText.length);
+        onScriptChange?.(outputText);
+      } else {
+        console.error("AI call failed:", response?.error);
+        // Fallback to mock script
+        const mockScript = `# ${topic}
+
+## Scene 1: Introduction
+Welcome to this comprehensive guide about ${topic}. In this video, we'll explore the key aspects and provide you with practical insights and actionable tips.
+
+## Scene 2: Background
+To understand ${topic}, we need to look at its origins and key concepts. This foundation will help us appreciate the deeper aspects of this topic.
+
+## Scene 3: Main Content
+Here are the core ideas you need to know about ${topic}. These principles form the basis for successful implementation.
+
+## Scene 4: Practical Tips
+Let's discuss some practical ways to apply ${topic} in your daily life or business.
+
+## Scene 5: Conclusion
+Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
+        onScriptChange?.(mockScript);
+      }
+    } catch (error) {
+      console.error("Failed to generate script:", error);
+      // Fallback to mock script
       const mockScript = `# ${topic}
 
 ## Scene 1: Introduction
@@ -323,10 +445,7 @@ Let's discuss some practical ways to apply ${topic} in your daily life or busine
 
 ## Scene 5: Conclusion
 Thank you for watching this guide about ${topic}. We hope you found this information valuable and actionable.`;
-
       onScriptChange?.(mockScript);
-    } catch (error) {
-      console.error("Failed to generate script:", error);
     } finally {
       setIsGeneratingScript(false);
     }
@@ -347,9 +466,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
         {/* Controls (fixed height as needed) */}
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              TOPIC
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TOPIC</label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -423,9 +540,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
                         {/* Quick Examples or AI Suggestions - More Compact */}
                         <div className="max-h-56 overflow-y-auto">
                           {topicSuggestions.length === 0 ? (
-                            <HintForTopicPrompt
-                              onSelectTopic={handleSelectHintTopic}
-                            />
+                            <HintForTopicPrompt onSelectTopic={handleSelectHintTopic} />
                           ) : (
                             <AITopicSuggestions
                               suggestions={topicSuggestions}
@@ -460,9 +575,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              TONE STYLE
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TONE STYLE</label>
             {simpleMode ? (
               <IconSelect
                 options={videoStyleOptions as any}
@@ -470,9 +583,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
                 onChange={(id) => onVideoStyleChange?.(id as VideoStyle)}
                 placeholder="Choose tone style"
                 isOpen={openSelect === "videoStyle"}
-                onOpenChange={(open) =>
-                  setOpenSelect(open ? "videoStyle" : null)
-                }
+                onOpenChange={(open) => setOpenSelect(open ? "videoStyle" : null)}
               />
             ) : (
               <select
@@ -480,17 +591,13 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
                 disabled
                 className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
               >
-                <option value={videoStyle}>
-                  {findVideoStyleLabel(videoStyle)}
-                </option>
+                <option value={videoStyle}>{findVideoStyleLabel(videoStyle)}</option>
               </select>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              VISUAL STYLE
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">VISUAL STYLE</label>
             {simpleMode ? (
               <IconSelect
                 options={visualStyleOptions as any}
@@ -498,9 +605,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
                 onChange={(id) => onVisualStyleChange?.(id as VisualStyle)}
                 placeholder="Choose visual style"
                 isOpen={openSelect === "visualStyle"}
-                onOpenChange={(open) =>
-                  setOpenSelect(open ? "visualStyle" : null)
-                }
+                onOpenChange={(open) => setOpenSelect(open ? "visualStyle" : null)}
               />
             ) : (
               <select
@@ -508,17 +613,13 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
                 disabled
                 className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
               >
-                <option value={visualStyle}>
-                  {findVisualStyleLabel(visualStyle)}
-                </option>
+                <option value={visualStyle}>{findVisualStyleLabel(visualStyle)}</option>
               </select>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-              SCRIPT LENGTH
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">SCRIPT LENGTH</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {["short", "medium", "long", "custom"].map((preset) => {
                 const info = getPresetInfo(preset);
@@ -546,15 +647,11 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
             </div>
             {scriptLengthPreset === "custom" && simpleMode && (
               <div className="mt-2">
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Custom Word Count
-                </label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Custom Word Count</label>
                 <input
                   type="number"
                   value={customWordCount}
-                  onChange={(e) =>
-                    onCustomWordCountChange?.(parseInt(e.target.value) || 0)
-                  }
+                  onChange={(e) => onCustomWordCountChange?.(parseInt(e.target.value) || 0)}
                   min="0"
                   placeholder="Enter word count..."
                   className="w-48 px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -573,9 +670,7 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
             value={script}
             onChange={(e) => simpleMode && onScriptChange?.(e.target.value)}
             readOnly={!simpleMode}
-            placeholder={
-              simpleMode ? "Enter or paste your video script here..." : ""
-            }
+            placeholder={simpleMode ? "Enter or paste your video script here..." : ""}
             className={`w-full h-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm font-mono resize-none overflow-auto ${
               simpleMode
                 ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -591,20 +686,16 @@ Thank you for watching this guide about ${topic}. We hope you found this informa
           <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-blue-900 dark:text-blue-100">
-              <strong>Simple Mode:</strong> Fill in all fields, then click
-              "Generate" to create your scenes.
+              <strong>Simple Mode:</strong> Fill in all fields, then click "Generate" to create your scenes.
             </p>
           </div>
         )}
 
         {prompts.length > 0 && (
           <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">
-              GENERATED
-            </div>
+            <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">GENERATED</div>
             <div className="text-sm font-semibold text-green-900 dark:text-green-100">
-              {prompts.length} scenes × 8 seconds = {prompts.length * 8} seconds
-              total
+              {prompts.length} scenes × 8 seconds = {prompts.length * 8} seconds total
             </div>
           </div>
         )}

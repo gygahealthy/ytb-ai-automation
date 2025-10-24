@@ -4,6 +4,9 @@ import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
 import { VideoConfigurationColumn } from "./VideoConfigurationColumn";
 import { PromptsOutputColumn } from "./PromptsOutputColumn";
+import { useAlert } from "../../../hooks/useAlert";
+
+const electronApi = (window as any).electronAPI;
 
 export interface VideoPrompt {
   id: string;
@@ -54,6 +57,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
   onScriptLengthChange,
   onCustomWordCountChange,
 }) => {
+  const { show: showAlert } = useAlert();
   const [prompts, setPrompts] = useState<VideoPrompt[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -72,8 +76,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
-    const newWidth =
-      ((e.clientX - containerRect.left) / containerRect.width) * 100;
+    const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
 
     // Limit width between 25% and 75%
     if (newWidth >= 25 && newWidth <= 75) {
@@ -107,85 +110,124 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
 
   // Generate video prompts from script
   const handleGeneratePrompts = async () => {
+    if (!script.trim()) {
+      showAlert({
+        message: "Please generate or edit a script first",
+        severity: "warning",
+      });
+      return;
+    }
+
     setIsGenerating(true);
+    try {
+      // First, get the config for VideoConfigurationColumn to retrieve the profile
+      const configResponse = await electronApi.aiPrompt.getConfig("VideoConfigurationColumn");
+      if (!configResponse?.success || !configResponse.data) {
+        throw new Error(configResponse?.error || "No configuration found for VideoConfigurationColumn component");
+      }
 
-    // TODO: Replace with actual IPC call to backend AI service
-    setTimeout(() => {
-      // Mock generation - split script into 8-second video prompts
-      const mockPrompts: VideoPrompt[] = [
-        {
-          id: "1",
-          sceneNumber: 1,
-          text: "Introduction and hook",
-          prompt: `A ${style} style opening scene with dynamic text overlay. Bright, engaging visuals that grab attention immediately. Professional cinematography with smooth camera movements.`,
-          duration: 8,
-        },
-        {
-          id: "2",
-          sceneNumber: 2,
-          text: "Main point explanation",
-          prompt: `${style} style educational content with clear visual metaphors. Clean composition, good lighting, professional color grading. Visual elements that support the narrative.`,
-          duration: 8,
-        },
-        {
-          id: "3",
-          sceneNumber: 3,
-          text: "Supporting details",
-          prompt: `${style} style b-roll footage showing relevant examples. High quality stock footage with natural lighting. Smooth transitions between clips.`,
-          duration: 8,
-        },
-        {
-          id: "4",
-          sceneNumber: 4,
-          text: "Key benefits",
-          prompt: `${style} style product showcase or demonstration. Professional lighting, clean background. Focus on details and quality.`,
-          duration: 8,
-        },
-        {
-          id: "5",
-          sceneNumber: 5,
-          text: "Social proof",
-          prompt: `${style} style testimonial or success story visuals. Authentic, relatable scenes. Warm color tones, emotional connection.`,
-          duration: 8,
-        },
-        {
-          id: "6",
-          sceneNumber: 6,
-          text: "Additional context",
-          prompt: `${style} style supporting footage with informative overlays. Professional composition, balanced framing. Clear visual hierarchy.`,
-          duration: 8,
-        },
-        {
-          id: "7",
-          sceneNumber: 7,
-          text: "Call to action setup",
-          prompt: `${style} style transition to conclusion. Building momentum, increasing energy. Dynamic camera movements, engaging visuals.`,
-          duration: 8,
-        },
-        {
-          id: "8",
-          sceneNumber: 8,
-          text: "Final call to action",
-          prompt: `${style} style closing scene with strong call to action. Bold text, clear message. Professional end screen with branding elements.`,
-          duration: 8,
-        },
-      ];
+      const componentConfig = configResponse.data;
+      const profileId = componentConfig.profileId || "default";
 
-      setPrompts(mockPrompts);
-      onPromptsGenerated(mockPrompts);
+      // Call AI service with real parameters using the profile from config
+      const response = await electronApi.aiPrompt.callAI({
+        componentName: "VideoConfigurationColumn",
+        profileId: profileId,
+        data: {
+          scene_script: script,
+          visual_style: visualStyle,
+        },
+        stream: false,
+      });
+
+      if (response?.success) {
+        // Parse the response to extract prompts
+        // Expected: array of prompts or formatted text that can be parsed
+        let promptsData: VideoPrompt[] = [];
+
+        if (Array.isArray(response.data)) {
+          // If response is already an array of prompts
+          promptsData = response.data.map((item: any, index: number) => ({
+            id: String(index + 1),
+            sceneNumber: index + 1,
+            text: item.text || `Scene ${index + 1}`,
+            prompt: item.prompt || item.description || "",
+            duration: item.duration || 8,
+          }));
+        } else if (typeof response.data === "string") {
+          // If response is text, parse it into prompts (split by scenes)
+          const scenes = response.data.split(/\n\n(?=Scene|\d+\.)/);
+          promptsData = scenes.map((scene: string, index: number) => ({
+            id: String(index + 1),
+            sceneNumber: index + 1,
+            text: `Scene ${index + 1}`,
+            prompt: scene.trim(),
+            duration: 8,
+          }));
+        } else if (response.data?.prompts) {
+          promptsData = response.data.prompts.map((item: any, index: number) => ({
+            id: String(index + 1),
+            sceneNumber: index + 1,
+            text: item.text || `Scene ${index + 1}`,
+            prompt: item.prompt || item.description || "",
+            duration: item.duration || 8,
+          }));
+        }
+
+        if (promptsData.length === 0) {
+          promptsData = [
+            {
+              id: "1",
+              sceneNumber: 1,
+              text: "Generated Prompt",
+              prompt: typeof response.data === "string" ? response.data : JSON.stringify(response.data),
+              duration: 8,
+            },
+          ];
+        }
+
+        setPrompts(promptsData);
+        onPromptsGenerated(promptsData);
+        showAlert({
+          title: "Success",
+          message: `Generated ${promptsData.length} video prompts!`,
+          severity: "success",
+        });
+      } else {
+        const errorMessage = response?.error || "Failed to generate prompts";
+        showAlert({
+          title: "Prompt Generation Failed",
+          message: errorMessage,
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating prompts:", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      showAlert({
+        title: "Error",
+        message: `Failed to generate prompts: ${errorMsg}`,
+        severity: "error",
+      });
+    } finally {
       setIsGenerating(false);
-    }, 100);
+    }
   };
 
   const handleRegeneratePrompt = (promptId: string) => {
     // TODO: Implement regeneration for specific prompt via IPC
-    alert(`Regenerating prompt ${promptId}...`);
+    showAlert({
+      message: `Regenerating prompt ${promptId}...`,
+      severity: "info",
+    });
   };
 
   const handleCopyPrompt = (prompt: string) => {
     navigator.clipboard.writeText(prompt);
-    // TODO: replace with real toast
-    alert("Prompt copied to clipboard!");
+    showAlert({
+      message: "Prompt copied to clipboard!",
+      severity: "success",
+    });
   };
 
   return (
@@ -196,10 +238,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         className="relative flex gap-0 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 w-full"
       >
         {/* LEFT COLUMN - Video Configuration Form */}
-        <div
-          className="overflow-y-auto p-6 h-full"
-          style={{ width: `${leftColumnWidth}%` }}
-        >
+        <div className="overflow-y-auto p-6 h-full" style={{ width: `${leftColumnWidth}%` }}>
           <VideoConfigurationColumn
             topic={topic}
             selectedTopic={selectedTopic} // ✅ Pass selectedTopic prop
@@ -236,10 +275,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         </div>
 
         {/* RIGHT COLUMN - AI Generated Prompts Output */}
-        <div
-          className="p-6 h-full"
-          style={{ width: `${100 - leftColumnWidth}%` }}
-        >
+        <div className="p-6 h-full" style={{ width: `${100 - leftColumnWidth}%` }}>
           <PromptsOutputColumn
             prompts={prompts}
             isGenerating={isGenerating}

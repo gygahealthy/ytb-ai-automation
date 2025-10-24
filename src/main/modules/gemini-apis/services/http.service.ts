@@ -375,7 +375,7 @@ export class HttpService {
 
       let buffer = "";
       let chunkIndex = 0;
-      let isGzipped = contentEncoding === "gzip";
+      const isGzipped = contentEncoding === "gzip";
 
       // If gzipped, decompress the stream first
       if (isGzipped) {

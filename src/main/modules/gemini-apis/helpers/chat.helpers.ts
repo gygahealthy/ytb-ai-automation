@@ -53,11 +53,7 @@ export function buildChatPayload(
 /**
  * Create conversation context for multi-turn chat
  */
-export function createConversationContext(
-  chatId: string,
-  replyId: string,
-  rcId: string
-): ConversationContext {
+export function createConversationContext(chatId: string, replyId: string, rcId: string): ConversationContext {
   return { chatId, replyId, rcId };
 }
 
@@ -75,9 +71,7 @@ export function createEmptyMetadata(): ConversationMetadata {
 /**
  * Extract conversation context from metadata
  */
-export function extractConversationContext(
-  metadata: ConversationMetadata
-): ConversationContext | null {
+export function extractConversationContext(metadata: ConversationMetadata): ConversationContext | null {
   if (metadata.cid && metadata.rid && metadata.rcid) {
     return {
       chatId: metadata.cid,
@@ -93,7 +87,7 @@ export function extractConversationContext(
  * Removes HTML tags and decodes entities
  */
 export function htmlToText(html: string): string {
-  let text = html
+  const text = html
     // Replace br tags with newlines
     .replace(/<br\s*\/?>/gi, "\n")
     // Replace paragraph tags with double newlines
@@ -125,9 +119,7 @@ export function htmlToText(html: string): string {
  * Detects BardErrorInfo and returns error code if present
  * Also handles simple error codes like [4], [2], etc.
  */
-export function extractError(
-  parsedData: unknown[]
-): { code: number; message: string } | null {
+export function extractError(parsedData: unknown[]): { code: number; message: string } | null {
   try {
     for (const part of parsedData) {
       if (!Array.isArray(part)) continue;
@@ -137,34 +129,22 @@ export function extractError(
         const errorSection = part[5];
 
         // Simple error code format: ["wrb.fr", null, null, null, null, [4]]
-        if (
-          typeof errorSection[0] === "number" &&
-          errorSection[0] !== 0 &&
-          errorSection.length === 1
-        ) {
+        if (typeof errorSection[0] === "number" && errorSection[0] !== 0 && errorSection.length === 1) {
           const errorCode = errorSection[0];
           return {
             code: errorCode,
-            message: `Gemini API Error ${errorCode}: ${getErrorMessage(
-              errorCode
-            )}`,
+            message: `Gemini API Error ${errorCode}: ${getErrorMessage(errorCode)}`,
           };
         }
 
         // Full error structure: ["wrb.fr", null, null, null, null, [3, null, [["BardErrorInfo", [errorCode]]]]]
         if (errorSection[0] === 3 && Array.isArray(errorSection[2])) {
           for (const errorDetail of errorSection[2]) {
-            if (
-              Array.isArray(errorDetail) &&
-              errorDetail[0]?.includes("BardErrorInfo") &&
-              Array.isArray(errorDetail[1])
-            ) {
+            if (Array.isArray(errorDetail) && errorDetail[0]?.includes("BardErrorInfo") && Array.isArray(errorDetail[1])) {
               const errorCode = errorDetail[1][0];
               return {
                 code: errorCode,
-                message: `Gemini API Error ${errorCode}: ${getErrorMessage(
-                  errorCode
-                )}`,
+                message: `Gemini API Error ${errorCode}: ${getErrorMessage(errorCode)}`,
               };
             }
           }
@@ -201,63 +181,72 @@ export function extractMessages(parsedData: unknown[]): string[] {
 
   try {
     logger.debug(`🔍 Extracting messages from ${parsedData.length} part(s)...`);
+    logger.debug(`[DEBUG] Full parsedData structure: ${JSON.stringify(parsedData).substring(0, 500)}`);
 
-    for (const part of parsedData) {
+    for (let partIndex = 0; partIndex < parsedData.length; partIndex++) {
+      const part = parsedData[partIndex];
+      logger.debug(`[DEBUG] Processing part[${partIndex}]`);
+
       if (!Array.isArray(part)) {
-        logger.debug(`⚠️ Part is not an array, skipping`);
+        logger.debug(`⚠️ Part is not an array (type: ${typeof part}), skipping`);
         continue;
       }
 
       logger.debug(`📋 Part has ${part.length} elements`);
+      logger.debug(`[DEBUG] Part structure: ${JSON.stringify(part).substring(0, 200)}`);
 
       // Look for nested data
       const maybeJson = part[2];
       if (!maybeJson || typeof maybeJson !== "string") {
-        logger.debug(
-          `⚠️ Part[2] is not a string (${typeof maybeJson}), skipping`
-        );
+        logger.debug(`⚠️ Part[2] is not a string (${typeof maybeJson}), skipping`);
+        if (maybeJson) {
+          logger.debug(`[DEBUG] Part[2] value: ${JSON.stringify(maybeJson).substring(0, 100)}`);
+        }
         continue;
       }
 
-      logger.debug(
-        `📝 Found JSON string at part[2]: ${maybeJson.length} chars`
-      );
+      logger.debug(`📝 Found JSON string at part[2]: ${maybeJson.length} chars`);
 
       let mainData: unknown;
       try {
         mainData = JSON.parse(maybeJson);
-        logger.debug(
-          `✅ Parsed JSON: ${
-            Array.isArray(mainData)
-              ? `array[${(mainData as unknown[]).length}]`
-              : typeof mainData
-          }`
-        );
+        logger.debug(`✅ Parsed JSON: ${Array.isArray(mainData) ? `array[${(mainData as unknown[]).length}]` : typeof mainData}`);
       } catch (err) {
         logger.debug(`❌ Failed to parse JSON: ${err}`);
         continue;
       }
 
-      // Extract candidates from mainData[4]
-      if (mainData && Array.isArray(mainData) && mainData[4]) {
-        logger.debug(
-          `🎯 Found mainData[4] with ${
-            Array.isArray(mainData[4]) ? (mainData[4] as unknown[]).length : 0
-          } candidate(s)`
-        );
+      // Extract candidates from mainData[4] - this is where Gemini puts the actual message content
+      if (mainData && Array.isArray(mainData) && mainData[4] && Array.isArray(mainData[4])) {
+        logger.debug(`🎯 Found mainData[4] with ${(mainData[4] as unknown[]).length} candidate(s)`);
 
         for (const candidate of mainData[4]) {
           try {
+            // candidate[1][0] is the actual message content from Gemini
             const text = candidate?.[1]?.[0];
             if (text && typeof text === "string") {
-              logger.debug(
-                `✅ Extracted message: ${text.substring(0, 100)}...`
-              );
-              messages.push(text);
+              // This is the actual message - it might be a JSON string or HTML
+              // Check if it looks like it contains structured data (like topic JSON)
+              const trimmed = text.trim();
+              if (trimmed.startsWith("[") && trimmed.includes("title")) {
+                // This looks like a JSON array with objects containing "title" field
+                // Try to parse it as JSON directly
+                try {
+                  const parsed = JSON.parse(text);
+                  logger.debug(`✅ [TOPICS-JSON] Detected and extracted topics JSON array`);
+                  const msgText = JSON.stringify(parsed, null, 2);
+                  messages.push(msgText);
+                } catch (parseErr) {
+                  // Not valid JSON, treat as regular text
+                  logger.debug(`✅ Extracted message: ${text.substring(0, 100)}...`);
+                  messages.push(text);
+                }
+              } else {
+                logger.debug(`✅ Extracted message: ${text.substring(0, 100)}...`);
+                messages.push(text);
+              }
             } else {
-              logger.debug(
-                `⚠️ Candidate[1][0] is not a string: ${typeof text}`
-              );
+              logger.debug(`⚠️ Candidate[1][0] is not a string: ${typeof text}`);
             }
           } catch (err) {
             logger.debug(`❌ Error processing candidate: ${err}`);
@@ -267,9 +256,7 @@ export function extractMessages(parsedData: unknown[]): string[] {
       } else {
         logger.debug(
           `⚠️ mainData[4] not found or not valid: ${
-            mainData && Array.isArray(mainData)
-              ? `mainData is array[${mainData.length}]`
-              : `mainData type: ${typeof mainData}`
+            mainData && Array.isArray(mainData) ? `mainData is array[${mainData.length}]` : `mainData type: ${typeof mainData}`
           }`
         );
       }
@@ -286,9 +273,7 @@ export function extractMessages(parsedData: unknown[]): string[] {
  * Extract conversation metadata from parsed response
  * Metadata includes: [cid, rid, rcid] needed for conversation continuity
  */
-export function extractMetadata(
-  parsedData: unknown[]
-): ConversationMetadata | null {
+export function extractMetadata(parsedData: unknown[]): ConversationMetadata | null {
   try {
     for (const part of parsedData) {
       if (!Array.isArray(part)) continue;
@@ -306,22 +291,12 @@ export function extractMetadata(
 
       // Extract metadata from mainData[1]
       // Format: [cid, rid, rcid, ...]
-      if (
-        mainData &&
-        Array.isArray(mainData) &&
-        mainData[1] &&
-        Array.isArray(mainData[1])
-      ) {
+      if (mainData && Array.isArray(mainData) && mainData[1] && Array.isArray(mainData[1])) {
         const metadata = mainData[1];
 
         // Get first candidate's rcid from mainData[4][0][0]
         let rcid: string | null = null;
-        if (
-          mainData[4] &&
-          Array.isArray(mainData[4]) &&
-          mainData[4][0] &&
-          Array.isArray(mainData[4][0])
-        ) {
+        if (mainData[4] && Array.isArray(mainData[4]) && mainData[4][0] && Array.isArray(mainData[4][0])) {
           rcid = mainData[4][0][0] || null;
         }
 
@@ -349,11 +324,7 @@ export async function sendChatRequest(
   prompt: string,
   options: ChatOptions = {}
 ): Promise<ChatResponse> {
-  const {
-    conversationContext = null,
-    dryRun = false,
-    model = "unspecified",
-  } = options;
+  const { conversationContext = null, dryRun = false, model = "unspecified" } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -363,9 +334,7 @@ export async function sendChatRequest(
   }
 
   logger.info("💬 Sending chat request...");
-  logger.debug(
-    `Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`
-  );
+  logger.debug(`Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`);
   logger.debug(`Model: ${model}`);
 
   // Resolve model to get ID and headers BEFORE building payload
@@ -416,9 +385,7 @@ export async function sendChatRequest(
       });
 
       if (response.statusCode !== 200) {
-        throw new Error(
-          `Request failed: ${response.statusCode} ${response.statusMessage}`
-        );
+        throw new Error(`Request failed: ${response.statusCode} ${response.statusMessage}`);
       }
 
       const messages: ChatMessage[] = [];
@@ -445,13 +412,9 @@ export async function sendChatRequest(
         yield Buffer.from(bodyText);
       })();
 
-      for await (const parsed of HttpService.parseStreamingJson(
-        readable as unknown as NodeJS.ReadableStream
-      )) {
+      for await (const parsed of HttpService.parseStreamingJson(readable as unknown as NodeJS.ReadableStream)) {
         // DEBUG: Log what we're parsing
-        logger.debug(
-          `Parsed chunk: ${JSON.stringify(parsed).substring(0, 200)}`
-        );
+        logger.debug(`Parsed chunk: ${JSON.stringify(parsed).substring(0, 200)}`);
 
         // Check for errors first
         const error = extractError(parsed);
@@ -521,11 +484,7 @@ export async function sendChatRequestStreaming(
   onChunk: (chunk: { text: string; html: string; index: number }) => void,
   options: ChatOptions = {}
 ): Promise<{ metadata: ConversationMetadata | null; totalChunks: number }> {
-  const {
-    conversationContext = null,
-    dryRun = false,
-    model = "unspecified",
-  } = options;
+  const { conversationContext = null, dryRun = false, model = "unspecified" } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -535,9 +494,7 @@ export async function sendChatRequestStreaming(
   }
 
   logger.info("💬 Sending chat request (streaming)...");
-  logger.debug(
-    `Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`
-  );
+  logger.debug(`Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`);
   logger.debug(`Model: ${model}`);
 
   // Resolve model to get ID and headers BEFORE building payload
@@ -588,11 +545,7 @@ export async function sendChatRequestStreaming(
         totalChunks++;
 
         // DEBUG: Log the actual chunk structure
-        logger.debug(
-          `📦 Chunk ${totalChunks} structure: ${JSON.stringify(
-            streamChunk.chunk
-          ).substring(0, 500)}...`
-        );
+        logger.debug(`📦 Chunk ${totalChunks} structure: ${JSON.stringify(streamChunk.chunk).substring(0, 500)}...`);
 
         // Check for errors first (e.g. wrb.fr error blocks like 1052)
         const error = extractError(streamChunk.chunk);
@@ -608,9 +561,7 @@ export async function sendChatRequestStreaming(
 
         // Extract messages from chunk
         const extracted = extractMessages(streamChunk.chunk);
-        logger.debug(
-          `🔍 Extracted ${extracted.length} HTML message(s) from chunk ${totalChunks}`
-        );
+        logger.debug(`🔍 Extracted ${extracted.length} HTML message(s) from chunk ${totalChunks}`);
 
         for (const html of extracted) {
           const text = htmlToText(html);
@@ -628,9 +579,7 @@ export async function sendChatRequestStreaming(
         }
       }
 
-      logger.info(
-        `✅ Stream complete (${totalChunks} chunks, ${chunkIndex} messages)`
-      );
+      logger.info(`✅ Stream complete (${totalChunks} chunks, ${chunkIndex} messages)`);
 
       return { metadata, totalChunks };
     } finally {
