@@ -324,7 +324,7 @@ export async function sendChatRequest(
   prompt: string,
   options: ChatOptions = {}
 ): Promise<ChatResponse> {
-  const { conversationContext = null, dryRun = false, model = "unspecified" } = options;
+  const { conversationContext = null, dryRun = false, model = "unspecified", forceRefreshToken = false } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -377,11 +377,13 @@ export async function sendChatRequest(
     try {
       // Send request with automatic token handling and model headers
       // FORCE REFRESH token for new conversations to avoid stale token errors (1052)
+      // Also respect the explicit forceRefreshToken flag from caller
       const isNewConversation = !conversationContext;
+      const shouldRefreshToken = forceRefreshToken || isNewConversation;
       const response = await httpService.sendGeminiRequest(fReq, {
         retries: 3,
         headers: modelHeaders,
-        forceRefreshToken: isNewConversation,
+        forceRefreshToken: shouldRefreshToken,
       });
 
       if (response.statusCode !== 200) {
@@ -484,7 +486,7 @@ export async function sendChatRequestStreaming(
   onChunk: (chunk: { text: string; html: string; index: number }) => void,
   options: ChatOptions = {}
 ): Promise<{ metadata: ConversationMetadata | null; totalChunks: number }> {
-  const { conversationContext = null, dryRun = false, model = "unspecified" } = options;
+  const { conversationContext = null, dryRun = false, model = "unspecified", forceRefreshToken = false } = options;
 
   // Add random delay to look more human (1-3 seconds)
   if (!dryRun) {
@@ -530,8 +532,10 @@ export async function sendChatRequestStreaming(
 
     try {
       // Get token - FORCE REFRESH for new conversations to avoid stale token errors (1052)
+      // Also respect the explicit forceRefreshToken flag from caller
       const isNewConversation = !conversationContext;
-      const token = await httpService.getToken(isNewConversation);
+      const shouldRefreshToken = forceRefreshToken || isNewConversation;
+      const token = await httpService.getToken(shouldRefreshToken);
 
       // Send streaming request with model headers
       let metadata: ConversationMetadata | null = null;

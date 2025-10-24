@@ -35,27 +35,15 @@ export async function sendChatMessage(req: {
   resetContext?: boolean; // Reset conversation context (only for 'persistent' mode)
 }): Promise<any> {
   try {
-    const {
-      stream = false,
-      requestId,
-      mode = GEMINI_CHAT_NORMAL_MODE_EPHEMERAL,
-      model,
-      resetContext = false,
-    } = req as any;
+    const { stream = false, requestId, mode = GEMINI_CHAT_NORMAL_MODE_EPHEMERAL, model, resetContext = false } = req as any;
 
     // Normalize legacy string values to new constants
     let normalizedMode: GeminiChatMode;
-    if (mode === "stateless")
-      normalizedMode = GEMINI_CHAT_NORMAL_MODE_EPHEMERAL;
-    else if (mode === "persistent")
-      normalizedMode = GEMINI_CHAT_NORMAL_MODE_PERSISTENT;
+    if (mode === "stateless") normalizedMode = GEMINI_CHAT_NORMAL_MODE_EPHEMERAL;
+    else if (mode === "persistent") normalizedMode = GEMINI_CHAT_NORMAL_MODE_PERSISTENT;
     else normalizedMode = mode as GeminiChatMode;
 
-    logger.info(
-      `[chat] Routing request to ${normalizedMode} ${
-        stream ? "streaming" : "non-streaming"
-      } handler`
-    );
+    logger.info(`[chat] Routing request to ${normalizedMode} ${stream ? "streaming" : "non-streaming"} handler`);
 
     // Validate inputs
     if (stream && !requestId) {
@@ -89,6 +77,8 @@ export async function sendChatMessage(req: {
       }
     } else {
       // Stateless mode (default): creates new ChatService per request
+      // Force token refresh for new conversations (no conversationContext) to avoid stale token errors with Pro models
+      const isNewConversation = !req.conversationContext;
       if (stream) {
         return await sendChatMessageStreaming({
           profileId: req.profileId,
@@ -96,6 +86,7 @@ export async function sendChatMessage(req: {
           conversationContext: req.conversationContext,
           requestId: requestId!,
           model,
+          forceRefreshToken: isNewConversation,
         });
       } else {
         return await sendChatMessageNonStreaming({
@@ -103,6 +94,7 @@ export async function sendChatMessage(req: {
           prompt: req.prompt,
           conversationContext: req.conversationContext,
           model,
+          forceRefreshToken: isNewConversation,
         });
       }
     }

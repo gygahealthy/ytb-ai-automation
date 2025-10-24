@@ -25,9 +25,10 @@ export async function sendChatMessageStreaming(req: {
   };
   requestId: string; // Required for streaming (unique ID per request)
   model?: string; // Model selection
+  forceRefreshToken?: boolean; // Force token refresh
 }): Promise<any> {
   try {
-    const { profileId, prompt, conversationContext, requestId, model } = req;
+    const { profileId, prompt, conversationContext, requestId, model, forceRefreshToken = false } = req;
 
     // Validate required fields
     if (!profileId || !prompt || !requestId) {
@@ -50,14 +51,11 @@ export async function sendChatMessageStreaming(req: {
 
     // Get cookies for the profile
     const cookiesResult = await cookieService.getCookiesByProfile(profileId);
-    logger.info(
-      `[chat:stream] Cookies from database for profile ${profileId}:`,
-      {
-        found: cookiesResult.success,
-        count: cookiesResult.data?.length || 0,
-        services: cookiesResult.data?.map((c) => c.service) || [],
-      }
-    );
+    logger.info(`[chat:stream] Cookies from database for profile ${profileId}:`, {
+      found: cookiesResult.success,
+      count: cookiesResult.data?.length || 0,
+      services: cookiesResult.data?.map((c) => c.service) || [],
+    });
 
     if (!cookiesResult.success || !cookiesResult.data?.length) {
       return {
@@ -68,20 +66,15 @@ export async function sendChatMessageStreaming(req: {
     }
 
     // Find GEMINI service cookie specifically (not just the first cookie)
-    const geminiCookie = cookiesResult.data.find(
-      (c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active"
-    );
+    const geminiCookie = cookiesResult.data.find((c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active");
 
     if (!geminiCookie || !geminiCookie.rawCookieString) {
-      logger.warn(
-        `[chat:stream] No active GEMINI cookie found for profile ${profileId}`,
-        {
-          availableServices: cookiesResult.data.map((c) => ({
-            service: c.service,
-            status: c.status,
-          })),
-        }
-      );
+      logger.warn(`[chat:stream] No active GEMINI cookie found for profile ${profileId}`, {
+        availableServices: cookiesResult.data.map((c) => ({
+          service: c.service,
+          status: c.status,
+        })),
+      });
       return {
         success: false,
         error: `No active Gemini cookies found for profile ${profileId}. Please extract Gemini cookies first.`,
@@ -110,26 +103,17 @@ export async function sendChatMessageStreaming(req: {
       const cookieRepository = new CookieRepository(db);
 
       // Create cookie manager with proper initialization
-      cookieManager = new CookieManagerDB(
-        cookieObj,
-        cookieRepository,
-        profileId,
-        "gemini.google.com",
-        {
-          autoValidate: false,
-          validateOnInit: false,
-          verbose: false,
-        }
-      );
+      cookieManager = new CookieManagerDB(cookieObj, cookieRepository, profileId, "gemini.google.com", {
+        autoValidate: false,
+        validateOnInit: false,
+        verbose: false,
+      });
 
       // Initialize the cookie manager
       try {
         await cookieManager.init();
       } catch (initError) {
-        logger.warn(
-          `[chat:stream] Cookie manager initialization warning: ${initError}`,
-          initError
-        );
+        logger.warn(`[chat:stream] Cookie manager initialization warning: ${initError}`, initError);
         // Continue even if init fails - the cookies might still be usable
       }
     }
@@ -137,9 +121,7 @@ export async function sendChatMessageStreaming(req: {
     // Return immediately with streaming channel; start async streaming in background
     const streamChannel = `gemini:chat:stream:${requestId}`;
 
-    logger.info(
-      `[chat:stream] Starting streaming chat for request ${requestId}`
-    );
+    logger.info(`[chat:stream] Starting streaming chat for request ${requestId}`);
 
     // Start streaming in background without awaiting
     setImmediate(async () => {
@@ -163,9 +145,7 @@ export async function sendChatMessageStreaming(req: {
           prompt,
           (chunk) => {
             // Send each chunk to renderer via IPC
-            logger.debug(
-              `[chat:stream] Sending chunk ${chunk.index} via ${streamChannel}`
-            );
+            logger.debug(`[chat:stream] Sending chunk ${chunk.index} via ${streamChannel}`);
             sendToAllWindows(streamChannel, {
               type: "chunk",
               data: chunk,
@@ -180,6 +160,7 @@ export async function sendChatMessageStreaming(req: {
                 }
               : undefined,
             model,
+            forceRefreshToken,
           }
         );
 
@@ -189,9 +170,7 @@ export async function sendChatMessageStreaming(req: {
           data: null,
         });
 
-        logger.info(
-          `[chat:stream] Streaming chat complete for request ${requestId}`
-        );
+        logger.info(`[chat:stream] Streaming chat complete for request ${requestId}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(`[chat:stream] Streaming failed: ${message}`, error);

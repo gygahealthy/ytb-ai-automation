@@ -16,6 +16,7 @@ export interface ChatOptions {
   dryRun?: boolean;
   timeout?: number;
   model?: string; // Model selection (e.g., "unspecified", "gemini-2.5-pro", "gemini-2.5-flash")
+  forceRefreshToken?: boolean; // Force fresh token extraction (important for new conversations with Pro models)
 }
 
 /**
