@@ -46,25 +46,25 @@ class ElectronApp {
       // Register IPC handlers
       registerIPCHandlers();
 
-      // Initialize global cookie rotation worker manager (but don't auto-start)
-      // User will manually start workers from the UI
-      try {
-        const manager = await getGlobalRotationWorkerManager();
-        console.log("✅ Cookie rotation manager initialized (workers not started)");
-
-        // Phase 2: Initialize startup workers
-        // This will automatically start workers for cookies marked with launch_worker_on_startup=1
-        await manager.initializeStartupWorkers();
-        console.log("✅ Startup cookie rotation workers initialized");
-      } catch (error) {
-        console.error("❌ Failed to initialize cookie rotation manager", error);
-      }
-
       // Restore pending video generations to polling queue
       await veo3PollingService.restorePendingGenerations();
 
-      // Create window
+      // Create window first (fast startup)
       this.createWindow();
+
+      // Phase 2: Initialize startup workers in the background (don't block UI)
+      // This will automatically start workers for cookies marked with launch_worker_on_startup=1
+      // Run asynchronously so it doesn't delay the renderer from appearing
+      setImmediate(async () => {
+        try {
+          const rotationManager = await getGlobalRotationWorkerManager();
+          console.log("✅ Cookie rotation manager initialized (workers not started)");
+          await rotationManager.initializeStartupWorkers();
+          console.log("✅ Startup cookie rotation workers initialized (background)");
+        } catch (error) {
+          console.error("❌ Failed to initialize cookie rotation manager and startup workers", error);
+        }
+      });
     });
 
     app.on("before-quit", async () => {
