@@ -1,9 +1,6 @@
 import React from "react";
-import {
-  VideoHistoryContent,
-  VideoHistoryToolbar,
-} from "../../components/video-creation/video-history";
-import { VideoHistoryProvider } from "../../contexts/VideoHistoryContext";
+import { VideoHistoryContent, VideoHistoryToolbar } from "@components/video-creation/video-history";
+import { VideoHistoryProvider } from "@contexts/VideoHistoryContext";
 
 /**
  * Video History Page - Main Container

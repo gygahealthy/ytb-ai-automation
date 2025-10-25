@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { ChevronRight, ChevronLeft, Wand2 } from "lucide-react";
 import { VideoPromptGenerator, VideoPrompt } from "@components/video-creation/script-creation/VideoPromptGenerator";
 import { Step1_TopicAndStyle } from "@components/video-creation/script-creation/step-by-step/Step1_TopicAndStyle";
 import { Step2_EditScriptAndVisualStyle } from "@components/video-creation/script-creation/step-by-step/Step2_EditScriptAndVisualStyle";
 import { Step3_GeneratePrompts } from "@components/video-creation/script-creation/step-by-step/Step3_GeneratePrompts";
 import { ScriptCreatePageToolbar } from "@components/video-creation/script-creation/ScriptCreatePageToolbar";
-import { useVideoCreation } from "@contexts/VideoCreationContext";
+import { useScriptCreationStore } from "@store/script-creation.store";
 import { useAlert } from "@hooks/useAlert";
 import { replaceTemplate } from "@shared/utils/template-replacement.util";
 
@@ -13,35 +13,40 @@ const electronApi = (window as any).electronAPI;
 
 const ScriptCreatePage: React.FC = () => {
   const { show: showAlert } = useAlert();
-  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
-  const [numberOfTopics, setNumberOfTopics] = useState<number>(8);
-  const [isGeneratingTopics, setIsGeneratingTopics] = useState<boolean>(false);
 
+  // Get all state and actions from Zustand store
   const {
     topic,
     selectedTopic,
     selectedTopicId,
+    topicSuggestions,
+    numberOfTopics,
+    videoStyle,
+    visualStyle,
+    editedScript,
+    scriptLengthPreset,
+    customWordCount,
+    currentStep,
+    viewMode,
+    isGenerating,
+    isGeneratingTopics,
     setTopic,
     setSelectedTopic,
     setSelectedTopicId,
-    videoStyle,
+    setTopicSuggestions,
+    clearTopicSuggestions,
+    setNumberOfTopics,
     setVideoStyle,
-    visualStyle,
     setVisualStyle,
-    editedScript,
     setEditedScript,
     setVideoPrompts,
-    scriptLengthPreset,
     setScriptLengthPreset,
-    customWordCount,
     setCustomWordCount,
-    currentStep,
     setCurrentStep,
-    viewMode,
     setViewMode,
-    isGenerating,
     setIsGenerating,
-  } = useVideoCreation();
+    setIsGeneratingTopics,
+  } = useScriptCreationStore();
 
   // Helper function to parse topics from AI response
   const parseTopicsFromAIResponse = (text: string, maxTopics: number): string[] => {
@@ -185,7 +190,7 @@ const ScriptCreatePage: React.FC = () => {
   };
 
   const handleClearSuggestions = () => {
-    setTopicSuggestions([]);
+    clearTopicSuggestions();
   };
 
   const handleGenerateScript = async () => {
@@ -406,7 +411,7 @@ const ScriptCreatePage: React.FC = () => {
           </button>
         </>
       )}
-    </div>
+    </div>  
   );
 };
 
