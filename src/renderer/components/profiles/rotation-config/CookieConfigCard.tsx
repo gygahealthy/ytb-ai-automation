@@ -293,49 +293,61 @@ export default function CookieConfigCard({
               <span className="text-xs font-bold text-gray-900 dark:text-white">Priority</span>
             </div>
             <div className="space-y-1">
-              {config.rotationMethodOrder.map((method: RotationMethod, index: number) => (
-                <div
-                  key={method}
-                  className="flex items-center justify-between gap-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded px-2 py-1"
-                >
-                  <div className="flex items-center gap-1 min-w-0">
-                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-500 text-white text-[7px] font-bold flex-shrink-0">
-                      {index + 1}
-                    </span>
-                    <span className="text-xs font-medium text-gray-900 dark:text-white truncate">{getMethodLabel(method)}</span>
-                  </div>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveMethodUp(index);
-                      }}
-                      disabled={index === 0}
-                      className={`p-0.5 rounded ${
-                        index === 0
-                          ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                          : "text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                      }`}
+              {/* Only show methods that are currently enabled in the Methods section */}
+              {config.rotationMethodOrder
+                .filter((m: RotationMethod) => config.enabledRotationMethods.includes(m))
+                .map((method: RotationMethod, visualIndex: number) => {
+                  // Map back to the original rotationMethodOrder index so move handlers operate on the full order
+                  const originalIndex = config.rotationMethodOrder.indexOf(method);
+                  const isFirst = originalIndex === 0;
+                  const isLast = originalIndex === config.rotationMethodOrder.length - 1;
+
+                  return (
+                    <div
+                      key={method}
+                      className="flex items-center justify-between gap-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded px-2 py-1"
                     >
-                      <ChevronUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveMethodDown(index);
-                      }}
-                      disabled={index === config.rotationMethodOrder.length - 1}
-                      className={`p-0.5 rounded ${
-                        index === config.rotationMethodOrder.length - 1
-                          ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                          : "text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                      }`}
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-500 text-white text-[7px] font-bold flex-shrink-0">
+                          {visualIndex + 1}
+                        </span>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          {getMethodLabel(method)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveMethodUp(originalIndex);
+                          }}
+                          disabled={isFirst}
+                          className={`p-0.5 rounded ${
+                            isFirst
+                              ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                              : "text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                          }`}
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveMethodDown(originalIndex);
+                          }}
+                          disabled={isLast}
+                          className={`p-0.5 rounded ${
+                            isLast
+                              ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                              : "text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                          }`}
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
 
