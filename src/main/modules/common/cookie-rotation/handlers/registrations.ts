@@ -1,6 +1,7 @@
 import { cookieRotationConfigService } from "../services/cookie-rotation-config.service";
 import { globalRotationWorkerManager, getGlobalRotationWorkerManager } from "../services/global-rotation-worker-manager.service";
 import type { ApiResponse } from "../../../../../core/ipc/types";
+import { workerLogHandlers } from "./worker-logs.js";
 
 // Use permissive type during scaffolding to avoid tight coupling with IPC signatures.
 export const registrations: any[] = [
@@ -181,6 +182,7 @@ export const registrations: any[] = [
       }
     },
   },
+  ...workerLogHandlers,
 ];
 
 // Intentionally do NOT default-export `registrations`.

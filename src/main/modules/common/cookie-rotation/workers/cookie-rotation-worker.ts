@@ -15,6 +15,7 @@ import { rotationMethodRegistry } from "../methods/index.js";
 import { cookieRotationConfigService } from "../services/cookie-rotation-config.service.js";
 import type { RotationMethodResult, RotationMethodType } from "../types/rotation-method.types.js";
 import { EventEmitter } from "events";
+import { WorkerFileLogger } from "./worker-file-logger.js";
 
 /**
  * Worker configuration options
@@ -28,6 +29,12 @@ export interface CookieRotationWorkerOptions {
 
   // HTTP proxy URL (optional)
   proxy?: string;
+
+  // Cookie service/type (e.g., "gemini", "chatgpt")
+  service?: string;
+
+  // Profile ID this cookie belongs to
+  profileId?: string;
 }
 
 /**
@@ -51,6 +58,7 @@ export class CookieRotationWorker extends EventEmitter {
   private isRunning = false;
   private timer: NodeJS.Timeout | null = null;
   private options: CookieRotationWorkerOptions;
+  private fileLogger: WorkerFileLogger;
 
   // Statistics
   private stats: WorkerStats = {
@@ -62,6 +70,7 @@ export class CookieRotationWorker extends EventEmitter {
   constructor(cookieId: string, options?: CookieRotationWorkerOptions) {
     super();
     this.cookieId = cookieId;
+    this.fileLogger = new WorkerFileLogger(cookieId, options?.service, options?.profileId);
     this.options = {
       performInitialRefresh: false,
       verbose: false,
@@ -69,7 +78,13 @@ export class CookieRotationWorker extends EventEmitter {
     };
 
     if (this.options.verbose) {
+      this.fileLogger.debug(`[CookieRotationWorker] Created for cookie ${cookieId}`);
+    }
+    // Also log to main logger if available
+    try {
       logger.debug(`[CookieRotationWorker] Created for cookie ${cookieId}`);
+    } catch (e) {
+      // Ignore if logger not available in forked process
     }
   }
 
@@ -79,25 +94,25 @@ export class CookieRotationWorker extends EventEmitter {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.warn(`[CookieRotationWorker] Worker for ${this.cookieId} is already running`);
+      this.fileLogger.warn(`[CookieRotationWorker] Worker for ${this.cookieId} is already running`);
       return;
     }
 
     this.isRunning = true;
     this.stats.isRunning = true;
     this.emit("statusChanged", "running");
-    logger.info(`[CookieRotationWorker] Starting worker for cookie ${this.cookieId}`);
+    this.fileLogger.info(`[CookieRotationWorker] Starting worker for cookie ${this.cookieId}`);
 
     // Phase 2: Perform initial refresh if requested (startup scenario)
     if (this.options.performInitialRefresh) {
-      logger.info(`[CookieRotationWorker] Performing initial headless refresh for ${this.cookieId}`);
+      this.fileLogger.info(`[CookieRotationWorker] Performing initial headless refresh for ${this.cookieId}`);
       await this.runRotationCycle({ forceHeadless: true });
     }
 
     // Fetch config to set up recurring interval
     const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
     if (!config) {
-      logger.error(`[CookieRotationWorker] No config found for cookie ${this.cookieId}`);
+      this.fileLogger.error(`[CookieRotationWorker] No config found for cookie ${this.cookieId}`);
       this.isRunning = false;
       this.stats.isRunning = false;
       return;
@@ -106,7 +121,7 @@ export class CookieRotationWorker extends EventEmitter {
     const intervalMs = config.rotationIntervalMinutes * 60 * 1000;
     this.timer = setInterval(() => this.runRotationCycle(), intervalMs);
 
-    logger.info(`[CookieRotationWorker] Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
+    this.fileLogger.info(`[CookieRotationWorker] Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
   }
 
   /**
@@ -120,11 +135,14 @@ export class CookieRotationWorker extends EventEmitter {
     this.isRunning = false;
     this.stats.isRunning = false;
     this.emit("statusChanged", "stopped");
-    logger.info(`[CookieRotationWorker] Stopped worker for cookie ${this.cookieId}`);
+    this.fileLogger.info(`[CookieRotationWorker] Stopped worker for cookie ${this.cookieId}`);
 
     if (this.options.verbose) {
       this.logStats();
     }
+
+    // Close the file logger
+    this.fileLogger.close();
   }
 
   /**
@@ -132,14 +150,14 @@ export class CookieRotationWorker extends EventEmitter {
    * Fetches config, determines method order, executes methods in sequence
    */
   private async runRotationCycle(options?: { forceHeadless?: boolean }): Promise<void> {
-    logger.info(`[CookieRotationWorker] Running rotation cycle for ${this.cookieId}`);
+    this.fileLogger.info(`[CookieRotationWorker] Running rotation cycle for ${this.cookieId}`);
     const cycleStartTime = Date.now();
 
     try {
       // 1. Fetch current config
       const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
       if (!config) {
-        logger.error(`[CookieRotationWorker] Config not found for ${this.cookieId}`);
+        this.fileLogger.error(`[CookieRotationWorker] Config not found for ${this.cookieId}`);
         return;
       }
 
@@ -150,7 +168,7 @@ export class CookieRotationWorker extends EventEmitter {
       const cookieRepository = new CookieRepository(db);
       const cookie = await cookieRepository.findById(this.cookieId);
       if (!cookie) {
-        logger.error(`[CookieRotationWorker] Cookie ${this.cookieId} not found in DB`);
+        this.fileLogger.error(`[CookieRotationWorker] Cookie ${this.cookieId} not found in DB`);
         return;
       }
 
@@ -171,11 +189,11 @@ export class CookieRotationWorker extends EventEmitter {
       }
 
       if (methodsToTry.length === 0) {
-        logger.warn(`[CookieRotationWorker] No rotation methods enabled for ${this.cookieId}`);
+        this.fileLogger.warn(`[CookieRotationWorker] No rotation methods enabled for ${this.cookieId}`);
         return;
       }
 
-      logger.info(`[CookieRotationWorker] Attempting methods in order: ${methodsToTry.join(" → ")}`);
+      this.fileLogger.info(`[CookieRotationWorker] Attempting methods in order: ${methodsToTry.join(" → ")}`);
 
       // 5. Try each method until one succeeds
       let lastResult: RotationMethodResult | null = null;
@@ -183,11 +201,11 @@ export class CookieRotationWorker extends EventEmitter {
       for (const methodName of methodsToTry) {
         const method = rotationMethodRegistry.get(methodName);
         if (!method) {
-          logger.warn(`[CookieRotationWorker] Method ${methodName} not found in registry`);
+          this.fileLogger.warn(`[CookieRotationWorker] Method ${methodName} not found in registry`);
           continue;
         }
 
-        logger.info(`[CookieRotationWorker] Trying method: ${methodName}`);
+        this.fileLogger.info(`[CookieRotationWorker] Trying method: ${methodName}`);
         const result = await method.execute(cookies, {
           proxy: this.options.proxy,
           cookieId: this.cookieId,
@@ -197,7 +215,7 @@ export class CookieRotationWorker extends EventEmitter {
         lastResult = result;
 
         if (result.success) {
-          logger.info(`[CookieRotationWorker] ✅ Method ${methodName} succeeded in ${result.duration}ms`);
+          this.fileLogger.info(`[CookieRotationWorker] ✅ Method ${methodName} succeeded in ${result.duration}ms`);
 
           // Update cookies in database
           if (result.updatedCookies) {
@@ -225,13 +243,13 @@ export class CookieRotationWorker extends EventEmitter {
 
           return; // Success - exit early
         } else {
-          logger.warn(`[CookieRotationWorker] ⚠️ Method ${methodName} failed: ${result.error}`);
+          this.fileLogger.warn(`[CookieRotationWorker] ⚠️ Method ${methodName} failed: ${result.error}`);
           this.emit("rotationError", result.error || "Unknown error");
         }
       }
 
       // All methods failed
-      logger.error(`[CookieRotationWorker] ❌ All rotation methods failed for ${this.cookieId}`);
+      this.fileLogger.error(`[CookieRotationWorker] ❌ All rotation methods failed for ${this.cookieId}`);
       this.stats.rotationErrors++;
 
       if (lastResult) {
@@ -240,7 +258,7 @@ export class CookieRotationWorker extends EventEmitter {
 
       this.emit("rotationError", "All rotation methods failed");
     } catch (error) {
-      logger.error(`[CookieRotationWorker] Rotation cycle error for ${this.cookieId}:`, error);
+      this.fileLogger.error(`[CookieRotationWorker] Rotation cycle error for ${this.cookieId}:`, error);
       this.stats.rotationErrors++;
       this.emit("rotationError", error instanceof Error ? error.message : "Unknown error");
     }
@@ -260,10 +278,10 @@ export class CookieRotationWorker extends EventEmitter {
       await monitorRepo.recordRotationAttempt(this.cookieId, method as RotationMethodType, success, result.error);
 
       if (this.options.verbose) {
-        logger.debug(`[CookieRotationWorker] Monitor updated: method=${method}, success=${success}`);
+        this.fileLogger.debug(`[CookieRotationWorker] Monitor updated: method=${method}, success=${success}`);
       }
     } catch (error) {
-      logger.warn(`[CookieRotationWorker] Failed to update monitor:`, error);
+      this.fileLogger.warn(`[CookieRotationWorker] Failed to update monitor:`, error);
     }
   }
 
@@ -295,13 +313,13 @@ export class CookieRotationWorker extends EventEmitter {
    * Log statistics
    */
   private logStats(): void {
-    logger.info("📊 Worker statistics:");
-    logger.info(`   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`);
+    this.fileLogger.info("📊 Worker statistics:");
+    this.fileLogger.info(`   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`);
     if (this.stats.lastRotation) {
-      logger.info(`   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`);
+      this.fileLogger.info(`   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`);
     }
     if (this.stats.lastSuccessfulMethod) {
-      logger.info(`   • Last successful method: ${this.stats.lastSuccessfulMethod}`);
+      this.fileLogger.info(`   • Last successful method: ${this.stats.lastSuccessfulMethod}`);
     }
   }
 
@@ -323,7 +341,7 @@ export class CookieRotationWorker extends EventEmitter {
    * Force immediate rotation
    */
   async forceRotation(): Promise<void> {
-    logger.info(`[CookieRotationWorker] Forcing immediate rotation for ${this.cookieId}`);
+    this.fileLogger.info(`[CookieRotationWorker] Forcing immediate rotation for ${this.cookieId}`);
     await this.runRotationCycle();
   }
 }

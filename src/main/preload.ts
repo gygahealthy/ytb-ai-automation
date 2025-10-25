@@ -200,6 +200,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     stopWorker: (profileId: string, cookieId: string) => ipcRenderer.invoke("cookie-rotation:stop-worker", profileId, cookieId),
     stopAll: () => ipcRenderer.invoke("cookie-rotation:stop-all"),
     startAll: () => ipcRenderer.invoke("cookie-rotation:start-all"),
+    // Worker log APIs
+    getWorkerLogs: (cookieId: string, options?: { tail?: number; profileId?: string }) =>
+      ipcRenderer.invoke("cookie-rotation:get-worker-logs", cookieId, options),
+    clearWorkerLogs: (cookieId: string) => ipcRenderer.invoke("cookie-rotation:clear-worker-logs", cookieId),
+    listWorkerLogFiles: () => ipcRenderer.invoke("cookie-rotation:list-worker-log-files"),
     onStatusUpdate: (callback: (data: any) => void) => {
       const channel = "cookie-rotation:status-update";
       const listener = (_event: any, data: any) => callback(data);

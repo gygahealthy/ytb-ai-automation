@@ -102,6 +102,9 @@ interface Window {
       stopWorker: (profileId: string, cookieId: string) => Promise<any>;
       stopAll: () => Promise<any>;
       startAll: () => Promise<any>;
+      getWorkerLogs: (cookieId: string, options?: { tail?: number; profileId?: string }) => Promise<any>;
+      clearWorkerLogs: (cookieId: string) => Promise<any>;
+      listWorkerLogFiles: () => Promise<any>;
       onStatusUpdate: (callback: (data: any) => void) => () => void;
     };
     invoke: (channel: string, ...args: any[]) => Promise<any>;

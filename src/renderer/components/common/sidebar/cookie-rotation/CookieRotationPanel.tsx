@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { RotationStatus, ProfileWithCookies } from "./types";
-import { Play, Square, RefreshCw, Eye } from "lucide-react";
+import { Play, Square, RefreshCw, Eye, FileText } from "lucide-react";
+import WorkerLogViewer from "./WorkerLogViewer";
 
 interface Props {
   status: RotationStatus;
@@ -40,6 +41,7 @@ export function CookieRotationPanel({
   ref,
 }: Props) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
+  const [viewingLogs, setViewingLogs] = useState<{ cookieId: string; profileId: string; profileName?: string } | null>(null);
 
   const toggleProfile = (profileId: string) => {
     setExpandedProfiles((prev) => {
@@ -78,6 +80,26 @@ export function CookieRotationPanel({
         return <div className="w-2 h-2 rounded-full bg-gray-400" />;
     }
   };
+
+  // If viewing logs, show the log viewer
+  if (viewingLogs) {
+    return (
+      <div
+        ref={ref}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 p-0 w-[28rem] max-h-[640px] overflow-hidden"
+        role="dialog"
+        aria-label="Worker Logs"
+      >
+        <WorkerLogViewer
+          cookieId={viewingLogs.cookieId}
+          profileId={viewingLogs.profileId}
+          profileName={viewingLogs.profileName}
+          onClose={() => setViewingLogs(null)}
+          maxHeight="580px"
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -214,6 +236,25 @@ export function CookieRotationPanel({
                           <div className={`text-xs ${getWorkerStatusColor(cookie.workerStatus)}`}>
                             {cookie.workerStatus || "stopped"}
                           </div>
+
+                          {/* View logs button - shown for running workers */}
+                          {cookie.workerStatus === "running" && (
+                            <button
+                              onClick={() =>
+                                setViewingLogs({
+                                  cookieId: cookie.cookieId,
+                                  profileId: profile.profileId,
+                                  profileName: profile.profileName,
+                                })
+                              }
+                              className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900"
+                              title="View worker logs"
+                              aria-label={`View logs for ${profile.profileName || profile.profileId}`}
+                            >
+                              <FileText className="w-4 h-4 text-blue-600" />
+                            </button>
+                          )}
+
                           {cookie.workerStatus === "running" ? (
                             <button
                               onClick={() => onStopWorker(profile.profileId, cookie.cookieId)}

@@ -619,9 +619,18 @@ export class GlobalRotationWorkerManager {
 
       // Fork the worker process
       const workerProcessPath = path.join(__dirname, "../workers/cookie-rotation-worker-process.js");
+
+      // Pass worker log directory via environment variable
+      const { app } = await import("electron");
+      const workerLogDir = path.join(app.getPath("userData"), "logs");
+
       const workerProcess = fork(workerProcessPath, [], {
         stdio: ["inherit", "inherit", "inherit", "ipc"],
-        env: { ...process.env, NODE_ENV: process.env.NODE_ENV || "production" },
+        env: {
+          ...process.env,
+          NODE_ENV: process.env.NODE_ENV || "production",
+          WORKER_LOG_DIR: workerLogDir,
+        },
       });
 
       // Handle worker process messages

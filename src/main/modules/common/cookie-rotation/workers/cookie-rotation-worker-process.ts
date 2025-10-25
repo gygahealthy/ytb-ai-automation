@@ -14,6 +14,8 @@ type StartMessage = {
     performInitialRefresh?: boolean;
     verbose?: boolean;
     proxy?: string;
+    service?: string;
+    profileId?: string;
   };
 };
 
@@ -49,6 +51,11 @@ process.on("message", async (msg: StartMessage | StopMessage | ForceRotationMess
   try {
     if ((msg as StartMessage).cmd === "start") {
       const { cookieId, options } = msg as StartMessage;
+
+      // Set log directory for worker (parent should have sent this via env)
+      if (!process.env.WORKER_LOG_DIR) {
+        console.warn("[cookie-rotation-worker-process] WORKER_LOG_DIR not set, using default");
+      }
 
       // Dynamically import the worker class (compiled .js at runtime)
       const mod = await import("./cookie-rotation-worker.js");
