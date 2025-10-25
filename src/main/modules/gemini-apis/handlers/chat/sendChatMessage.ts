@@ -77,8 +77,8 @@ export async function sendChatMessage(req: {
       }
     } else {
       // Stateless mode (default): creates new ChatService per request
-      // Force token refresh for new conversations (no conversationContext) to avoid stale token errors with Pro models
-      const isNewConversation = !req.conversationContext;
+      // DO NOT force token refresh - let the HTTP service use cached token if valid
+      // Forcing refresh can trigger fallback token extraction which may not work with Pro models
       if (stream) {
         return await sendChatMessageStreaming({
           profileId: req.profileId,
@@ -86,7 +86,7 @@ export async function sendChatMessage(req: {
           conversationContext: req.conversationContext,
           requestId: requestId!,
           model,
-          forceRefreshToken: isNewConversation,
+          forceRefreshToken: false,
         });
       } else {
         return await sendChatMessageNonStreaming({
@@ -94,7 +94,7 @@ export async function sendChatMessage(req: {
           prompt: req.prompt,
           conversationContext: req.conversationContext,
           model,
-          forceRefreshToken: isNewConversation,
+          forceRefreshToken: false,
         });
       }
     }

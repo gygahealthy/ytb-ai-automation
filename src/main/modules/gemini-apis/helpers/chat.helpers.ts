@@ -376,14 +376,13 @@ export async function sendChatRequest(
 
     try {
       // Send request with automatic token handling and model headers
-      // FORCE REFRESH token for new conversations to avoid stale token errors (1052)
-      // Also respect the explicit forceRefreshToken flag from caller
-      const isNewConversation = !conversationContext;
-      const shouldRefreshToken = forceRefreshToken || isNewConversation;
+      // Respect the explicit forceRefreshToken flag from caller
+      // DO NOT automatically force refresh for new conversations - let HTTP service handle caching
+      // Forcing refresh can trigger fallback token extraction which may not work with Pro models
       const response = await httpService.sendGeminiRequest(fReq, {
         retries: 3,
         headers: modelHeaders,
-        forceRefreshToken: shouldRefreshToken,
+        forceRefreshToken: forceRefreshToken,
       });
 
       if (response.statusCode !== 200) {
