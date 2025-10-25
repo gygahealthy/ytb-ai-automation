@@ -1,11 +1,8 @@
 import { IpcRegistration } from "../../../../core/ipc/types";
 import { sendChatMessage } from "./chat/sendChatMessage";
-import { cookieRegistrations } from "../../common/cookie/handlers/registrations";
 
-// cookie-rotation handlers moved to separate module: src/main/modules/cookie-rotation
-// cookie handlers now managed by common/cookie module
-
-export { cookieRegistrations };
+// Cookie handlers are now managed by common/cookie module
+// No need to re-export them here to avoid duplicate registrations
 
 export const chatRegistrations: IpcRegistration[] = [
   {
@@ -17,4 +14,4 @@ export const chatRegistrations: IpcRegistration[] = [
   },
 ];
 
-// cookie-rotation handlers have been moved into `src/main/modules/cookie-rotation`
+// Note: cookie-rotation handlers have been moved into `src/main/modules/common/cookie-rotation`

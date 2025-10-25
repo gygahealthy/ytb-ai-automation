@@ -2,9 +2,10 @@
  * Cookie Rotation Worker Process Bootstrap
  * Runs a CookieRotationWorker in a separate Node.js process to avoid blocking
  * the Electron main process. Communication with parent via IPC (process.send/on).
+ *
+ * NOTE: This runs in a forked child process, so Electron APIs (like BrowserWindow)
+ * are not available. Use console logging instead of the logger utility.
  */
-
-import { logger } from "../../../../utils/logger-backend.js";
 
 type StartMessage = {
   cmd: "start";
@@ -28,12 +29,7 @@ let workerInstance: any = null;
 
 // Handle uncaught exceptions gracefully
 process.on("uncaughtException", (err) => {
-  try {
-    logger.error("[cookie-rotation-worker-process] Uncaught exception:", err);
-  } catch (e) {
-    // logger might not be available
-    console.error("[cookie-rotation-worker-process] Uncaught exception:", err);
-  }
+  console.error("[cookie-rotation-worker-process] Uncaught exception:", err);
   // Inform parent
   if (process.send) {
     process.send({ type: "error", error: String(err) });
@@ -42,11 +38,7 @@ process.on("uncaughtException", (err) => {
 });
 
 process.on("unhandledRejection", (reason) => {
-  try {
-    logger.error("[cookie-rotation-worker-process] Unhandled rejection:", reason);
-  } catch (e) {
-    console.error("[cookie-rotation-worker-process] Unhandled rejection:", reason);
-  }
+  console.error("[cookie-rotation-worker-process] Unhandled rejection:", reason);
   if (process.send) {
     process.send({ type: "error", error: String(reason) });
   }
@@ -96,16 +88,16 @@ process.on("message", async (msg: StartMessage | StopMessage | ForceRotationMess
         process.send({ type: "started", cookieId });
       }
 
-      logger.info(`[cookie-rotation-worker-process] Worker started for cookie ${cookieId}`);
+      console.log(`[cookie-rotation-worker-process] Worker started for cookie ${cookieId}`);
     }
 
     if ((msg as StopMessage).cmd === "stop") {
       if (workerInstance) {
         try {
           await workerInstance.stop();
-          logger.info("[cookie-rotation-worker-process] Worker stopped");
+          console.log("[cookie-rotation-worker-process] Worker stopped");
         } catch (e) {
-          logger.warn("[cookie-rotation-worker-process] Error stopping worker:", e);
+          console.warn("[cookie-rotation-worker-process] Error stopping worker:", e);
         }
       }
       if (process.send) {
@@ -128,7 +120,7 @@ process.on("message", async (msg: StartMessage | StopMessage | ForceRotationMess
       }
     }
   } catch (error) {
-    logger.error("[cookie-rotation-worker-process] Failed to handle message:", error);
+    console.error("[cookie-rotation-worker-process] Failed to handle message:", error);
     if (process.send) {
       process.send({ type: "error", error: String(error) });
     }
@@ -141,4 +133,4 @@ if (process.send) {
   process.send({ type: "ready" });
 }
 
-logger.info("[cookie-rotation-worker-process] Process initialized and waiting for commands");
+console.log("[cookie-rotation-worker-process] Process initialized and waiting for commands");

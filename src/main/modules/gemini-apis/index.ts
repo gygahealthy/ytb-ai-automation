@@ -1,12 +1,13 @@
 import { ipcMain } from "electron";
 import { IpcRegistration } from "../../../core/ipc/types";
-import { cookieRegistrations, chatRegistrations } from "./handlers/registrations";
+import { chatRegistrations } from "./handlers/registrations";
 
 // Export IPC registrations for module-loader to collect
-export { cookieRegistrations, chatRegistrations } from "./handlers/registrations";
+// Cookie registrations are now handled by common/cookie module
+export { chatRegistrations } from "./handlers/registrations";
 
-// Export combined registrations array for easier access
-export const registrations: IpcRegistration[] = [...cookieRegistrations, ...chatRegistrations];
+// Export combined registrations array (only chat now, cookies handled elsewhere)
+export const registrations: IpcRegistration[] = [...chatRegistrations];
 
 // Export services
 export { ChatService } from "./services/chat.service";
@@ -57,7 +58,8 @@ export {
 export { extractTokens, validateToken, type TokenData } from "../common/cookie/helpers/token.helpers";
 
 export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
-  const allRegistrations = [...cookieRegistrations, ...chatRegistrations];
+  // Only register chat handlers here; cookie handlers are registered by common/cookie module
+  const allRegistrations = [...chatRegistrations];
 
   if (registrar) {
     registrar(allRegistrations);
