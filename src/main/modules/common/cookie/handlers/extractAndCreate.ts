@@ -62,7 +62,7 @@ export const extractAndCreateHandler = async (req: { profileId: string; service:
       mode: headless ? "HEADLESS (background)" : "VISIBLE (interactive)",
     });
 
-    const extractResult = await cookieService.extractCookiesFromBrowser(
+    const extractResult = await cookieService.extractAndStoreCookiesFromBrowser(
       profile,
       url,
       domainFilter,
@@ -86,7 +86,7 @@ export const extractAndCreateHandler = async (req: { profileId: string; service:
 
     // Store the extracted cookies in database
     // domainFilter is used for cookie filtering, url is stored as the reference URL
-    const storeResult = await cookieService.extractAndStoreCookiesFromPage(
+    const storeResult = await cookieService.storeCookiesFromPage(
       profileId,
       domainFilter, // Used for filtering cookies by domain
       service,

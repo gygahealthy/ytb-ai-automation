@@ -69,6 +69,9 @@ export class CookieManagerDB {
   // Required cookies for Gemini API
   private readonly REQUIRED_COOKIES = ["__Secure-1PSID", "__Secure-1PSIDTS"];
 
+  // Per-page required cookies loaded from database (overrides REQUIRED_COOKIES if set)
+  private requiredCookies: string[] | undefined = undefined;
+
   // Statistics
   private stats = {
     psidtsRotations: 0,
@@ -162,7 +165,16 @@ export class CookieManagerDB {
           url: entity.url,
           status: entity.status,
           lastRotated: entity.lastRotatedAt,
+          requiredCookies: entity.requiredCookies,
         });
+
+        // Load required cookies for validation (if set)
+        if (entity.requiredCookies && entity.requiredCookies.length > 0) {
+          this.requiredCookies = entity.requiredCookies;
+          logger.info(
+            `✅ Loaded ${this.requiredCookies.length} required cookies from database: ${this.requiredCookies.join(", ")}`
+          );
+        }
 
         // Update in-memory cookies with database values
         if (entity.rawCookieString) {
@@ -207,8 +219,12 @@ export class CookieManagerDB {
   /**
    * Validate cookies
    */
+  /**
+   * Validate cookies against required cookies from database or default
+   */
   validate(): ValidationResult {
-    const result = validateRequiredCookies(this.cookies, this.REQUIRED_COOKIES);
+    const cookiesToValidate = this.requiredCookies || this.REQUIRED_COOKIES;
+    const result = validateRequiredCookies(this.cookies, cookiesToValidate);
 
     if (!result.valid) {
       return result;
@@ -223,6 +239,21 @@ export class CookieManagerDB {
     }
 
     return { valid: true };
+  }
+
+  /**
+   * Validate current cookies against database-loaded required cookies
+   * Returns validation result with missing cookies if validation fails
+   */
+  validateCurrentCookies(): ValidationResult {
+    const cookiesToValidate = this.requiredCookies || this.REQUIRED_COOKIES;
+
+    logger.debug(`[CookieManagerDB] Validating current cookies`, {
+      requiredCookies: cookiesToValidate,
+      currentCookies: Object.keys(this.cookies),
+    });
+
+    return validateRequiredCookies(this.cookies, cookiesToValidate);
   }
 
   /**
@@ -273,6 +304,17 @@ export class CookieManagerDB {
       if (result.newPSIDTS) {
         this.cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
         logger.info(`✅ PSIDTS rotated successfully`);
+
+        // Validate cookies after rotation
+        const validation = this.validateCurrentCookies();
+        if (!validation.valid) {
+          logger.warn(`⚠️ Cookie validation failed after rotation`, {
+            error: validation.error,
+            missing: (validation as any).missing,
+          });
+        } else {
+          logger.debug(`✅ Cookie validation passed after rotation`);
+        }
 
         // Save to database
         try {

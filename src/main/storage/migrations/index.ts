@@ -25,6 +25,7 @@ import * as m021 from "./modules/021_add_component_prompt_configs";
 import * as m022 from "./modules/022_add_variable_occurrences_config";
 import * as m023 from "./modules/023_remove_gemini_token_column";
 import * as m024 from "./modules/024_add_cookie_rotation_config_columns";
+import * as m025 from "./modules/025_add_required_cookies_column";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -53,6 +54,7 @@ const modules: Migration[] = [
   m022,
   m023,
   m024,
+  m025,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

@@ -84,6 +84,8 @@ export interface Cookie {
   launchWorkerOnStartup: number; // 0 = false, 1 = true
   enabledRotationMethods: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
   rotationMethodOrder: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
+  // Required cookies for validation
+  requiredCookies?: string[]; // Array of required cookie names (parsed from JSON)
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +109,8 @@ export interface CookieRow {
   launch_worker_on_startup: number; // 0 = false, 1 = true
   enabled_rotation_methods: string; // JSON array
   rotation_method_order: string; // JSON array
+  // Required cookies stored as JSON string in database
+  required_cookies?: string; // JSON string: ["__Secure-1PSID","__Secure-1PSIDTS"]
   created_at: string;
   updated_at: string;
 }

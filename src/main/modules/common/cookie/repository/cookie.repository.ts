@@ -29,11 +29,11 @@ export class CookieRepository extends BaseRepository<Cookie> {
       launchWorkerOnStartup: cookieRow.launch_worker_on_startup ?? 0,
       enabledRotationMethods: cookieRow.enabled_rotation_methods ?? '["refreshCreds","rotateCookie"]',
       rotationMethodOrder: cookieRow.rotation_method_order ?? '["refreshCreds","rotateCookie","headless"]',
+      requiredCookies: this.parseRequiredCookies(cookieRow.required_cookies),
       createdAt: cookieRow.created_at,
       updatedAt: cookieRow.updated_at,
     };
   }
-
   /**
    * Convert Cookie entity to database row
    */
@@ -52,11 +52,11 @@ export class CookieRepository extends BaseRepository<Cookie> {
       launch_worker_on_startup: entity.launchWorkerOnStartup,
       enabled_rotation_methods: entity.enabledRotationMethods,
       rotation_method_order: entity.rotationMethodOrder,
+      required_cookies: this.stringifyRequiredCookies(entity.requiredCookies),
       created_at: entity.createdAt,
       updated_at: entity.updatedAt,
     };
   }
-
   /**
    * Find cookies by profile ID
    */
@@ -188,6 +188,7 @@ export class CookieRepository extends BaseRepository<Cookie> {
       enabledRotationMethods?: string;
       rotationMethodOrder?: string;
       rotationIntervalMinutes?: number;
+      requiredCookies?: string[];
     }
   ): Promise<void> {
     const updates: string[] = [];
@@ -209,6 +210,10 @@ export class CookieRepository extends BaseRepository<Cookie> {
       updates.push("rotation_interval_minutes = ?");
       values.push(config.rotationIntervalMinutes);
     }
+    if (config.requiredCookies !== undefined) {
+      updates.push("required_cookies = ?");
+      values.push(this.stringifyRequiredCookies(config.requiredCookies));
+    }
 
     if (updates.length === 0) {
       return;
@@ -219,5 +224,47 @@ export class CookieRepository extends BaseRepository<Cookie> {
     values.push(now, id);
 
     await this.db.run(`UPDATE ${this.tableName} SET ${updates.join(", ")} WHERE id = ?`, values);
+  }
+
+  /**
+   * Parse required_cookies JSON string to array
+   * Returns undefined if null/invalid JSON
+   *
+   * @private
+   */
+  private parseRequiredCookies(jsonString?: string): string[] | undefined {
+    if (!jsonString || jsonString.trim() === "") {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => typeof item === "string");
+      }
+      return undefined;
+    } catch (error) {
+      console.warn("[CookieRepository] Failed to parse required_cookies JSON:", jsonString, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Stringify required_cookies array to JSON string
+   * Returns null for database if undefined/empty
+   *
+   * @private
+   */
+  private stringifyRequiredCookies(array?: string[]): string | null {
+    if (!array || array.length === 0) {
+      return null;
+    }
+
+    try {
+      return JSON.stringify(array);
+    } catch (error) {
+      console.warn("[CookieRepository] Failed to stringify required_cookies array:", array, error);
+      return null;
+    }
   }
 }

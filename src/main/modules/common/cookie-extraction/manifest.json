@@ -1,0 +1,6 @@
+{
+  "name": "cookie-extraction",
+  "version": "1.0.0",
+  "description": "Cookie extraction service for browser-based authentication",
+  "disabled": false
+}
