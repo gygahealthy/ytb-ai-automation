@@ -13,16 +13,21 @@ import { parseCookieHeader } from "../../cookie/helpers/cookie-parser.helpers.js
 import { extractAndCreateHandler } from "../../cookie/handlers/extractAndCreate.js";
 import { BrowserWindow } from "electron";
 import { cookieRotationConfigService } from "./cookie-rotation-config.service.js";
+import { fork, type ChildProcess } from "child_process";
+import * as path from "path";
 
 /**
  * Worker instance tracking
  */
 interface WorkerInstance {
-  cookieManagerDB: CookieManagerDB;
+  cookieManagerDB: CookieManagerDB | null; // null for Phase 1 forked workers
   monitorId: string;
   profileId: string;
   cookieId: string;
   userDataDir?: string;
+  // Phase 1 worker process tracking
+  workerProcess?: ChildProcess;
+  workerType?: "legacy" | "phase1-forked";
 }
 
 /**
@@ -186,6 +191,7 @@ export class GlobalRotationWorkerManager {
         profileId: cookie.profileId,
         cookieId: cookie.id,
         userDataDir: undefined, // Will be loaded on-demand for headless refresh
+        workerType: "legacy",
       });
 
       // Update monitor to running
@@ -212,7 +218,20 @@ export class GlobalRotationWorkerManager {
     }
 
     try {
-      worker.cookieManagerDB.stop();
+      // Handle Phase 1 forked worker
+      if (worker.workerType === "phase1-forked" && worker.workerProcess) {
+        worker.workerProcess.send({ cmd: "stop" });
+        // Give it a moment to gracefully stop, then force kill if needed
+        setTimeout(() => {
+          if (worker.workerProcess && !worker.workerProcess.killed) {
+            worker.workerProcess.kill();
+          }
+        }, 2000);
+      } else if (worker.cookieManagerDB) {
+        // Handle legacy worker
+        worker.cookieManagerDB.stop();
+      }
+
       this.workers.delete(key);
 
       // Update monitor
@@ -475,10 +494,21 @@ export class GlobalRotationWorkerManager {
       this.monitorInterval = null;
     }
 
-    // Stop all workers
+    // Stop all workers (both legacy and forked)
     for (const [key, worker] of this.workers.entries()) {
       try {
-        worker.cookieManagerDB.stop();
+        // Handle Phase 1 forked worker
+        if (worker.workerType === "phase1-forked" && worker.workerProcess) {
+          worker.workerProcess.send({ cmd: "stop" });
+          setTimeout(() => {
+            if (worker.workerProcess && !worker.workerProcess.killed) {
+              worker.workerProcess.kill();
+            }
+          }, 1000);
+        } else if (worker.cookieManagerDB) {
+          // Handle legacy worker
+          worker.cookieManagerDB.stop();
+        }
         await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
       } catch (error) {
         logger.error(`[rotation-manager] Failed to stop worker ${key}`, error);
@@ -555,7 +585,7 @@ export class GlobalRotationWorkerManager {
 
   /**
    * Start worker for a specific profile/cookie by IDs
-   * Phase 1: Now accepts options for initial refresh
+   * Phase 1: Now accepts options for initial refresh and forks a separate process
    */
   async startWorkerByIds(profileId: string, cookieId: string, options?: { performInitialRefresh?: boolean }): Promise<void> {
     const cookie = await this.cookieRepository.findById(cookieId);
@@ -574,22 +604,9 @@ export class GlobalRotationWorkerManager {
       return;
     }
 
-    // Use Phase 1 CookieRotationWorker if options provided
+    // Use Phase 1 CookieRotationWorker in a separate process if options provided
     if (options?.performInitialRefresh) {
-      logger.info(`[rotation-manager] Starting Phase 1 worker with initial refresh for ${cookieId}`);
-
-      const { CookieRotationWorker } = await import("../workers/cookie-rotation-worker.js");
-      const worker = new CookieRotationWorker(cookieId, {
-        performInitialRefresh: true,
-        verbose: true,
-      });
-
-      // Start the worker
-      await worker.start();
-
-      // Store reference (we need to track this differently than legacy workers)
-      // For now, create a minimal WorkerInstance entry
-      const profile = await this.getProfile(profileId);
+      logger.info(`[rotation-manager] Starting Phase 1 worker (forked process) with initial refresh for ${cookieId}`);
 
       // Find or create monitor
       let monitor = await this.monitorRepository.findByProfileAndCookie(profileId, cookieId);
@@ -597,16 +614,102 @@ export class GlobalRotationWorkerManager {
         monitor = await this.createMonitor(profileId, cookieId);
       }
 
+      // Update monitor to initializing
+      await this.monitorRepository.updateWorkerStatus(monitor.id, "initializing");
+
+      // Fork the worker process
+      const workerProcessPath = path.join(__dirname, "../workers/cookie-rotation-worker-process.js");
+      const workerProcess = fork(workerProcessPath, [], {
+        stdio: ["inherit", "inherit", "inherit", "ipc"],
+        env: { ...process.env, NODE_ENV: process.env.NODE_ENV || "production" },
+      });
+
+      // Handle worker process messages
+      workerProcess.on("message", async (msg: any) => {
+        try {
+          if (msg.type === "ready") {
+            logger.info(`[rotation-manager] Worker process ready for ${cookieId}`);
+          } else if (msg.type === "started") {
+            logger.info(`[rotation-manager] Worker process started for ${msg.cookieId}`);
+            await this.monitorRepository.updateWorkerStatus(monitor!.id, "running");
+          } else if (msg.type === "stopped") {
+            logger.info(`[rotation-manager] Worker process stopped for ${cookieId}`);
+            await this.monitorRepository.updateWorkerStatus(monitor!.id, "stopped");
+            this.workers.delete(workerKey);
+          } else if (msg.type === "status") {
+            logger.debug(`[rotation-manager] Worker status: ${msg.status}`);
+          } else if (msg.type === "rotationSuccess") {
+            logger.info(`[rotation-manager] Rotation success for ${cookieId}`);
+          } else if (msg.type === "rotationError") {
+            logger.warn(`[rotation-manager] Rotation error for ${cookieId}: ${msg.error}`);
+          } else if (msg.type === "error") {
+            logger.error(`[rotation-manager] Worker process error for ${cookieId}: ${msg.error}`);
+            await this.monitorRepository.updateWorkerStatus(monitor!.id, "stopped");
+            this.workers.delete(workerKey);
+          }
+        } catch (error) {
+          logger.error(`[rotation-manager] Failed to handle worker message:`, error);
+        }
+      });
+
+      // Handle worker process exit
+      workerProcess.on("exit", async (code, signal) => {
+        logger.info(`[rotation-manager] Worker process exited for ${cookieId} (code: ${code}, signal: ${signal})`);
+        try {
+          await this.monitorRepository.updateWorkerStatus(monitor!.id, "stopped");
+        } catch (e) {
+          // ignore
+        }
+        this.workers.delete(workerKey);
+      });
+
+      // Handle worker process errors
+      workerProcess.on("error", async (err) => {
+        logger.error(`[rotation-manager] Worker process spawn error for ${cookieId}:`, err);
+        try {
+          await this.monitorRepository.updateWorkerStatus(monitor!.id, "stopped");
+        } catch (e) {
+          // ignore
+        }
+        this.workers.delete(workerKey);
+      });
+
+      // Wait for ready signal, then send start command
+      const readyPromise = new Promise<void>((resolve) => {
+        const handler = (msg: any) => {
+          if (msg.type === "ready") {
+            workerProcess.off("message", handler);
+            resolve();
+          }
+        };
+        workerProcess.on("message", handler);
+      });
+
+      await readyPromise;
+
+      // Send start command with options
+      workerProcess.send({
+        cmd: "start",
+        cookieId,
+        options: {
+          performInitialRefresh: true,
+          verbose: true,
+        },
+      });
+
+      // Store worker reference
+      const profile = await this.getProfile(profileId);
       this.workers.set(workerKey, {
-        cookieManagerDB: null as any, // Phase 1 worker doesn't use CookieManagerDB
+        cookieManagerDB: null, // Phase 1 forked worker doesn't use in-process CookieManagerDB
         monitorId: monitor.id,
         profileId,
         cookieId,
         userDataDir: profile?.userDataDir,
+        workerProcess,
+        workerType: "phase1-forked",
       });
 
-      await this.monitorRepository.updateWorkerStatus(monitor.id, "running");
-      logger.info(`[rotation-manager] ✅ Phase 1 worker started for ${workerKey}`);
+      logger.info(`[rotation-manager] ✅ Phase 1 worker (forked process) started for ${workerKey}`);
     } else {
       // Fall back to legacy behavior for backward compatibility
       await this.startWorkerForCookie(cookie);
