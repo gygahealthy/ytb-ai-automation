@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, ChevronsLeftRightIcon } from "lucide-react";
 import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
-import { VideoConfigurationColumn } from "./VideoConfigurationColumn";
-import { PromptsOutputColumn } from "./PromptsOutputColumn";
+import { VideoConfigurationColumn } from "./step-video-prompt/VideoConfigurationColumn";
+import { PromptsOutputColumn } from "./step-video-prompt/PromptsOutputColumn";
 import { useAlert } from "../../../hooks/useAlert";
 
 const electronApi = (window as any).electronAPI;

@@ -5,9 +5,11 @@ import { Step1_TopicAndStyle } from "@components/video-creation/script-creation/
 import { Step2_EditScriptAndVisualStyle } from "@components/video-creation/script-creation/step-by-step/Step2_EditScriptAndVisualStyle";
 import { Step3_GeneratePrompts } from "@components/video-creation/script-creation/step-by-step/Step3_GeneratePrompts";
 import { ScriptCreatePageToolbar } from "@components/video-creation/script-creation/ScriptCreatePageToolbar";
+import { VideoStyle } from "@components/video-creation/script-creation/ScriptStyleSelector";
 import { useScriptCreationStore } from "@store/script-creation.store";
 import { useAlert } from "@hooks/useAlert";
 import { replaceTemplate } from "@shared/utils/template-replacement.util";
+import { VIDEO_STYLE_KEYWORD_MAP } from "@shared/constants/script-style.constants";
 
 const electronApi = (window as any).electronAPI;
 
@@ -46,7 +48,21 @@ const ScriptCreatePage: React.FC = () => {
     setViewMode,
     setIsGenerating,
     setIsGeneratingTopics,
+    setSuggestedVideoStyle,
   } = useScriptCreationStore();
+
+  // Helper to extract video style hint from topic text
+  const extractStyleFromTopic = (topicText: string): VideoStyle | null => {
+    const lowerText = topicText.toLowerCase();
+
+    for (const [keyword, style] of Object.entries(VIDEO_STYLE_KEYWORD_MAP)) {
+      if (lowerText.includes(keyword)) {
+        return style;
+      }
+    }
+
+    return null;
+  };
 
   // Helper function to parse topics from AI response
   const parseTopicsFromAIResponse = (text: string, maxTopics: number): string[] => {
@@ -152,8 +168,52 @@ const ScriptCreatePage: React.FC = () => {
           outputText = JSON.stringify(response.data, null, 2);
         }
 
-        const topics = parseTopicsFromAIResponse(outputText, numberOfTopics);
+        // Try to extract structured JSON array first (objects with title/description/format)
+        let topics: string[] = [];
+        let detectedSuggestedStyle: VideoStyle | null = null;
+
+        try {
+          const jsonMatch = outputText.match(/\[\s*\{[\s\S]*\}\s*\]/m);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(parsed)) {
+              topics = parsed
+                .map((item: any) => {
+                  if (typeof item === "string") return item;
+                  if (item.title) return item.title;
+                  if (item.description) return item.description;
+                  if (item.name) return item.name;
+                  return null;
+                })
+                .filter((t: any) => t && typeof t === "string" && t.length > 0)
+                .slice(0, numberOfTopics);
+
+              // If the AI returned structured items, try to infer style from the first item's format/description/title
+              if (parsed.length > 0) {
+                const first = parsed[0];
+                const combined = `${first.format || ""} ${first.title || ""} ${first.description || ""}`.trim();
+                if (combined) {
+                  detectedSuggestedStyle = extractStyleFromTopic(combined);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // ignore JSON parse errors and fall back to text parsing below
+        }
+
+        // Fallback to plain text parsing when no structured JSON was found
+        if (topics.length === 0) {
+          topics = parseTopicsFromAIResponse(outputText, numberOfTopics);
+          // Try to detect style from first topic text
+          if (topics.length > 0) {
+            detectedSuggestedStyle = extractStyleFromTopic(topics[0]);
+          }
+        }
+
         setTopicSuggestions(topics);
+        // Persist suggested style (so it survives navigation)
+        setSuggestedVideoStyle(detectedSuggestedStyle);
       } else {
         console.error("AI call failed:", response?.error);
         const errorMessage = response?.error || "Failed to generate topics";
@@ -179,6 +239,13 @@ const ScriptCreatePage: React.FC = () => {
   const handleSelectSuggestion = (suggestion: string, id: string) => {
     setSelectedTopic(suggestion); // ✅ Store the full AI-generated topic text
     setSelectedTopicId(id);
+
+    // ✅ Extract and auto-apply suggested style from topic
+    const suggestedStyle = extractStyleFromTopic(suggestion);
+    if (suggestedStyle) {
+      setVideoStyle(suggestedStyle);
+      setSuggestedVideoStyle(suggestedStyle);
+    }
     // Don't update the input field - just track the selection in context
   };
 
@@ -186,11 +253,19 @@ const ScriptCreatePage: React.FC = () => {
     setTopic(topic);
     setSelectedTopic(topic); // ✅ Also store in selectedTopic
     setSelectedTopicId(id);
+
+    // ✅ Extract and auto-apply suggested style from topic
+    const suggestedStyle = extractStyleFromTopic(topic);
+    if (suggestedStyle) {
+      setVideoStyle(suggestedStyle);
+      setSuggestedVideoStyle(suggestedStyle);
+    }
     // Update input field when selecting from Hint section
   };
-
   const handleClearSuggestions = () => {
     clearTopicSuggestions();
+    // Clear any AI-suggested style when user clears suggestions
+    setSuggestedVideoStyle(null);
   };
 
   const handleGenerateScript = async () => {
@@ -377,18 +452,31 @@ const ScriptCreatePage: React.FC = () => {
 
       {/* Floating Circular Action Buttons - Only in step-by-step mode */}
       {viewMode === "step-by-step" && currentStep === 1 && (
-        <button
-          onClick={handleGenerateScript}
-          disabled={!topic.trim() || isGenerating}
-          title="Generate Video Script"
-          className="fixed top-20 right-6 z-20 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
-        >
-          {isGenerating ? (
-            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Wand2 className="w-7 h-7" />
+        <>
+          {/* Forward to Step 2 when script exists */}
+          {editedScript.trim() && (
+            <button
+              onClick={() => setCurrentStep(2)}
+              title="Go to Edit Script"
+              className="fixed top-20 right-6 z-20 w-16 h-16 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+            >
+              <ChevronRight className="w-7 h-7" />
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={handleGenerateScript}
+            disabled={!(topic.trim() || selectedTopic) || isGenerating}
+            title="Generate Video Script"
+            className="fixed top-20 right-24 z-20 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+          >
+            {isGenerating ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Wand2 className="w-7 h-7" />
+            )}
+          </button>
+        </>
       )}
 
       {viewMode === "step-by-step" && currentStep === 2 && (
@@ -413,7 +501,7 @@ const ScriptCreatePage: React.FC = () => {
           </button>
         </>
       )}
-    </div>  
+    </div>
   );
 };
 

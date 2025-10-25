@@ -82,15 +82,13 @@ export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = (
                   }`}
                   title={hasTopicOrScript ? "Go to Edit Script" : "Generate a script first"}
                 >
-                  <ChevronRight className={`w-4 h-4 ${
-                    hasTopicOrScript ? "text-blue-500" : "text-gray-400"
-                  }`} />
+                  <ChevronRight className={`w-4 h-4 ${hasTopicOrScript ? "text-blue-500" : "text-gray-400"}`} />
                 </button>
                 <button
-                  onClick={() => currentStep >= 2 && onStepChange(2)}
-                  disabled={currentStep < 2}
+                  onClick={() => hasTopicOrScript && onStepChange(2)}
+                  disabled={!hasTopicOrScript}
                   className={`flex items-center gap-2 transition-all ${currentStep >= 2 ? "text-blue-500" : "text-gray-400"} ${
-                    currentStep < 2
+                    !hasTopicOrScript
                       ? "cursor-not-allowed"
                       : currentStep === 2
                       ? "cursor-default"
@@ -114,15 +112,13 @@ export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = (
                   }`}
                   title={hasScript ? "Go to Generate Prompts" : "Generate a script first"}
                 >
-                  <ChevronRight className={`w-4 h-4 ${
-                    hasScript ? "text-blue-500" : "text-gray-400"
-                  }`} />
+                  <ChevronRight className={`w-4 h-4 ${hasScript ? "text-blue-500" : "text-gray-400"}`} />
                 </button>
                 <button
-                  onClick={() => currentStep >= 3 && onStepChange(3)}
-                  disabled={currentStep < 3}
+                  onClick={() => hasScript && onStepChange(3)}
+                  disabled={!hasScript}
                   className={`flex items-center gap-2 transition-all ${currentStep >= 3 ? "text-blue-500" : "text-gray-400"} ${
-                    currentStep < 3 ? "cursor-not-allowed" : "cursor-pointer hover:opacity-80"
+                    !hasScript ? "cursor-not-allowed" : "cursor-pointer hover:opacity-80"
                   }`}
                 >
                   <div

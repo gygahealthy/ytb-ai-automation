@@ -1,5 +1,5 @@
 import React from "react";
-import { TopicInput } from "../TopicInput";
+import { TopicIdeaInput } from "../TopicIdeaInput";
 import { ScriptStyleSelector } from "../ScriptStyleSelector";
 import { VideoStyle } from "../ScriptStyleSelector";
 
@@ -45,7 +45,7 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
   return (
     <div className="h-full overflow-auto px-6 py-8">
       <div className="space-y-6 animate-fadeIn">
-        <TopicInput
+        <TopicIdeaInput
           topic={topic}
           onTopicChange={onTopicChange}
           numberOfTopics={numberOfTopics}

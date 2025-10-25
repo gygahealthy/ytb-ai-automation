@@ -1,5 +1,5 @@
 // Export all script creation components
-export { TopicInput } from "./TopicInput";
+export { TopicIdeaInput } from "./TopicIdeaInput";
 export { HintForTopicPrompt } from "./HintForTopicPrompt";
 export { AITopicSuggestions } from "./AITopicSuggestions";
 export { ScriptStyleSelector } from "./ScriptStyleSelector";

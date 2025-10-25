@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Play, Copy, RefreshCw, ChevronDown, ChevronUp, Wand2 } from "lucide-react";
-import { VideoPrompt } from "./VideoPromptGenerator";
-import { StepNavigationButtons } from "./StepNavigationButtons";
+import { VideoPrompt } from "../VideoPromptGenerator";
+import { StepNavigationButtons } from "../StepNavigationButtons";
 
 interface PromptsOutputColumnProps {
   prompts: VideoPrompt[];

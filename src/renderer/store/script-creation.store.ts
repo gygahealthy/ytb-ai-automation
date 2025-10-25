@@ -19,6 +19,7 @@ interface ScriptCreationState {
   videoPrompts: VideoPrompt[];
   scriptLengthPreset: string;
   customWordCount: number;
+  suggestedVideoStyle: VideoStyle | null; // ✅ Store suggested style from AI topic
 
   // UI state (not persisted)
   currentStep: 1 | 2 | 3;
@@ -43,6 +44,7 @@ interface ScriptCreationState {
   removeVideoPrompt: (index: number) => void;
   setScriptLengthPreset: (preset: string) => void;
   setCustomWordCount: (count: number) => void;
+  setSuggestedVideoStyle: (style: VideoStyle | null) => void; // ✅ New action
   setCurrentStep: (step: 1 | 2 | 3) => void;
   setViewMode: (mode: ViewMode) => void;
   setIsGenerating: (isGenerating: boolean) => void;
@@ -67,6 +69,7 @@ const initialState = {
   videoPrompts: [] as VideoPrompt[],
   scriptLengthPreset: "medium",
   customWordCount: 140,
+  suggestedVideoStyle: null as VideoStyle | null, // ✅ New field
   currentStep: 1 as 1 | 2 | 3,
   viewMode: "step-by-step" as ViewMode,
   isGenerating: false,
@@ -101,6 +104,7 @@ export const useScriptCreationStore = create<ScriptCreationState>()(
         })),
       setScriptLengthPreset: (scriptLengthPreset) => set({ scriptLengthPreset }),
       setCustomWordCount: (customWordCount) => set({ customWordCount }),
+      setSuggestedVideoStyle: (suggestedVideoStyle) => set({ suggestedVideoStyle }), // ✅ New action
       setCurrentStep: (currentStep) => set({ currentStep }),
       setViewMode: (viewMode) => set({ viewMode }),
       setIsGenerating: (isGenerating) => set({ isGenerating }),
@@ -114,6 +118,7 @@ export const useScriptCreationStore = create<ScriptCreationState>()(
           selectedTopic: initialState.selectedTopic,
           selectedTopicId: initialState.selectedTopicId,
           topicSuggestions: initialState.topicSuggestions,
+          suggestedVideoStyle: initialState.suggestedVideoStyle, // ✅ Reset suggested style
         }),
       resetScriptState: () =>
         set({
@@ -140,6 +145,8 @@ export const useScriptCreationStore = create<ScriptCreationState>()(
         videoPrompts: state.videoPrompts,
         scriptLengthPreset: state.scriptLengthPreset,
         customWordCount: state.customWordCount,
+        // Persist AI-suggested video style so it survives navigation
+        suggestedVideoStyle: state.suggestedVideoStyle,
         // Don't persist UI state like currentStep, viewMode, isGenerating, etc.
       }),
     }

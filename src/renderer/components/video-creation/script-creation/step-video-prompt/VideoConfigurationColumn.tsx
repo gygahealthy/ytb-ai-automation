@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { ChevronDown, Wand2, X, Lightbulb, FileText, BookOpen, Sparkles } from "lucide-react";
-import { VideoStyle } from "./ScriptStyleSelector";
-import { VisualStyle } from "./VisualStyleSelector";
-import { VideoPrompt } from "./VideoPromptGenerator";
-import { HintForTopicPrompt } from "./HintForTopicPrompt";
-import { AITopicSuggestions } from "./AITopicSuggestions";
+import { VideoStyle } from "../ScriptStyleSelector";
+import { VisualStyle } from "../VisualStyleSelector";
+import { VideoPrompt } from "../VideoPromptGenerator";
+import { HintForTopicPrompt } from "../HintForTopicPrompt";
+import { AITopicSuggestions } from "../AITopicSuggestions";
 import { replaceTemplate } from "@/shared/utils/template-replacement.util";
 import { VIDEO_STYLE_OPTIONS } from "@/shared/constants/video-style.constants";
 import { VISUAL_STYLE_OPTIONS } from "@/shared/constants/visual-style.constants";
@@ -31,6 +31,7 @@ interface VideoConfigurationColumnProps {
 
 export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> = ({
   topic,
+  selectedTopic,
   videoStyle,
   visualStyle,
   scriptLengthPreset,
@@ -461,6 +462,14 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
                 </div>
               )}
             </div>
+
+            {/* Display Selected Topic */}
+            {selectedTopic && (
+              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded text-sm text-gray-700 dark:text-gray-300">
+                <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">Selected Topic:</p>
+                <p className="text-gray-600 dark:text-gray-400">{selectedTopic}</p>
+              </div>
+            )}
           </div>
 
           <div>
