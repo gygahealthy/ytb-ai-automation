@@ -1,5 +1,30 @@
-import { app, BrowserWindow, Menu } from "electron";
+// Register tsconfig-paths to resolve TypeScript path aliases at runtime
+// Configure paths manually since tsconfig.json is not in dist/
+import * as tsConfigPaths from "tsconfig-paths";
 import * as path from "path";
+
+// Set up path mappings for runtime resolution
+const baseUrl = __dirname; // dist/main
+tsConfigPaths.register({
+  baseUrl,
+  paths: {
+    "@/*": ["../*"],
+    "@main/*": ["./*"],
+    "@handlers/*": ["./handlers/*"],
+    "@modules/*": ["./modules/*"],
+    "@renderer/*": ["../renderer/*"],
+    "@components/*": ["../renderer/components/*"],
+    "@constants/*": ["../renderer/constants/*"],
+    "@contexts/*": ["../renderer/contexts/*"],
+    "@hooks/*": ["../renderer/hooks/*"],
+    "@ipc/*": ["../renderer/ipc/*"],
+    "@pages/*": ["../renderer/pages/*"],
+    "@store/*": ["../renderer/store/*"],
+    "@shared/*": ["../shared/*"],
+  },
+});
+
+import { app, BrowserWindow, Menu } from "electron";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 import { veo3PollingService } from "./modules/ai-video-creation/services/veo3.service";
