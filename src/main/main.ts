@@ -49,8 +49,13 @@ class ElectronApp {
       // Initialize global cookie rotation worker manager (but don't auto-start)
       // User will manually start workers from the UI
       try {
-        await getGlobalRotationWorkerManager();
+        const manager = await getGlobalRotationWorkerManager();
         console.log("✅ Cookie rotation manager initialized (workers not started)");
+
+        // Phase 2: Initialize startup workers
+        // This will automatically start workers for cookies marked with launch_worker_on_startup=1
+        await manager.initializeStartupWorkers();
+        console.log("✅ Startup cookie rotation workers initialized");
       } catch (error) {
         console.error("❌ Failed to initialize cookie rotation manager", error);
       }

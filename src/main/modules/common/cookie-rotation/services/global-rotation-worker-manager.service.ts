@@ -555,8 +555,9 @@ export class GlobalRotationWorkerManager {
 
   /**
    * Start worker for a specific profile/cookie by IDs
+   * Phase 1: Now accepts options for initial refresh
    */
-  async startWorkerByIds(profileId: string, cookieId: string): Promise<void> {
+  async startWorkerByIds(profileId: string, cookieId: string, options?: { performInitialRefresh?: boolean }): Promise<void> {
     const cookie = await this.cookieRepository.findById(cookieId);
     if (!cookie) {
       throw new Error(`Cookie ${cookieId} not found`);
@@ -566,7 +567,76 @@ export class GlobalRotationWorkerManager {
       throw new Error(`Cookie ${cookieId} does not belong to profile ${profileId}`);
     }
 
-    await this.startWorkerForCookie(cookie);
+    // Check if worker already exists
+    const workerKey = `${profileId}-${cookieId}`;
+    if (this.workers.has(workerKey)) {
+      logger.warn(`[rotation-manager] Worker already running for ${workerKey}`);
+      return;
+    }
+
+    // Use Phase 1 CookieRotationWorker if options provided
+    if (options?.performInitialRefresh) {
+      logger.info(`[rotation-manager] Starting Phase 1 worker with initial refresh for ${cookieId}`);
+
+      const { CookieRotationWorker } = await import("../workers/cookie-rotation-worker.js");
+      const worker = new CookieRotationWorker(cookieId, {
+        performInitialRefresh: true,
+        verbose: true,
+      });
+
+      // Start the worker
+      await worker.start();
+
+      // Store reference (we need to track this differently than legacy workers)
+      // For now, create a minimal WorkerInstance entry
+      const profile = await this.getProfile(profileId);
+
+      // Find or create monitor
+      let monitor = await this.monitorRepository.findByProfileAndCookie(profileId, cookieId);
+      if (!monitor) {
+        monitor = await this.createMonitor(profileId, cookieId);
+      }
+
+      this.workers.set(workerKey, {
+        cookieManagerDB: null as any, // Phase 1 worker doesn't use CookieManagerDB
+        monitorId: monitor.id,
+        profileId,
+        cookieId,
+        userDataDir: profile?.userDataDir,
+      });
+
+      await this.monitorRepository.updateWorkerStatus(monitor.id, "running");
+      logger.info(`[rotation-manager] ✅ Phase 1 worker started for ${workerKey}`);
+    } else {
+      // Fall back to legacy behavior for backward compatibility
+      await this.startWorkerForCookie(cookie);
+    }
+  }
+
+  /**
+   * Initialize startup workers (Phase 2)
+   * Identifies all cookies marked for startup and launches their rotation workers.
+   * Each worker will be instructed to perform an immediate initial refresh.
+   */
+  async initializeStartupWorkers(): Promise<void> {
+    logger.info("[rotation-manager] Initializing startup cookie rotation workers...");
+    try {
+      const startupCookies = await this.cookieRepository.findWithRotationEnabledOnStartup();
+      if (startupCookies.length === 0) {
+        logger.info("[rotation-manager] No cookies are configured for startup rotation.");
+        return;
+      }
+
+      logger.info(`[rotation-manager] Found ${startupCookies.length} cookie(s) to start on launch.`);
+
+      for (const cookie of startupCookies) {
+        logger.info(`[rotation-manager] Starting worker for cookie: ${cookie.id} (${cookie.service})`);
+        // Use Phase 1's enhanced startWorkerByIds with performInitialRefresh option
+        await this.startWorkerByIds(cookie.profileId, cookie.id, { performInitialRefresh: true });
+      }
+    } catch (error) {
+      logger.error("[rotation-manager] Failed to initialize startup cookie workers.", error);
+    }
   }
 }
 
@@ -580,9 +650,9 @@ export async function getGlobalRotationWorkerManager(): Promise<GlobalRotationWo
     const cookieRepository = new CookieRepository(db);
     const monitorRepository = new CookieRotationMonitorRepository(db);
 
-    // Initialize cookie-rotation module's config service holder with the CookieRepository
+    // Initialize cookie-rotation module's config service holder with both repositories
     try {
-      cookieRotationConfigService.init(cookieRepository);
+      cookieRotationConfigService.init(cookieRepository, monitorRepository);
     } catch (err) {
       // Non-fatal - log and continue. The holder may already be initialized in tests/dev.
       logger.debug("cookieRotationConfigService init skipped or failed", err);

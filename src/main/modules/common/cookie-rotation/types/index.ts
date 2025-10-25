@@ -13,4 +13,7 @@ export interface RotationMonitorRecord {
 
 export type { CookieRotationConfig as ICookieRotationConfig };
 
+// Re-export rotation method types
+export type { RotationMethodType, RotationMethodResult, RotationMethodExecutor } from "./rotation-method.types.js";
+
 export default {} as unknown;

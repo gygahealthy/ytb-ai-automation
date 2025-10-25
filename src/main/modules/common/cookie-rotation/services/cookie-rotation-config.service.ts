@@ -4,6 +4,7 @@
  */
 
 import { CookieRepository } from "../../cookie/repository/cookie.repository.js";
+import { CookieRotationMonitorRepository } from "../repository/cookie-rotation-monitor.repository.js";
 import { logger } from "../../../../utils/logger-backend.js";
 
 export type RotationMethod = "refreshCreds" | "rotateCookie" | "headless";
@@ -33,7 +34,7 @@ export interface ProfileWithCookieConfig {
 }
 
 export class CookieRotationConfigService {
-  constructor(private cookieRepository: CookieRepository) {}
+  constructor(private cookieRepository: CookieRepository, private monitorRepository: CookieRotationMonitorRepository) {}
 
   async getProfilesWithConfigs(): Promise<ProfileWithCookieConfig[]> {
     const activeCookies = await this.cookieRepository.findByStatus("active");
@@ -51,12 +52,17 @@ export class CookieRotationConfigService {
 
       const profile = profileMap.get(cookie.profileId)!;
 
+      // Get monitor info if exists to include worker status
+      const monitor = await this.monitorRepository.findByProfileAndCookie(cookie.profileId, cookie.id);
+
       profile.cookies.push({
         cookieId: cookie.id,
         service: cookie.service,
         url: cookie.url,
         rawCookieString: cookie.rawCookieString,
         status: cookie.status,
+        workerStatus: monitor?.workerStatus,
+        sessionHealth: monitor?.sessionHealth,
         lastRotatedAt: cookie.lastRotatedAt,
         config: {
           cookieId: cookie.id,
@@ -139,14 +145,14 @@ export default CookieRotationConfigService;
 
 /**
  * Backing holder singleton used by IPC handlers and module loader.
- * The real implementation requires a CookieRepository instance (needs DB).
- * Modules can call `init` with a constructed CookieRepository to wire the service.
+ * The real implementation requires a CookieRepository and CookieRotationMonitorRepository instance (needs DB).
+ * Modules can call `init` with constructed repositories to wire the service.
  */
 class CookieRotationConfigServiceHolder {
   private impl: CookieRotationConfigService | null = null;
 
-  init(cookieRepository: any) {
-    this.impl = new CookieRotationConfigService(cookieRepository);
+  init(cookieRepository: any, monitorRepository: any) {
+    this.impl = new CookieRotationConfigService(cookieRepository, monitorRepository);
   }
 
   async getAll() {

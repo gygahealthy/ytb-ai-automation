@@ -267,4 +267,14 @@ export class CookieRepository extends BaseRepository<Cookie> {
       return null;
     }
   }
+
+  /**
+   * Find all cookies that are configured to have their rotation
+   * worker launched on application startup (Phase 2).
+   * @returns A promise that resolves to an array of Cookie objects.
+   */
+  async findWithRotationEnabledOnStartup(): Promise<Cookie[]> {
+    const rows = await this.db.all(`SELECT * FROM ${this.tableName} WHERE launch_worker_on_startup = 1 AND status = 'active'`);
+    return rows.map((row) => this.rowToEntity(row));
+  }
 }

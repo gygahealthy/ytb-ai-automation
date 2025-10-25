@@ -329,6 +329,100 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
       requiresHeadless: result.requiresHeadless || 0,
     };
   }
+
+  /**
+   * Record a rotation attempt (Phase 1)
+   * Tracks which rotation method was used and whether it succeeded
+   */
+  async recordRotationAttempt(
+    cookieId: string,
+    method: "refreshCreds" | "rotateCookie" | "headless",
+    success: boolean,
+    error?: string
+  ): Promise<void> {
+    const now = new Date().toISOString();
+
+    // Find monitor by cookieId
+    const monitor = await this.findByCookieId(cookieId);
+    if (!monitor) {
+      // Monitor doesn't exist yet, skip recording
+      return;
+    }
+
+    // Update appropriate counters based on method and success
+    let updateQuery = "";
+    const params: any[] = [];
+
+    if (method === "rotateCookie" || method === "refreshCreds") {
+      // Map to PSIDTS rotation for now (both rotate tokens)
+      if (success) {
+        updateQuery = `
+          UPDATE ${this.tableName}
+          SET psidts_rotation_count = psidts_rotation_count + 1,
+              last_psidts_rotation_at = ?,
+              consecutive_failures = 0,
+              session_health = 'healthy',
+              updated_at = ?
+          WHERE id = ?
+        `;
+        params.push(now, now, monitor.id);
+      } else {
+        updateQuery = `
+          UPDATE ${this.tableName}
+          SET psidts_error_count = psidts_error_count + 1,
+              consecutive_failures = consecutive_failures + 1,
+              last_error_message = ?,
+              last_error_at = ?,
+              session_health = CASE 
+                WHEN consecutive_failures + 1 >= 3 THEN 'expired'
+                WHEN consecutive_failures + 1 >= 2 THEN 'degraded'
+                ELSE 'degraded'
+              END,
+              updated_at = ?
+          WHERE id = ?
+        `;
+        params.push(error || "Unknown error", now, now, monitor.id);
+      }
+    } else if (method === "headless") {
+      // Headless refresh
+      if (success) {
+        updateQuery = `
+          UPDATE ${this.tableName}
+          SET headless_refresh_count = headless_refresh_count + 1,
+              last_headless_refresh_at = ?,
+              consecutive_failures = 0,
+              requires_headless_refresh = 0,
+              session_health = 'healthy',
+              updated_at = ?
+          WHERE id = ?
+        `;
+        params.push(now, now, monitor.id);
+      } else {
+        updateQuery = `
+          UPDATE ${this.tableName}
+          SET consecutive_failures = consecutive_failures + 1,
+              last_error_message = ?,
+              last_error_at = ?,
+              session_health = 'expired',
+              updated_at = ?
+          WHERE id = ?
+        `;
+        params.push(error || "Headless refresh failed", now, now, monitor.id);
+      }
+    }
+
+    if (updateQuery) {
+      await this.db.run(updateQuery, params);
+    }
+  }
+
+  /**
+   * Find monitor by cookie ID only
+   */
+  private async findByCookieId(cookieId: string): Promise<CookieRotationMonitor | null> {
+    const row = await this.db.get(`SELECT * FROM ${this.tableName} WHERE cookie_id = ? LIMIT 1`, [cookieId]);
+    return row ? this.rowToEntity(row) : null;
+  }
 }
 
 // Note: repository instances are created at runtime when a real SQLiteDatabase

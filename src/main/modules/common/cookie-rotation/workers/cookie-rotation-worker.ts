@@ -1,61 +1,33 @@
 /**
- * Cookie Rotation Worker
- * Manages scheduled cookie rotation and refresh tasks with configurable intervals
- * Inspired by HanaokaYuzu/Gemini-API Python implementation
+ * Cookie Rotation Worker (Phase 1 - Config-Driven)
+ * Manages scheduled cookie rotation and refresh tasks with configurable methods
  *
- * Usage:
- *   const worker = new CookieRotationWorker(cookies, { rotationInterval: 540, refreshInterval: 120 });
- *   const control = worker.start();
- *   // ...later
- *   control.stop();
+ * Phase 1 Changes:
+ * - Config-driven: reads enabledRotationMethods and rotationMethodOrder from DB
+ * - Method abstraction: uses RotationMethodRegistry to execute methods
+ * - Fallback logic: tries methods in order until one succeeds
+ * - Initial refresh support: performInitialRefresh option for startup workers
  */
 
-import type { CookieCollection, RotationResult } from "../../../gemini-apis/shared/types/index.js";
+import type { CookieCollection } from "../../../gemini-apis/shared/types/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
-import { rotate1psidts, startAutoRotation, type RotationControl } from "../helpers/cookie-rotation.helpers.js";
+import { rotationMethodRegistry } from "../methods/index.js";
+import { cookieRotationConfigService } from "../services/cookie-rotation-config.service.js";
+import type { RotationMethodResult, RotationMethodType } from "../types/rotation-method.types.js";
+import { EventEmitter } from "events";
 
 /**
  * Worker configuration options
  */
-export interface CookieRotationWorkerConfig {
-  // PSIDTS rotation interval in seconds (default: 540 = 9 minutes)
-  rotationInterval?: number;
+export interface CookieRotationWorkerOptions {
+  // Perform initial refresh before starting regular rotation (Phase 2 startup)
+  performInitialRefresh?: boolean;
 
   // Enable verbose logging
   verbose?: boolean;
 
   // HTTP proxy URL (optional)
   proxy?: string;
-
-  // Callbacks for monitoring rotation events
-  onRotationStart?: () => void;
-  onRotationSuccess?: (result: RotationResult) => void;
-  onRotationError?: (error: string) => void;
-
-  onError?: (type: "PSIDTS", error: string) => void;
-}
-
-/**
- * Required worker configuration (all values filled)
- */
-interface RequiredCookieRotationWorkerConfig {
-  rotationInterval: number;
-  verbose: boolean;
-  proxy?: string;
-  onRotationStart: (() => void) | undefined;
-  onRotationSuccess: ((result: RotationResult) => void) | undefined;
-  onRotationError: ((error: string) => void) | undefined;
-  onError: ((type: "PSIDTS", error: string) => void) | undefined;
-}
-
-/**
- * Worker control interface
- */
-export interface CookieRotationWorkerControl {
-  stop: () => void;
-  isRunning: () => boolean;
-  getStats: () => WorkerStats;
-  forceRotation: () => Promise<void>;
 }
 
 /**
@@ -67,26 +39,18 @@ export interface WorkerStats {
   rotationErrors: number;
   lastRotation?: Date;
   lastRotationDuration?: number;
+  lastSuccessfulMethod?: RotationMethodType;
 }
 
 /**
  * Cookie Rotation Worker
- * Manages scheduled cookie rotation and refresh tasks
+ * Config-driven worker that executes rotation methods based on per-cookie configuration
  */
-export class CookieRotationWorker {
-  private cookies: CookieCollection;
-  private config: Omit<
-    RequiredCookieRotationWorkerConfig,
-    "onRotationStart" | "onRotationSuccess" | "onRotationError" | "onError"
-  > & {
-    onRotationStart?: () => void;
-    onRotationSuccess?: (result: RotationResult) => void;
-    onRotationError?: (error: string) => void;
-    onError?: (type: "PSIDTS", error: string) => void;
-  };
-  private running = false;
-
-  private rotationControl: RotationControl | null = null;
+export class CookieRotationWorker extends EventEmitter {
+  private cookieId: string;
+  private isRunning = false;
+  private timer: NodeJS.Timeout | null = null;
+  private options: CookieRotationWorkerOptions;
 
   // Statistics
   private stats: WorkerStats = {
@@ -95,146 +59,236 @@ export class CookieRotationWorker {
     rotationErrors: 0,
   };
 
-  constructor(cookies: CookieCollection, config: CookieRotationWorkerConfig = {}) {
-    this.cookies = cookies;
-    this.config = {
-      rotationInterval: config.rotationInterval ?? 540, // 9 minutes
-      verbose: config.verbose ?? false,
-      proxy: config.proxy,
-      onRotationStart: config.onRotationStart,
-      onRotationSuccess: config.onRotationSuccess,
-      onRotationError: config.onRotationError,
-      onError: config.onError,
+  constructor(cookieId: string, options?: CookieRotationWorkerOptions) {
+    super();
+    this.cookieId = cookieId;
+    this.options = {
+      performInitialRefresh: false,
+      verbose: false,
+      ...options,
     };
 
-    this.logConfig();
+    if (this.options.verbose) {
+      logger.debug(`[CookieRotationWorker] Created for cookie ${cookieId}`);
+    }
   }
 
   /**
    * Start the worker
-   * Begins both rotation and refresh tasks
+   * Begins rotation tasks based on configuration
    */
-  start(): CookieRotationWorkerControl {
-    if (this.running) {
-      logger.warn("⚠️ Worker is already running");
-      return this.getControl();
+  async start(): Promise<void> {
+    if (this.isRunning) {
+      logger.warn(`[CookieRotationWorker] Worker for ${this.cookieId} is already running`);
+      return;
     }
 
-    this.running = true;
+    this.isRunning = true;
     this.stats.isRunning = true;
+    this.emit("statusChanged", "running");
+    logger.info(`[CookieRotationWorker] Starting worker for cookie ${this.cookieId}`);
 
-    logger.info("🚀 Starting cookie rotation worker...");
+    // Phase 2: Perform initial refresh if requested (startup scenario)
+    if (this.options.performInitialRefresh) {
+      logger.info(`[CookieRotationWorker] Performing initial headless refresh for ${this.cookieId}`);
+      await this.runRotationCycle({ forceHeadless: true });
+    }
 
-    // Start PSIDTS rotation
-    this.startRotationTask();
+    // Fetch config to set up recurring interval
+    const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+    if (!config) {
+      logger.error(`[CookieRotationWorker] No config found for cookie ${this.cookieId}`);
+      this.isRunning = false;
+      this.stats.isRunning = false;
+      return;
+    }
 
-    logger.info(`✅ Worker started with interval:`);
-    logger.info(`   • PSIDTS rotation: ${this.config.rotationInterval}s (${this.formatInterval(this.config.rotationInterval)})`);
+    const intervalMs = config.rotationIntervalMinutes * 60 * 1000;
+    this.timer = setInterval(() => this.runRotationCycle(), intervalMs);
 
-    return this.getControl();
+    logger.info(`[CookieRotationWorker] Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
   }
 
   /**
    * Stop the worker
    */
-  private stopInternal(): void {
-    if (!this.running) return;
-
-    this.running = false;
-    this.stats.isRunning = false;
-
-    // Stop rotation
-    if (this.rotationControl) {
-      this.rotationControl.stop();
-      this.rotationControl = null;
+  async stop(): Promise<void> {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
+    this.isRunning = false;
+    this.stats.isRunning = false;
+    this.emit("statusChanged", "stopped");
+    logger.info(`[CookieRotationWorker] Stopped worker for cookie ${this.cookieId}`);
 
-    logger.info("🛑 Worker stopped");
-    this.logStats();
+    if (this.options.verbose) {
+      this.logStats();
+    }
   }
 
   /**
-   * Start rotation task
+   * Run a rotation cycle (Phase 1 - Config-Driven)
+   * Fetches config, determines method order, executes methods in sequence
    */
-  private startRotationTask(): void {
-    this.rotationControl = startAutoRotation(this.cookies, this.config.rotationInterval, {
-      proxy: this.config.proxy,
-      onRotate: (result: RotationResult) => {
-        if (result.success) {
-          this.stats.rotations++;
-          this.stats.lastRotation = new Date();
-
-          if (this.config.verbose) {
-            logger.debug(`✅ PSIDTS rotation successful`);
-          }
-
-          this.config.onRotationSuccess?.(result);
-        } else {
-          this.stats.rotationErrors++;
-          logger.warn(`⚠️ PSIDTS rotation failed: ${result.error}`);
-
-          this.config.onRotationError?.(result.error || "Unknown error");
-          this.config.onError?.("PSIDTS", result.error || "Unknown error");
-        }
-      },
-    });
-  }
-
-  /**
-   * Force immediate rotation
-   */
-  async forceRotation(): Promise<void> {
-    logger.info("🔄 Forcing immediate PSIDTS rotation...");
+  private async runRotationCycle(options?: { forceHeadless?: boolean }): Promise<void> {
+    logger.info(`[CookieRotationWorker] Running rotation cycle for ${this.cookieId}`);
+    const cycleStartTime = Date.now();
 
     try {
-      const result = await rotate1psidts(this.cookies, {
-        proxy: this.config.proxy,
-        skipCache: true,
+      // 1. Fetch current config
+      const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+      if (!config) {
+        logger.error(`[CookieRotationWorker] Config not found for ${this.cookieId}`);
+        return;
+      }
+
+      // 2. Fetch current cookie data
+      const { database } = await import("../../../../storage/database.js");
+      const db = database.getSQLiteDatabase();
+      const { CookieRepository } = await import("../../cookie/repository/cookie.repository.js");
+      const cookieRepository = new CookieRepository(db);
+      const cookie = await cookieRepository.findById(this.cookieId);
+      if (!cookie) {
+        logger.error(`[CookieRotationWorker] Cookie ${this.cookieId} not found in DB`);
+        return;
+      }
+
+      // 3. Parse cookies into CookieCollection
+      const cookies = this.parseCookieString(cookie.rawCookieString || "");
+
+      // 4. Determine method order
+      let methodsToTry = config.enabledRotationMethods.filter((method) => config.rotationMethodOrder.includes(method));
+
+      // Sort by the order specified in rotationMethodOrder
+      methodsToTry.sort((a, b) => {
+        return config.rotationMethodOrder.indexOf(a) - config.rotationMethodOrder.indexOf(b);
       });
 
-      if (result.success) {
-        // If we got a new PSIDTS value, update it
-        if (result.newPSIDTS) {
-          this.cookies["__Secure-1PSIDTS"] = result.newPSIDTS;
+      // If forceHeadless, put headless first (Phase 2 startup behavior)
+      if (options?.forceHeadless && methodsToTry.includes("headless")) {
+        methodsToTry = ["headless", ...methodsToTry.filter((m) => m !== "headless")];
+      }
+
+      if (methodsToTry.length === 0) {
+        logger.warn(`[CookieRotationWorker] No rotation methods enabled for ${this.cookieId}`);
+        return;
+      }
+
+      logger.info(`[CookieRotationWorker] Attempting methods in order: ${methodsToTry.join(" → ")}`);
+
+      // 5. Try each method until one succeeds
+      let lastResult: RotationMethodResult | null = null;
+
+      for (const methodName of methodsToTry) {
+        const method = rotationMethodRegistry.get(methodName);
+        if (!method) {
+          logger.warn(`[CookieRotationWorker] Method ${methodName} not found in registry`);
+          continue;
         }
 
-        this.stats.rotations++;
-        this.stats.lastRotation = new Date();
+        logger.info(`[CookieRotationWorker] Trying method: ${methodName}`);
+        const result = await method.execute(cookies, {
+          proxy: this.options.proxy,
+          cookieId: this.cookieId,
+          profileId: cookie.profileId,
+        });
 
-        logger.info("✅ Force rotation successful");
-        this.config.onRotationSuccess?.(result);
-      } else {
-        logger.warn(`⚠️ Force rotation failed: ${result.error}`);
-        this.config.onRotationError?.(result.error || "Unknown error");
+        lastResult = result;
+
+        if (result.success) {
+          logger.info(`[CookieRotationWorker] ✅ Method ${methodName} succeeded in ${result.duration}ms`);
+
+          // Update cookies in database
+          if (result.updatedCookies) {
+            const updatedCookieString = this.buildCookieString({
+              ...cookies,
+              ...result.updatedCookies,
+            });
+            await cookieRepository.update(this.cookieId, {
+              rawCookieString: updatedCookieString,
+              lastRotatedAt: new Date().toISOString(),
+            });
+          }
+
+          // Update stats
+          this.stats.rotations++;
+          this.stats.lastRotation = new Date();
+          this.stats.lastRotationDuration = Date.now() - cycleStartTime;
+          this.stats.lastSuccessfulMethod = methodName;
+
+          // Update monitoring table
+          await this.updateMonitor(methodName, true, result);
+
+          // Emit success event
+          this.emit("rotationSuccess", result);
+
+          return; // Success - exit early
+        } else {
+          logger.warn(`[CookieRotationWorker] ⚠️ Method ${methodName} failed: ${result.error}`);
+          this.emit("rotationError", result.error || "Unknown error");
+        }
+      }
+
+      // All methods failed
+      logger.error(`[CookieRotationWorker] ❌ All rotation methods failed for ${this.cookieId}`);
+      this.stats.rotationErrors++;
+
+      if (lastResult) {
+        await this.updateMonitor("unknown", false, lastResult);
+      }
+
+      this.emit("rotationError", "All rotation methods failed");
+    } catch (error) {
+      logger.error(`[CookieRotationWorker] Rotation cycle error for ${this.cookieId}:`, error);
+      this.stats.rotationErrors++;
+      this.emit("rotationError", error instanceof Error ? error.message : "Unknown error");
+    }
+  }
+
+  /**
+   * Update rotation monitoring table
+   */
+  private async updateMonitor(method: string, success: boolean, result: RotationMethodResult): Promise<void> {
+    try {
+      const { database } = await import("../../../../storage/database.js");
+      const db = database.getSQLiteDatabase();
+      const { CookieRotationMonitorRepository } = await import("../repository/cookie-rotation-monitor.repository.js");
+      const monitorRepo = new CookieRotationMonitorRepository(db);
+
+      // Record the rotation attempt with method-specific tracking
+      await monitorRepo.recordRotationAttempt(this.cookieId, method as RotationMethodType, success, result.error);
+
+      if (this.options.verbose) {
+        logger.debug(`[CookieRotationWorker] Monitor updated: method=${method}, success=${success}`);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      logger.error(`💥 Force rotation error: ${message}`);
-      this.config.onRotationError?.(message);
+      logger.warn(`[CookieRotationWorker] Failed to update monitor:`, error);
     }
   }
 
   /**
-   * Get control interface
+   * Parse cookie string to CookieCollection
    */
-  private getControl(): CookieRotationWorkerControl {
-    return {
-      stop: () => this.stopInternal(),
-      isRunning: () => this.running,
-      getStats: () => ({ ...this.stats }),
-      forceRotation: () => this.forceRotation(),
-    };
+  private parseCookieString(cookieString: string): CookieCollection {
+    const cookies: Partial<CookieCollection> = {};
+    const pairs = cookieString.split(";").map((p) => p.trim());
+    for (const pair of pairs) {
+      const [key, ...valueParts] = pair.split("=");
+      if (key && valueParts.length > 0) {
+        cookies[key.trim()] = valueParts.join("=").trim();
+      }
+    }
+    return cookies as CookieCollection;
   }
 
   /**
-   * Log configuration
+   * Build cookie string from CookieCollection
    */
-  private logConfig(): void {
-    if (this.config.verbose) {
-      logger.debug("🔧 Worker configuration:");
-      logger.debug(`   • rotationInterval: ${this.config.rotationInterval}s`);
-      logger.debug(`   • proxy: ${this.config.proxy || "none"}`);
-    }
+  private buildCookieString(cookies: CookieCollection): string {
+    return Object.entries(cookies)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("; ");
   }
 
   /**
@@ -243,19 +297,12 @@ export class CookieRotationWorker {
   private logStats(): void {
     logger.info("📊 Worker statistics:");
     logger.info(`   • Rotations: ${this.stats.rotations} (${this.stats.rotationErrors} errors)`);
-
     if (this.stats.lastRotation) {
       logger.info(`   • Last rotation: ${this.stats.lastRotation.toLocaleTimeString()}`);
     }
-  }
-
-  /**
-   * Format interval to human readable string
-   */
-  private formatInterval(seconds: number): string {
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+    if (this.stats.lastSuccessfulMethod) {
+      logger.info(`   • Last successful method: ${this.stats.lastSuccessfulMethod}`);
+    }
   }
 
   /**
@@ -266,85 +313,28 @@ export class CookieRotationWorker {
   }
 
   /**
-   * Get current cookies
+   * Check if worker is running
    */
-  getCookies(): CookieCollection {
-    return { ...this.cookies };
+  isWorkerRunning(): boolean {
+    return this.isRunning;
   }
 
   /**
-   * Update cookies
+   * Force immediate rotation
    */
-  updateCookies(newCookies: Partial<CookieCollection>): void {
-    Object.assign(this.cookies, newCookies);
-
-    if (this.config.verbose) {
-      logger.debug(`🔄 Cookies updated: ${Object.keys(newCookies).join(", ")}`);
-    }
-  }
-
-  /**
-   * Update configuration
-   * Note: Changes take effect on next cycle
-   */
-  updateConfig(newConfig: Partial<CookieRotationWorkerConfig>): void {
-    if (newConfig.rotationInterval !== undefined) {
-      this.config.rotationInterval = newConfig.rotationInterval;
-    }
-
-    if (newConfig.verbose !== undefined) {
-      this.config.verbose = newConfig.verbose;
-    }
-
-    if (this.config.verbose) {
-      logger.debug("🔧 Worker configuration updated");
-    }
+  async forceRotation(): Promise<void> {
+    logger.info(`[CookieRotationWorker] Forcing immediate rotation for ${this.cookieId}`);
+    await this.runRotationCycle();
   }
 }
 
-// Re-export startAutoRotation from cookie-rotation.service for use within this module
-// Note: startAutoRotation is called from startRotationTask()
-export { startAutoRotation };
+// Legacy exports for backward compatibility
 export async function createCookieRotationWorker(
-  cookies: CookieCollection,
-  config?: CookieRotationWorkerConfig
+  cookieId: string,
+  options?: CookieRotationWorkerOptions
 ): Promise<CookieRotationWorker> {
-  const worker = new CookieRotationWorker(cookies, config);
+  const worker = new CookieRotationWorker(cookieId, options);
   return worker;
 }
 
-/**
- * Pre-configured worker with default intervals
- * Suitable for always-on services
- */
-export function createDefaultWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
-  return new CookieRotationWorker(cookies, {
-    rotationInterval: 540, // 9 minutes (Python repo: auto_refresh_interval_minutes = 9)
-    verbose: false,
-    proxy,
-  });
-}
-
-/**
- * Pre-configured aggressive worker for high-traffic services
- * Rotates more frequently to maintain fresh sessions
- */
-export function createAggressiveWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
-  return new CookieRotationWorker(cookies, {
-    rotationInterval: 300, // 5 minutes
-    verbose: false,
-    proxy,
-  });
-}
-
-/**
- * Pre-configured conservative worker for low-traffic services
- * Reduces rotation frequency to minimize server hits
- */
-export function createConservativeWorker(cookies: CookieCollection, proxy?: string): CookieRotationWorker {
-  return new CookieRotationWorker(cookies, {
-    rotationInterval: 900, // 15 minutes
-    verbose: false,
-    proxy,
-  });
-}
+export { type CookieRotationWorkerOptions as CookieRotationWorkerConfig };
