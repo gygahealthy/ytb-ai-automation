@@ -7,6 +7,8 @@
  * are not available. Use console logging instead of the logger utility.
  */
 
+import type { CookieRotationConfig } from "../services/cookie-rotation-config.service.js";
+
 type StartMessage = {
   cmd: "start";
   cookieId: string;
@@ -16,6 +18,8 @@ type StartMessage = {
     proxy?: string;
     service?: string;
     profileId?: string;
+    profileName?: string; // Profile name for logging context
+    config?: CookieRotationConfig; // Parent-provided config (includes service, profileId, profileName for logging)
   };
 };
 

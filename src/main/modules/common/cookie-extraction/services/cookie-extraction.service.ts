@@ -6,17 +6,17 @@
  * providing reusable, testable extraction logic for any service/page.
  */
 
-import { logger } from "@main/utils/logger-backend";
-import { ApiResponse } from "@shared/types";
-import { launchBrowser } from "@modules/gemini-apis/helpers/browser/browser-launcher.helpers";
+import { logger } from "../../../../utils/logger-backend.js";
+import { ApiResponse } from "../../../../../shared/types/index.js";
+import { launchBrowser } from "../../../gemini-apis/helpers/browser/browser-launcher.helpers.js";
 import {
   navigateAndExtractCookies,
   toCookieString,
   logCookieExtractionSummary,
   logCookieExtractionSuccess,
-} from "../helpers/cookie-extraction.helpers";
-import { containsDtsCookie, hasCookieChanged } from "../helpers/cookie-check.helpers";
-import type { ExtractOptions, ExtractResult, CookieValidation, CookiesForDb } from "../types/extraction.types";
+} from "../helpers/cookie-extraction.helpers.js";
+import { containsDtsCookie, hasCookieChanged } from "../helpers/cookie-check.helpers.js";
+import type { ExtractOptions, ExtractResult, CookieValidation, CookiesForDb } from "../types/extraction.types.js";
 
 /**
  * Service for extracting cookies from browsers using Puppeteer

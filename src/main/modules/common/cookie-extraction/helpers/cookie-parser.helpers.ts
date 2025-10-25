@@ -3,7 +3,7 @@
  * Handles cookie format conversion and validation during extraction workflow
  */
 
-import type { CookieCollection, ValidationResult } from "@modules/gemini-apis/shared/types/index.js";
+import type { CookieCollection, ValidationResult } from "../../../gemini-apis/shared/types/index.js";
 
 /**
  * Parse a cookie header string into an object

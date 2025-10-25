@@ -15,6 +15,10 @@ export interface CookieRotationConfig {
   enabledRotationMethods: RotationMethod[];
   rotationMethodOrder: RotationMethod[];
   rotationIntervalMinutes: number;
+  // Optional fields for logging context (added by parent when forking child workers)
+  profileId?: string;
+  profileName?: string;
+  service?: string;
 }
 
 export interface ProfileWithCookieConfig {

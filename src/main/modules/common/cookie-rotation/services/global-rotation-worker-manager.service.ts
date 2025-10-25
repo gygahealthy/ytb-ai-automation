@@ -166,20 +166,27 @@ export class GlobalRotationWorkerManager {
       await this.monitorRepository.updateWorkerStatus(monitor.id, "initializing");
 
       // Create cookie manager with rotation worker
-      const cookieManagerDB = await createCookieManagerDB(cookies, this.cookieRepository, cookie.profileId, cookie.url, {
-        psidtsIntervalSeconds: 540, // 9 minutes
-        verbose: false,
-        onPSIDTSRotate: async (result) => {
-          await this.handlePSIDTSRotation(monitor!.id, result);
+      const cookieManagerDB = await createCookieManagerDB(
+        cookies,
+        this.cookieRepository,
+        cookie.profileId,
+        cookie.url,
+        {
+          psidtsIntervalSeconds: 540, // 9 minutes
+          verbose: false,
+          onPSIDTSRotate: async (result) => {
+            await this.handlePSIDTSRotation(monitor!.id, result);
+          },
+          onError: async (error, type) => {
+            // CookieManagerDB now reports only PSIDTS or DB errors
+            if (type !== "DB") {
+              // type is "PSIDTS" here
+              await this.handleRotationError(monitor!.id, error, "PSIDTS");
+            }
+          },
         },
-        onError: async (error, type) => {
-          // CookieManagerDB now reports only PSIDTS or DB errors
-          if (type !== "DB") {
-            // type is "PSIDTS" here
-            await this.handleRotationError(monitor!.id, error, "PSIDTS");
-          }
-        },
-      });
+        cookie.service // Pass the service from the cookie entity
+      );
 
       // Start the rotation worker
       cookieManagerDB.start();
@@ -620,9 +627,12 @@ export class GlobalRotationWorkerManager {
       // Fork the worker process
       const workerProcessPath = path.join(__dirname, "../workers/cookie-rotation-worker-process.js");
 
-      // Pass worker log directory via environment variable
+      // Pass worker log directory and DB path via environment variables
       const { app } = await import("electron");
       const workerLogDir = path.join(app.getPath("userData"), "logs");
+      const APP_FOLDER_NAME = "veo3-automation";
+      const dbDir = path.join(app.getPath("appData"), APP_FOLDER_NAME);
+      const dbPath = path.join(dbDir, "veo3-automation.db");
 
       const workerProcess = fork(workerProcessPath, [], {
         stdio: ["inherit", "inherit", "inherit", "ipc"],
@@ -630,6 +640,7 @@ export class GlobalRotationWorkerManager {
           ...process.env,
           NODE_ENV: process.env.NODE_ENV || "production",
           WORKER_LOG_DIR: workerLogDir,
+          DB_PATH: dbPath,
         },
       });
 
@@ -696,24 +707,45 @@ export class GlobalRotationWorkerManager {
 
       await readyPromise;
 
-      // Send start command with options
+      // Fetch config in parent to pass to child (avoids uninitialized service in forked process)
+      const config = await cookieRotationConfigService.getCookieConfig(cookieId);
+      if (!config) {
+        logger.warn(`[rotation-manager] No config found for cookie ${cookieId}, worker may fail`);
+      }
+
+      // Fetch profile name for logging context
+      const profileEntity = await this.getProfile(profileId);
+      const profileName = profileEntity?.name || profileId;
+
+      // Send start command with options and config (including logging context)
       workerProcess.send({
         cmd: "start",
         cookieId,
         options: {
           performInitialRefresh: true,
           verbose: true,
+          service: cookie.service,
+          profileId: cookie.profileId,
+          profileName, // Pass profile name for logging context in child
+          config: config
+            ? {
+                ...config,
+                // Include logging context in config for access in worker methods
+                profileId: cookie.profileId,
+                profileName,
+                service: cookie.service,
+              }
+            : undefined, // Pass parent-fetched config to avoid DB access in child
         },
       });
 
       // Store worker reference
-      const profile = await this.getProfile(profileId);
       this.workers.set(workerKey, {
         cookieManagerDB: null, // Phase 1 forked worker doesn't use in-process CookieManagerDB
         monitorId: monitor.id,
         profileId,
         cookieId,
-        userDataDir: profile?.userDataDir,
+        userDataDir: profileEntity?.userDataDir,
         workerProcess,
         workerType: "phase1-forked",
       });

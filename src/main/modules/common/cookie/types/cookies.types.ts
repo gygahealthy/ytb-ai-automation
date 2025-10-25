@@ -84,7 +84,7 @@ export interface Cookie {
   launchWorkerOnStartup: number; // 0 = false, 1 = true
   enabledRotationMethods: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
   rotationMethodOrder: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
-  // Required cookies for validation
+  // Required cookies for validation (per-service)
   requiredCookies?: string[]; // Array of required cookie names (parsed from JSON)
   createdAt: string;
   updatedAt: string;

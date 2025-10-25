@@ -1,9 +1,10 @@
-import { Cookie } from "@modules/gemini-apis/shared/types";
-import { logger } from "@main/utils/logger-backend";
-import { ApiResponse } from "@shared/types";
-import { database } from "@main/storage/database";
-import { cookieExtractionService } from "../../cookie-extraction";
-import { CookieRepository } from "../repository/cookie.repository";
+import { Cookie } from "../../../gemini-apis/shared/types/index.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { ApiResponse } from "../../../../../shared/types/index.js";
+// Removed top-level database import to support worker processes
+// import { database } from "@main/storage/database";
+import { cookieExtractionService } from "../../cookie-extraction/index.js";
+import { CookieRepository } from "../repository/cookie.repository.js";
 
 /**
  * Service for managing cookies
@@ -514,15 +515,31 @@ export class CookieService {
  */
 let cookieServiceInstance: CookieService | null = null;
 
-export function getCookieService(): CookieService {
+/**
+ * Get cookie service singleton (lazy initialization)
+ * Can be called from worker processes if a worker-safe database is provided
+ */
+export function getCookieService(db?: any): CookieService {
   if (!cookieServiceInstance) {
-    // Import here to avoid circular dependencies
-    const db = database.getSQLiteDatabase();
-    const cookieRepository = new CookieRepository(db);
+    // Use provided db or lazy-load from main process database
+    const database =
+      db ||
+      (() => {
+        // Lazy import to avoid triggering database initialization at module load time
+        const { database: mainDb } = require("../../../../storage/database.js");
+        return mainDb.getSQLiteDatabase();
+      })();
+
+    const cookieRepository = new CookieRepository(database);
     cookieServiceInstance = new CookieService(cookieRepository);
   }
   return cookieServiceInstance;
 }
 
-// Export default singleton
-export const cookieService = getCookieService();
+// Export lazy getter instead of direct singleton to avoid module-load-time database access
+export const cookieService = new Proxy({} as CookieService, {
+  get(_target, prop) {
+    const instance = getCookieService();
+    return instance[prop as keyof CookieService];
+  },
+});

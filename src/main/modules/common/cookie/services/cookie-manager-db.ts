@@ -230,12 +230,15 @@ export class CookieManagerDB {
       return result;
     }
 
-    const psidts = this.cookies["__Secure-1PSIDTS"];
-    if (!psidts || psidts === "undefined") {
-      return {
-        valid: false,
-        error: "__Secure-1PSIDTS is undefined or empty",
-      };
+    // Only validate PSIDTS for Gemini service
+    if (this.service === COOKIE_SERVICES.GEMINI) {
+      const psidts = this.cookies["__Secure-1PSIDTS"];
+      if (!psidts || psidts === "undefined") {
+        return {
+          valid: false,
+          error: "__Secure-1PSIDTS is undefined or empty",
+        };
+      }
     }
 
     return { valid: true };

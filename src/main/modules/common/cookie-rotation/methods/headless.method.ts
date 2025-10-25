@@ -42,8 +42,8 @@ export class HeadlessMethod implements RotationMethodExecutor {
       });
 
       // Step 1: Get cookie record from database to retrieve URL and service
-      const { database } = await import("../../../../storage/database.js");
-      const db = database.getSQLiteDatabase();
+      // Use worker-safe database instance (doesn't rely on Electron app.getPath())
+      const db = await this.getWorkerSafeDatabase();
       const cookieRow = await db.get("SELECT * FROM cookies WHERE id = ?", [cookieId]);
 
       if (!cookieRow) {
@@ -91,7 +91,9 @@ export class HeadlessMethod implements RotationMethodExecutor {
       });
 
       // Step 3: Use CookieService to extract fresh cookies
-      const { cookieService } = await import("../../cookie/services/cookie.service.js");
+      // Initialize with worker-safe database to avoid singleton issues in worker process
+      const { getCookieService } = await import("../../cookie/services/cookie.service.js");
+      const cookieService = getCookieService(db);
 
       const extractResult = await cookieService.extractAndStoreCookiesFromBrowser(
         profile,
@@ -181,12 +183,28 @@ export class HeadlessMethod implements RotationMethodExecutor {
   }
 
   /**
+   * Get worker-safe database instance
+   * Uses DB_PATH env var set by parent process instead of Electron app.getPath()
+   */
+  private async getWorkerSafeDatabase(): Promise<any> {
+    const dbPath = process.env.DB_PATH;
+    if (!dbPath) {
+      throw new Error("DB_PATH environment variable not set. Worker process must receive DB path from parent.");
+    }
+
+    // Import SQLiteDatabase directly (not the singleton Database class which uses app.getPath())
+    const { SQLiteDatabase } = await import("../../../../storage/sqlite-database.js");
+    const db = new SQLiteDatabase(dbPath);
+    await db.waitForInit();
+    return db;
+  }
+
+  /**
    * Get profile by ID with proper property mapping
    */
   private async getProfile(profileId: string): Promise<any> {
     try {
-      const { database } = await import("../../../../storage/database.js");
-      const db = database.getSQLiteDatabase();
+      const db = await this.getWorkerSafeDatabase();
       const row = await db.get("SELECT * FROM profiles WHERE id = ?", [profileId]);
 
       if (!row) {

@@ -35,6 +35,22 @@ export interface CookieRotationWorkerOptions {
 
   // Profile ID this cookie belongs to
   profileId?: string;
+
+  // Profile name for logging context
+  profileName?: string;
+
+  // Parent-provided config (avoids DB fetch in child process)
+  config?: {
+    cookieId: string;
+    launchWorkerOnStartup: boolean;
+    enabledRotationMethods: Array<"refreshCreds" | "rotateCookie" | "headless">;
+    rotationMethodOrder: Array<"refreshCreds" | "rotateCookie" | "headless">;
+    rotationIntervalMinutes: number;
+    // Logging context fields
+    profileId?: string;
+    profileName?: string;
+    service?: string;
+  };
 }
 
 /**
@@ -70,19 +86,23 @@ export class CookieRotationWorker extends EventEmitter {
   constructor(cookieId: string, options?: CookieRotationWorkerOptions) {
     super();
     this.cookieId = cookieId;
-    this.fileLogger = new WorkerFileLogger(cookieId, options?.service, options?.profileId);
+    // Use profile name from options or config for better logging context
+    const profileName = options?.profileName || options?.config?.profileName;
+    const service = options?.service || options?.config?.service;
+    this.fileLogger = new WorkerFileLogger(cookieId, service, options?.profileId);
     this.options = {
       performInitialRefresh: false,
       verbose: false,
       ...options,
     };
 
+    const logContext = profileName ? `[${profileName}/${service || "unknown"}] ` : "";
     if (this.options.verbose) {
-      this.fileLogger.debug(`[CookieRotationWorker] Created for cookie ${cookieId}`);
+      this.fileLogger.debug(`${logContext}[CookieRotationWorker] Created for cookie ${cookieId}`);
     }
     // Also log to main logger if available
     try {
-      logger.debug(`[CookieRotationWorker] Created for cookie ${cookieId}`);
+      logger.debug(`${logContext}[CookieRotationWorker] Created for cookie ${cookieId}`);
     } catch (e) {
       // Ignore if logger not available in forked process
     }
@@ -101,27 +121,39 @@ export class CookieRotationWorker extends EventEmitter {
     this.isRunning = true;
     this.stats.isRunning = true;
     this.emit("statusChanged", "running");
-    this.fileLogger.info(`[CookieRotationWorker] Starting worker for cookie ${this.cookieId}`);
+
+    const profileName = this.options.profileName || this.options.config?.profileName;
+    const service = this.options.service || this.options.config?.service;
+    const logContext = profileName ? `[${profileName}/${service || "unknown"}] ` : "";
+
+    this.fileLogger.info(`${logContext}Starting worker for cookie ${this.cookieId}`);
 
     // Phase 2: Perform initial refresh if requested (startup scenario)
     if (this.options.performInitialRefresh) {
-      this.fileLogger.info(`[CookieRotationWorker] Performing initial headless refresh for ${this.cookieId}`);
+      this.fileLogger.info(`${logContext}Performing initial headless refresh`);
       await this.runRotationCycle({ forceHeadless: true });
     }
 
-    // Fetch config to set up recurring interval
-    const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+    // Prefer parent-provided config (avoids uninitialized service in forked process)
+    let config = this.options.config;
     if (!config) {
-      this.fileLogger.error(`[CookieRotationWorker] No config found for cookie ${this.cookieId}`);
-      this.isRunning = false;
-      this.stats.isRunning = false;
-      return;
+      // Fallback: fetch from service (only works if service is initialized)
+      const fetchedConfig = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+      if (!fetchedConfig) {
+        this.fileLogger.error(`${logContext}No config found for cookie ${this.cookieId}`);
+        this.isRunning = false;
+        this.stats.isRunning = false;
+        return;
+      }
+      config = fetchedConfig;
+    } else {
+      this.fileLogger.debug(`${logContext}Using parent-provided config`);
     }
 
     const intervalMs = config.rotationIntervalMinutes * 60 * 1000;
     this.timer = setInterval(() => this.runRotationCycle(), intervalMs);
 
-    this.fileLogger.info(`[CookieRotationWorker] Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
+    this.fileLogger.info(`${logContext}Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
   }
 
   /**
@@ -135,7 +167,12 @@ export class CookieRotationWorker extends EventEmitter {
     this.isRunning = false;
     this.stats.isRunning = false;
     this.emit("statusChanged", "stopped");
-    this.fileLogger.info(`[CookieRotationWorker] Stopped worker for cookie ${this.cookieId}`);
+
+    const profileName = this.options.profileName || this.options.config?.profileName;
+    const service = this.options.service || this.options.config?.service;
+    const logContext = profileName ? `[${profileName}/${service || "unknown"}] ` : "";
+
+    this.fileLogger.info(`${logContext}Stopped worker for cookie ${this.cookieId}`);
 
     if (this.options.verbose) {
       this.logStats();
@@ -146,24 +183,48 @@ export class CookieRotationWorker extends EventEmitter {
   }
 
   /**
+   * Get worker-safe database instance
+   * Uses DB_PATH env var set by parent process instead of Electron app.getPath()
+   */
+  private async getWorkerSafeDatabase(): Promise<any> {
+    const dbPath = process.env.DB_PATH;
+    if (!dbPath) {
+      throw new Error("DB_PATH environment variable not set. Worker process must receive DB path from parent.");
+    }
+
+    // Import SQLiteDatabase directly (not the singleton Database class which uses app.getPath())
+    const { SQLiteDatabase } = await import("../../../../storage/sqlite-database.js");
+    const db = new SQLiteDatabase(dbPath);
+    await db.waitForInit();
+    return db;
+  }
+
+  /**
    * Run a rotation cycle (Phase 1 - Config-Driven)
    * Fetches config, determines method order, executes methods in sequence
    */
   private async runRotationCycle(options?: { forceHeadless?: boolean }): Promise<void> {
-    this.fileLogger.info(`[CookieRotationWorker] Running rotation cycle for ${this.cookieId}`);
+    const profileName = this.options.profileName || this.options.config?.profileName;
+    const service = this.options.service || this.options.config?.service;
+    const logContext = profileName ? `[${profileName}/${service || "unknown"}] ` : "";
+
+    this.fileLogger.info(`${logContext}Running rotation cycle`);
     const cycleStartTime = Date.now();
 
     try {
-      // 1. Fetch current config
-      const config = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+      // 1. Get config (prefer parent-provided, fallback to service)
+      let config = this.options.config;
       if (!config) {
-        this.fileLogger.error(`[CookieRotationWorker] Config not found for ${this.cookieId}`);
-        return;
+        const fetchedConfig = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+        if (!fetchedConfig) {
+          this.fileLogger.error(`${logContext}Config not found for ${this.cookieId}`);
+          return;
+        }
+        config = fetchedConfig;
       }
 
       // 2. Fetch current cookie data
-      const { database } = await import("../../../../storage/database.js");
-      const db = database.getSQLiteDatabase();
+      const db = await this.getWorkerSafeDatabase();
       const { CookieRepository } = await import("../../cookie/repository/cookie.repository.js");
       const cookieRepository = new CookieRepository(db);
       const cookie = await cookieRepository.findById(this.cookieId);
@@ -269,8 +330,7 @@ export class CookieRotationWorker extends EventEmitter {
    */
   private async updateMonitor(method: string, success: boolean, result: RotationMethodResult): Promise<void> {
     try {
-      const { database } = await import("../../../../storage/database.js");
-      const db = database.getSQLiteDatabase();
+      const db = await this.getWorkerSafeDatabase();
       const { CookieRotationMonitorRepository } = await import("../repository/cookie-rotation-monitor.repository.js");
       const monitorRepo = new CookieRotationMonitorRepository(db);
 
