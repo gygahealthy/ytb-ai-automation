@@ -9,13 +9,9 @@ import { request, Agent } from "undici";
 import { createGunzip } from "zlib";
 import { logger } from "../../../utils/logger-backend.js";
 import { config } from "../shared/config/app-config.js";
-import type { CookieManagerDB } from "./cookie-manager-db.js";
-import { extractTokens, validateToken } from "../helpers/token.helpers.js";
-import {
-  createGetHeaders,
-  createGeminiHeaders,
-  getStatusMessage,
-} from "../helpers/http.helpers.js";
+import type { CookieManagerDB } from "../../common/cookie/services/cookie-manager-db.js";
+import { extractTokens, validateToken } from "../../common/cookie/helpers/token.helpers.js";
+import { createGetHeaders, createGeminiHeaders, getStatusMessage } from "../helpers/http.helpers.js";
 
 // Create a shared HTTP/2 agent for connection pooling
 const sharedAgent = new Agent({
@@ -98,9 +94,7 @@ export class HttpService {
   async getToken(forceRefresh: boolean = false): Promise<string> {
     // Check cache
     if (!forceRefresh && this.cachedToken && this.isTokenValid()) {
-      logger.info(
-        `✅ Using cached token: ${this.cachedToken.substring(0, 20)}...`
-      );
+      logger.info(`✅ Using cached token: ${this.cachedToken.substring(0, 20)}...`);
       return this.cachedToken;
     }
 
@@ -136,10 +130,7 @@ export class HttpService {
     headers: "get" | "gemini" = "gemini",
     options?: Partial<HttpRequestOptions>
   ): Record<string, string> {
-    const baseHeaders =
-      headers === "get"
-        ? createGetHeaders(this.cookieManager)
-        : createGeminiHeaders(this.cookieManager);
+    const baseHeaders = headers === "get" ? createGetHeaders(this.cookieManager) : createGeminiHeaders(this.cookieManager);
 
     if (options?.headers) {
       Object.assign(baseHeaders, options.headers);
@@ -151,10 +142,7 @@ export class HttpService {
   /**
    * Send GET request (for token extraction and page fetching)
    */
-  async get(
-    url: string,
-    options?: Partial<HttpRequestOptions>
-  ): Promise<HttpResponse> {
+  async get(url: string, options?: Partial<HttpRequestOptions>): Promise<HttpResponse> {
     const headers = this.buildRequestHeaders("get", options);
 
     logger.debug(`→ GET ${url}`);
@@ -173,10 +161,7 @@ export class HttpService {
       // Decompress if gzipped
       let body: string;
       const uint8Array = new Uint8Array(buffer);
-      if (
-        contentEncoding === "gzip" ||
-        (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)
-      ) {
+      if (contentEncoding === "gzip" || (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)) {
         logger.debug("📦 Decompressing gzip response...");
         body = await decompressGzip(Buffer.from(buffer));
       } else {
@@ -185,16 +170,10 @@ export class HttpService {
 
       const statusMessage = getStatusMessage(response.statusCode);
 
-      logger.debug(
-        `← ${response.statusCode} ${statusMessage} (${(
-          body.length / 1024
-        ).toFixed(2)} KB)`
-      );
+      logger.debug(`← ${response.statusCode} ${statusMessage} (${(body.length / 1024).toFixed(2)} KB)`);
 
       if (response.statusCode !== 200) {
-        throw new Error(
-          `GET request failed: ${response.statusCode} ${statusMessage}`
-        );
+        throw new Error(`GET request failed: ${response.statusCode} ${statusMessage}`);
       }
 
       const responseHeaders: Record<string, string | string[]> = {};
@@ -221,11 +200,7 @@ export class HttpService {
   /**
    * Send POST request to Gemini API
    */
-  async post(
-    token: string,
-    fReq: string,
-    options?: Partial<HttpRequestOptions>
-  ): Promise<HttpResponse> {
+  async post(token: string, fReq: string, options?: Partial<HttpRequestOptions>): Promise<HttpResponse> {
     if (!validateToken(token)) {
       throw new Error("Invalid token provided to post request");
     }
@@ -259,10 +234,7 @@ export class HttpService {
         // Decompress if gzipped
         let responseBody: string;
         const uint8Array = new Uint8Array(buffer);
-        if (
-          contentEncoding === "gzip" ||
-          (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)
-        ) {
+        if (contentEncoding === "gzip" || (uint8Array[0] === 0x1f && uint8Array[1] === 0x8b)) {
           logger.debug("📦 Decompressing gzip response...");
           responseBody = await decompressGzip(Buffer.from(buffer));
         } else {
@@ -272,9 +244,9 @@ export class HttpService {
         const statusMessage = getStatusMessage(response.statusCode);
 
         logger.debug(
-          `← ${response.statusCode} ${statusMessage} (${(
-            responseBody.length / 1024
-          ).toFixed(2)} KB) [attempt ${attempt}/${maxRetries}]`
+          `← ${response.statusCode} ${statusMessage} (${(responseBody.length / 1024).toFixed(
+            2
+          )} KB) [attempt ${attempt}/${maxRetries}]`
         );
 
         if (response.statusCode === 200) {
@@ -297,9 +269,7 @@ export class HttpService {
 
         // Retry on server errors
         if (response.statusCode >= 500) {
-          lastError = new Error(
-            `Server error: ${response.statusCode} ${statusMessage}`
-          );
+          lastError = new Error(`Server error: ${response.statusCode} ${statusMessage}`);
           if (attempt < maxRetries) {
             const backoff = Math.pow(2, attempt - 1) * 1000;
             logger.warn(`Retrying in ${backoff}ms...`);
@@ -308,20 +278,14 @@ export class HttpService {
           }
         }
 
-        throw new Error(
-          `POST request failed: ${response.statusCode} ${statusMessage}`
-        );
+        throw new Error(`POST request failed: ${response.statusCode} ${statusMessage}`);
       } catch (error) {
         lastError = error as Error;
         if (attempt === maxRetries) {
           break;
         }
         const backoff = Math.pow(2, attempt - 1) * 1000;
-        logger.warn(
-          `Attempt ${attempt} failed: ${
-            (error as Error).message
-          }. Retrying in ${backoff}ms...`
-        );
+        logger.warn(`Attempt ${attempt} failed: ${(error as Error).message}. Retrying in ${backoff}ms...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
       }
     }
@@ -368,9 +332,7 @@ export class HttpService {
       logger.debug(`← ${response.statusCode} ${statusMessage} (streaming)`);
 
       if (response.statusCode !== 200) {
-        throw new Error(
-          `POST request failed: ${response.statusCode} ${statusMessage}`
-        );
+        throw new Error(`POST request failed: ${response.statusCode} ${statusMessage}`);
       }
 
       let buffer = "";
@@ -454,9 +416,7 @@ export class HttpService {
    * Extract first JSON array from streaming response
    * Handles Google's XSSI protection prefix ")]}'
    */
-  static extractFirstJsonArray(
-    text: string
-  ): { text: string; end: number } | null {
+  static extractFirstJsonArray(text: string): { text: string; end: number } | null {
     let cleanText = text;
 
     // Remove Google's XSSI protection prefix if present
@@ -489,9 +449,7 @@ export class HttpService {
   /**
    * Parse streaming JSON arrays from response body
    */
-  static async *parseStreamingJson(
-    body: NodeJS.ReadableStream
-  ): AsyncGenerator<unknown[], void, unknown> {
+  static async *parseStreamingJson(body: NodeJS.ReadableStream): AsyncGenerator<unknown[], void, unknown> {
     let buffer = "";
 
     for await (const chunk of body) {
@@ -553,9 +511,7 @@ export function getHttpService(cookieManager?: CookieManagerDB): HttpService {
   }
 
   if (!serviceInstance) {
-    throw new Error(
-      "HTTP service not initialized. Call getHttpService(cookieManager) first."
-    );
+    throw new Error("HTTP service not initialized. Call getHttpService(cookieManager) first.");
   }
 
   return serviceInstance;

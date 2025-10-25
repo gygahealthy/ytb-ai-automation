@@ -5,12 +5,12 @@
  */
 
 import { logger } from "../../../../utils/logger-backend.js";
-import { CookieRepository } from "../../../gemini-apis/repository/cookie.repository.js";
+import { CookieRepository } from "../../cookie/repository/cookie.repository.js";
 import { CookieRotationMonitorRepository, type CookieRotationMonitor } from "../repository/cookie-rotation-monitor.repository.js";
-import { createCookieManagerDB, type CookieManagerDB } from "../../../gemini-apis/services/cookie-manager-db.js";
+import { createCookieManagerDB, type CookieManagerDB } from "../../cookie/services/cookie-manager-db.js";
 import type { CookieCollection } from "../../../gemini-apis/shared/types/index.js";
-import { parseCookieHeader } from "../../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
-import { extractAndCreateHandler } from "../../../gemini-apis/handlers/cookie/extractAndCreate.js";
+import { parseCookieHeader } from "../../cookie/helpers/cookie-parser.helpers.js";
+import { extractAndCreateHandler } from "../../cookie/handlers/extractAndCreate.js";
 import { BrowserWindow } from "electron";
 import { cookieRotationConfigService } from "./cookie-rotation-config.service.js";
 

@@ -1,18 +1,11 @@
 import { ApiResponse } from "../../../../../shared/types";
 import { Logger } from "../../../../../shared/utils/logger";
 import { StringUtil } from "../../../../../shared/utils/string";
-import {
-  profileRepository,
-  veo3ProjectRepository,
-} from "../../../../storage/database";
+import { profileRepository, veo3ProjectRepository } from "../../../../storage/database";
 import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
-import { cookieService } from "../../../gemini-apis/services/cookie.service";
+import { cookieService } from "../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";
-import {
-  CreateVEO3ProjectInput,
-  VEO3Project,
-  VideoScene,
-} from "../../veo3.types";
+import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../../veo3.types";
 
 const logger = new Logger("VEO3ProjectService");
 
@@ -53,9 +46,7 @@ export class VEO3ProjectService {
   /**
    * Create new project
    */
-  async createProject(
-    input: CreateVEO3ProjectInput
-  ): Promise<ApiResponse<VEO3Project>> {
+  async createProject(input: CreateVEO3ProjectInput): Promise<ApiResponse<VEO3Project>> {
     try {
       // Generate IDs for scenes
       const scenes: VideoScene[] = input.scenes.map((scene) => ({
@@ -111,10 +102,7 @@ export class VEO3ProjectService {
   /**
    * Add scene to project
    */
-  async addScene(
-    projectId: string,
-    scene: Omit<VideoScene, "id">
-  ): Promise<ApiResponse<VEO3Project>> {
+  async addScene(projectId: string, scene: Omit<VideoScene, "id">): Promise<ApiResponse<VEO3Project>> {
     try {
       const project = await veo3ProjectRepository.findById(projectId);
       if (!project) {
@@ -142,10 +130,7 @@ export class VEO3ProjectService {
   /**
    * Remove scene from project
    */
-  async removeScene(
-    projectId: string,
-    sceneId: string
-  ): Promise<ApiResponse<VEO3Project>> {
+  async removeScene(projectId: string, sceneId: string): Promise<ApiResponse<VEO3Project>> {
     try {
       const project = await veo3ProjectRepository.findById(projectId);
       if (!project) {
@@ -168,10 +153,7 @@ export class VEO3ProjectService {
   /**
    * Update JSON prompt
    */
-  async updateJsonPrompt(
-    projectId: string,
-    jsonPrompt: Record<string, any>
-  ): Promise<ApiResponse<VEO3Project>> {
+  async updateJsonPrompt(projectId: string, jsonPrompt: Record<string, any>): Promise<ApiResponse<VEO3Project>> {
     try {
       if (!(await veo3ProjectRepository.exists(projectId))) {
         return { success: false, error: "Project not found" };
@@ -229,11 +211,7 @@ export class VEO3ProjectService {
 
       // Get cookies for the profile from CookieRepository
       const cookieResult = await cookieService.getCookiesByProfile(profileId);
-      if (
-        !cookieResult.success ||
-        !cookieResult.data ||
-        cookieResult.data.length === 0
-      ) {
+      if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
         return {
           success: false,
           error: "Profile has no cookies. Please login first.",
@@ -241,9 +219,7 @@ export class VEO3ProjectService {
       }
 
       // Find the "flow" service cookie
-      const flowCookie = cookieResult.data.find(
-        (c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active"
-      );
+      const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
       if (!flowCookie || !flowCookie.rawCookieString) {
         return {
           success: false,
@@ -254,9 +230,7 @@ export class VEO3ProjectService {
       logger.info(`Fetching VEO3 projects for profile: ${profile.name}`);
 
       // Call VEO3 API to list projects
-      const result = await veo3ApiClient.listProjects(
-        flowCookie.rawCookieString
-      );
+      const result = await veo3ApiClient.listProjects(flowCookie.rawCookieString);
 
       if (!result.success) {
         return {
@@ -281,10 +255,7 @@ export class VEO3ProjectService {
    * @param profileId - Profile ID to get cookies from
    * @param projectTitle - Title for the new project
    */
-  async createProjectViaAPI(
-    profileId: string,
-    projectTitle: string
-  ): Promise<ApiResponse<any>> {
+  async createProjectViaAPI(profileId: string, projectTitle: string): Promise<ApiResponse<any>> {
     try {
       // Get profile to ensure it exists and is logged in
       const profile = await profileRepository.findById(profileId);
@@ -301,11 +272,7 @@ export class VEO3ProjectService {
 
       // Get cookies for the profile from CookieRepository
       const cookieResult = await cookieService.getCookiesByProfile(profileId);
-      if (
-        !cookieResult.success ||
-        !cookieResult.data ||
-        cookieResult.data.length === 0
-      ) {
+      if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
         return {
           success: false,
           error: "Profile has no cookies. Please login first.",
@@ -313,9 +280,7 @@ export class VEO3ProjectService {
       }
 
       // Find the "flow" service cookie
-      const flowCookie = cookieResult.data.find(
-        (c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active"
-      );
+      const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
       if (!flowCookie || !flowCookie.rawCookieString) {
         return {
           success: false,
@@ -323,15 +288,10 @@ export class VEO3ProjectService {
         };
       }
 
-      logger.info(
-        `Creating VEO3 project "${projectTitle}" for profile: ${profile.name}`
-      );
+      logger.info(`Creating VEO3 project "${projectTitle}" for profile: ${profile.name}`);
 
       // Call VEO3 API to create project
-      const result = await veo3ApiClient.createProject(
-        flowCookie.rawCookieString,
-        projectTitle
-      );
+      const result = await veo3ApiClient.createProject(flowCookie.rawCookieString, projectTitle);
 
       if (!result.success) {
         return {
@@ -340,9 +300,7 @@ export class VEO3ProjectService {
         };
       }
 
-      logger.info(
-        `Successfully created VEO3 project: ${result.data?.projectId}`
-      );
+      logger.info(`Successfully created VEO3 project: ${result.data?.projectId}`);
       return { success: true, data: result.data };
     } catch (error) {
       logger.error("Failed to create project via API", error);

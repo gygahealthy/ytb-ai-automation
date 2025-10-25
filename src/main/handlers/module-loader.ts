@@ -162,13 +162,21 @@ export function collectModuleRegistrations(): any[] {
       try {
         let mod: any;
         try {
-          mod = require(modulePath);
+          // Try to require index.js directly
+          const srcIndex = path.join(modulePath, "index.js");
+          if (fs.existsSync(srcIndex)) {
+            mod = require(srcIndex);
+          } else {
+            // Fallback: try requiring the directory (will look for package.json or index.js)
+            mod = require(modulePath);
+          }
         } catch (innerErr) {
           if (modulePath.startsWith(srcPrefix)) {
+            // Try compiled version in dist
             const compiledPath = modulePath.replace(srcPrefix, path.join(cwd, "dist"));
             const compiledIndex = path.join(compiledPath, "index.js");
             if (fs.existsSync(compiledIndex)) {
-              mod = require(compiledPath);
+              mod = require(compiledIndex);
             } else {
               throw innerErr;
             }

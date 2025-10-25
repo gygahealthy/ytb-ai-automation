@@ -7,7 +7,7 @@ import { CookieJar } from "tough-cookie";
 import type { CookieCollection, RotationResult } from "../../../gemini-apis/shared/types/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
 import { endpoints, headers } from "../../../gemini-apis/shared/config/index.js";
-import { cookiesToHeader } from "../../../gemini-apis/helpers/cookie/cookie-parser.helpers.js";
+import { cookiesToHeader } from "../../cookie/helpers/cookie-parser.helpers.js";
 
 let gotInstance: any = null;
 

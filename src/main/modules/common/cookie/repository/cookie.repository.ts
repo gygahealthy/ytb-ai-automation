@@ -1,6 +1,6 @@
-import { BaseRepository } from "../../../storage/repositories/base.repository";
-import { SQLiteDatabase } from "../../../storage/sqlite-database";
-import { Cookie, CookieRow } from "../shared/types";
+import { BaseRepository } from "../../../../storage/repositories/base.repository";
+import { SQLiteDatabase } from "../../../../storage/sqlite-database";
+import { Cookie, CookieRow } from "../../../gemini-apis/shared/types";
 
 /**
  * Repository for managing cookies in the database

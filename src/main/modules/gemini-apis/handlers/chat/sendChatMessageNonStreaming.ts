@@ -1,11 +1,11 @@
 import { profileRepository } from "../../../../storage/repositories";
 import { logger } from "../../../../utils/logger-backend";
 import { ChatService } from "../../services/chat.service";
-import { CookieManagerDB } from "../../services/cookie-manager-db";
-import { cookieService } from "../../services/cookie.service";
+import { CookieManagerDB } from "../../../common/cookie/services/cookie-manager-db";
+import { cookieService } from "../../../common/cookie/services/cookie.service";
 import { COOKIE_SERVICES } from "../../shared/constants/services";
 import { database } from "../../../../storage/database";
-import { CookieRepository } from "../../repository/cookie.repository";
+import { CookieRepository } from "../../../common/cookie/repository/cookie.repository";
 
 // Local cookie manager instance for this module
 let cookieManager: CookieManagerDB | null = null;

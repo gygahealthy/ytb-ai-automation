@@ -4,20 +4,17 @@
  * Headers building, parsing, response handling
  */
 
-import type { CookieManagerDB } from "../services/cookie-manager-db.js";
+import type { CookieManagerDB } from "../../common/cookie/services/cookie-manager-db.js";
 import { config } from "../shared/config/app-config.js";
 
 /**
  * Build common HTTP headers that mimic a real Chrome browser
  */
-export function createHttpCommonHeaders(
-  cookieManager: CookieManagerDB
-): Record<string, string> {
+export function createHttpCommonHeaders(cookieManager: CookieManagerDB): Record<string, string> {
   return {
     "user-agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "sec-ch-ua":
-      '"Google Chrome";v="120", "Chromium";v="120", "Not?A_Brand";v="24"',
+    "sec-ch-ua": '"Google Chrome";v="120", "Chromium";v="120", "Not?A_Brand";v="24"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
     "sec-fetch-dest": "empty",
@@ -37,9 +34,7 @@ export function createHttpCommonHeaders(
 /**
  * Build headers specifically for Gemini API requests
  */
-export function createGeminiHeaders(
-  cookieManager: CookieManagerDB
-): Record<string, string> {
+export function createGeminiHeaders(cookieManager: CookieManagerDB): Record<string, string> {
   return {
     ...createHttpCommonHeaders(cookieManager),
     "content-type": "application/x-www-form-urlencoded;charset=utf-8",
@@ -52,22 +47,17 @@ export function createGeminiHeaders(
 /**
  * Build headers for GET requests (token extraction, page fetching)
  */
-export function createGetHeaders(
-  cookieManager: CookieManagerDB
-): Record<string, string> {
+export function createGetHeaders(cookieManager: CookieManagerDB): Record<string, string> {
   return {
     ...createHttpCommonHeaders(cookieManager),
-    accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   };
 }
 
 /**
  * Convert headers object to lowercase keys
  */
-export function normalizeHeaders(
-  headers: Record<string, string | string[]>
-): Record<string, string | string[]> {
+export function normalizeHeaders(headers: Record<string, string | string[]>): Record<string, string | string[]> {
   const normalized: Record<string, string | string[]> = {};
   for (const [key, value] of Object.entries(headers)) {
     normalized[key.toLowerCase()] = value;
@@ -78,10 +68,7 @@ export function normalizeHeaders(
 /**
  * Extract header value (handles both string and array values)
  */
-export function getHeader(
-  headers: Record<string, string | string[]>,
-  key: string
-): string | undefined {
+export function getHeader(headers: Record<string, string | string[]>, key: string): string | undefined {
   const value = headers[key.toLowerCase()];
   if (Array.isArray(value)) {
     return value[0];

@@ -1,7 +1,7 @@
-import { profileRepository } from "../../../../storage/repositories";
-import { instanceManager as iManager } from "../../../instance-management/services/instance-manager";
-import { cookieService } from "../../services/cookie.service";
-import { logger } from "../../../../utils/logger-backend";
+import { profileRepository } from "@main/storage/repositories";
+import { instanceManager as iManager } from "@modules/instance-management/services/instance-manager";
+import { cookieService } from "../services/cookie.service";
+import { logger } from "@main/utils/logger-backend";
 
 /**
  * Unified cookie extraction handler
@@ -17,12 +17,7 @@ import { logger } from "../../../../utils/logger-backend";
  * - Supports both headless and visible browser modes
  * - Handles profile locking to prevent concurrent extractions
  */
-export const extractAndCreateHandler = async (req: {
-  profileId: string;
-  service: string;
-  url: string;
-  headless?: boolean;
-}) => {
+export const extractAndCreateHandler = async (req: { profileId: string; service: string; url: string; headless?: boolean }) => {
   const { profileId, service, url, headless = true } = req as any;
 
   if (!profileId || !service || !url) {
@@ -39,8 +34,7 @@ export const extractAndCreateHandler = async (req: {
   if (!iManager.canLaunchProfile(profileId)) {
     return {
       success: false,
-      error:
-        "Profile is currently running an automation. Please wait for it to complete before extracting cookies.",
+      error: "Profile is currently running an automation. Please wait for it to complete before extracting cookies.",
     };
   }
 
@@ -110,26 +104,18 @@ export const extractAndCreateHandler = async (req: {
       };
     }
 
-    logger.info(
-      "[cookies:extractAndCreate] Extraction and storage completed successfully",
-      {
-        service,
-        url,
-        totalExtracted: extractResult.data!.cookies.length,
-      }
-    );
+    logger.info("[cookies:extractAndCreate] Extraction and storage completed successfully", {
+      service,
+      url,
+      totalExtracted: extractResult.data!.cookies.length,
+    });
 
     return storeResult;
   } catch (error) {
-    logger.error(
-      "[cookies:extractAndCreate] Unexpected error during extraction",
-      error
-    );
+    logger.error("[cookies:extractAndCreate] Unexpected error during extraction", error);
     return {
       success: false,
-      error: `Error extracting cookies: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      error: `Error extracting cookies: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 };

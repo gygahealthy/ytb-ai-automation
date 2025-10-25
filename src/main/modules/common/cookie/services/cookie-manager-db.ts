@@ -4,13 +4,18 @@
  * Integrates cookie lifecycle management with the database repository
  */
 
-import type { CookieCollection, RotationResult, ValidationResult, CookieService } from "../shared/types/index.js";
-import { COOKIE_SERVICES } from "../shared/types/index.js";
-import { cookiesToHeader, validateRequiredCookies, mergeCookies } from "../helpers/cookie/cookie-parser.helpers.js";
-import { logger } from "../../../utils/logger-backend.js";
-import { startAutoRotation, type RotationControl } from "../../common/cookie-rotation/helpers/cookie-rotation.helpers.js";
+import type {
+  CookieCollection,
+  RotationResult,
+  ValidationResult,
+  CookieService,
+} from "@modules/gemini-apis/shared/types/index.js";
+import { COOKIE_SERVICES } from "@modules/gemini-apis/shared/types/index.js";
+import { cookiesToHeader, validateRequiredCookies, mergeCookies } from "../helpers/cookie-parser.helpers.js";
+import { startAutoRotation, type RotationControl } from "@modules/common/cookie-rotation/helpers/cookie-rotation.helpers.js";
 import type { CookieRepository } from "../repository/cookie.repository.js";
-import type { Cookie } from "../shared/types/index.js";
+import type { Cookie } from "@modules/gemini-apis/shared/types/index.js";
+import { logger } from "@/main/utils/logger-backend.js";
 
 /**
  * Extended options for database-integrated cookie manager

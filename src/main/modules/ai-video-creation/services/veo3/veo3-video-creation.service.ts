@@ -3,7 +3,7 @@ import { ApiResponse } from "../../../../../shared/types";
 import { logger } from "../../../../utils/logger-backend";
 import { profileRepository } from "../../../../storage/database";
 import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
-import { cookieService } from "../../../gemini-apis/services/cookie.service";
+import { cookieService } from "../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";
 import { videoGenerationRepository } from "../../repository/video-generation.repository";
 
@@ -25,12 +25,10 @@ export function extractVideoMetadata(rawData: any): ExtractedVideoMetadata {
   const metadata = operation?.operation?.metadata;
   const video = metadata?.video;
 
-  const mediaGenerationId =
-    video?.mediaGenerationId || operation?.mediaGenerationId;
+  const mediaGenerationId = video?.mediaGenerationId || operation?.mediaGenerationId;
   const fifeUrl = video?.fifeUrl;
   const servingBaseUri = video?.servingBaseUri;
-  const videoUrl =
-    fifeUrl || servingBaseUri || video?.url || operation?.videoUrl || "";
+  const videoUrl = fifeUrl || servingBaseUri || video?.url || operation?.videoUrl || "";
 
   return { mediaGenerationId, fifeUrl, servingBaseUri, videoUrl, status };
 }
@@ -57,17 +55,11 @@ export class VEO3VideoCreationService {
         return { success: false, error: "Profile not found or not logged in" };
       }
 
-      logger.info(
-        `Starting video generation for profile: ${profile.name}, project: ${projectId}`
-      );
+      logger.info(`Starting video generation for profile: ${profile.name}, project: ${projectId}`);
 
       // Get cookies for the profile
       const cookieResult = await cookieService.getCookiesByProfile(profileId);
-      if (
-        !cookieResult.success ||
-        !cookieResult.data ||
-        cookieResult.data.length === 0
-      ) {
+      if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
         return {
           success: false,
           error: "Profile has no cookies. Please login first.",
@@ -75,9 +67,7 @@ export class VEO3VideoCreationService {
       }
 
       // Find the "flow" service cookie
-      const flowCookie = cookieResult.data.find(
-        (c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active"
-      );
+      const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
       if (!flowCookie || !flowCookie.rawCookieString) {
         return {
           success: false,
@@ -85,9 +75,7 @@ export class VEO3VideoCreationService {
         };
       }
 
-      const tokenResult = await veo3ApiClient.extractBearerToken(
-        flowCookie.rawCookieString
-      );
+      const tokenResult = await veo3ApiClient.extractBearerToken(flowCookie.rawCookieString);
       if (!tokenResult.success || !tokenResult.token) {
         return {
           success: false,
@@ -95,12 +83,7 @@ export class VEO3VideoCreationService {
         };
       }
 
-      const generateResult = await veo3ApiClient.generateVideo(
-        tokenResult.token,
-        projectId,
-        prompt,
-        aspectRatio
-      );
+      const generateResult = await veo3ApiClient.generateVideo(tokenResult.token, projectId, prompt, aspectRatio);
       if (!generateResult.success) {
         return {
           success: false,
@@ -117,9 +100,7 @@ export class VEO3VideoCreationService {
           error: "Invalid response from video generation API",
         };
       }
-      logger.info(
-        `Video generation started: operationName=${operationName}, sceneId=${sceneId}`
-      );
+      logger.info(`Video generation started: operationName=${operationName}, sceneId=${sceneId}`);
 
       const generationId = randomBytes(16).toString("hex");
       await videoGenerationRepository.create({

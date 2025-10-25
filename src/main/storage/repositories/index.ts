@@ -1,16 +1,10 @@
 // Export all repositories
-export {
-  Veo3ProjectRepository,
-  veo3ProjectRepository,
-} from "../../modules/ai-video-creation/repository/veo3-project.repository";
+export { Veo3ProjectRepository, veo3ProjectRepository } from "../../modules/ai-video-creation/repository/veo3-project.repository";
 export {
   VideoGenerationRepository,
   videoGenerationRepository,
 } from "../../modules/ai-video-creation/repository/video-generation.repository";
-export {
-  ProfileRepository,
-  profileRepository,
-} from "../../modules/profile-management/repository/profile.repository";
+export { ProfileRepository, profileRepository } from "../../modules/profile-management/repository/profile.repository";
 export { promptRepository } from "../../modules/master-prompt-management/repository/master-prompt.repository";
 export {
   AutomationRepository,
@@ -23,4 +17,4 @@ export {
   youtubeChannelRepository,
 } from "../../modules/channel-management/repository/youtube.repository";
 export { BaseRepository } from "./base.repository";
-export { CookieRepository } from "../../modules/gemini-apis/repository/cookie.repository";
+export { CookieRepository } from "../../modules/common/cookie/repository/cookie.repository";

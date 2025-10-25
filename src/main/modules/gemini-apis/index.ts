@@ -10,8 +10,8 @@ export const registrations: IpcRegistration[] = [...cookieRegistrations, ...chat
 
 // Export services
 export { ChatService } from "./services/chat.service";
-export { CookieService } from "./services/cookie.service";
-export { cookieService } from "./services/cookie.service";
+export { CookieService } from "../common/cookie/services/cookie.service";
+export { cookieService } from "../common/cookie/services/cookie.service";
 export {
   getOrCreateCookieManager,
   getOrCreateChatService,
@@ -20,7 +20,7 @@ export {
   clearAll,
   getStats,
 } from "./services/chat.registry";
-export type { Cookie } from "./types/cookies.types";
+export type { Cookie } from "../common/cookie/types/cookies.types";
 export type { ChatResponse, ChatMessage, ConversationContext } from "./types/gemini-chat.types";
 
 // Export helpers
@@ -40,7 +40,7 @@ export {
   extractCookies,
   validateRequiredCookies,
   mergeCookies,
-} from "./helpers/cookie/cookie-parser.helpers";
+} from "../common/cookie/helpers/cookie-parser.helpers";
 export {
   rotate1psidts,
   startAutoRotation,
@@ -54,7 +54,7 @@ export {
   getHeader,
   getStatusMessage,
 } from "./helpers/http.helpers";
-export { extractTokens, validateToken, type TokenData } from "./helpers/token.helpers";
+export { extractTokens, validateToken, type TokenData } from "../common/cookie/helpers/token.helpers";
 
 export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
   const allRegistrations = [...cookieRegistrations, ...chatRegistrations];

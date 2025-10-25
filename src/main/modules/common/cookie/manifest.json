@@ -1,0 +1,7 @@
+{
+  "id": "cookie",
+  "name": "Cookie Management",
+  "version": "0.1.0",
+  "disabled": false,
+  "description": "Core cookie management, extraction, parsing, and persistence"
+}

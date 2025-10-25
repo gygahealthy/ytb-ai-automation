@@ -1,12 +1,12 @@
 import { profileRepository } from "../../../../storage/repositories";
 import { logger } from "../../../../utils/logger-backend";
-import { CookieManagerDB } from "../../services/cookie-manager-db";
-import { cookieService } from "../../services/cookie.service";
+import { CookieManagerDB } from "../../../common/cookie/services/cookie-manager-db.js";
+import { cookieService } from "../../../common/cookie/services/cookie.service.js";
 import { COOKIE_SERVICES } from "../../shared/constants/services";
 import { sendChatRequestStreaming } from "../../helpers/chat.helpers.js";
 import { BrowserWindow } from "electron";
 import { database } from "../../../../storage/database";
-import { CookieRepository } from "../../repository/cookie.repository";
+import { CookieRepository } from "../../../common/cookie/repository/cookie.repository.js";
 
 // Local cookie manager instance for this module
 let cookieManager: CookieManagerDB | null = null;

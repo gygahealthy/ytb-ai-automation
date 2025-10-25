@@ -4,7 +4,7 @@
  */
 
 import type { ChatOptions, ChatResponse, ConversationMetadata } from "../types/gemini-chat.types.js";
-import { CookieManagerDB } from "./cookie-manager-db.js";
+import { CookieManagerDB } from "../../common/cookie/services/cookie-manager-db.js";
 import { sendChatRequest, createEmptyMetadata, extractConversationContext } from "../helpers/chat.helpers.js";
 
 /**

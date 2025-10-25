@@ -12,7 +12,7 @@ import type {
   ChatMessage,
 } from "../types/gemini-chat.types.js";
 import { logger } from "../../../utils/logger-backend.js";
-import type { CookieManagerDB } from "../services/cookie-manager-db.js";
+import type { CookieManagerDB } from "../../common/cookie/services/cookie-manager-db.js";
 import { createHttpService, HttpService } from "../services/http.service.js";
 import { resolveChatModel } from "../shared/constants/model.constants.js";
 

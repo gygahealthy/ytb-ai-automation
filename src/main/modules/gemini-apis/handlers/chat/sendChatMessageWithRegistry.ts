@@ -14,13 +14,9 @@
 
 import { profileRepository } from "../../../../storage/repositories/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
-import { cookieService } from "../../services/cookie.service.js";
+import { cookieService } from "../../../common/cookie/services/cookie.service.js";
 import { COOKIE_SERVICES } from "../../shared/constants/services.js";
-import {
-  getOrCreateCookieManager,
-  getOrCreateChatService,
-  resetChatService,
-} from "../../services/chat.registry.js";
+import { getOrCreateCookieManager, getOrCreateChatService, resetChatService } from "../../services/chat.registry.js";
 
 /**
  * Non-streaming chat with persistent conversation context
@@ -38,13 +34,7 @@ export async function sendChatMessageWithRegistry(req: {
   resetContext?: boolean; // Force start new conversation
 }): Promise<any> {
   try {
-    const {
-      profileId,
-      prompt,
-      conversationContext,
-      model,
-      resetContext = false,
-    } = req;
+    const { profileId, prompt, conversationContext, model, resetContext = false } = req;
 
     // Validate required fields
     if (!profileId || !prompt) {
@@ -55,9 +45,7 @@ export async function sendChatMessageWithRegistry(req: {
       };
     }
 
-    logger.info(
-      `[chat:registry:non-streaming] Processing request for profile ${profileId}`
-    );
+    logger.info(`[chat:registry:non-streaming] Processing request for profile ${profileId}`);
 
     // Verify profile exists
     const profile = await profileRepository.findById(profileId);
@@ -71,14 +59,11 @@ export async function sendChatMessageWithRegistry(req: {
 
     // Get cookies for the profile
     const cookiesResult = await cookieService.getCookiesByProfile(profileId);
-    logger.info(
-      `[chat:registry:non-streaming] Cookies for profile ${profileId}:`,
-      {
-        found: cookiesResult.success,
-        count: cookiesResult.data?.length || 0,
-        services: cookiesResult.data?.map((c) => c.service) || [],
-      }
-    );
+    logger.info(`[chat:registry:non-streaming] Cookies for profile ${profileId}:`, {
+      found: cookiesResult.success,
+      count: cookiesResult.data?.length || 0,
+      services: cookiesResult.data?.map((c) => c.service) || [],
+    });
 
     if (!cookiesResult.success || !cookiesResult.data?.length) {
       return {
@@ -89,20 +74,15 @@ export async function sendChatMessageWithRegistry(req: {
     }
 
     // Find GEMINI service cookie specifically (not just the first cookie)
-    const geminiCookie = cookiesResult.data.find(
-      (c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active"
-    );
+    const geminiCookie = cookiesResult.data.find((c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active");
 
     if (!geminiCookie || !geminiCookie.rawCookieString) {
-      logger.warn(
-        `[chat:registry:non-streaming] No active GEMINI cookie found for profile ${profileId}`,
-        {
-          availableServices: cookiesResult.data.map((c) => ({
-            service: c.service,
-            status: c.status,
-          })),
-        }
-      );
+      logger.warn(`[chat:registry:non-streaming] No active GEMINI cookie found for profile ${profileId}`, {
+        availableServices: cookiesResult.data.map((c) => ({
+          service: c.service,
+          status: c.status,
+        })),
+      });
       return {
         success: false,
         error: `No active Gemini cookies found for profile ${profileId}. Please extract Gemini cookies first.`,
@@ -113,32 +93,24 @@ export async function sendChatMessageWithRegistry(req: {
     const rawCookieString = geminiCookie.rawCookieString;
 
     // Get or create CookieManager from registry
-    const cookieManager = await getOrCreateCookieManager(
-      profileId,
-      rawCookieString
-    );
+    const cookieManager = await getOrCreateCookieManager(profileId, rawCookieString);
 
     // Get or create ChatService from registry (singleton per profile)
     let chatService = getOrCreateChatService(profileId, cookieManager);
 
     // Reset context if requested
     if (resetContext) {
-      logger.info(
-        `[chat:registry:non-streaming] Resetting conversation context for profile ${profileId}`
-      );
+      logger.info(`[chat:registry:non-streaming] Resetting conversation context for profile ${profileId}`);
       resetChatService(profileId);
       chatService = getOrCreateChatService(profileId, cookieManager);
     }
 
     // Load external conversation context if provided (overrides registry state)
     if (conversationContext) {
-      logger.info(
-        `[chat:registry:non-streaming] Loading external conversation context for profile ${profileId}`,
-        {
-          chatId: conversationContext.chatId,
-          replyId: conversationContext.replyId,
-        }
-      );
+      logger.info(`[chat:registry:non-streaming] Loading external conversation context for profile ${profileId}`, {
+        chatId: conversationContext.chatId,
+        replyId: conversationContext.replyId,
+      });
       chatService.loadMetadata({
         cid: conversationContext.chatId,
         rid: conversationContext.replyId,
@@ -148,13 +120,10 @@ export async function sendChatMessageWithRegistry(req: {
 
     // Get current metadata before sending (for logging)
     const metadataBefore = chatService.getMetadata();
-    const isNewConversation =
-      !metadataBefore.cid || metadataBefore.cid === null;
+    const isNewConversation = !metadataBefore.cid || metadataBefore.cid === null;
 
     logger.info(
-      `[chat:registry:non-streaming] Sending message (${
-        isNewConversation ? "new conversation" : "continuing conversation"
-      })`
+      `[chat:registry:non-streaming] Sending message (${isNewConversation ? "new conversation" : "continuing conversation"})`
     );
     if (model) {
       logger.info(`[chat:registry:non-streaming] Model: ${model}`);
@@ -168,13 +137,10 @@ export async function sendChatMessageWithRegistry(req: {
     // Get updated metadata after response
     const metadataAfter = chatService.getMetadata();
 
-    logger.info(
-      `[chat:registry:non-streaming] Response received and context preserved`,
-      {
-        conversationId: metadataAfter.cid,
-        replyId: metadataAfter.rid,
-      }
-    );
+    logger.info(`[chat:registry:non-streaming] Response received and context preserved`, {
+      conversationId: metadataAfter.cid,
+      replyId: metadataAfter.rid,
+    });
 
     return {
       success: response.success,

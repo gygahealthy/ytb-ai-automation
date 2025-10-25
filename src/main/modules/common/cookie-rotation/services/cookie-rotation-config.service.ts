@@ -3,7 +3,7 @@
  * Manages per-cookie rotation configuration settings
  */
 
-import { CookieRepository } from "../../../gemini-apis/repository/cookie.repository.js";
+import { CookieRepository } from "../../cookie/repository/cookie.repository.js";
 import { logger } from "../../../../utils/logger-backend.js";
 
 export type RotationMethod = "refreshCreds" | "rotateCookie" | "headless";

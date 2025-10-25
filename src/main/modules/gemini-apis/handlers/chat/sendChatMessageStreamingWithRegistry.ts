@@ -8,15 +8,11 @@
 
 import { profileRepository } from "../../../../storage/repositories/index.js";
 import { logger } from "../../../../utils/logger-backend.js";
-import { cookieService } from "../../services/cookie.service.js";
+import { cookieService } from "../../../common/cookie/services/cookie.service.js";
 import { COOKIE_SERVICES } from "../../shared/constants/services.js";
 import { sendChatRequestStreaming } from "../../helpers/chat.helpers.js";
 import { BrowserWindow } from "electron";
-import {
-  getOrCreateCookieManager,
-  getOrCreateChatService,
-  resetChatService,
-} from "../../services/chat.registry.js";
+import { getOrCreateCookieManager, getOrCreateChatService, resetChatService } from "../../services/chat.registry.js";
 
 /**
  * Streaming chat with persistent conversation context
@@ -35,14 +31,7 @@ export async function sendChatMessageStreamingWithRegistry(req: {
   resetContext?: boolean; // Force start new conversation
 }): Promise<any> {
   try {
-    const {
-      profileId,
-      prompt,
-      conversationContext,
-      requestId,
-      model,
-      resetContext = false,
-    } = req;
+    const { profileId, prompt, conversationContext, requestId, model, resetContext = false } = req;
 
     // Validate required fields
     if (!profileId || !prompt || !requestId) {
@@ -54,9 +43,7 @@ export async function sendChatMessageStreamingWithRegistry(req: {
       };
     }
 
-    logger.info(
-      `[chat:registry:streaming] Processing streaming request ${requestId} for profile ${profileId}`
-    );
+    logger.info(`[chat:registry:streaming] Processing streaming request ${requestId} for profile ${profileId}`);
 
     // Verify profile exists
     const profile = await profileRepository.findById(profileId);
@@ -87,20 +74,15 @@ export async function sendChatMessageStreamingWithRegistry(req: {
     }
 
     // Find GEMINI service cookie specifically (not just the first cookie)
-    const geminiCookie = cookiesResult.data.find(
-      (c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active"
-    );
+    const geminiCookie = cookiesResult.data.find((c) => c.service === COOKIE_SERVICES.GEMINI && c.status === "active");
 
     if (!geminiCookie || !geminiCookie.rawCookieString) {
-      logger.warn(
-        `[chat:registry:streaming] No active GEMINI cookie found for profile ${profileId}`,
-        {
-          availableServices: cookiesResult.data.map((c) => ({
-            service: c.service,
-            status: c.status,
-          })),
-        }
-      );
+      logger.warn(`[chat:registry:streaming] No active GEMINI cookie found for profile ${profileId}`, {
+        availableServices: cookiesResult.data.map((c) => ({
+          service: c.service,
+          status: c.status,
+        })),
+      });
       return {
         success: false,
         error: `No active Gemini cookies found for profile ${profileId}. Please extract Gemini cookies first.`,
@@ -112,32 +94,24 @@ export async function sendChatMessageStreamingWithRegistry(req: {
     const rawCookieString = geminiCookie.rawCookieString;
 
     // Get or create CookieManager from registry
-    const cookieManager = await getOrCreateCookieManager(
-      profileId,
-      rawCookieString
-    );
+    const cookieManager = await getOrCreateCookieManager(profileId, rawCookieString);
 
     // Get or create ChatService from registry (singleton per profile)
     let chatService = getOrCreateChatService(profileId, cookieManager);
 
     // Reset context if requested
     if (resetContext) {
-      logger.info(
-        `[chat:registry:streaming] Resetting conversation context for profile ${profileId}`
-      );
+      logger.info(`[chat:registry:streaming] Resetting conversation context for profile ${profileId}`);
       resetChatService(profileId);
       chatService = getOrCreateChatService(profileId, cookieManager);
     }
 
     // Load external conversation context if provided (overrides registry state)
     if (conversationContext) {
-      logger.info(
-        `[chat:registry:streaming] Loading external conversation context for profile ${profileId}`,
-        {
-          chatId: conversationContext.chatId,
-          replyId: conversationContext.replyId,
-        }
-      );
+      logger.info(`[chat:registry:streaming] Loading external conversation context for profile ${profileId}`, {
+        chatId: conversationContext.chatId,
+        replyId: conversationContext.replyId,
+      });
       chatService.loadMetadata({
         cid: conversationContext.chatId,
         rid: conversationContext.replyId,
@@ -147,8 +121,7 @@ export async function sendChatMessageStreamingWithRegistry(req: {
 
     // Get current metadata before sending (for logging)
     const metadataBefore = chatService.getMetadata();
-    const isNewConversation =
-      !metadataBefore.cid || metadataBefore.cid === null;
+    const isNewConversation = !metadataBefore.cid || metadataBefore.cid === null;
 
     // Stream channel for this request
     const streamChannel = `gemini:chat:stream:${requestId}`;
@@ -186,35 +159,29 @@ export async function sendChatMessageStreamingWithRegistry(req: {
         }
 
         // Send streaming request using stored metadata
-        const { metadata: responseMetadata, totalChunks } =
-          await sendChatRequestStreaming(
-            cookieManager,
-            prompt,
-            (chunk) => {
-              logger.debug(
-                `[chat:registry:streaming] Sending chunk ${chunk.index} via ${streamChannel}`
-              );
-              sendToAllWindows(streamChannel, {
-                type: "chunk",
-                data: chunk,
-              });
-            },
-            {
-              conversationContext: conversationContextForRequest,
-              model,
-            }
-          );
+        const { metadata: responseMetadata, totalChunks } = await sendChatRequestStreaming(
+          cookieManager,
+          prompt,
+          (chunk) => {
+            logger.debug(`[chat:registry:streaming] Sending chunk ${chunk.index} via ${streamChannel}`);
+            sendToAllWindows(streamChannel, {
+              type: "chunk",
+              data: chunk,
+            });
+          },
+          {
+            conversationContext: conversationContextForRequest,
+            model,
+          }
+        );
 
         // Update stored metadata from response
         if (responseMetadata) {
           chatService.loadMetadata(responseMetadata);
-          logger.info(
-            `[chat:registry:streaming] Updated stored metadata for profile ${profileId}`,
-            {
-              conversationId: responseMetadata.cid,
-              replyId: responseMetadata.rid,
-            }
-          );
+          logger.info(`[chat:registry:streaming] Updated stored metadata for profile ${profileId}`, {
+            conversationId: responseMetadata.cid,
+            replyId: responseMetadata.rid,
+          });
         }
 
         // Signal completion with updated metadata
@@ -226,15 +193,10 @@ export async function sendChatMessageStreamingWithRegistry(req: {
           },
         });
 
-        logger.info(
-          `[chat:registry:streaming] Streaming complete for request ${requestId} (${totalChunks} chunks)`
-        );
+        logger.info(`[chat:registry:streaming] Streaming complete for request ${requestId} (${totalChunks} chunks)`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.error(
-          `[chat:registry:streaming] Streaming failed for request ${requestId}: ${message}`,
-          error
-        );
+        logger.error(`[chat:registry:streaming] Streaming failed for request ${requestId}: ${message}`, error);
 
         const windows = BrowserWindow.getAllWindows();
         windows.forEach((win) => {

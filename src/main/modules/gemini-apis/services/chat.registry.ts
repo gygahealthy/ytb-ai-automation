@@ -12,11 +12,11 @@
  */
 
 import { ChatService } from "./chat.service.js";
-import { CookieManagerDB } from "./cookie-manager-db.js";
+import { CookieManagerDB } from "../../common/cookie/services/cookie-manager-db.js";
 import { database } from "../../../storage/database.js";
-import { CookieRepository } from "../repository/cookie.repository.js";
+import { CookieRepository } from "../../common/cookie/repository/cookie.repository.js";
 import { logger } from "../../../utils/logger-backend.js";
-import { parseCookieHeader } from "../helpers/cookie/cookie-parser.helpers.js";
+import { parseCookieHeader } from "../../common/cookie/helpers/cookie-parser.helpers.js";
 
 interface CookieManagerEntry {
   manager: CookieManagerDB;

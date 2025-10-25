@@ -1,16 +1,16 @@
 import { CookieRepository } from "../repository/cookie.repository";
-import { Cookie } from "../shared/types";
-import { logger } from "../../../utils/logger-backend";
-import { ApiResponse } from "../../../../shared/types";
-import { database } from "../../../storage/database";
-import { launchBrowser } from "../helpers/browser/browser-launcher.helpers";
+import { Cookie } from "@modules/gemini-apis/shared/types";
+import { logger } from "@main/utils/logger-backend";
+import { ApiResponse } from "@shared/types";
+import { database } from "@main/storage/database";
+import { launchBrowser } from "@modules/gemini-apis/helpers/browser/browser-launcher.helpers";
 import {
   navigateAndExtractCookies,
   logCookieExtractionSummary,
   toCookieString,
   logCookieExtractionSuccess,
-} from "../helpers/cookie/cookie-extraction.helpers";
-import { containsDtsCookie, hasCookieChanged } from "../helpers/cookie/cookie-check.helpers";
+} from "../helpers/cookie-extraction.helpers";
+import { containsDtsCookie, hasCookieChanged } from "../helpers/cookie-check.helpers";
 
 /**
  * Service for managing cookies
@@ -492,7 +492,7 @@ export class CookieService {
    */
   async extractAndStoreCookiesFromPage(
     profileId: string,
-    _url: string,  
+    _url: string,
     service: string,
     pageUrl: string,
     cookies: Array<{

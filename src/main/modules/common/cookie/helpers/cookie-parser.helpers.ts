@@ -2,10 +2,7 @@
  * Cookie parsing and manipulation utilities
  */
 
-import type {
-  CookieCollection,
-  ValidationResult,
-} from "../../shared/types/index.js";
+import type { CookieCollection, ValidationResult } from "../../../gemini-apis/shared/types/index.js";
 
 /**
  * Parse a cookie header string into an object
@@ -55,10 +52,7 @@ export function cookiesToHeader(cookies: CookieCollection): string {
  * @param names - Cookie names to extract
  * @returns Filtered cookie object
  */
-export function extractCookies(
-  cookies: CookieCollection,
-  names: string[]
-): Partial<CookieCollection> {
+export function extractCookies(cookies: CookieCollection, names: string[]): Partial<CookieCollection> {
   const result: Partial<CookieCollection> = {};
 
   for (const name of names) {
@@ -76,10 +70,7 @@ export function extractCookies(
  * @param required - Required cookie names
  * @returns Validation result with status and error message if invalid
  */
-export function validateRequiredCookies(
-  cookies: CookieCollection,
-  required: string[] = ["__Secure-1PSID"]
-): ValidationResult {
+export function validateRequiredCookies(cookies: CookieCollection, required: string[] = ["__Secure-1PSID"]): ValidationResult {
   const missing: string[] = [];
 
   for (const name of required) {
@@ -105,9 +96,6 @@ export function validateRequiredCookies(
  * @param updates - Cookie updates to apply
  * @returns Merged cookie collection
  */
-export function mergeCookies(
-  base: CookieCollection,
-  updates: Partial<CookieCollection>
-): CookieCollection {
+export function mergeCookies(base: CookieCollection, updates: Partial<CookieCollection>): CookieCollection {
   return { ...base, ...updates } as CookieCollection;
 }

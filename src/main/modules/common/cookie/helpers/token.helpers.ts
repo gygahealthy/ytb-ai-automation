@@ -4,9 +4,9 @@
  * Shared by all modules that need API tokens
  */
 
-import { config } from "../shared/config/index.js";
-import { logger } from "../../../utils/logger-backend.js";
-import { createHttpService } from "../services/http.service.js";
+import { config } from "../../../gemini-apis/shared/config/index.js";
+import { logger } from "../../../../utils/logger-backend.js";
+import { createHttpService } from "../../../gemini-apis/services/http.service.js";
 import type { CookieManagerDB } from "../services/cookie-manager-db.js";
 
 /**
@@ -55,9 +55,7 @@ function extractSnlm0eToken(html: string): string | null {
 
   // FALLBACK: If standard patterns fail, search for any token-like string
   // that appears in the HTML. Google may have changed the structure entirely.
-  logger.warn(
-    "⚠️ Standard SNlM0e patterns failed, trying fallback extraction..."
-  );
+  logger.warn("⚠️ Standard SNlM0e patterns failed, trying fallback extraction...");
 
   // Search for strings that look like tokens (long alphanumeric sequences)
   const fallbackPattern = /["']([a-zA-Z0-9\-_]{80,300})["']/g;
@@ -81,9 +79,7 @@ function extractSnlm0eToken(html: string): string | null {
   // Use the longest token found
   if (potentialTokens.length > 0) {
     const longestToken = potentialTokens.sort((a, b) => b.length - a.length)[0];
-    logger.warn(
-      `Found potential token via fallback (length: ${longestToken.length})`
-    );
+    logger.warn(`Found potential token via fallback (length: ${longestToken.length})`);
     return longestToken;
   }
 
@@ -95,9 +91,7 @@ function extractSnlm0eToken(html: string): string | null {
  * @param cookieManager - Database-integrated cookie manager instance
  * @returns Token data
  */
-export async function extractTokens(
-  cookieManager: CookieManagerDB
-): Promise<TokenData> {
+export async function extractTokens(cookieManager: CookieManagerDB): Promise<TokenData> {
   logger.info("🔍 Extracting fresh token from Gemini page...");
 
   // Step 2: Validate cookies before fetching
@@ -108,9 +102,7 @@ export async function extractTokens(
       validationError: validation.error,
       parsedCookies: {
         __Secure_1PSID: cookies["__Secure-1PSID"] ? "✅ present" : "❌ MISSING",
-        __Secure_1PSIDTS: cookies["__Secure-1PSIDTS"]
-          ? "✅ present"
-          : "❌ MISSING",
+        __Secure_1PSIDTS: cookies["__Secure-1PSIDTS"] ? "✅ present" : "❌ MISSING",
       },
       totalCookies: Object.keys(cookies).length,
       cookieNames: Object.keys(cookies),
@@ -122,9 +114,7 @@ export async function extractTokens(
 
   logger.debug(`Using PSID: ${cookies["__Secure-1PSID"]?.substring(0, 20)}...`);
   if (cookies["__Secure-1PSIDTS"]) {
-    logger.debug(
-      `Using PSIDTS: ${cookies["__Secure-1PSIDTS"]?.substring(0, 20)}...`
-    );
+    logger.debug(`Using PSIDTS: ${cookies["__Secure-1PSIDTS"]?.substring(0, 20)}...`);
   }
 
   try {
@@ -134,16 +124,10 @@ export async function extractTokens(
     const httpService = createHttpService(cookieManager);
     const response = await httpService.get(`${config.geminiBaseUrl}/app`);
 
-    logger.debug(
-      `Response: ${response.statusCode} (${(
-        response.body.length / 1024
-      ).toFixed(2)} KB)`
-    );
+    logger.debug(`Response: ${response.statusCode} (${(response.body.length / 1024).toFixed(2)} KB)`);
 
     if (response.statusCode !== 200) {
-      throw new Error(
-        `Failed to fetch Gemini page: ${response.statusCode} ${response.statusMessage}`
-      );
+      throw new Error(`Failed to fetch Gemini page: ${response.statusCode} ${response.statusMessage}`);
     }
 
     const html = response.body;
@@ -165,25 +149,15 @@ export async function extractTokens(
 
       // Try to find out why the page content might be wrong
       if (html.includes("accounts.google.com")) {
-        logger.error(
-          "Page content suggests a redirect to login page. Cookies might be invalid or expired."
-        );
-        throw new Error(
-          "Token extraction failed: Redirected to login page. Cookies may be invalid."
-        );
+        logger.error("Page content suggests a redirect to login page. Cookies might be invalid or expired.");
+        throw new Error("Token extraction failed: Redirected to login page. Cookies may be invalid.");
       }
       if (html.includes("consent.google.com")) {
-        logger.error(
-          "Page content suggests a cookie consent screen is blocking access."
-        );
-        throw new Error(
-          "Token extraction failed: Blocked by cookie consent screen."
-        );
+        logger.error("Page content suggests a cookie consent screen is blocking access.");
+        throw new Error("Token extraction failed: Blocked by cookie consent screen.");
       }
       if (html.length < 1000) {
-        logger.error(
-          "HTML content is unusually small, suggesting an error page or incomplete load."
-        );
+        logger.error("HTML content is unusually small, suggesting an error page or incomplete load.");
       }
 
       throw new Error(errorDetails.message);
