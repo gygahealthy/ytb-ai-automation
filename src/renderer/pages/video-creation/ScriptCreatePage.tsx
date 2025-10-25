@@ -295,6 +295,8 @@ const ScriptCreatePage: React.FC = () => {
         onViewModeChange={setViewMode}
         currentStep={currentStep}
         onStepChange={setCurrentStep}
+        hasTopicOrScript={!!(selectedTopic || topic.trim() || editedScript.trim())}
+        hasScript={!!editedScript.trim()}
       />
       <div className="flex-1 overflow-hidden">
         {/* Step-by-Step Mode */}

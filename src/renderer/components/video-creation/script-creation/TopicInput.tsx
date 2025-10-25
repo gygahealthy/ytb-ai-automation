@@ -1,5 +1,5 @@
 import React from "react";
-import { Wand2, Sparkles } from "lucide-react";
+import { Lightbulb, Sparkles } from "lucide-react";
 import { HintForTopicPrompt } from "./HintForTopicPrompt";
 import { AITopicSuggestions } from "./AITopicSuggestions";
 
@@ -37,8 +37,21 @@ export const TopicInput: React.FC<TopicInputProps> = ({
         What is your video's topic IDEA?
       </label>
 
-      {/* Input Row: Topic Input + Number of Topics + Generate Button */}
+      {/* Input Row: Generate Button (left) + Topic Input + Number of Topics */}
       <div className="flex gap-3 mb-4">
+        <button
+          onClick={onGenerateTopics}
+          disabled={isGenerating || !topic.trim()}
+          className="px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap shadow-md"
+          title="Generate AI topic hints"
+        >
+          {isGenerating ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Lightbulb className="w-4 h-4" />
+          )}
+          <span className="hidden sm:inline">Hint</span>
+        </button>
         <input
           type="text"
           value={topic}
@@ -56,19 +69,6 @@ export const TopicInput: React.FC<TopicInputProps> = ({
             className="w-16 px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             title="Number of topics to generate"
           />
-          <button
-            onClick={onGenerateTopics}
-            disabled={isGenerating || !topic.trim()}
-            className="px-4 py-3 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-            title="Generate AI topic suggestions"
-          >
-            {isGenerating ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Wand2 className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">Generate</span>
-          </button>
         </div>
       </div>
 

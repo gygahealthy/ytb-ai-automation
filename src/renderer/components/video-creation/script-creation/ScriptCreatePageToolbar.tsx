@@ -7,6 +7,8 @@ interface ScriptCreatePageToolbarProps {
   onViewModeChange: (mode: "step-by-step" | "simple") => void;
   currentStep: 1 | 2 | 3;
   onStepChange: (step: 1 | 2 | 3) => void;
+  hasTopicOrScript?: boolean;
+  hasScript?: boolean;
 }
 
 export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = ({
@@ -14,6 +16,8 @@ export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = (
   onViewModeChange,
   currentStep,
   onStepChange,
+  hasTopicOrScript = false,
+  hasScript = false,
 }) => {
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 z-10">
@@ -70,7 +74,18 @@ export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = (
                   </div>
                   <span className="text-sm font-medium">Topic & Style</span>
                 </button>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <button
+                  onClick={() => hasTopicOrScript && currentStep !== 2 && onStepChange(2)}
+                  disabled={!hasTopicOrScript || currentStep === 2}
+                  className={`transition-all ${
+                    hasTopicOrScript && currentStep !== 2 ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed"
+                  }`}
+                  title={hasTopicOrScript ? "Go to Edit Script" : "Generate a script first"}
+                >
+                  <ChevronRight className={`w-4 h-4 ${
+                    hasTopicOrScript ? "text-blue-500" : "text-gray-400"
+                  }`} />
+                </button>
                 <button
                   onClick={() => currentStep >= 2 && onStepChange(2)}
                   disabled={currentStep < 2}
@@ -91,7 +106,18 @@ export const ScriptCreatePageToolbar: React.FC<ScriptCreatePageToolbarProps> = (
                   </div>
                   <span className="text-sm font-medium">Edit Script & Visual Style</span>
                 </button>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <button
+                  onClick={() => hasScript && currentStep !== 3 && onStepChange(3)}
+                  disabled={!hasScript || currentStep === 3}
+                  className={`transition-all ${
+                    hasScript && currentStep !== 3 ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed"
+                  }`}
+                  title={hasScript ? "Go to Generate Prompts" : "Generate a script first"}
+                >
+                  <ChevronRight className={`w-4 h-4 ${
+                    hasScript ? "text-blue-500" : "text-gray-400"
+                  }`} />
+                </button>
                 <button
                   onClick={() => currentStep >= 3 && onStepChange(3)}
                   disabled={currentStep < 3}
