@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useEffect, useState } from "react";
 import Drawer, { DrawerProps } from "../components/common/Drawer";
 import { useLogStore } from "../store/log.store";
 
@@ -10,7 +10,7 @@ interface DrawerContextValue {
   setIsPinned: (pinned: boolean) => void;
 }
 
-const DrawerContext = createContext<DrawerContextValue | undefined>(undefined);
+export const DrawerContext = createContext<DrawerContextValue | undefined>(undefined);
 
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [drawerProps, setDrawerProps] = useState<Omit<DrawerProps, "isOpen" | "onClose"> | null>(null);
@@ -148,17 +148,4 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
       {drawerProps && <Drawer {...drawerProps} isOpen={true} onClose={closeDrawer} onPinChange={setIsPinned} />}
     </DrawerContext.Provider>
   );
-}
-
-export function useDrawer() {
-  const context = useContext(DrawerContext);
-  if (!context) {
-    throw new Error("useDrawer must be used within DrawerProvider");
-  }
-  return context;
-}
-
-// Safe hook that returns the drawer context or undefined when not inside a provider.
-export function useOptionalDrawer() {
-  return useContext(DrawerContext);
 }

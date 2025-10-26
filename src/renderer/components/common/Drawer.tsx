@@ -107,13 +107,13 @@ export default function Drawer({
       {/* Drawer */}
       <div
         className={clsx(
-          "fixed top-0 bottom-0 bg-white dark:bg-gray-800 shadow-2xl overflow-y-auto transform transition-all duration-300",
+          "fixed top-0 bottom-0 bg-white dark:bg-gray-800 shadow-2xl transform transition-all duration-300 flex flex-col",
           sideClass,
           drawerWidth,
           isPinned ? "z-30" : "z-50"
         )}
       >
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between z-10">
+        <div className="flex-none sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between z-10">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             {icon}
             {title}
@@ -141,7 +141,9 @@ export default function Drawer({
           </div>
         </div>
 
-        <div className="p-4">{children}</div>
+        <div className="p-4 flex flex-col flex-1">
+          <div className="flex-1 overflow-y-auto">{children}</div>
+        </div>
       </div>
     </>
   );

@@ -16,9 +16,16 @@ import { logger } from "@main/utils/logger-backend";
  * - Stores full cookie data including HttpOnly, Secure flags
  * - Supports both headless and visible browser modes
  * - Handles profile locking to prevent concurrent extractions
+ * - Applies rotation configuration if provided
  */
-export const extractAndCreateHandler = async (req: { profileId: string; service: string; url: string; headless?: boolean }) => {
-  const { profileId, service, url, headless = true } = req as any;
+export const extractAndCreateHandler = async (req: {
+  profileId: string;
+  service: string;
+  url: string;
+  headless?: boolean;
+  rotationConfig?: any;
+}) => {
+  const { profileId, service, url, headless = true, rotationConfig } = req as any;
 
   if (!profileId || !service || !url) {
     return {
@@ -104,10 +111,27 @@ export const extractAndCreateHandler = async (req: { profileId: string; service:
       };
     }
 
+    // If rotation config was provided, update the stored cookie with rotation settings
+    if (rotationConfig && storeResult.data) {
+      logger.info("[cookies:extractAndCreate] Applying rotation config to extracted cookie", {
+        cookieId: storeResult.data.id,
+        rotationConfig: rotationConfig,
+      });
+
+      await cookieService.repository.updateRotationConfig(storeResult.data.id, rotationConfig);
+
+      // Fetch updated cookie with rotation config applied
+      const updatedCookie = await cookieService.repository.findById(storeResult.data.id);
+      if (updatedCookie) {
+        storeResult.data = updatedCookie;
+      }
+    }
+
     logger.info("[cookies:extractAndCreate] Extraction and storage completed successfully", {
       service,
       url,
       totalExtracted: extractResult.data!.cookies.length,
+      rotationConfigApplied: !!rotationConfig,
     });
 
     return storeResult;

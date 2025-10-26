@@ -80,7 +80,9 @@ export interface Cookie {
   rotationData?: string; // JSON string
   rotationIntervalMinutes: number;
   status: "active" | "expired" | "renewal_failed";
-  // Rotation configuration fields
+  // Rotation profile reference
+  rotationProfileId?: string | null; // Foreign key to rotation_profiles table
+  // Rotation configuration fields (can override profile settings)
   launchWorkerOnStartup: number; // 0 = false, 1 = true
   enabledRotationMethods: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
   rotationMethodOrder: string; // JSON array: ["refreshCreds", "rotateCookie", "headless"]
@@ -105,6 +107,8 @@ export interface CookieRow {
   rotation_data?: string;
   rotation_interval_minutes: number;
   status: "active" | "expired" | "renewal_failed";
+  // Rotation profile reference
+  rotation_profile_id?: string | null; // Foreign key to rotation_profiles table
   // Rotation configuration fields
   launch_worker_on_startup: number; // 0 = false, 1 = true
   enabled_rotation_methods: string; // JSON array

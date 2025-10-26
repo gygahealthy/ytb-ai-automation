@@ -13,6 +13,11 @@ import { CookieRepository } from "../repository/cookie.repository.js";
 export class CookieService {
   constructor(private cookieRepository: CookieRepository) {}
 
+  // Expose repository for cases where direct repository access is needed
+  get repository(): CookieRepository {
+    return this.cookieRepository;
+  }
+
   /**
    * Extract cookies from browser and prepare them with DB context
    * Loads required cookies from DB, delegates extraction to CookieExtractionService,
@@ -156,6 +161,15 @@ export class CookieService {
 
       const { v4: uuidv4 } = await import("uuid");
       const now = new Date().toISOString();
+
+      // Extract rotation config if provided in data.rotationConfig or at root level
+      const rotationConfig = (data as any).rotationConfig || {};
+      const requiredCookies = rotationConfig.required_cookies
+        ? typeof rotationConfig.required_cookies === "string"
+          ? JSON.parse(rotationConfig.required_cookies)
+          : rotationConfig.required_cookies
+        : ["__Secure-3PSIDCC"];
+
       const cookie: Cookie = {
         id: uuidv4(),
         profileId,
@@ -165,14 +179,32 @@ export class CookieService {
         lastRotatedAt: data.lastRotatedAt,
         spidExpiration: data.spidExpiration,
         rotationData: data.rotationData,
-        rotationIntervalMinutes: data.rotationIntervalMinutes ?? 1440, // Default 24 hours
+        rotationIntervalMinutes: rotationConfig.rotation_interval_minutes ?? data.rotationIntervalMinutes ?? 1440, // Default 24 hours
         status: "active",
-        launchWorkerOnStartup: data.launchWorkerOnStartup ?? 0,
-        enabledRotationMethods: data.enabledRotationMethods ?? '["refreshCreds","rotateCookie"]',
-        rotationMethodOrder: data.rotationMethodOrder ?? '["refreshCreds","rotateCookie","headless"]',
+        launchWorkerOnStartup: rotationConfig.launch_worker_on_startup ?? data.launchWorkerOnStartup ?? 0,
+        enabledRotationMethods:
+          typeof rotationConfig.enabled_rotation_methods === "string"
+            ? rotationConfig.enabled_rotation_methods
+            : JSON.stringify(rotationConfig.enabled_rotation_methods ?? ["refreshCreds", "rotateCookie"]),
+        rotationMethodOrder:
+          typeof rotationConfig.rotation_method_order === "string"
+            ? rotationConfig.rotation_method_order
+            : JSON.stringify(rotationConfig.rotation_method_order ?? ["refreshCreds", "rotateCookie", "headless"]),
+        requiredCookies,
         createdAt: now,
         updatedAt: now,
       };
+
+      logger.info("[cookie.service] Creating new cookie with rotation config", {
+        cookieId: cookie.id,
+        profileId,
+        url,
+        service,
+        launchWorkerOnStartup: cookie.launchWorkerOnStartup,
+        rotationIntervalMinutes: cookie.rotationIntervalMinutes,
+        enabledRotationMethods: cookie.enabledRotationMethods,
+        requiredCookies: cookie.requiredCookies,
+      });
 
       await this.cookieRepository.insert(cookie);
 

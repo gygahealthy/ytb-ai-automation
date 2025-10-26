@@ -98,6 +98,24 @@ declare global {
       componentDiscovery: {
         getComponentTreeForUI: () => Promise<any>;
       };
+      cookies: {
+        getCookiesByProfile: (profileId: string) => Promise<any>;
+        getCookie: (profileId: string, url: string) => Promise<any>;
+        createCookie: (profileId: string, url: string, data: any) => Promise<any>;
+        updateRotationInterval: (id: string, rotationIntervalMinutes: number) => Promise<any>;
+        updateStatus: (id: string, status: string) => Promise<any>;
+        deleteCookie: (id: string) => Promise<any>;
+        deleteByProfile: (profileId: string) => Promise<any>;
+        getDueForRotation: () => Promise<any>;
+        getByStatus: (status: string) => Promise<any>;
+        extractAndCreateCookie: (
+          profileId: string,
+          service: string,
+          url: string,
+          headless?: boolean,
+          rotationConfig?: any
+        ) => Promise<any>;
+      };
       cookieRotation: {
         getStatus: () => Promise<any>;
         getProfiles: () => Promise<any>;

@@ -85,8 +85,8 @@ export const cookieRegistrations: IpcRegistration[] = [
   {
     channel: "gemini:cookies:extractAndCreate",
     description: "Extract cookies from URL for a profile",
-    handler: async (req: { profileId: string; service: string; url: string }) => {
-      return await extractAndCreateHandler(req as any);
+    handler: async (req: any) => {
+      return await extractAndCreateHandler(req);
     },
   },
   {

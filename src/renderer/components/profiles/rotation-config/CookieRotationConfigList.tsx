@@ -21,6 +21,7 @@ interface ProfileWithCookieConfig {
 interface CookieRotationConfigListProps {
   profiles: ProfileWithCookieConfig[];
   onUpdateConfig: (cookieId: string, config: Partial<CookieRotationConfig>) => Promise<void>;
+  onDeleteCookie?: (profileId: string, cookieId: string) => Promise<void>;
   onAddCookie?: (profileId: string) => void;
   onForceHeadlessRefresh?: (profileId: string, cookieId: string) => Promise<void>;
   onForceVisibleRefresh?: (profileId: string, cookieId: string) => Promise<void>;
@@ -32,6 +33,7 @@ interface CookieRotationConfigListProps {
 export default function CookieRotationConfigList({
   profiles,
   onUpdateConfig,
+  onDeleteCookie,
   onAddCookie,
   onForceHeadlessRefresh,
   onForceVisibleRefresh,
@@ -126,6 +128,7 @@ export default function CookieRotationConfigList({
                       cookie={cookie}
                       profileName={profile.profileName || profile.profileId}
                       onUpdateConfig={onUpdateConfig}
+                      onDeleteCookie={onDeleteCookie ? (cookieId) => onDeleteCookie(profile.profileId, cookieId) : undefined}
                       onForceHeadlessRefresh={
                         onForceHeadlessRefresh ? (cookieId) => onForceHeadlessRefresh(profile.profileId, cookieId) : undefined
                       }

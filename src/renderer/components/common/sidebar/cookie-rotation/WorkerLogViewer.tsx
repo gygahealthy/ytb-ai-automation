@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Terminal, X, ArrowDown, ArrowUp, Search, RefreshCw, Trash2 } from "lucide-react";
+import { Terminal, X, ArrowDown, ArrowUp, ArrowLeft, Search, RefreshCw, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 interface WorkerLogEntry {
@@ -22,6 +22,8 @@ interface WorkerLogViewerProps {
   profileId?: string;
   profileName?: string;
   onClose?: () => void;
+  // onBack should navigate back to the parent panel without closing the drawer
+  onBack?: () => void;
   maxHeight?: string;
 }
 
@@ -30,6 +32,7 @@ export default function WorkerLogViewer({
   profileId,
   profileName,
   onClose,
+  onBack,
   maxHeight = "400px",
 }: WorkerLogViewerProps) {
   const [logs, setLogs] = useState<WorkerLogEntry[]>([]);
@@ -162,6 +165,16 @@ export default function WorkerLogViewer({
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 mr-1"
+                title="Back to rotation panel"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            )}
             <div className="p-1.5 rounded bg-blue-500 shadow-sm">
               <Terminal className="w-4 h-4 text-white" />
             </div>

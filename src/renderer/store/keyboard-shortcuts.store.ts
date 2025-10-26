@@ -8,7 +8,8 @@ export type ShortcutAction =
   | "toggle-history"
   | "toggle-profile-select"
   | "toggle-logs"
-  | "pin-drawer";
+  | "pin-drawer"
+  | "open-cookie-rotation";
 
 // Added navigation shortcuts
 export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
@@ -81,6 +82,13 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     description: "Pin or unpin the currently open drawer",
     keys: ["Ctrl", "N"],
     icon: "Pin",
+  },
+  {
+    id: "open-cookie-rotation",
+    label: "Open Cookie Rotation",
+    description: "Open the Cookie Rotation drawer",
+    keys: ["Ctrl", "T"],
+    icon: "RefreshCw",
   },
   // Navigation: Alt + ArrowLeft / Alt + ArrowRight
   {

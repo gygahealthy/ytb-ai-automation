@@ -170,12 +170,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     deleteByProfile: (profileId: string) => ipcRenderer.invoke("gemini:cookies:deleteByProfile", { profileId }),
     getDueForRotation: () => ipcRenderer.invoke("gemini:cookies:getDueForRotation"),
     getByStatus: (status: string) => ipcRenderer.invoke("gemini:cookies:getByStatus", { status }),
-    extractAndCreateCookie: (profileId: string, service: string, url: string, headless: boolean = true) =>
+    extractAndCreateCookie: (profileId: string, service: string, url: string, headless: boolean = true, rotationConfig?: any) =>
       ipcRenderer.invoke("gemini:cookies:extractAndCreate", {
         profileId,
         service,
         url,
         headless,
+        rotationConfig,
       }),
   },
 

@@ -1,11 +1,7 @@
 import clsx from "clsx";
 import { Maximize2, Moon, Palette, Sun, Type, Zap } from "lucide-react";
 // no default React import needed with modern JSX transform
-import {
-  ColorScheme,
-  FontSize,
-  useSettingsStore,
-} from "../../../store/settings.store";
+import { ColorScheme, FontSize, useSettingsStore } from "../../../store/settings.store";
 
 const colorSchemes: { value: ColorScheme; label: string; color: string }[] = [
   { value: "blue", label: "Blue", color: "bg-blue-500" },
@@ -44,8 +40,8 @@ export default function GeneralSettings() {
       {/* Theme Selection */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Theme</label>
+          <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Theme</label>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -53,8 +49,8 @@ export default function GeneralSettings() {
             className={clsx(
               "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all",
               theme === "light"
-                ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-800"
             )}
           >
             <Sun className="w-4 h-4" />
@@ -65,8 +61,8 @@ export default function GeneralSettings() {
             className={clsx(
               "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all",
               theme === "dark"
-                ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-800"
             )}
           >
             <Moon className="w-4 h-4" />
@@ -78,8 +74,8 @@ export default function GeneralSettings() {
       {/* Color Scheme Selection */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Palette className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Color Scheme</label>
+          <Palette className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Color Scheme</label>
         </div>
         <div className="grid grid-cols-4 gap-3">
           {colorSchemes.map((scheme) => (
@@ -89,12 +85,12 @@ export default function GeneralSettings() {
               className={clsx(
                 "flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 font-medium transition-all",
                 colorScheme === scheme.value
-                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
               )}
             >
               <div className={clsx("w-4 h-4 rounded-full", scheme.color)} />
-              <span className="text-sm">{scheme.label}</span>
+              <span className="text-sm text-gray-800 dark:text-gray-100">{scheme.label}</span>
             </button>
           ))}
         </div>
@@ -103,16 +99,16 @@ export default function GeneralSettings() {
       {/* Compact Mode */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Compact Mode</label>
+          <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Compact Mode</label>
         </div>
         <button
           onClick={() => setCompactMode(!compactMode)}
           className={clsx(
             "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
             compactMode
-              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
-              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+              ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
           )}
         >
           <span>Reduce spacing and padding</span>
@@ -135,8 +131,8 @@ export default function GeneralSettings() {
       {/* Font Size */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Type className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Font Size</label>
+          <Type className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Font Size</label>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {fontSizes.map((size) => (
@@ -146,8 +142,8 @@ export default function GeneralSettings() {
               className={clsx(
                 "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all",
                 fontSize === size.value
-                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
               )}
             >
               <span className={size.size}>{size.label}</span>
@@ -159,25 +155,23 @@ export default function GeneralSettings() {
       {/* Streaming Response */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Zap className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Streaming Response</label>
+          <Zap className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Streaming Response</label>
         </div>
         <button
           onClick={() => setStreamingEnabled(!streamingEnabled)}
           className={clsx(
             "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
             streamingEnabled
-              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
-              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+              ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
           )}
         >
           <span>Stream chat responses in real-time</span>
           <div
             className={clsx(
               "w-12 h-6 rounded-full transition-colors relative",
-              streamingEnabled
-                ? "bg-primary-500"
-                : "bg-gray-300 dark:bg-gray-600"
+              streamingEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
             )}
           >
             <div

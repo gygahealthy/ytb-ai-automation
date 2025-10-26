@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import electronApi from "../ipc";
 import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
+import React from "react";
+import CookieRotationDrawerContent from "@/renderer/components/common/sidebar/cookie-rotation/CookieRotationDrawerContent";
 
 type ShortcutHandler = () => void;
 
@@ -72,6 +74,46 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
 
     // Try to pin other drawers via custom event
     window.dispatchEvent(new CustomEvent("pin-drawer"));
+  },
+  "open-cookie-rotation": () => {
+    console.log("[Keyboard] Open Cookie Rotation drawer triggered");
+    try {
+      const api = (window as any).__veo3_drawer_api;
+      const props = {
+        title: "Cookie Rotation",
+        icon: undefined,
+        // create element without JSX because this file is .ts
+        children: React.createElement(CookieRotationDrawerContent, null),
+        side: "right",
+        width: "w-96",
+        enablePin: true,
+        drawerId: "cookie-rotation",
+      } as any;
+
+      if (api) {
+        // Prefer toggle API if available to avoid close->reopen behavior
+        if (typeof api.toggle === "function") {
+          api.toggle(props);
+        } else {
+          // Fallback: check isOpen then close or open
+          try {
+            const isOpen = !!api.isOpen;
+            if (isOpen) {
+              api.close && api.close();
+            } else {
+              api.open && api.open(props);
+            }
+          } catch (err) {
+            // If checking failed, fallback to open
+            api.open && api.open(props);
+          }
+        }
+      } else {
+        console.warn("[Keyboard] Drawer API not available yet");
+      }
+    } catch (err) {
+      console.error("[Keyboard] Error opening cookie rotation drawer:", err);
+    }
   },
   "navigate-back": () => {
     console.log("[Keyboard] Navigate Back triggered");

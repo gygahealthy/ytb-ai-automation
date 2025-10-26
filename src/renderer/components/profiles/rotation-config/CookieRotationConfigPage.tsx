@@ -197,6 +197,30 @@ export default function CookieRotationConfigPage() {
     }
   };
 
+  const handleDeleteCookie = async (_profileId: string, cookieId: string) => {
+    try {
+      const result = await (window.electronAPI as any).cookies.deleteCookie(cookieId);
+      if (!result?.success) {
+        setSaveMessage({
+          type: "error",
+          text: `Failed to delete cookie: ${result?.error || "unknown error"}`,
+        });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        setSaveMessage({ type: "success", text: "Cookie deleted successfully" });
+        // Reload profiles to reflect the deletion
+        await loadProfiles();
+        setTimeout(() => setSaveMessage(null), 2000);
+      }
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: `Error deleting cookie: ${String(error)}`,
+      });
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+  };
+
   const handleSaveAll = async () => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -397,6 +421,7 @@ export default function CookieRotationConfigPage() {
         <CookieRotationConfigList
           profiles={profiles}
           onUpdateConfig={handleUpdateConfig}
+          onDeleteCookie={handleDeleteCookie}
           onAddCookie={handleAddCookie}
           onForceHeadlessRefresh={handleForceHeadlessRefresh}
           onForceVisibleRefresh={handleForceVisibleRefresh}

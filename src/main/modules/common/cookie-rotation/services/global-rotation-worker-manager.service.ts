@@ -794,7 +794,7 @@ export async function getGlobalRotationWorkerManager(): Promise<GlobalRotationWo
     const cookieRepository = new CookieRepository(db);
     const monitorRepository = new CookieRotationMonitorRepository(db);
 
-    // Initialize cookie-rotation module's config service holder with both repositories
+    // Initialize cookie-rotation module's config service holder with repositories
     try {
       cookieRotationConfigService.init(cookieRepository, monitorRepository);
     } catch (err) {

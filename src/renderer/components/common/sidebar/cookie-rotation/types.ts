@@ -1,5 +1,17 @@
 export type RotationMethod = "refreshCreds" | "rotateCookie" | "headless";
 
+export interface RotationProfile {
+  id: string;
+  profileName: string;
+  rotationUrl: string;
+  requiredCookies: string; // JSON string
+  rotationIntervalMinutes: number;
+  enabledRotationMethods: string; // JSON string
+  rotationMethodOrder: string; // JSON string
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CookieRotationConfig {
   cookieId: string;
   launchWorkerOnStartup: boolean;

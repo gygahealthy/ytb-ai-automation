@@ -6,7 +6,7 @@ import SettingsForm from "./components/common/settings/SettingsForm";
 // page components are now loaded via src/renderer/Routes.tsx
 import { Settings } from "lucide-react";
 import AppRoutes from "./Routes";
-import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
+import { DrawerProvider } from "./contexts/DrawerContext";
 import { GeminiChatProvider } from "./contexts/GeminiChatContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { OverlayPortalProvider } from "./contexts/OverlayPortalContext";
@@ -16,6 +16,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ModalProvider, useModal } from "./hooks/useModal";
 import { useLogStore } from "./store/log.store";
 import { useSettingsStore } from "./store/settings.store";
+import { useDrawer } from "./hooks/useDrawer";
 
 export type Page =
   | "dashboard"

@@ -9,7 +9,7 @@ import JobDetailsModal from "@components/video-creation/JobDetailsModal";
 import JsonToolbar from "@components/video-creation/JsonToolbar";
 import ProfileDrawer from "@components/video-creation/ProfileDrawer";
 import VideoPromptRow from "@components/video-creation/VideoPromptRow";
-import { useDrawer } from "@contexts/DrawerContext";
+import { useDrawer } from "@hooks/useDrawer";
 import { useVideoCreationStore } from "@store/video-creation.store";
 
 export default function SingleVideoCreationPage() {

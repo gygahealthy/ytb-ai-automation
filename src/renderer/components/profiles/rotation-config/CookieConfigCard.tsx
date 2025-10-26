@@ -1,7 +1,8 @@
-import { Settings, RefreshCw, Cpu, Clock, ChevronUp, ChevronDown, Play, Square, Zap, Info } from "lucide-react";
+import { Settings, RefreshCw, Cpu, Clock, ChevronUp, ChevronDown, Play, Square, Zap, Info, X, Edit } from "lucide-react";
 import type { CookieRotationConfig, RotationMethod } from "../../common/sidebar/cookie-rotation/types";
 import { useState } from "react";
 import CookieDetailModal from "../cookie/CookieDetailModal";
+import { CookieAddModal } from "./CookieAddModal";
 
 interface CookieConfigCardProps {
   cookie: {
@@ -15,6 +16,7 @@ interface CookieConfigCardProps {
   };
   profileName?: string;
   onUpdateConfig: (cookieId: string, config: Partial<CookieRotationConfig>) => Promise<void>;
+  onDeleteCookie?: (cookieId: string) => Promise<void>;
   onForceHeadlessRefresh?: (cookieId: string) => Promise<void>;
   onForceVisibleRefresh?: (cookieId: string) => Promise<void>;
   onStartWorker?: (cookieId: string) => Promise<void>;
@@ -26,6 +28,7 @@ export default function CookieConfigCard({
   cookie,
   profileName,
   onUpdateConfig,
+  onDeleteCookie,
   onForceHeadlessRefresh,
   onForceVisibleRefresh,
   onStartWorker,
@@ -33,6 +36,7 @@ export default function CookieConfigCard({
   workerStatus,
 }: CookieConfigCardProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Provide default config if missing
   const config: CookieRotationConfig = cookie.config || {
@@ -127,22 +131,57 @@ export default function CookieConfigCard({
       {/* Card Header with Profile Name and Service */}
       <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Worker Status Badge moved to leftmost of this row */}
+            <div
+              className="flex items-center gap-2 px-2 py-1 rounded border text-xs font-medium"
+              style={{
+                borderColor: isWorkerRunning ? "#86efac" : "#d1d5db",
+                backgroundColor: isWorkerRunning ? "rgba(34, 197, 94, 0.05)" : "transparent",
+                color: isWorkerRunning ? "#166534" : "#6b7280",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`w-2 h-2 rounded-full ${isWorkerRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+              <span>{isWorkerRunning ? "Running" : "Stopped"}</span>
+            </div>
+
             {profileName && <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Profile: {profileName}</p>}
           </div>
-          {/* Active Status Badge - Top Right */}
-          <span className={`px-2 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getActiveStatusColor()}`}>
-            {isActive ? "Active" : "Inactive"}
-          </span>
+
+          <div className="flex items-center gap-2">
+            {/* Active Status Badge (kept in top-right) */}
+            <span className={`px-2 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getActiveStatusColor()}`}>
+              {isActive ? "Active" : "Inactive"}
+            </span>
+            {/* Delete Button - X in Top Right Corner */}
+            {onDeleteCookie && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete cookie for ${cookie.service}?`)) {
+                    onDeleteCookie(cookie.cookieId);
+                  }
+                }}
+                className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                title="Delete cookie"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 mb-2">
-          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getServiceBadgeColor(cookie.service)}`}>
-            {cookie.service}
-          </span>
-          <span className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1" title={cookie.url}>
-            {new URL(cookie.url).hostname}
-          </span>
+          <div className="flex items-center gap-2 flex-1">
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getServiceBadgeColor(cookie.service)}`}>
+              {cookie.service}
+            </span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1" title={cookie.url}>
+              {new URL(cookie.url).hostname}
+            </span>
+          </div>
+          {/* space reserved for top-right actions handled above */}
         </div>
 
         {/* Action Icons and Worker Status */}
@@ -172,16 +211,7 @@ export default function CookieConfigCard({
                 <RefreshCw className="w-4 h-4" />
               </button>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDetailModal(true);
-              }}
-              className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              title="View cookie details"
-            >
-              <Info className="w-4 h-4" />
-            </button>
+            {/* Info button moved to the right side (see below) */}
             {onStartWorker || onStopWorker ? (
               <>
                 {isWorkerRunning ? (
@@ -209,18 +239,31 @@ export default function CookieConfigCard({
                 )}
               </>
             ) : null}
-          </div>{" "}
-          {/* Worker Status Indicator - Right Side */}
-          <div
-            className="flex items-center gap-2 px-2 py-1 rounded border text-xs font-medium"
-            style={{
-              borderColor: isWorkerRunning ? "#86efac" : "#d1d5db",
-              backgroundColor: isWorkerRunning ? "rgba(34, 197, 94, 0.05)" : "transparent",
-              color: isWorkerRunning ? "#166534" : "#6b7280",
-            }}
-          >
-            <div className={`w-2 h-2 rounded-full ${isWorkerRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
-            <span>{isWorkerRunning ? "Running" : "Stopped"}</span>
+          </div>
+
+          {/* Right side actions: moved Info icon here and add Edit icon that opens CookieAddModal */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEditModal(true);
+              }}
+              className="p-1.5 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded transition-colors"
+              title="Edit cookie"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDetailModal(true);
+              }}
+              className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="View cookie details"
+            >
+              <Info className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -424,6 +467,14 @@ export default function CookieConfigCard({
           updatedAt: new Date().toISOString(),
         }}
         onClose={() => setShowDetailModal(false)}
+      />
+
+      <CookieAddModal
+        isOpen={showEditModal}
+        profileId={""}
+        mode={"manual"}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={() => setShowEditModal(false)}
       />
     </div>
   );

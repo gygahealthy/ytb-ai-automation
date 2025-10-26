@@ -123,12 +123,22 @@ export class CookieRotationConfigService {
       return null;
     }
 
+    const enabledMethods = cookie.enabledRotationMethods
+      ? this.parseJsonArray(cookie.enabledRotationMethods)
+      : ["refreshCreds", "rotateCookie"];
+
+    const methodOrder = cookie.rotationMethodOrder
+      ? this.parseJsonArray(cookie.rotationMethodOrder)
+      : ["refreshCreds", "rotateCookie"];
+
+    const intervalMinutes = cookie.rotationIntervalMinutes || 60;
+
     return {
       cookieId: cookie.id,
       launchWorkerOnStartup: cookie.launchWorkerOnStartup === 1,
-      enabledRotationMethods: this.parseJsonArray(cookie.enabledRotationMethods),
-      rotationMethodOrder: this.parseJsonArray(cookie.rotationMethodOrder),
-      rotationIntervalMinutes: cookie.rotationIntervalMinutes,
+      enabledRotationMethods: enabledMethods as RotationMethod[],
+      rotationMethodOrder: methodOrder as RotationMethod[],
+      rotationIntervalMinutes: intervalMinutes,
     };
   }
 

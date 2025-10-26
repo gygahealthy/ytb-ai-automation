@@ -128,12 +128,6 @@ export class CookieRotationWorker extends EventEmitter {
 
     this.fileLogger.info(`${logContext}Starting worker for cookie ${this.cookieId}`);
 
-    // Phase 2: Perform initial refresh if requested (startup scenario)
-    if (this.options.performInitialRefresh) {
-      this.fileLogger.info(`${logContext}Performing initial headless refresh`);
-      await this.runRotationCycle({ forceHeadless: true });
-    }
-
     // Prefer parent-provided config (avoids uninitialized service in forked process)
     let config = this.options.config;
     if (!config) {
@@ -154,6 +148,19 @@ export class CookieRotationWorker extends EventEmitter {
     this.timer = setInterval(() => this.runRotationCycle(), intervalMs);
 
     this.fileLogger.info(`${logContext}Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
+
+    // Phase 2: Perform initial refresh if requested (startup scenario)
+    // CRITICAL: Run asynchronously AFTER worker reports "started" to avoid blocking the main process
+    if (this.options.performInitialRefresh) {
+      this.fileLogger.info(`${logContext}Performing initial headless refresh (background)`);
+      // Use setImmediate to ensure this runs after the worker reports "started"
+      setImmediate(() => {
+        this.runRotationCycle({ forceHeadless: true }).catch((error) => {
+          this.fileLogger.error(`${logContext}Initial refresh failed:`, error);
+          this.emit("rotationError", error instanceof Error ? error.message : "Initial refresh failed");
+        });
+      });
+    }
   }
 
   /**

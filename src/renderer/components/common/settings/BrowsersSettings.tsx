@@ -4,15 +4,14 @@ import { useSettingsStore } from "../../../store/settings.store";
 import clsx from "clsx";
 
 export default function BrowsersSettings({ onAdd }: { onAdd: () => void }) {
-  const { browserPaths, setDefaultBrowserPath, removeBrowserPath } =
-    useSettingsStore();
+  const { browserPaths, setDefaultBrowserPath, removeBrowserPath } = useSettingsStore();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <label className="font-semibold">Browser Executables</label>
+          <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <label className="font-semibold text-gray-900 dark:text-gray-100">Browser Executables</label>
         </div>
         <button
           onClick={onAdd}
@@ -24,12 +23,10 @@ export default function BrowsersSettings({ onAdd }: { onAdd: () => void }) {
       </div>
 
       {browserPaths.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <Globe className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No browser paths configured</p>
-          <p className="text-xs mt-1">
-            Click "Add Browser" to add a Chromium-based browser
-          </p>
+        <div className="text-center py-8 text-gray-600 dark:text-gray-300">
+          <Globe className="w-12 h-12 mx-auto mb-2 opacity-60 dark:opacity-40" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">No browser paths configured</p>
+          <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">Click "Add Browser" to add a Chromium-based browser</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -39,36 +36,25 @@ export default function BrowsersSettings({ onAdd }: { onAdd: () => void }) {
               className={clsx(
                 "flex items-center gap-3 p-3 rounded-lg border-2 transition-all",
                 bp.isDefault
-                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
+                  : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:bg-gray-800"
               )}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium truncate">{bp.name}</h4>
-                  {bp.isDefault && (
-                    <span className="px-2 py-0.5 text-xs bg-primary-500 text-white rounded-full">
-                      Default
-                    </span>
-                  )}
+                  {bp.isDefault && <span className="px-2 py-0.5 text-xs bg-primary-500 text-white rounded-full">Default</span>}
                 </div>
-                <p
-                  className="text-xs text-gray-600 dark:text-gray-400 truncate"
-                  title={bp.path}
-                >
+                <p className="text-xs text-gray-700 dark:text-gray-300 truncate" title={bp.path}>
                   {bp.path}
                 </p>
-                {bp.note && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                    {bp.note}
-                  </p>
-                )}
+                {bp.note && <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{bp.note}</p>}
               </div>
               <div className="flex items-center gap-2">
                 {!bp.isDefault && (
                   <button
                     onClick={() => setDefaultBrowserPath(bp.id)}
-                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
                     title="Set as default"
                   >
                     <Check className="w-4 h-4 text-gray-600 dark:text-gray-400" />
