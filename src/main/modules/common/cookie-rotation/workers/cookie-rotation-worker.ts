@@ -16,6 +16,7 @@ import { cookieRotationConfigService } from "../services/cookie-rotation-config.
 import type { RotationMethodResult, RotationMethodType } from "../types/rotation-method.types.js";
 import { EventEmitter } from "events";
 import { WorkerFileLogger } from "./worker-file-logger.js";
+import { profileRotationCoordinator } from "../helpers/profile-rotation-coordinator.js";
 
 /**
  * Worker configuration options
@@ -150,15 +151,15 @@ export class CookieRotationWorker extends EventEmitter {
     this.fileLogger.info(`${logContext}Scheduled rotation every ${config.rotationIntervalMinutes} minutes`);
 
     // Phase 2: Perform initial refresh if requested (startup scenario)
-    // CRITICAL: Run asynchronously AFTER worker reports "started" to avoid blocking the main process
+    // CRITICAL: Honor the staggered startup delays by NOT using setImmediate
+    // The coordinator's promise chaining will serialize rotations per profile
     if (this.options.performInitialRefresh) {
       this.fileLogger.info(`${logContext}Performing initial headless refresh (background)`);
-      // Use setImmediate to ensure this runs after the worker reports "started"
-      setImmediate(() => {
-        this.runRotationCycle({ forceHeadless: true }).catch((error) => {
-          this.fileLogger.error(`${logContext}Initial refresh failed:`, error);
-          this.emit("rotationError", error instanceof Error ? error.message : "Initial refresh failed");
-        });
+      // Start rotation immediately (coordinator will handle serialization)
+      // Do NOT use setImmediate - it would bypass staggered delays
+      this.runRotationCycle({ forceHeadless: true }).catch((error) => {
+        this.fileLogger.error(`${logContext}Initial refresh failed:`, error);
+        this.emit("rotationError", error instanceof Error ? error.message : "Initial refresh failed");
       });
     }
   }
@@ -215,121 +216,136 @@ export class CookieRotationWorker extends EventEmitter {
     const service = this.options.service || this.options.config?.service;
     const logContext = profileName ? `[${profileName}/${service || "unknown"}] ` : "";
 
-    this.fileLogger.info(`${logContext}Running rotation cycle`);
-    const cycleStartTime = Date.now();
+    // Get profileId for coordination
+    const profileId = this.options.profileId || this.options.config?.profileId;
+    if (!profileId) {
+      this.fileLogger.error(`${logContext}No profileId available for rotation coordination`);
+      return;
+    }
 
-    try {
-      // 1. Get config (prefer parent-provided, fallback to service)
-      let config = this.options.config;
-      if (!config) {
-        const fetchedConfig = await cookieRotationConfigService.getCookieConfig(this.cookieId);
-        if (!fetchedConfig) {
-          this.fileLogger.error(`${logContext}Config not found for ${this.cookieId}`);
+    // Use profile rotation coordinator to prevent simultaneous rotations on same profile
+    return profileRotationCoordinator.executeRotation(profileId, this.cookieId, async () => {
+      // REMOVED: Random jitter is counterproductive with promise chaining
+      // The coordinator already ensures serial execution via promise chains
+      // Jitter could cause second cookie to start Chrome before first cookie finishes
+      // The 4-second cleanup delay at the end is sufficient
+
+      this.fileLogger.info(`${logContext}Running rotation cycle`);
+      const cycleStartTime = Date.now();
+
+      try {
+        // 1. Get config (prefer parent-provided, fallback to service)
+        let config = this.options.config;
+        if (!config) {
+          const fetchedConfig = await cookieRotationConfigService.getCookieConfig(this.cookieId);
+          if (!fetchedConfig) {
+            this.fileLogger.error(`${logContext}Config not found for ${this.cookieId}`);
+            return;
+          }
+          config = fetchedConfig;
+        }
+
+        // 2. Fetch current cookie data
+        const db = await this.getWorkerSafeDatabase();
+        const { CookieRepository } = await import("../../cookie/repository/cookie.repository.js");
+        const cookieRepository = new CookieRepository(db);
+        const cookie = await cookieRepository.findById(this.cookieId);
+        if (!cookie) {
+          this.fileLogger.error(`[CookieRotationWorker] Cookie ${this.cookieId} not found in DB`);
           return;
         }
-        config = fetchedConfig;
-      }
 
-      // 2. Fetch current cookie data
-      const db = await this.getWorkerSafeDatabase();
-      const { CookieRepository } = await import("../../cookie/repository/cookie.repository.js");
-      const cookieRepository = new CookieRepository(db);
-      const cookie = await cookieRepository.findById(this.cookieId);
-      if (!cookie) {
-        this.fileLogger.error(`[CookieRotationWorker] Cookie ${this.cookieId} not found in DB`);
-        return;
-      }
+        // 3. Parse cookies into CookieCollection
+        const cookies = this.parseCookieString(cookie.rawCookieString || "");
 
-      // 3. Parse cookies into CookieCollection
-      const cookies = this.parseCookieString(cookie.rawCookieString || "");
+        // 4. Determine method order
+        let methodsToTry = config.enabledRotationMethods.filter((method) => config.rotationMethodOrder.includes(method));
 
-      // 4. Determine method order
-      let methodsToTry = config.enabledRotationMethods.filter((method) => config.rotationMethodOrder.includes(method));
-
-      // Sort by the order specified in rotationMethodOrder
-      methodsToTry.sort((a, b) => {
-        return config.rotationMethodOrder.indexOf(a) - config.rotationMethodOrder.indexOf(b);
-      });
-
-      // If forceHeadless, put headless first (Phase 2 startup behavior)
-      if (options?.forceHeadless && methodsToTry.includes("headless")) {
-        methodsToTry = ["headless", ...methodsToTry.filter((m) => m !== "headless")];
-      }
-
-      if (methodsToTry.length === 0) {
-        this.fileLogger.warn(`[CookieRotationWorker] No rotation methods enabled for ${this.cookieId}`);
-        return;
-      }
-
-      this.fileLogger.info(`[CookieRotationWorker] Attempting methods in order: ${methodsToTry.join(" → ")}`);
-
-      // 5. Try each method until one succeeds
-      let lastResult: RotationMethodResult | null = null;
-
-      for (const methodName of methodsToTry) {
-        const method = rotationMethodRegistry.get(methodName);
-        if (!method) {
-          this.fileLogger.warn(`[CookieRotationWorker] Method ${methodName} not found in registry`);
-          continue;
-        }
-
-        this.fileLogger.info(`[CookieRotationWorker] Trying method: ${methodName}`);
-        const result = await method.execute(cookies, {
-          proxy: this.options.proxy,
-          cookieId: this.cookieId,
-          profileId: cookie.profileId,
+        // Sort by the order specified in rotationMethodOrder
+        methodsToTry.sort((a, b) => {
+          return config.rotationMethodOrder.indexOf(a) - config.rotationMethodOrder.indexOf(b);
         });
 
-        lastResult = result;
+        // If forceHeadless, put headless first (Phase 2 startup behavior)
+        if (options?.forceHeadless && methodsToTry.includes("headless")) {
+          methodsToTry = ["headless", ...methodsToTry.filter((m) => m !== "headless")];
+        }
 
-        if (result.success) {
-          this.fileLogger.info(`[CookieRotationWorker] ✅ Method ${methodName} succeeded in ${result.duration}ms`);
+        if (methodsToTry.length === 0) {
+          this.fileLogger.warn(`[CookieRotationWorker] No rotation methods enabled for ${this.cookieId}`);
+          return;
+        }
 
-          // Update cookies in database
-          if (result.updatedCookies) {
-            const updatedCookieString = this.buildCookieString({
-              ...cookies,
-              ...result.updatedCookies,
-            });
-            await cookieRepository.update(this.cookieId, {
-              rawCookieString: updatedCookieString,
-              lastRotatedAt: new Date().toISOString(),
-            });
+        this.fileLogger.info(`[CookieRotationWorker] Attempting methods in order: ${methodsToTry.join(" → ")}`);
+
+        // 5. Try each method until one succeeds
+        let lastResult: RotationMethodResult | null = null;
+
+        for (const methodName of methodsToTry) {
+          const method = rotationMethodRegistry.get(methodName);
+          if (!method) {
+            this.fileLogger.warn(`[CookieRotationWorker] Method ${methodName} not found in registry`);
+            continue;
           }
 
-          // Update stats
-          this.stats.rotations++;
-          this.stats.lastRotation = new Date();
-          this.stats.lastRotationDuration = Date.now() - cycleStartTime;
-          this.stats.lastSuccessfulMethod = methodName;
+          this.fileLogger.info(`[CookieRotationWorker] Trying method: ${methodName}`);
+          const result = await method.execute(cookies, {
+            proxy: this.options.proxy,
+            cookieId: this.cookieId,
+            profileId: cookie.profileId,
+          });
 
-          // Update monitoring table
-          await this.updateMonitor(methodName, true, result);
+          lastResult = result;
 
-          // Emit success event
-          this.emit("rotationSuccess", result);
+          if (result.success) {
+            this.fileLogger.info(`[CookieRotationWorker] ✅ Method ${methodName} succeeded in ${result.duration}ms`);
 
-          return; // Success - exit early
-        } else {
-          this.fileLogger.warn(`[CookieRotationWorker] ⚠️ Method ${methodName} failed: ${result.error}`);
-          this.emit("rotationError", result.error || "Unknown error");
+            // Update cookies in database
+            if (result.updatedCookies) {
+              const updatedCookieString = this.buildCookieString({
+                ...cookies,
+                ...result.updatedCookies,
+              });
+              await cookieRepository.update(this.cookieId, {
+                rawCookieString: updatedCookieString,
+                lastRotatedAt: new Date().toISOString(),
+              });
+            }
+
+            // Update stats
+            this.stats.rotations++;
+            this.stats.lastRotation = new Date();
+            this.stats.lastRotationDuration = Date.now() - cycleStartTime;
+            this.stats.lastSuccessfulMethod = methodName;
+
+            // Update monitoring table
+            await this.updateMonitor(methodName, true, result);
+
+            // Emit success event
+            this.emit("rotationSuccess", result);
+
+            return; // Success - exit early
+          } else {
+            this.fileLogger.warn(`[CookieRotationWorker] ⚠️ Method ${methodName} failed: ${result.error}`);
+            this.emit("rotationError", result.error || "Unknown error");
+          }
         }
+
+        // All methods failed
+        this.fileLogger.error(`[CookieRotationWorker] ❌ All rotation methods failed for ${this.cookieId}`);
+        this.stats.rotationErrors++;
+
+        if (lastResult) {
+          await this.updateMonitor("unknown", false, lastResult);
+        }
+
+        this.emit("rotationError", "All rotation methods failed");
+      } catch (error) {
+        this.fileLogger.error(`[CookieRotationWorker] Rotation cycle error for ${this.cookieId}:`, error);
+        this.stats.rotationErrors++;
+        this.emit("rotationError", error instanceof Error ? error.message : "Unknown error");
       }
-
-      // All methods failed
-      this.fileLogger.error(`[CookieRotationWorker] ❌ All rotation methods failed for ${this.cookieId}`);
-      this.stats.rotationErrors++;
-
-      if (lastResult) {
-        await this.updateMonitor("unknown", false, lastResult);
-      }
-
-      this.emit("rotationError", "All rotation methods failed");
-    } catch (error) {
-      this.fileLogger.error(`[CookieRotationWorker] Rotation cycle error for ${this.cookieId}:`, error);
-      this.stats.rotationErrors++;
-      this.emit("rotationError", error instanceof Error ? error.message : "Unknown error");
-    }
+    }); // End of profileRotationCoordinator.executeRotation
   }
 
   /**

@@ -90,6 +90,15 @@ export class CookieExtractionService {
 
       let allCookies = await navigateAndExtractCookies(page, targetUrl, headless, requiredCookies);
 
+      // Check if extraction returned any cookies
+      if (!allCookies || allCookies.length === 0) {
+        logger.error("[CookieExtractionService] No cookies extracted (page may have closed prematurely)");
+        return {
+          success: false,
+          error: "No cookies extracted - page may have closed or navigation failed",
+        };
+      }
+
       // Non-headless mode: wait for interactive login if needed
       if (!headless) {
         allCookies = await this.handleInteractiveExtraction(page, allCookies, maxWaitMs, inactivityThresholdMs);

@@ -113,13 +113,24 @@ export async function extractCookiesNonHeadless(page: any, targetUrl: string, re
     return finalCookies;
   } catch (gotoError) {
     logger.warn("[cookie-extraction] Error navigating to target URL in non-headless mode", gotoError);
+
     // Continue anyway - extract whatever cookies are available
-    const cookies = await page.cookies();
-    logger.info("[cookie-extraction] Extracting ALL available cookies after error:", {
-      totalCookies: cookies.length,
-      domains: [...new Set(cookies.map((c: any) => c.domain))],
-    });
-    return cookies;
+    try {
+      if (page && (!page.isClosed || !page.isClosed())) {
+        const cookies = await page.cookies();
+        logger.info("[cookie-extraction] Extracting ALL available cookies after error:", {
+          totalCookies: cookies.length,
+          domains: [...new Set(cookies.map((c: any) => c.domain))],
+        });
+        return cookies;
+      } else {
+        logger.error("[cookie-extraction] Page is closed, cannot extract cookies");
+        return [];
+      }
+    } catch (cookieError) {
+      logger.error("[cookie-extraction] Failed to extract cookies (page likely closed)", cookieError);
+      return [];
+    }
   }
 }
 
@@ -136,6 +147,20 @@ export async function extractCookiesNonHeadless(page: any, targetUrl: string, re
 export async function extractCookiesHeadless(page: any, targetUrl: string, requiredCookies?: string[]): Promise<any[]> {
   logger.info("[cookie-extraction] HEADLESS mode: Running in background (no visible window)");
   logger.info("[cookie-extraction] Loading profile cookies from user-data-dir...");
+
+  // First, try to extract cookies that are already loaded from profile (before any navigation)
+  let initialCookies: any[] = [];
+  try {
+    if (page && (!page.isClosed || !page.isClosed())) {
+      initialCookies = await page.cookies();
+      logger.info("[cookie-extraction] Pre-navigation cookies from profile", {
+        count: initialCookies.length,
+        cookieNames: initialCookies.map((c: any) => c.name),
+      });
+    }
+  } catch (preNavError) {
+    logger.warn("[cookie-extraction] Could not extract pre-navigation cookies", preNavError);
+  }
 
   // Navigate to base URL first to load cookies from profile
   const baseUrl = "https://gemini.google.com";
@@ -186,28 +211,51 @@ export async function extractCookiesHeadless(page: any, targetUrl: string, requi
     // If we have required cookies, the profile is authenticated
     if (hasRequiredCookies) {
       logger.info("[cookie-extraction] ✅ Auth cookies loaded from profile! User is logged in.");
+
+      // Store cookies BEFORE attempting risky navigation
+      const cookiesBeforeNavigation = cookies;
+
       // Navigate to app URL to get any app-specific cookies
       logger.info("[cookie-extraction] Step 2: Navigating to app URL", {
         targetUrl,
       });
-      await page.goto(targetUrl, {
-        waitUntil: "load",
-        timeout: 30000,
-      });
 
-      logger.info("[cookie-extraction] App URL loaded");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      try {
+        await page.goto(targetUrl, {
+          waitUntil: "load",
+          timeout: 30000,
+        });
 
-      // Extract ALL cookies from all domains
-      cookies = await page.cookies();
+        logger.info("[cookie-extraction] App URL loaded");
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-      logger.info("[cookie-extraction] Retrieved ALL cookies after full navigation", {
-        totalCookies: cookies.length,
-        cookieNames: cookies.map((c: any) => c.name),
-        domains: [...new Set(cookies.map((c: any) => c.domain))],
-      });
-
-      return cookies;
+        // Extract ALL cookies from all domains (with safety check)
+        try {
+          // Check if page is still open before extracting
+          if (!page.isClosed || !page.isClosed()) {
+            cookies = await page.cookies();
+            logger.info("[cookie-extraction] Retrieved ALL cookies after full navigation", {
+              totalCookies: cookies.length,
+              cookieNames: cookies.map((c: any) => c.name),
+              domains: [...new Set(cookies.map((c: any) => c.domain))],
+            });
+            return cookies;
+          } else {
+            logger.warn("[cookie-extraction] Page closed after navigation, using pre-navigation cookies");
+            return cookiesBeforeNavigation;
+          }
+        } catch (cookieError) {
+          logger.warn(
+            "[cookie-extraction] Failed to extract cookies after app navigation, using pre-navigation cookies",
+            cookieError
+          );
+          return cookiesBeforeNavigation;
+        }
+      } catch (appNavError) {
+        logger.warn("[cookie-extraction] App URL navigation failed, using cookies from base URL", appNavError);
+        // Return cookies we already have from base URL
+        return cookiesBeforeNavigation;
+      }
     } else {
       logger.warn("[cookie-extraction] ⚠️  No auth cookies in profile. Profile may not be logged in.");
       logger.info("[cookie-extraction] Extracting ALL available cookies from profile anyway");
@@ -218,12 +266,42 @@ export async function extractCookiesHeadless(page: any, targetUrl: string, requi
     }
   } catch (headlessNavError) {
     logger.warn("[cookie-extraction] Navigation error in headless mode (continuing anyway)", headlessNavError);
-    const cookies = await page.cookies();
-    logger.info("[cookie-extraction] Extracting ALL available cookies after error:", {
-      totalCookies: cookies.length,
-      domains: [...new Set(cookies.map((c: any) => c.domain))],
-    });
-    return cookies;
+
+    // Try to extract cookies, but handle case where page/session is closed
+    try {
+      // Check if page is still accessible
+      if (page && (!page.isClosed || !page.isClosed())) {
+        const cookies = await page.cookies();
+        logger.info("[cookie-extraction] Extracting ALL available cookies after error:", {
+          totalCookies: cookies.length,
+          domains: [...new Set(cookies.map((c: any) => c.domain))],
+        });
+        return cookies;
+      } else {
+        // Page is closed - use pre-navigation cookies if we have them
+        if (initialCookies && initialCookies.length > 0) {
+          logger.warn("[cookie-extraction] Page is closed, using pre-navigation cookies from profile", {
+            count: initialCookies.length,
+          });
+          return initialCookies;
+        }
+        logger.error("[cookie-extraction] Page is closed and no pre-navigation cookies available");
+        return [];
+      }
+    } catch (cookieExtractError) {
+      logger.error(
+        "[cookie-extraction] Failed to extract cookies after navigation error (page likely closed)",
+        cookieExtractError
+      );
+      // Last resort: return pre-navigation cookies if available
+      if (initialCookies && initialCookies.length > 0) {
+        logger.info("[cookie-extraction] Returning pre-navigation cookies as fallback", {
+          count: initialCookies.length,
+        });
+        return initialCookies;
+      }
+      return [];
+    }
   }
 }
 
@@ -256,8 +334,20 @@ export async function navigateAndExtractCookies(
     }
   } catch (navError) {
     logger.warn("[cookie-extraction] Unexpected error during navigation", navError);
+
     // Continue anyway - we still want to extract whatever cookies are available
-    return await page.cookies();
+    // But handle case where page/session is closed
+    try {
+      if (page && (!page.isClosed || !page.isClosed())) {
+        return await page.cookies();
+      } else {
+        logger.error("[cookie-extraction] Page is closed in outer handler, returning empty array");
+        return [];
+      }
+    } catch (finalError) {
+      logger.error("[cookie-extraction] Final cookie extraction failed (page likely closed)", finalError);
+      return [];
+    }
   }
 }
 

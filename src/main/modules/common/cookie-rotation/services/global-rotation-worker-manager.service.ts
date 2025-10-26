@@ -788,6 +788,7 @@ export class GlobalRotationWorkerManager {
    * Initialize startup workers (Phase 2)
    * Identifies all cookies marked for startup and launches their rotation workers.
    * Each worker will be instructed to perform an immediate initial refresh.
+   * Staggers startup for cookies sharing the same profile to prevent browser launch conflicts.
    */
   async initializeStartupWorkers(): Promise<void> {
     logger.info("[rotation-manager] Initializing startup cookie rotation workers...");
@@ -800,11 +801,54 @@ export class GlobalRotationWorkerManager {
 
       logger.info(`[rotation-manager] Found ${startupCookies.length} cookie(s) to start on launch.`);
 
+      // Group cookies by profileId to stagger same-profile launches
+      const cookiesByProfile = new Map<string, typeof startupCookies>();
       for (const cookie of startupCookies) {
-        logger.info(`[rotation-manager] Starting worker for cookie: ${cookie.id} (${cookie.service})`);
-        // Use Phase 1's enhanced startWorkerByIds with performInitialRefresh option
-        await this.startWorkerByIds(cookie.profileId, cookie.id, { performInitialRefresh: true });
+        const profileId = cookie.profileId;
+        if (!cookiesByProfile.has(profileId)) {
+          cookiesByProfile.set(profileId, []);
+        }
+        cookiesByProfile.get(profileId)!.push(cookie);
       }
+
+      logger.info(`[rotation-manager] Cookies grouped across ${cookiesByProfile.size} profile(s)`);
+
+      // Start workers with staggered delays for same-profile cookies
+      const startPromises: Promise<void>[] = [];
+      let globalDelay = 0;
+
+      for (const [profileId, profileCookies] of cookiesByProfile.entries()) {
+        logger.info(`[rotation-manager] Profile ${profileId} has ${profileCookies.length} cookie(s) to start`);
+
+        for (let i = 0; i < profileCookies.length; i++) {
+          const cookie = profileCookies[i];
+          const staggerDelay = globalDelay + i * 3000; // 3 second stagger per cookie in same profile
+
+          startPromises.push(
+            (async () => {
+              if (staggerDelay > 0) {
+                logger.info(
+                  `[rotation-manager] Delaying start for ${cookie.id} (${cookie.service}) by ${staggerDelay}ms to avoid profile conflict`
+                );
+                await new Promise((resolve) => setTimeout(resolve, staggerDelay));
+              }
+
+              logger.info(`[rotation-manager] Starting worker for cookie: ${cookie.id} (${cookie.service})`);
+              await this.startWorkerByIds(cookie.profileId, cookie.id, {
+                performInitialRefresh: true,
+              });
+            })()
+          );
+        }
+
+        // Add inter-profile delay (1 second after last cookie of this profile)
+        globalDelay += profileCookies.length * 3000 + 1000;
+      }
+
+      // Wait for all workers to start (in staggered manner)
+      await Promise.allSettled(startPromises);
+
+      logger.info("[rotation-manager] ✅ Startup cookie rotation workers initialized (background)");
     } catch (error) {
       logger.error("[rotation-manager] Failed to initialize startup cookie workers.", error);
     }
