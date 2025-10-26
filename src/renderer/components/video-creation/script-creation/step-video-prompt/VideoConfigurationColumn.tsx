@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ChevronDown, Wand2, X, Lightbulb, FileText, BookOpen, Sparkles } from "lucide-react";
 import { VideoStyle } from "../ScriptStyleSelector";
 import { VisualStyle } from "../VisualStyleSelector";
@@ -7,6 +7,7 @@ import { HintForTopicPrompt } from "../HintForTopicPrompt";
 import { AITopicSuggestions } from "../AITopicSuggestions";
 import { VIDEO_STYLE_OPTIONS } from "@/shared/constants/video-style.constants";
 import { VISUAL_STYLE_OPTIONS } from "@/shared/constants/visual-style.constants";
+import { formatDuration } from "@/shared/utils/formatters";
 
 const electronApi = (window as any).electronAPI;
 
@@ -290,6 +291,52 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
     }
   };
 
+  // Helper to parse JSON from a prompt string (similar approach used in PromptsOutputColumn)
+  const parsePromptJSON = (promptText: string): any | null => {
+    try {
+      let cleanText = promptText.trim();
+      if (cleanText.startsWith("```json")) {
+        cleanText = cleanText.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+      } else if (cleanText.startsWith("```")) {
+        cleanText = cleanText.replace(/^```\n?/, "").replace(/\n?```$/, "");
+      }
+      return JSON.parse(cleanText);
+    } catch {
+      const jsonMatch = promptText.match(/\[\s*\{[\s\S]*\}\s*\]/m);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+  };
+
+  // Compute total scenes by parsing each prompt's JSON. If parsing fails, fall back to 1 scene per prompt.
+  const totalScenes = useMemo(() => {
+    if (!prompts || prompts.length === 0) return 0;
+    let total = 0;
+    for (const p of prompts) {
+      try {
+        const parsed = parsePromptJSON(p.prompt || "");
+        if (Array.isArray(parsed)) {
+          total += parsed.length;
+        } else if (parsed && typeof parsed === "object") {
+          // If the parsed object contains a scenes array, count it
+          if (Array.isArray((parsed as any).scenes)) total += (parsed as any).scenes.length;
+          else total += 1;
+        } else {
+          total += 1;
+        }
+      } catch {
+        total += 1;
+      }
+    }
+    return total;
+  }, [prompts]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -542,7 +589,7 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
           <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">GENERATED</div>
             <div className="text-sm font-semibold text-green-900 dark:text-green-100">
-              {prompts.length} scenes × 8 seconds = {prompts.length * 8} seconds total
+              {totalScenes} scenes × 8 seconds = {formatDuration(totalScenes * 8)} total
             </div>
           </div>
         )}

@@ -1,7 +1,9 @@
 import React from "react";
+import { Sparkles } from "lucide-react";
 import { TopicIdeaInput } from "../TopicIdeaInput";
 import { ScriptStyleSelector } from "../ScriptStyleSelector";
 import { VideoStyle } from "../ScriptStyleSelector";
+import { useScriptCreationStore } from "@store/script-creation.store";
 
 interface Step1Props {
   topic: string;
@@ -42,8 +44,10 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
   customWordCount,
   onCustomWordCountChange,
 }) => {
+  const { lastAISuggestions, restoreCachedTopicSuggestions } = useScriptCreationStore();
+
   return (
-    <div className="h-full overflow-auto px-6 py-8">
+    <div className="h-full overflow-auto px-6 py-8 relative">
       <div className="space-y-6 animate-fadeIn">
         <TopicIdeaInput
           topic={topic}
@@ -58,6 +62,19 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
           onClearSuggestions={onClearSuggestions}
           isGenerating={isGenerating}
         />
+        <div className="flex items-center">
+          {/* Small icon button to restore AI hints (visible when cache exists and no current suggestions) */}
+          {lastAISuggestions && lastAISuggestions.length > 0 && suggestions.length === 0 && (
+            <button
+              onClick={() => restoreCachedTopicSuggestions()}
+              aria-label="Show AI Hints"
+              title="Show AI Hints"
+              className="w-9 h-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center shadow-sm hover:shadow-md"
+            >
+              <Sparkles className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+            </button>
+          )}
+        </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <ScriptStyleSelector
             selectedStyle={videoStyle}

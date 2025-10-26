@@ -641,6 +641,7 @@ export default function SingleVideoCreationPage() {
             globalPreviewMode={globalPreviewMode}
             statusFilter={statusFilter}
             selectedCount={prompts.filter((p) => p.selected).length}
+            totalCount={prompts.length}
             onUndo={undo}
             onRedo={redo}
             onAddJson={() => setShowAddJsonModal(true)}
@@ -652,6 +653,8 @@ export default function SingleVideoCreationPage() {
             onToggleGlobalPreview={toggleGlobalPreview}
             onStatusFilterChange={setStatusFilter}
             onCreateMultiple={handleCreateMultiple}
+            onSelectAll={useVideoCreationStore.getState().selectAllPrompts}
+            onDeselectAll={useVideoCreationStore.getState().clearAllSelections}
           />
         </div>
 

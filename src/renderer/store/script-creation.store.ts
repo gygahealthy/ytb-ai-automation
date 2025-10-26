@@ -12,6 +12,8 @@ interface ScriptCreationState {
   selectedTopic: string | null;
   selectedTopicId: string | null;
   topicSuggestions: string[];
+  // Local cache for last AI-generated suggestions (in-memory only)
+  lastAISuggestions: string[];
   numberOfTopics: number;
   videoStyle: VideoStyle;
   visualStyle: VisualStyle;
@@ -45,6 +47,9 @@ interface ScriptCreationState {
   setScriptLengthPreset: (preset: string) => void;
   setCustomWordCount: (count: number) => void;
   setSuggestedVideoStyle: (style: VideoStyle | null) => void; // ✅ New action
+  cacheTopicSuggestions: (suggestions: string[]) => void;
+  restoreCachedTopicSuggestions: () => void;
+  clearCachedTopicSuggestions: () => void;
   setCurrentStep: (step: 1 | 2 | 3) => void;
   setViewMode: (mode: ViewMode) => void;
   setIsGenerating: (isGenerating: boolean) => void;
@@ -62,6 +67,7 @@ const initialState = {
   selectedTopic: null as string | null,
   selectedTopicId: null as string | null,
   topicSuggestions: [] as string[],
+  lastAISuggestions: [] as string[],
   numberOfTopics: 8,
   videoStyle: "explainer" as VideoStyle,
   visualStyle: "2d-cartoon" as VisualStyle,
@@ -105,6 +111,9 @@ export const useScriptCreationStore = create<ScriptCreationState>()(
       setScriptLengthPreset: (scriptLengthPreset) => set({ scriptLengthPreset }),
       setCustomWordCount: (customWordCount) => set({ customWordCount }),
       setSuggestedVideoStyle: (suggestedVideoStyle) => set({ suggestedVideoStyle }), // ✅ New action
+      cacheTopicSuggestions: (lastAISuggestions) => set({ lastAISuggestions }),
+      restoreCachedTopicSuggestions: () => set((state) => ({ topicSuggestions: state.lastAISuggestions || [] })),
+      clearCachedTopicSuggestions: () => set({ lastAISuggestions: [] }),
       setCurrentStep: (currentStep) => set({ currentStep }),
       setViewMode: (viewMode) => set({ viewMode }),
       setIsGenerating: (isGenerating) => set({ isGenerating }),

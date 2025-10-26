@@ -1,17 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  FileDown,
-  FileUp,
-  Filter,
-  Play,
-  Redo,
-  Save,
-  Trash2,
-  Undo,
-} from "lucide-react";
+import { Copy, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
 // no local react state currently required
 
 interface JsonToolbarProps {
@@ -21,6 +9,7 @@ interface JsonToolbarProps {
   globalPreviewMode: boolean;
   statusFilter: "all" | "idle" | "processing" | "completed" | "failed";
   selectedCount?: number;
+  totalCount?: number;
   onUndo: () => void;
   onRedo: () => void;
   onAddJson: () => void;
@@ -32,6 +21,8 @@ interface JsonToolbarProps {
   onToggleGlobalPreview: () => void;
   onStatusFilterChange: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
   onCreateMultiple?: (opts?: { skipConfirm?: boolean }) => void;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
 }
 
 export default function JsonToolbar({
@@ -41,6 +32,7 @@ export default function JsonToolbar({
   globalPreviewMode,
   statusFilter,
   selectedCount = 0,
+  totalCount = 0,
   onUndo,
   onRedo,
   onAddJson,
@@ -52,6 +44,8 @@ export default function JsonToolbar({
   onToggleGlobalPreview,
   onStatusFilterChange,
   onCreateMultiple,
+  onSelectAll,
+  onDeselectAll,
 }: JsonToolbarProps) {
   // Note: alerts are shown inline via window.alert/confirm in this toolbar
   const [filterOpen, setFilterOpen] = useState(false);
@@ -69,12 +63,15 @@ export default function JsonToolbar({
   }, [filterOpen]);
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-gray-700">
-  <div className="flex flex-wrap items-center gap-2 flex-1">
+      <div className="flex flex-wrap items-center gap-2 flex-1">
         {/* Add JSON button occupies its own visual row */}
         <div className="flex items-center gap-2 w-full sm:w-auto pr-2">
           <div className="relative flex items-center">
             {/* animated bordered pulse circle */}
-            <span className="absolute -inset-1 rounded-full border-2 border-indigo-300 opacity-60 transform-gpu animate-pulse-slow scale-100" aria-hidden="true"></span>
+            <span
+              className="absolute -inset-1 rounded-full border-2 border-indigo-300 opacity-60 transform-gpu animate-pulse-slow scale-100"
+              aria-hidden="true"
+            ></span>
             <button
               onClick={onAddJson}
               aria-label="Add prompts from JSON"
@@ -122,7 +119,31 @@ export default function JsonToolbar({
           </button>
         </div>
 
-        {/* Removed select/remove selected controls - keep Clear All next to Create */}
+        {/* Select/Deselect All Controls */}
+        {onSelectAll && onDeselectAll && (
+          <div className="flex items-center gap-2 pr-2 border-r border-gray-200 dark:border-gray-700">
+            <button
+              onClick={onSelectAll}
+              className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+              title="Select all prompts"
+            >
+              <span className="text-xs font-medium">Select All</span>
+            </button>
+            <button
+              onClick={onDeselectAll}
+              disabled={selectedCount === 0}
+              className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Deselect all prompts"
+            >
+              <span className="text-xs font-medium">Deselect</span>
+            </button>
+            {selectedCount > 0 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                {selectedCount} / {totalCount}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Undo/Redo compact */}
         <div className="flex items-center gap-2 pr-2 border-r border-gray-200 dark:border-gray-700">
@@ -222,7 +243,7 @@ export default function JsonToolbar({
         {filterOpen && (
           <div className="absolute right-3 mt-12 z-50">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-2 px-2 w-40">
-              {( ["completed", "processing", "failed"] as const).map((filter) => (
+              {(["completed", "processing", "failed"] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => {

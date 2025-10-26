@@ -35,6 +35,7 @@ const ScriptCreatePage: React.FC = () => {
     setSelectedTopic,
     setSelectedTopicId,
     setTopicSuggestions,
+    cacheTopicSuggestions,
     clearTopicSuggestions,
     setNumberOfTopics,
     setVideoStyle,
@@ -187,6 +188,8 @@ const ScriptCreatePage: React.FC = () => {
         }
 
         setTopicSuggestions(topics);
+        // cache locally in the store so user can re-open after clearing
+        cacheTopicSuggestions(topics);
         // Persist suggested style (so it survives navigation)
         setSuggestedVideoStyle(detectedSuggestedStyle);
       } else {
@@ -238,6 +241,7 @@ const ScriptCreatePage: React.FC = () => {
     // Update input field when selecting from Hint section
   };
   const handleClearSuggestions = () => {
+    // hide suggestions but keep a local cache so user can re-open them
     clearTopicSuggestions();
     // Clear any AI-suggested style when user clears suggestions
     setSuggestedVideoStyle(null);

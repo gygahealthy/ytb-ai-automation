@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  ChevronRight,
-  ChevronDown,
-  FolderOpen,
-  Package,
-  AlertCircle,
-} from "lucide-react";
+import { ChevronRight, ChevronDown, FolderOpen, Package, AlertCircle } from "lucide-react";
 
 interface TreeNode {
   id: string;
@@ -44,9 +38,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
       setError(null);
 
       // Call the IPC handler to get component tree
-      const response = await (
-        window.electronAPI as any
-      ).componentDiscovery.getComponentTreeForUI();
+      const response = await (window.electronAPI as any).componentDiscovery.getComponentTreeForUI();
 
       console.log("[ComponentSelector] Received response:", response);
       console.log("[ComponentSelector] Response type:", typeof response);
@@ -60,10 +52,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
       }
 
       if (response.success && response.data) {
-        console.log(
-          "[ComponentSelector] Processing data, length:",
-          response.data.length
-        );
+        console.log("[ComponentSelector] Processing data, length:", response.data.length);
         // Transform the response data into TreeNode format
         const treeData: TreeNode[] = response.data.map((category: any) => ({
           id: category.id,
@@ -81,11 +70,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
             icon: child.icon,
           })),
         }));
-        console.log(
-          "[ComponentSelector] Setting tree with",
-          treeData.length,
-          "items"
-        );
+        console.log("[ComponentSelector] Setting tree with", treeData.length, "items");
         setTree(treeData);
       } else if (Array.isArray(response)) {
         // If response is directly an array, use it as is
@@ -112,13 +97,8 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
         setError(response.error || "Failed to load components");
       }
     } catch (err) {
-      console.error(
-        "[ComponentSelector] Failed to load component hierarchy:",
-        err
-      );
-      setError(
-        err instanceof Error ? err.message : "Unknown error loading components"
-      );
+      console.error("[ComponentSelector] Failed to load component hierarchy:", err);
+      setError(err instanceof Error ? err.message : "Unknown error loading components");
     } finally {
       setLoading(false);
     }
@@ -136,10 +116,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
     });
   };
 
-  const renderTreeNode = (
-    node: TreeNode,
-    depth: number = 0
-  ): React.ReactNode => {
+  const renderTreeNode = (node: TreeNode, depth: number = 0): React.ReactNode => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
 
@@ -156,12 +133,8 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
             style={{ paddingLeft: `${12 + depth * 16}px` }}
           >
             <Package size={16} className="flex-shrink-0" />
-            <span className="flex-1 text-left">
-              {node.displayName || node.name}
-            </span>
-            {selectedComponent === node.id && (
-              <div className="w-2 h-2 bg-blue-600 rounded-full" />
-            )}
+            <span className="flex-1 text-left">{node.displayName || node.name}</span>
+            {selectedComponent === node.id && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
           </button>
         </div>
       );
@@ -181,9 +154,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
             <ChevronRight size={16} className="flex-shrink-0" />
           )}
           <FolderOpen size={16} className="flex-shrink-0 text-amber-500" />
-          <span className="flex-1 text-left">
-            {node.displayName || node.name}
-          </span>
+          <span className="flex-1 text-left">{node.displayName || node.name}</span>
           {hasChildren && (
             <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded px-2 py-0.5">
               {node.children?.length}
@@ -192,16 +163,14 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
         </button>
 
         {isExpanded && hasChildren && (
-          <div className="space-y-0.5">
-            {node.children!.map((child) => renderTreeNode(child, depth + 1))}
-          </div>
+          <div className="space-y-0.5">{node.children!.map((child) => renderTreeNode(child, depth + 1))}</div>
         )}
       </div>
     );
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden p-4 flex flex-col">
+    <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden p-4 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <FolderOpen size={20} className="text-amber-500" />
@@ -215,10 +184,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-          <AlertCircle
-            size={16}
-            className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
-          />
+          <AlertCircle size={16} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
@@ -228,17 +194,13 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
           <div className="inline-block">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Loading components...
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading components...</p>
         </div>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden flex-1 flex flex-col">
           <div className="p-3 flex-1 overflow-y-auto">
             {tree.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-                No components found
-              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">No components found</p>
             ) : (
               tree.map((node) => renderTreeNode(node))
             )}
@@ -255,9 +217,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                 const idxDash = selectedComponent.lastIndexOf("-");
                 const idxPipe = selectedComponent.lastIndexOf("|");
                 const idx = Math.max(idxDash, idxPipe);
-                return idx === -1
-                  ? selectedComponent
-                  : selectedComponent.slice(idx + 1);
+                return idx === -1 ? selectedComponent : selectedComponent.slice(idx + 1);
               })()}
             </span>
           </p>

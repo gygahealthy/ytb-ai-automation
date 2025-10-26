@@ -14,6 +14,7 @@ import {
   Coffee,
   Info,
 } from "lucide-react";
+import { VIDEO_STYLE_KEYWORD_MAP, VIDEO_STYLE_OPTIONS } from "@shared/constants/script-style.constants";
 
 export type VideoStyle =
   | "modern"
@@ -29,19 +30,8 @@ export type VideoStyle =
   | "playful"
   | "calm";
 
-interface StyleOption {
-  id: VideoStyle;
-  name: string;
-  icon: React.ReactNode;
-  description: string;
-  colorClass: string;
-  tooltip: {
-    purpose: string;
-    visuals: string;
-    music: string;
-    useCase: string;
-  };
-}
+// Export VIDEO_STYLE_KEYWORD_MAP for use in other components
+export { VIDEO_STYLE_KEYWORD_MAP };
 
 interface StyleSelectorProps {
   selectedStyle: VideoStyle;
@@ -53,177 +43,27 @@ interface StyleSelectorProps {
   onCustomWordCountChange?: (count: number) => void;
 }
 
-const styleOptions: StyleOption[] = [
-  {
-    id: "explainer",
-    name: "Explainer & Educational",
-    icon: <BookOpen className="w-6 h-6" />,
-    description: "Simplify complex topics",
-    colorClass: "green",
-    tooltip: {
-      purpose: "To simplify complex topics and educate viewers",
-      visuals:
-        "Whiteboard animations, simple 2D graphics, clear icons, screen recordings",
-      music: "Upbeat but unobtrusive corporate or ukulele background music",
-      useCase: "Tutorials, product demos, educational content",
-    },
-  },
-  {
-    id: "corporate",
-    name: "Corporate & Business",
-    icon: <Briefcase className="w-6 h-6" />,
-    description: "Professional and trustworthy",
-    colorClass: "gray",
-    tooltip: {
-      purpose: "To appear professional, trustworthy, and polished",
-      visuals:
-        "High-quality stock footage, office environments, abstract geometric shapes, clean data visualizations",
-      music: "Subtle, motivational corporate tracks",
-      useCase: "Company announcements, investor pitches, brand overviews",
-    },
-  },
-  {
-    id: "marketing",
-    name: "Marketing & Promotional",
-    icon: <TrendingUp className="w-6 h-6" />,
-    description: "Grab attention and persuade",
-    colorClass: "orange",
-    tooltip: {
-      purpose: "To grab attention and persuade viewers to take action",
-      visuals:
-        "Dynamic footage, eye-catching product shots, bold text animations, fast cuts",
-      music: "Modern, energetic pop, electronic, or epic trailer music",
-      useCase: "Social media ads, product launches, event promotions",
-    },
-  },
-  {
-    id: "documentary",
-    name: "Documentary & Storytelling",
-    icon: <Film className="w-6 h-6" />,
-    description: "Evoke emotion, tell stories",
-    colorClass: "indigo",
-    tooltip: {
-      purpose: "To evoke emotion and tell a compelling narrative",
-      visuals:
-        "Cinematic footage, historical photos, interviews with lower thirds text",
-      music:
-        "Evocative orchestral scores, ambient soundscapes, poignant piano tracks",
-      useCase: "Human interest stories, historical summaries, case studies",
-    },
-  },
-  {
-    id: "modern",
-    name: "Modern & Minimalist",
-    icon: <Sparkles className="w-6 h-6" />,
-    description: "Clean lines and simplicity",
-    colorClass: "blue",
-    tooltip: {
-      purpose: "Create a sleek, contemporary aesthetic",
-      visuals:
-        "Lots of white space, clean lines, simple geometry, subtle animations, limited color palette",
-      music: "Ambient, electronic, or lo-fi",
-      useCase: "Tech products, lifestyle brands, design portfolios",
-    },
-  },
-  {
-    id: "dynamic",
-    name: "Dynamic & Trendy",
-    icon: <Zap className="w-6 h-6" />,
-    description: "Fast-paced and viral",
-    colorClass: "purple",
-    tooltip: {
-      purpose: "Create engaging short-form content for social media",
-      visuals:
-        "Fast cuts, zoom effects, whip pans, glitch transitions, vibrant text overlays, emojis",
-      music: "Trending pop songs, EDM, hip-hop",
-      useCase: "TikTok/Reels content, viral marketing, social media engagement",
-    },
-  },
-  {
-    id: "tech",
-    name: "Tech & Futuristic",
-    icon: <Cpu className="w-6 h-6" />,
-    description: "Cutting-edge and digital",
-    colorClass: "cyan",
-    tooltip: {
-      purpose: "Convey innovation and technological advancement",
-      visuals:
-        "Dark backgrounds with neon/glowing elements, glitch effects, HUD overlays, digital fonts",
-      music: "Techno, electronic, futuristic soundscapes",
-      useCase: "Tech launches, AI/software demos, gaming content",
-    },
-  },
-  {
-    id: "organic",
-    name: "Organic & Handmade",
-    icon: <Palette className="w-6 h-6" />,
-    description: "Authentic and tactile",
-    colorClass: "teal",
-    tooltip: {
-      purpose: "Create a warm, authentic, human-centered feel",
-      visuals:
-        "Stop-motion, paper-cutout animations, hand-drawn elements, natural textures",
-      music: "Acoustic guitar, folk, indie music",
-      useCase: "Artisan products, children's content, eco-friendly brands",
-    },
-  },
-  {
-    id: "luxury",
-    name: "Elegant & Luxurious",
-    icon: <Crown className="w-6 h-6" />,
-    description: "Sophisticated and premium",
-    colorClass: "yellow",
-    tooltip: {
-      purpose: "Convey exclusivity, quality, and sophistication",
-      visuals:
-        "Slow graceful animations, high-contrast visuals, black/white/gold palette, classic serif fonts",
-      music: "Classical, orchestral, smooth jazz",
-      useCase: "Luxury brands, high-end products, premium services",
-    },
-  },
-  {
-    id: "inspirational",
-    name: "Inspirational & Uplifting",
-    icon: <Heart className="w-6 h-6" />,
-    description: "Motivate and inspire",
-    colorClass: "pink",
-    tooltip: {
-      purpose: "Create an emotional connection and motivate viewers",
-      visuals:
-        "Bright warm visuals, sunrises, drone shots, slow-motion effects, impactful quotes",
-      music: "Soaring orchestral music, motivational piano",
-      useCase: "Nonprofit campaigns, personal stories, motivational content",
-    },
-  },
-  {
-    id: "calm",
-    name: "Calm & Relaxing",
-    icon: <Coffee className="w-6 h-6" />,
-    description: "Soothing and peaceful",
-    colorClass: "emerald",
-    tooltip: {
-      purpose: "Create a peaceful, meditative viewing experience",
-      visuals:
-        "Slow pans, long takes of nature, satisfying processes, muted natural color palettes",
-      music: "Ambient soundscapes, lo-fi beats, gentle nature sounds",
-      useCase: "Meditation guides, relaxation videos, study-with-me content",
-    },
-  },
-  {
-    id: "playful",
-    name: "Playful & Comedic",
-    icon: <Smile className="w-6 h-6" />,
-    description: "Fun and entertaining",
-    colorClass: "red",
-    tooltip: {
-      purpose: "Entertain and make viewers laugh",
-      visuals:
-        "Bright primary colors, cartoonish animations, funny sound effects, meme-style editing",
-      music: "Quirky, upbeat, ukulele or lighthearted tunes",
-      useCase: "Comedy sketches, entertainment content, children's videos",
-    },
-  },
-];
+// Icon mapping
+const iconMap: Record<string, React.ReactNode> = {
+  BookOpen: <BookOpen className="w-6 h-6" />,
+  Briefcase: <Briefcase className="w-6 h-6" />,
+  TrendingUp: <TrendingUp className="w-6 h-6" />,
+  Film: <Film className="w-6 h-6" />,
+  Sparkles: <Sparkles className="w-6 h-6" />,
+  Zap: <Zap className="w-6 h-6" />,
+  Cpu: <Cpu className="w-6 h-6" />,
+  Palette: <Palette className="w-6 h-6" />,
+  Crown: <Crown className="w-6 h-6" />,
+  Heart: <Heart className="w-6 h-6" />,
+  Coffee: <Coffee className="w-6 h-6" />,
+  Smile: <Smile className="w-6 h-6" />,
+};
+
+// Generate style options with icons from constants
+const styleOptions = VIDEO_STYLE_OPTIONS.map((option) => ({
+  ...option,
+  icon: iconMap[option.iconName] || <Sparkles className="w-6 h-6" />,
+}));
 
 const getColorClasses = (color: string, isSelected: boolean) => {
   const colors = {
@@ -292,9 +132,7 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
 
   return (
     <>
-      <label className="block text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Choose Your Video Style
-      </label>
+      <label className="block text-lg font-semibold text-gray-900 dark:text-white mb-4">Choose Your Video Style</label>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {styleOptions.map((style) => {
           const isSelected = selectedStyle === style.id;
@@ -310,18 +148,8 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
                   isSelected
                 )}`}
               >
-                <div
-                  className={`flex-shrink-0 ${
-                    isSelected ? "" : "text-gray-400 dark:text-gray-500"
-                  }`}
-                >
-                  {style.icon}
-                </div>
-                <div
-                  className={`text-sm font-semibold flex-1 text-center ${
-                    isSelected ? "" : "text-gray-900 dark:text-white"
-                  }`}
-                >
+                <div className={`flex-shrink-0 ${isSelected ? "" : "text-gray-400 dark:text-gray-500"}`}>{style.icon}</div>
+                <div className={`text-sm font-semibold flex-1 text-center ${isSelected ? "" : "text-gray-900 dark:text-white"}`}>
                   {style.name}
                 </div>
                 <Info className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
@@ -332,30 +160,20 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
                 <div className="absolute z-50 left-0 top-full mt-2 w-80 p-4 bg-gray-900 dark:bg-gray-950 text-white rounded-lg shadow-xl border border-gray-700 pointer-events-none">
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">
-                        Purpose
-                      </div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Purpose</div>
                       <div className="text-sm">{style.tooltip.purpose}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">
-                        Visual Style
-                      </div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Visual Style</div>
                       <div className="text-sm">{style.tooltip.visuals}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">
-                        Music Style
-                      </div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Music Style</div>
                       <div className="text-sm">{style.tooltip.music}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">
-                        Best For
-                      </div>
-                      <div className="text-sm text-blue-400">
-                        {style.tooltip.useCase}
-                      </div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Best For</div>
+                      <div className="text-sm text-blue-400">{style.tooltip.useCase}</div>
                     </div>
                   </div>
                   {/* Arrow */}
@@ -368,9 +186,7 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
       </div>
       {/* Script length presets */}
       <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Script Length Preset
-        </label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Script Length Preset</label>
         <div className="flex flex-wrap gap-2">
           {presets.map((p) => (
             <button
@@ -393,15 +209,11 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
         </div>
         {localPreset === "custom" && (
           <div className="mt-3">
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Word Count
-            </label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Word Count</label>
             <input
               type="number"
               value={customWordCount}
-              onChange={(e) =>
-                onCustomWordCountChange?.(parseInt(e.target.value) || 0)
-              }
+              onChange={(e) => onCustomWordCountChange?.(parseInt(e.target.value) || 0)}
               min="0"
               placeholder="Enter word count..."
               className="w-48 px-3 py-2 border rounded-lg text-gray-900 dark:text-white text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -410,9 +222,8 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
         )}
       </div>
       <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-        The style will influence the tone, pacing, visuals, and overall feel of
-        your video script. Hover over each style to see detailed
-        characteristics.
+        The style will influence the tone, pacing, visuals, and overall feel of your video script. Hover over each style to see
+        detailed characteristics.
       </p>
     </>
   );

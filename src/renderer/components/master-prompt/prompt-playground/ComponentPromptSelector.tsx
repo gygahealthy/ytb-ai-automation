@@ -76,7 +76,8 @@ export function ComponentPromptSelector({ onSelect, selectedConfig }: ComponentP
   };
 
   return (
-    <div className="h-full flex flex-col border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    // ensure the container can fill available height and allow its child with `overflow-y-auto` to scroll
+    <div className="h-full min-h-0 flex flex-col border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-800">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Component Prompts</h3>
         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Select a component to load its master prompt</p>

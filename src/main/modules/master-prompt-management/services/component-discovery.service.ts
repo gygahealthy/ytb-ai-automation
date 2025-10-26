@@ -1,7 +1,7 @@
 /**
  * Component Discovery Service
- * Dynamically scans the renderer/components folder structure and returns component metadata.
- * Uses fs and path to discover components at runtime instead of hardcoded registry.
+ * Dynamically scans the renderer/pages folder structure and returns page metadata.
+ * Uses fs and path to discover pages at runtime instead of hardcoded registry.
  */
 
 import * as fs from "fs";
@@ -33,117 +33,113 @@ export class ComponentDiscoveryService {
   private componentsBasePath: string;
 
   constructor() {
-    // Determine the base path to src/renderer/components
+    // Determine the base path to src/renderer/pages
     // In development mode, TypeScript compiles to dist/main/modules/...
     // __dirname = dist/main/modules/master-prompt-management/services
-    // We need to resolve back to src/renderer/components
+    // We need to resolve back to src/renderer/pages
 
     const isDev = process.env.NODE_ENV === "development";
 
     if (isDev) {
       // Development: Go from dist/main/modules/master-prompt-management/services back to project root
-      // Then to src/renderer/components
+      // Then to src/renderer/pages
       // From services: up 5 levels gets us to project root (services -> mpm -> modules -> main -> dist -> root)
       const projectRoot = path.resolve(__dirname, "../../../../..");
-      this.componentsBasePath = path.resolve(
-        projectRoot,
-        "src/renderer/components"
-      );
+      this.componentsBasePath = path.resolve(projectRoot, "src/renderer/pages");
     } else {
       // Production: process.cwd() is the project root
-      this.componentsBasePath = path.resolve(
-        process.cwd(),
-        "src/renderer/components"
-      );
+      this.componentsBasePath = path.resolve(process.cwd(), "src/renderer/pages");
     }
 
-    console.log(
-      `[ComponentDiscovery] Components base path: ${this.componentsBasePath}`
-    );
-    console.log(
-      `[ComponentDiscovery] Directory exists: ${fs.existsSync(
-        this.componentsBasePath
-      )}`
-    );
+    console.log(`[ComponentDiscovery] Pages base path: ${this.componentsBasePath}`);
+    console.log(`[ComponentDiscovery] Directory exists: ${fs.existsSync(this.componentsBasePath)}`);
   }
 
   /**
-   * Scan the components directory and return all discovered components
+   * Scan the pages directory and return all discovered pages
    */
   getAllComponents(): ComponentMetadata[] {
     const components: ComponentMetadata[] = [];
 
     try {
       if (!fs.existsSync(this.componentsBasePath)) {
-        console.warn(
-          `Components directory not found: ${this.componentsBasePath}`
-        );
+        console.warn(`Pages directory not found: ${this.componentsBasePath}`);
         return components;
       }
 
-      const categories = fs.readdirSync(this.componentsBasePath, {
+      const entries = fs.readdirSync(this.componentsBasePath, {
         withFileTypes: true,
       });
 
-      for (const category of categories) {
-        if (!category.isDirectory()) continue;
+      // First, add root-level .tsx files
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith(".tsx")) {
+          const componentName = entry.name.replace(/\.tsx$/, "");
+          const displayName = this.formatDisplayName(componentName);
 
-        const categoryName = category.name;
+          components.push({
+            id: `root-${componentName}`,
+            name: componentName,
+            displayName,
+            path: `src/renderer/pages`,
+            category: "root",
+            description: `Page from root`,
+            icon: this.getCategoryIcon("root"),
+            isActive: true,
+          });
+        }
+      }
+
+      // Then, scan subdirectories as categories
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+
+        const categoryName = entry.name;
         const categoryPath = path.join(this.componentsBasePath, categoryName);
 
-        // Scan for .tsx and .ts files in the category folder
+        // Scan for .tsx files in the category folder
         this.scanDirectory(categoryPath, categoryName, components);
       }
     } catch (error) {
-      console.error("Error scanning components directory:", error);
+      console.error("Error scanning pages directory:", error);
     }
 
     return components;
   }
 
   /**
-   * Recursively scan a directory for component files
+   * Recursively scan a directory for page files
    */
-  private scanDirectory(
-    dirPath: string,
-    category: string,
-    components: ComponentMetadata[],
-    relativePath: string = ""
-  ): void {
+  private scanDirectory(dirPath: string, category: string, components: ComponentMetadata[], relativePath: string = ""): void {
     try {
       const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
-        const currentRelPath = relativePath
-          ? `${relativePath}/${entry.name}`
-          : entry.name;
+        const currentRelPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
 
         if (entry.isDirectory()) {
           // Recursively scan subdirectories
           this.scanDirectory(fullPath, category, components, currentRelPath);
         } else if (entry.isFile()) {
-          // Check if it's a component file (.tsx or .ts but not .d.ts, .test.ts, .spec.ts)
+          // Check if it's a page file (.tsx only - not .ts, .d.ts, .test.tsx, .spec.tsx)
           if (
-            (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
+            entry.name.endsWith(".tsx") &&
             !entry.name.endsWith(".d.ts") &&
             !entry.name.includes(".test.") &&
             !entry.name.includes(".spec.") &&
-            entry.name !== "index.ts" &&
             entry.name !== "index.tsx"
           ) {
-            const componentName = entry.name.replace(/\.(tsx|ts)$/, "");
+            const componentName = entry.name.replace(/\.tsx$/, "");
             const displayName = this.formatDisplayName(componentName);
 
             components.push({
               id: `${category}-${componentName}`,
               name: componentName,
               displayName,
-              path: `src/renderer/components/${category}${
-                relativePath ? "/" + relativePath : ""
-              }`,
+              path: `src/renderer/pages/${category}${relativePath ? "/" + relativePath : ""}`,
               category,
-              description: `Component from ${category}`,
+              description: `Page from ${category}`,
               icon: this.getCategoryIcon(category),
               isActive: true,
             });
@@ -186,12 +182,8 @@ export class ComponentDiscoveryService {
   /**
    * Build component tree from components array
    */
-  private buildComponentTree(
-    components: ComponentMetadata[]
-  ): ComponentHierarchyNode[] {
-    const categories = Array.from(
-      new Set(components.map((comp) => comp.category))
-    );
+  private buildComponentTree(components: ComponentMetadata[]): ComponentHierarchyNode[] {
+    const categories = Array.from(new Set(components.map((comp) => comp.category)));
     const tree: Record<string, ComponentHierarchyNode> = {};
 
     categories.forEach((category) => {
@@ -205,9 +197,7 @@ export class ComponentDiscoveryService {
         children: [],
       };
 
-      const componentsInCategory = components.filter(
-        (comp) => comp.category === category
-      );
+      const componentsInCategory = components.filter((comp) => comp.category === category);
       componentsInCategory.forEach((comp) => {
         tree[category].children?.push({
           id: comp.id,
@@ -281,13 +271,10 @@ export class ComponentDiscoveryService {
     const iconMap: Record<string, string> = {
       "video-creation": "Clapperboard",
       "channel-management": "Users",
-      "preset-studio": "Palette",
+      "master-prompt": "Sparkles",
       automation: "Zap",
-      admin: "Settings",
-      "all-channels": "List",
-      common: "Box",
       profiles: "User",
-      settings: "Settings",
+      root: "FileText",
     };
 
     return iconMap[category] || "Folder";

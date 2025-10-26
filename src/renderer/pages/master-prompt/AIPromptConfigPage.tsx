@@ -79,7 +79,7 @@ export const AIPromptConfigPage: React.FC = () => {
         {/* Main Layout: Left column (1/3) = Builder (top) + Tree (scrollable). Right column (2/3) = Active Configs (scrollable) */}
         <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-140px)]">
           {/* LEFT: Builder (top) + Component Tree (below) - 1/3 width */}
-          <div className="w-full lg:w-1/3 flex flex-col gap-3 h-full">
+          <div className="w-full lg:w-1/3 flex flex-col gap-3 ">
             {/* Builder - compact and sticky */}
             <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all duration-200 flex-shrink-0 sticky top-6 z-10">
               <div className="flex items-center justify-between mb-8">

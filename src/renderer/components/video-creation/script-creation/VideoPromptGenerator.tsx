@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, ChevronsLeftRightIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
 import { VideoConfigurationColumn } from "./step-video-prompt/VideoConfigurationColumn";
 import { PromptsOutputColumn } from "./step-video-prompt/PromptsOutputColumn";
 import { useAlert } from "../../../hooks/useAlert";
+import { useScriptCreationStore } from "../../../store/script-creation.store";
+import { useVideoCreationStore } from "../../../store/video-creation.store";
 
 const electronApi = (window as any).electronAPI;
 
@@ -57,8 +60,20 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
   onCustomWordCountChange,
 }) => {
   const { show: showAlert } = useAlert();
+  const navigate = useNavigate();
   const [prompts, setPrompts] = useState<VideoPrompt[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Get Zustand store actions
+  const { videoPrompts, setVideoPrompts } = useScriptCreationStore();
+  const { loadFromJson } = useVideoCreationStore();
+
+  // Initialize local state from store if available
+  useEffect(() => {
+    if (videoPrompts.length > 0 && prompts.length === 0) {
+      setPrompts(videoPrompts);
+    }
+  }, [videoPrompts]);
 
   // Resizable columns state - increased default widths
   const [leftColumnWidth, setLeftColumnWidth] = useState(45); // percentage
@@ -107,6 +122,81 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
     };
   }, [isDragging]);
 
+  // Helper to clean prompt text (remove markdown code fences)
+  const cleanPromptText = (promptText: string): string => {
+    let cleaned = promptText.trim();
+    if (cleaned.startsWith("```json")) {
+      cleaned = cleaned.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    } else if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```\n?/, "").replace(/\n?```$/, "");
+    }
+    return cleaned.trim();
+  };
+
+  // Navigate to SingleVideoCreationPage with prompts
+  const handleMakeVideos = () => {
+    if (prompts.length === 0) {
+      showAlert({
+        message: "Please generate prompts first",
+        severity: "warning",
+      });
+      return;
+    }
+
+    // Parse each prompt's JSON and extract all scene items as separate prompts
+    // This matches AddJsonModal's behavior of creating an array of strings
+    const allScenePrompts: string[] = [];
+
+    for (const prompt of prompts) {
+      const cleanedText = cleanPromptText(prompt.prompt);
+
+      try {
+        const parsed = JSON.parse(cleanedText);
+
+        // If it's an array of scenes, add each scene's text as a separate prompt
+        if (Array.isArray(parsed)) {
+          for (const scene of parsed) {
+            if (typeof scene === "string") {
+              allScenePrompts.push(scene);
+            } else if (typeof scene === "object" && scene !== null) {
+              // If it's an object, stringify it and add as a prompt
+              allScenePrompts.push(JSON.stringify(scene, null, 2));
+            }
+          }
+        } else if (typeof parsed === "string") {
+          allScenePrompts.push(parsed);
+        } else if (typeof parsed === "object") {
+          allScenePrompts.push(JSON.stringify(parsed, null, 2));
+        }
+      } catch {
+        // If not valid JSON, just add the cleaned text as-is
+        allScenePrompts.push(cleanedText);
+      }
+    }
+
+    // Convert to JSON string matching AddJsonModal's array format
+    const jsonString = JSON.stringify(allScenePrompts, null, 2);
+
+    // Load into video creation store
+    const success = loadFromJson(jsonString, "replace");
+
+    if (success) {
+      showAlert({
+        title: "Success",
+        message: `${allScenePrompts.length} scene prompts imported to video creation page`,
+        severity: "success",
+      });
+      // Navigate to single video creation page
+      navigate("/video-creation/single");
+    } else {
+      showAlert({
+        title: "Error",
+        message: "Failed to import prompts",
+        severity: "error",
+      });
+    }
+  };
+
   // Generate video prompts from script
   const handleGeneratePrompts = async () => {
     if (!script.trim()) {
@@ -119,23 +209,11 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
 
     setIsGenerating(true);
     try {
-      // First, get the config for VideoConfigurationColumn to retrieve the profile
-      const configResponse = await electronApi.aiPromptConf.getConfig("VideoConfigurationColumn");
-      if (!configResponse?.success || !configResponse.data) {
-        throw new Error(configResponse?.error || "No configuration found for VideoConfigurationColumn component");
-      }
-
-      const componentConfig = configResponse.data;
-      const profileId = componentConfig.profileId || "default";
-
-      // Call AI service with real parameters using the profile from config
+      // Call AI service using the new array-based pattern
+      // The service will fetch the config internally using componentName
       const response = await electronApi.aiPromptConf.callAI({
-        componentName: "VideoConfigurationColumn",
-        profileId: profileId,
-        data: {
-          scene_script: script,
-          visual_style: visualStyle,
-        },
+        componentName: "ScriptCreatePage",
+        dataArray: [script, visualStyle],
         stream: false,
       });
 
@@ -186,6 +264,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         }
 
         setPrompts(promptsData);
+        setVideoPrompts(promptsData); // ✅ Save to Zustand store for persistence
         onPromptsGenerated(promptsData);
         showAlert({
           title: "Success",
@@ -237,7 +316,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         className="relative flex gap-0 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 w-full"
       >
         {/* LEFT COLUMN - Video Configuration Form */}
-        <div className="overflow-y-auto p-6 h-full" style={{ width: `${leftColumnWidth}%` }}>
+        <div className="p-6 h-full overflow-hidden" style={{ width: `${leftColumnWidth}%` }}>
           <VideoConfigurationColumn
             topic={topic}
             selectedTopic={selectedTopic} // ✅ Pass selectedTopic prop
@@ -274,7 +353,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         </div>
 
         {/* RIGHT COLUMN - AI Generated Prompts Output */}
-        <div className="p-6 h-full" style={{ width: `${100 - leftColumnWidth}%` }}>
+        <div className="p-6 h-full overflow-hidden" style={{ width: `${100 - leftColumnWidth}%` }}>
           <PromptsOutputColumn
             prompts={prompts}
             isGenerating={isGenerating}
@@ -284,6 +363,7 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
             onGenerate={handleGeneratePrompts}
             onRegeneratePrompt={handleRegeneratePrompt}
             onCopyPrompt={handleCopyPrompt}
+            onMakeVideos={handleMakeVideos}
           />
         </div>
       </div>
