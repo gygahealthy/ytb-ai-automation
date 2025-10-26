@@ -85,9 +85,10 @@ export class CookieExtractionService {
       logger.info("[CookieExtractionService] Navigating and extracting cookies", {
         headless,
         targetUrl,
+        requiredCookies,
       });
 
-      let allCookies = await navigateAndExtractCookies(page, targetUrl, headless);
+      let allCookies = await navigateAndExtractCookies(page, targetUrl, headless, requiredCookies);
 
       // Non-headless mode: wait for interactive login if needed
       if (!headless) {

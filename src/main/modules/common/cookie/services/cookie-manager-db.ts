@@ -114,7 +114,7 @@ export class CookieManagerDB {
 
   /**
    * Initialize the cookie manager
-   * Validates cookies and loads from database if available
+   * Loads from database first (to get requiredCookies), then validates if needed
    */
   async init(): Promise<void> {
     if (this.initialized) {
@@ -123,15 +123,16 @@ export class CookieManagerDB {
     }
 
     try {
+      // Load from database FIRST to get requiredCookies configuration
+      await this.loadFromDatabase();
+
+      // Then validate if required (using loaded requiredCookies)
       if (this.options.validateOnInit) {
         const validation = this.validate();
         if (!validation.valid) {
           throw new Error(`Cookie validation failed: ${validation.error}`);
         }
       }
-
-      // Try to load from database
-      await this.loadFromDatabase();
 
       this.initialized = true;
       logger.info("✅ CookieManagerDB initialized");
@@ -224,6 +225,13 @@ export class CookieManagerDB {
    */
   validate(): ValidationResult {
     const cookiesToValidate = this.requiredCookies || this.REQUIRED_COOKIES;
+
+    // Skip validation if no required cookies specified
+    if (!cookiesToValidate || cookiesToValidate.length === 0) {
+      logger.info("⏭️ No requiredCookies specified, skipping validation");
+      return { valid: true };
+    }
+
     const result = validateRequiredCookies(this.cookies, cookiesToValidate);
 
     if (!result.valid) {
@@ -250,6 +258,12 @@ export class CookieManagerDB {
    */
   validateCurrentCookies(): ValidationResult {
     const cookiesToValidate = this.requiredCookies || this.REQUIRED_COOKIES;
+
+    // Skip validation if no required cookies specified
+    if (!cookiesToValidate || cookiesToValidate.length === 0) {
+      logger.debug(`[CookieManagerDB] No requiredCookies specified, skipping validation`);
+      return { valid: true };
+    }
 
     logger.debug(`[CookieManagerDB] Validating current cookies`, {
       requiredCookies: cookiesToValidate,

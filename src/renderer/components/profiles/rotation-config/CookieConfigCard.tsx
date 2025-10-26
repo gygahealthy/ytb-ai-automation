@@ -97,8 +97,8 @@ export default function CookieConfigCard({
     // read existing from raw cookie.config if present (type-unsafe, so use any)
     const existing: string[] = ((cookie.config as any)?.requiredCookies as string[]) || [];
     if (existing.includes(name)) return;
-    // send as any to avoid TS shape errors - repository/service layer should handle storing the extra field
-    onUpdateConfig(cookie.cookieId, { requiredCookies: [...existing, name] } as unknown as Partial<CookieRotationConfig>);
+    // Now properly typed - no need for type casting
+    onUpdateConfig(cookie.cookieId, { requiredCookies: [...existing, name] });
     setNewRequiredCookie("");
   };
 
@@ -106,7 +106,7 @@ export default function CookieConfigCard({
     const existing: string[] = ((cookie.config as any)?.requiredCookies as string[]) || [];
     onUpdateConfig(cookie.cookieId, {
       requiredCookies: existing.filter((c: string) => c !== name),
-    } as unknown as Partial<CookieRotationConfig>);
+    });
   };
 
   const getMethodLabel = (method: RotationMethod): string => {

@@ -67,13 +67,18 @@ export const extractAndCreateHandler = async (req: {
     logger.info("[cookies:extractAndCreate] Using browser mode:", {
       headless: headless,
       mode: headless ? "HEADLESS (background)" : "VISIBLE (interactive)",
+      requiredCookies: rotationConfig?.requiredCookies,
     });
+
+    // Extract requiredCookies from rotationConfig if provided
+    const requiredCookies = rotationConfig?.requiredCookies;
 
     const extractResult = await cookieService.extractAndStoreCookiesFromBrowser(
       profile,
       url,
       domainFilter,
-      headless // Use the actual headless parameter
+      headless, // Use the actual headless parameter
+      requiredCookies // Pass requiredCookies for polling validation
     );
 
     if (!extractResult.success) {

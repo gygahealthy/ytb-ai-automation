@@ -18,6 +18,7 @@ export interface CookieRotationConfig {
   enabledRotationMethods: RotationMethod[];
   rotationMethodOrder: RotationMethod[];
   rotationIntervalMinutes: number;
+  requiredCookies?: string[]; // Array of required cookie names for validation
 }
 
 export interface ProfileWithCookies {

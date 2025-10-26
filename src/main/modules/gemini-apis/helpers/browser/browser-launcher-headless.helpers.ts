@@ -19,11 +19,7 @@ puppeteer.use(StealthPlugin());
  * @param userAgent - Optional custom user agent
  * @returns Array of Chrome command-line arguments for headless mode
  */
-export function buildHeadlessChromeArgs(
-  userDataDir: string,
-  debugPort: number,
-  userAgent?: string
-): string[] {
+export function buildHeadlessChromeArgs(userDataDir: string, debugPort: number, userAgent?: string): string[] {
   const args = [
     `--remote-debugging-port=${debugPort}`,
     "--remote-debugging-address=127.0.0.1",
@@ -78,9 +74,7 @@ export async function launchHeadlessBrowser(
 ): Promise<any> {
   // Validate user data directory
   if (!userDataDir) {
-    throw new Error(
-      "userDataDir is required for headless browser launch with profile"
-    );
+    throw new Error("userDataDir is required for headless browser launch with profile");
   }
 
   // Ensure user data directory exists
@@ -120,9 +114,7 @@ export async function launchHeadlessBrowser(
       );
     }
 
-    logger.info(
-      "[headless-launcher] Spawning Chrome process with user-data-dir (HEADLESS)"
-    );
+    logger.info("[headless-launcher] Spawning Chrome process with user-data-dir (HEADLESS)");
     const chromeProcess = spawn(executablePath, chromeArgs, {
       detached: true,
       stdio: "ignore",
@@ -131,20 +123,19 @@ export async function launchHeadlessBrowser(
     // Unref so the parent can exit independently
     chromeProcess.unref();
 
-    logger.info(
-      "[headless-launcher] Chrome process spawned, waiting for debugging port..."
-    );
+    logger.info("[headless-launcher] Chrome process spawned, waiting for debugging port...");
 
-    // Wait and retry connection to debugging port
-    const maxRetries = 15;
-    const retryDelay = 1000; // 1 second
+    // Wait and retry connection to debugging port with exponential backoff
+    const maxRetries = 20;
+    const initialRetryDelay = 500; // Start with 500ms
     let browser: any = null;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        logger.debug(
-          `[headless-launcher] Connection attempt ${i + 1}/${maxRetries}...`
-        );
+        // Exponential backoff: 500ms, 750ms, 1125ms, etc. (capped at 3s)
+        const retryDelay = Math.min(initialRetryDelay * Math.pow(1.5, i), 3000);
+
+        logger.debug(`[headless-launcher] Connection attempt ${i + 1}/${maxRetries} (delay: ${retryDelay}ms)...`);
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
         // Try to connect
@@ -153,21 +144,23 @@ export async function launchHeadlessBrowser(
           defaultViewport: null,
         });
 
-        logger.info(
-          "[headless-launcher] ✅ Successfully connected to Chrome instance!"
-        );
+        logger.info(`[headless-launcher] ✅ Successfully connected to Chrome instance on attempt ${i + 1}!`);
         break;
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logger.debug(`[headless-launcher] Connection attempt ${i + 1} failed: ${errorMessage}`);
+
         if (i === maxRetries - 1) {
-          logger.error(
-            "[headless-launcher] Failed to connect after all retries",
-            {
-              error: err instanceof Error ? err.message : String(err),
-              debugPort,
-            }
-          );
+          logger.error("[headless-launcher] Failed to connect after all retries", {
+            error: errorMessage,
+            debugPort,
+            attempts: maxRetries,
+            suggestion: "Port may be in use or Chrome failed to start. Try restarting the application.",
+          });
           throw new Error(
-            `Failed to connect to Chrome after ${maxRetries} attempts. Port: ${debugPort}`
+            `Failed to connect to Chrome after ${maxRetries} attempts. Port: ${debugPort}. ` +
+              `This usually means the port is in use or Chrome didn't start properly. ` +
+              `Try restarting the application or checking for zombie Chrome processes.`
           );
         }
       }
@@ -177,9 +170,7 @@ export async function launchHeadlessBrowser(
       throw new Error("Failed to establish connection to Chrome");
     }
 
-    logger.info(
-      "[headless-launcher] ✅ HEADLESS browser launched successfully"
-    );
+    logger.info("[headless-launcher] ✅ HEADLESS browser launched successfully");
     logger.debug("[headless-launcher] Browser details", {
       wsEndpoint: browser.wsEndpoint(),
       userDataDir,

@@ -20,11 +20,7 @@ puppeteer.use(StealthPlugin());
  * @param userAgent - Optional custom user agent
  * @returns Array of Chrome command-line arguments for visible mode
  */
-export function buildVisibleChromeArgs(
-  userDataDir: string,
-  debugPort: number,
-  userAgent?: string
-): string[] {
+export function buildVisibleChromeArgs(userDataDir: string, debugPort: number, userAgent?: string): string[] {
   const args = [
     `--remote-debugging-port=${debugPort}`,
     "--remote-debugging-address=127.0.0.1",
@@ -68,15 +64,11 @@ export async function launchVisibleBrowser(
 ): Promise<{ browser: any; chromeProcess: any | null }> {
   // Validate required parameters
   if (!executablePath) {
-    throw new Error(
-      "executablePath is required for non-headless browser launch"
-    );
+    throw new Error("executablePath is required for non-headless browser launch");
   }
 
   if (!userDataDir) {
-    throw new Error(
-      "userDataDir is required for non-headless browser launch with profile"
-    );
+    throw new Error("userDataDir is required for non-headless browser launch with profile");
   }
 
   // Ensure user data directory exists
@@ -107,9 +99,7 @@ export async function launchVisibleBrowser(
     // This ensures the user-data-dir is properly loaded even if Chrome is already running
     const { spawn } = require("child_process");
 
-    logger.info(
-      "[visible-launcher] Spawning Chrome process with user-data-dir"
-    );
+    logger.info("[visible-launcher] Spawning Chrome process with user-data-dir");
     const chromeProcess = spawn(executablePath, chromeArgs, {
       detached: true,
       stdio: "ignore",
@@ -118,20 +108,19 @@ export async function launchVisibleBrowser(
     // Unref so the parent can exit independently
     chromeProcess.unref();
 
-    logger.info(
-      "[visible-launcher] Chrome process spawned, waiting for debugging port..."
-    );
+    logger.info("[visible-launcher] Chrome process spawned, waiting for debugging port...");
 
-    // Wait and retry connection to debugging port
-    const maxRetries = 15;
-    const retryDelay = 1000; // 1 second
+    // Wait and retry connection to debugging port with exponential backoff
+    const maxRetries = 20;
+    const initialRetryDelay = 500; // Start with 500ms
     let browser: any = null;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        logger.debug(
-          `[visible-launcher] Connection attempt ${i + 1}/${maxRetries}...`
-        );
+        // Exponential backoff: 500ms, 750ms, 1125ms, etc. (capped at 3s)
+        const retryDelay = Math.min(initialRetryDelay * Math.pow(1.5, i), 3000);
+
+        logger.debug(`[visible-launcher] Connection attempt ${i + 1}/${maxRetries} (delay: ${retryDelay}ms)...`);
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
         // Try to connect
@@ -140,21 +129,23 @@ export async function launchVisibleBrowser(
           defaultViewport: null,
         });
 
-        logger.info(
-          "[visible-launcher] ✅ Successfully connected to Chrome instance!"
-        );
+        logger.info(`[visible-launcher] ✅ Successfully connected to Chrome instance on attempt ${i + 1}!`);
         break;
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logger.debug(`[visible-launcher] Connection attempt ${i + 1} failed: ${errorMessage}`);
+
         if (i === maxRetries - 1) {
-          logger.error(
-            "[visible-launcher] Failed to connect after all retries",
-            {
-              error: err instanceof Error ? err.message : String(err),
-              debugPort,
-            }
-          );
+          logger.error("[visible-launcher] Failed to connect after all retries", {
+            error: errorMessage,
+            debugPort,
+            attempts: maxRetries,
+            suggestion: "Port may be in use or Chrome failed to start. Try restarting the application.",
+          });
           throw new Error(
-            `Failed to connect to Chrome after ${maxRetries} attempts. Port: ${debugPort}`
+            `Failed to connect to Chrome after ${maxRetries} attempts. Port: ${debugPort}. ` +
+              `This usually means the port is in use or Chrome didn't start properly. ` +
+              `Try restarting the application or checking for zombie Chrome processes.`
           );
         }
       }
@@ -164,12 +155,8 @@ export async function launchVisibleBrowser(
       throw new Error("Failed to establish connection to Chrome");
     }
 
-    logger.info(
-      "[visible-launcher] ✅ NON-HEADLESS browser launched successfully"
-    );
-    logger.info(
-      "[visible-launcher] 👁️  Browser window should be VISIBLE on your screen"
-    );
+    logger.info("[visible-launcher] ✅ NON-HEADLESS browser launched successfully");
+    logger.info("[visible-launcher] 👁️  Browser window should be VISIBLE on your screen");
     logger.debug("[visible-launcher] Browser details", {
       wsEndpoint: browser.wsEndpoint(),
       userDataDir,

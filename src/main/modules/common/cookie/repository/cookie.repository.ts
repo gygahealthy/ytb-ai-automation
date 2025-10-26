@@ -253,20 +253,29 @@ export class CookieRepository extends BaseRepository<Cookie> {
 
   /**
    * Stringify required_cookies array to JSON string
-   * Returns null for database if undefined/empty
+   * Returns null only if undefined (meaning "don't update this field")
+   * Returns "[]" for empty arrays (explicitly set to empty)
+   * Returns JSON string for non-empty arrays
    *
    * @private
    */
   private stringifyRequiredCookies(array?: string[]): string | null {
-    if (!array || array.length === 0) {
+    // undefined means "don't update this field" -> return null for SQL
+    if (array === undefined) {
       return null;
+    }
+
+    // Empty array [] should be stored as "[]" not NULL
+    // This allows explicitly clearing required cookies
+    if (array.length === 0) {
+      return "[]";
     }
 
     try {
       return JSON.stringify(array);
     } catch (error) {
-      console.warn("[CookieRepository] Failed to stringify required_cookies array:", array, error);
-      return null;
+      console.warn("[CookieRepository] Failed to stringify required_cookies:", array, error);
+      return "[]";
     }
   }
 

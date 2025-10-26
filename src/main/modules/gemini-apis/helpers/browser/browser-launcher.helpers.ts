@@ -6,8 +6,55 @@
 
 import { logger } from "../../../../utils/logger-backend";
 import * as fs from "fs";
+import * as net from "net";
 import { launchHeadlessBrowser } from "./browser-launcher-headless.helpers";
 import { launchVisibleBrowser } from "./browser-launcher-visible.helpers";
+
+/**
+ * Check if a port is available
+ * @param port - Port number to check
+ * @returns Promise<boolean> - true if port is available, false if in use
+ */
+export async function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+
+    server.once("error", (err: any) => {
+      if (err.code === "EADDRINUSE") {
+        resolve(false);
+      } else {
+        resolve(false);
+      }
+    });
+
+    server.once("listening", () => {
+      server.close();
+      resolve(true);
+    });
+
+    server.listen(port, "127.0.0.1");
+  });
+}
+
+/**
+ * Find an available port in a range
+ * @param startPort - Starting port number
+ * @param maxAttempts - Maximum number of ports to try
+ * @returns Promise<number> - Available port number
+ */
+export async function findAvailablePort(startPort: number = 9223, maxAttempts: number = 50): Promise<number> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = startPort + i;
+    const available = await isPortAvailable(port);
+    if (available) {
+      logger.debug("[browser-launcher] Found available port", { port, attempt: i + 1 });
+      return port;
+    }
+    logger.debug("[browser-launcher] Port in use, trying next", { port });
+  }
+
+  throw new Error(`No available ports found in range ${startPort}-${startPort + maxAttempts - 1}`);
+}
 
 /**
  * Find Chrome executable path on Windows
@@ -41,9 +88,7 @@ export function findChromeExecutable(): string | undefined {
     }
 
     if (!executablePath) {
-      logger.warn(
-        "[browser-launcher] Chrome executable not found in any standard location"
-      );
+      logger.warn("[browser-launcher] Chrome executable not found in any standard location");
     }
   }
 
@@ -69,7 +114,10 @@ export async function launchBrowser(
   }
 
   const executablePath = profile.browserPath || findChromeExecutable();
-  const debugPort = 9223 + Math.floor(Math.random() * 1000);
+
+  // Find an available port instead of random selection
+  logger.debug("[browser-launcher] Finding available debug port...");
+  const debugPort = await findAvailablePort(9223, 50);
 
   logger.info("[browser-launcher] Browser launch request", {
     profileId: profile.id,
@@ -91,30 +139,19 @@ export async function launchBrowser(
         dir: profile.userDataDir,
         error: err instanceof Error ? err.message : String(err),
       });
-      throw new Error(
-        `Failed to create user data directory: ${profile.userDataDir}`
-      );
+      throw new Error(`Failed to create user data directory: ${profile.userDataDir}`);
     }
   }
 
   try {
     if (headless) {
       // Launch in HEADLESS (background) mode
-      logger.info(
-        "[browser-launcher] Routing to HEADLESS launcher (background mode)"
-      );
-      const headlessBrowser = await launchHeadlessBrowser(
-        executablePath,
-        profile.userDataDir,
-        debugPort,
-        profile.userAgent
-      );
+      logger.info("[browser-launcher] Routing to HEADLESS launcher (background mode)");
+      const headlessBrowser = await launchHeadlessBrowser(executablePath, profile.userDataDir, debugPort, profile.userAgent);
       return { browser: headlessBrowser, chromeProcess: null };
     } else {
       // Launch in NON-HEADLESS (visible) mode
-      logger.info(
-        "[browser-launcher] Routing to NON-HEADLESS launcher (visible mode)"
-      );
+      logger.info("[browser-launcher] Routing to NON-HEADLESS launcher (visible mode)");
 
       if (!executablePath) {
         throw new Error(
@@ -123,12 +160,7 @@ export async function launchBrowser(
         );
       }
 
-      const visibleResult = await launchVisibleBrowser(
-        executablePath,
-        profile.userDataDir,
-        debugPort,
-        profile.userAgent
-      );
+      const visibleResult = await launchVisibleBrowser(executablePath, profile.userDataDir, debugPort, profile.userAgent);
       return visibleResult;
     }
   } catch (error) {

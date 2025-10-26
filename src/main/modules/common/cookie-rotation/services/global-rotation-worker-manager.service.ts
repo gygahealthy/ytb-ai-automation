@@ -145,8 +145,8 @@ export class GlobalRotationWorkerManager {
       // Parse cookies
       const cookies: CookieCollection = parseCookieHeader(cookie.rawCookieString || "");
 
-      // Check if session is expired
-      const isExpired = await this.detectExpiredSession(cookies);
+      // Check if session is expired using configured requiredCookies
+      const isExpired = await this.detectExpiredSession(cookies, cookie.id);
 
       if (isExpired) {
         logger.warn(`[rotation-manager] ⚠️ Detected expired session for ${key}`);
@@ -343,12 +343,22 @@ export class GlobalRotationWorkerManager {
     logger.info(`[rotation-manager] 🌐 Starting headless refresh for cookie ${cookie.id} using unified extraction`);
 
     try {
+      // Prepare rotation config with requiredCookies if available
+      const rotationConfig: any = {};
+      if (cookie.requiredCookies && cookie.requiredCookies.length > 0) {
+        rotationConfig.requiredCookies = cookie.requiredCookies;
+        logger.info(`[rotation-manager] Using configured requiredCookies for headless refresh`, {
+          requiredCookies: cookie.requiredCookies,
+        });
+      }
+
       // Call unified extraction handler with headless=true (background mode)
       const result = await extractAndCreateHandler({
         profileId: cookie.profileId,
         service: cookie.service,
         url: cookie.url || "https://gemini.google.com",
         headless: true, // Use headless mode for automatic refresh
+        rotationConfig: Object.keys(rotationConfig).length > 0 ? rotationConfig : undefined,
       });
 
       if (result.success) {
@@ -372,9 +382,26 @@ export class GlobalRotationWorkerManager {
 
   /**
    * Detect if a session is expired
+   * Uses configured requiredCookies if available, otherwise defaults to Google/Gemini cookies
    */
-  private async detectExpiredSession(cookies: CookieCollection): Promise<boolean> {
-    const requiredCookies = ["__Secure-1PSID", "__Secure-1PSIDTS"];
+  private async detectExpiredSession(cookies: CookieCollection, cookieId?: string): Promise<boolean> {
+    // Try to load requiredCookies from cookie configuration
+    let requiredCookies: string[] = ["__Secure-1PSID", "__Secure-1PSIDTS"]; // Default for backward compatibility
+
+    if (cookieId) {
+      try {
+        const cookie = await this.cookieRepository.findById(cookieId);
+        if (cookie?.requiredCookies && cookie.requiredCookies.length > 0) {
+          requiredCookies = cookie.requiredCookies;
+          logger.debug(`[rotation-manager] Using configured requiredCookies for session detection`, {
+            cookieId,
+            requiredCookies,
+          });
+        }
+      } catch (error) {
+        logger.warn(`[rotation-manager] Failed to load requiredCookies for ${cookieId}, using defaults`, error);
+      }
+    }
 
     for (const key of requiredCookies) {
       if (!cookies[key] || cookies[key] === "undefined") {

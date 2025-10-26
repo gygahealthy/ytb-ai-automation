@@ -90,7 +90,23 @@ export class HeadlessMethod implements RotationMethodExecutor {
         userDataDir: profile.userDataDir,
       });
 
-      // Step 3: Use CookieService to extract fresh cookies
+      // Step 3: Load requiredCookies from cookie configuration if available
+      let requiredCookies: string[] | undefined = undefined;
+      if (cookieRow.required_cookies) {
+        try {
+          const parsed = JSON.parse(cookieRow.required_cookies);
+          if (Array.isArray(parsed)) {
+            requiredCookies = parsed;
+            logger.info("[HeadlessMethod] Using configured requiredCookies for extraction", {
+              requiredCookies,
+            });
+          }
+        } catch (error) {
+          logger.warn("[HeadlessMethod] Failed to parse requiredCookies, extraction will use defaults", error);
+        }
+      }
+
+      // Step 4: Use CookieService to extract fresh cookies
       // Initialize with worker-safe database to avoid singleton issues in worker process
       const { getCookieService } = await import("../../cookie/services/cookie.service.js");
       const cookieService = getCookieService(db);
@@ -99,7 +115,8 @@ export class HeadlessMethod implements RotationMethodExecutor {
         profile,
         targetUrl,
         "", // domainFilter not used
-        true // Force headless mode
+        true, // Force headless mode
+        requiredCookies // Pass configured requiredCookies for validation
       );
 
       if (!extractResult.success || !extractResult.data) {
@@ -118,7 +135,7 @@ export class HeadlessMethod implements RotationMethodExecutor {
         cookieNames: extractedCookies.map((c: any) => c.name),
       });
 
-      // Step 4: Store extracted cookies in database using cookieService
+      // Step 5: Store extracted cookies in database using cookieService
       const storeResult = await cookieService.storeCookiesFromPage(
         profileId,
         "", // domainFilter not used
@@ -141,7 +158,7 @@ export class HeadlessMethod implements RotationMethodExecutor {
         storedCount: extractedCookies.length,
       });
 
-      // Step 5: Parse extracted cookies into CookieCollection format for return
+      // Step 6: Parse extracted cookies into CookieCollection format for return
       const updatedCollection = this.parseCookiesToCollection(extractedCookies, cookieString);
 
       // Validate that we got essential cookies

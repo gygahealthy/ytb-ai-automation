@@ -30,12 +30,14 @@ export class CookieService {
    * @param targetUrl - URL to extract cookies for (e.g., "https://gemini.google.com")
    * @param _domainFilter - Domain to filter cookies by (DEPRECATED, not used)
    * @param headless - Whether to run in headless (background) mode or visible mode
+   * @param providedRequiredCookies - Optional array of required cookie names to validate (overrides DB)
    */
   async extractAndStoreCookiesFromBrowser(
     profile: any,
     targetUrl: string = "https://gemini.google.com",
     _domainFilter: string = "google.com",
-    headless: boolean = false
+    headless: boolean = false,
+    providedRequiredCookies?: string[]
   ): Promise<ApiResponse<{ cookieString: string; cookies: any[] }>> {
     logger.info("[cookie.service] Delegating extraction to CookieExtractionService", {
       profileId: profile?.id,
@@ -44,22 +46,28 @@ export class CookieService {
     });
 
     try {
-      // Try to load required cookies from DB for this profile/url
-      let requiredCookies: string[] | undefined = undefined;
+      // Use provided requiredCookies, or try to load from DB
+      let requiredCookies: string[] | undefined = providedRequiredCookies;
 
-      if (profile?.id) {
+      if (!requiredCookies && profile?.id) {
         try {
           const existingCookie = await this.cookieRepository.findByProfileAndUrl(profile.id, targetUrl);
 
           if (existingCookie?.requiredCookies) {
             requiredCookies = existingCookie.requiredCookies;
-            logger.info("[cookie.service] Loaded required cookies for validation", {
+            logger.info("[cookie.service] Loaded required cookies from DB for validation", {
               requiredCookies,
             });
           }
         } catch (dbError) {
           logger.warn("[cookie.service] Failed to load required cookies from DB (continuing)", dbError);
         }
+      }
+
+      if (requiredCookies) {
+        logger.info("[cookie.service] Using required cookies for extraction validation", {
+          requiredCookies,
+        });
       }
 
       // Delegate to extraction service

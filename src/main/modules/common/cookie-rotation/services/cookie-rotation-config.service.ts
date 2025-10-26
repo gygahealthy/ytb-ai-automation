@@ -15,6 +15,7 @@ export interface CookieRotationConfig {
   enabledRotationMethods: RotationMethod[];
   rotationMethodOrder: RotationMethod[];
   rotationIntervalMinutes: number;
+  requiredCookies?: string[]; // Array of required cookie names for validation
   // Optional fields for logging context (added by parent when forking child workers)
   profileId?: string;
   profileName?: string;
@@ -59,6 +60,9 @@ export class CookieRotationConfigService {
       // Get monitor info if exists to include worker status
       const monitor = await this.monitorRepository.findByProfileAndCookie(cookie.profileId, cookie.id);
 
+      // requiredCookies is already parsed by the repository
+      const requiredCookies = cookie.requiredCookies;
+
       profile.cookies.push({
         cookieId: cookie.id,
         service: cookie.service,
@@ -74,6 +78,7 @@ export class CookieRotationConfigService {
           enabledRotationMethods: this.parseJsonArray(cookie.enabledRotationMethods),
           rotationMethodOrder: this.parseJsonArray(cookie.rotationMethodOrder),
           rotationIntervalMinutes: cookie.rotationIntervalMinutes,
+          requiredCookies,
         },
       });
     }
@@ -112,6 +117,10 @@ export class CookieRotationConfigService {
       updateData.rotationIntervalMinutes = config.rotationIntervalMinutes;
     }
 
+    if (config.requiredCookies !== undefined) {
+      updateData.requiredCookies = config.requiredCookies;
+    }
+
     await this.cookieRepository.updateRotationConfig(cookieId, updateData);
 
     logger.info(`[CookieRotationConfigService] Updated config for cookie ${cookieId}`);
@@ -133,12 +142,16 @@ export class CookieRotationConfigService {
 
     const intervalMinutes = cookie.rotationIntervalMinutes || 60;
 
+    // requiredCookies is already parsed by the repository
+    const requiredCookies = cookie.requiredCookies;
+
     return {
       cookieId: cookie.id,
       launchWorkerOnStartup: cookie.launchWorkerOnStartup === 1,
       enabledRotationMethods: enabledMethods as RotationMethod[],
       rotationMethodOrder: methodOrder as RotationMethod[],
       rotationIntervalMinutes: intervalMinutes,
+      requiredCookies,
     };
   }
 
