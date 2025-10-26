@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { RefreshCw } from "lucide-react";
 import { useAlert } from "@/renderer/hooks/useAlert";
 import { useDrawer } from "@/renderer/hooks/useDrawer";
 import CookieRotationDrawerContent from "./CookieRotationDrawerContent";
@@ -102,7 +103,11 @@ export function CookieRotationIndicatorInner() {
         onClick={() =>
           drawer.openDrawer({
             title: "Cookie Rotation",
-            icon: undefined,
+            icon: (
+              <div className="p-2 rounded-lg bg-green-500 shadow-sm flex items-center justify-center">
+                <RefreshCw className="w-4 h-4 text-white" />
+              </div>
+            ),
             children: <CookieRotationDrawerContent />,
             side: "right",
             width: "w-96",

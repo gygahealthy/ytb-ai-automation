@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ArrowDown, ArrowUp, Pin, PinOff, Search, Terminal, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Pin, PinOff, Search, FileText, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LogEntry, useLogStore } from "../store/log.store";
 import LogLine from "./LogLine";
@@ -116,7 +116,8 @@ export default function LogDrawer() {
 
   if (!isDrawerOpen && !isPinned) return null;
 
-  const drawerWidth = isPinned ? "w-1/4" : "w-1/4";
+  // Use a fixed, modern drawer width to keep layout consistent across drawers
+  const drawerWidth = "w-96"; // 24rem (384px)
 
   return (
     <>
@@ -135,8 +136,8 @@ export default function LogDrawer() {
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
-                <Terminal className="w-5 h-5 text-white" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 shadow-lg">
+                <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">System Logs</h2>
@@ -220,7 +221,7 @@ export default function LogDrawer() {
         <div ref={logContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2">
           {filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
-              <Terminal className="w-12 h-12 mb-3 opacity-50" />
+              <FileText className="w-12 h-12 mb-3 opacity-60 text-gray-400 dark:text-gray-500" />
               <p className="text-sm font-medium">{logs.length === 0 ? "No logs yet" : "No logs match your filters"}</p>
               <p className="text-xs mt-1">
                 {logs.length === 0 ? "Logs will appear here as the application runs" : "Try adjusting your search or filters"}

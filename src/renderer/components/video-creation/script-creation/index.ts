@@ -1,6 +1,5 @@
 // Export all script creation components
 export { TopicIdeaInput } from "./TopicIdeaInput";
-export { HintForTopicPrompt } from "./HintForTopicPrompt";
 export { AITopicSuggestions } from "./AITopicSuggestions";
 export { ScriptStyleSelector } from "./ScriptStyleSelector";
 export type { VideoStyle } from "./ScriptStyleSelector";

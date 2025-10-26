@@ -1,9 +1,7 @@
 import React from "react";
-import { Sparkles } from "lucide-react";
 import { TopicIdeaInput } from "../TopicIdeaInput";
 import { ScriptStyleSelector } from "../ScriptStyleSelector";
 import { VideoStyle } from "../ScriptStyleSelector";
-import { useScriptCreationStore } from "@store/script-creation.store";
 
 interface Step1Props {
   topic: string;
@@ -44,8 +42,6 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
   customWordCount,
   onCustomWordCountChange,
 }) => {
-  const { lastAISuggestions, restoreCachedTopicSuggestions } = useScriptCreationStore();
-
   return (
     <div className="h-full overflow-auto px-6 py-8 relative">
       <div className="space-y-6 animate-fadeIn">
@@ -62,19 +58,6 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
           onClearSuggestions={onClearSuggestions}
           isGenerating={isGenerating}
         />
-        <div className="flex items-center">
-          {/* Small icon button to restore AI hints (visible when cache exists and no current suggestions) */}
-          {lastAISuggestions && lastAISuggestions.length > 0 && suggestions.length === 0 && (
-            <button
-              onClick={() => restoreCachedTopicSuggestions()}
-              aria-label="Show AI Hints"
-              title="Show AI Hints"
-              className="w-9 h-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center shadow-sm hover:shadow-md"
-            >
-              <Sparkles className="w-4 h-4 text-gray-700 dark:text-gray-200" />
-            </button>
-          )}
-        </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <ScriptStyleSelector
             selectedStyle={videoStyle}
@@ -84,26 +67,6 @@ export const Step1_TopicAndStyle: React.FC<Step1Props> = ({
             customWordCount={customWordCount}
             onCustomWordCountChange={onCustomWordCountChange}
           />
-        </div>
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">How It Works</h3>
-          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <p>
-              <strong>1.</strong> Enter your video topic or idea (just a few words is enough)
-            </p>
-            <p>
-              <strong>2.</strong> Choose a tone/style that matches your content
-            </p>
-            <p>
-              <strong>3.</strong> AI generates a complete script divided into scenes
-            </p>
-            <p>
-              <strong>4.</strong> Edit the script and choose visual style for the video
-            </p>
-            <p>
-              <strong>5.</strong> Generate 8-second video prompts optimized for your chosen styles
-            </p>
-          </div>
         </div>
       </div>
     </div>

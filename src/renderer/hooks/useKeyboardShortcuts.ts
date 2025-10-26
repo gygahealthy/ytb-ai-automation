@@ -4,6 +4,7 @@ import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
 import React from "react";
 import CookieRotationDrawerContent from "@/renderer/components/common/sidebar/cookie-rotation/CookieRotationDrawerContent";
+import { RefreshCw } from "lucide-react";
 
 type ShortcutHandler = () => void;
 
@@ -81,7 +82,12 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
       const api = (window as any).__veo3_drawer_api;
       const props = {
         title: "Cookie Rotation",
-        icon: undefined,
+        // small rounded icon to appear in the drawer header (matches other drawers)
+        icon: React.createElement(
+          "div",
+          { className: "p-1 rounded bg-green-500 shadow-sm flex items-center justify-center" },
+          React.createElement(RefreshCw, { className: "w-4 h-4 text-white" })
+        ),
         // create element without JSX because this file is .ts
         children: React.createElement(CookieRotationDrawerContent, null),
         side: "right",

@@ -3,11 +3,11 @@ import { ChevronDown, Wand2, X, Lightbulb, FileText, BookOpen, Sparkles } from "
 import { VideoStyle } from "../ScriptStyleSelector";
 import { VisualStyle } from "../VisualStyleSelector";
 import { VideoPrompt } from "../VideoPromptGenerator";
-import { HintForTopicPrompt } from "../HintForTopicPrompt";
 import { AITopicSuggestions } from "../AITopicSuggestions";
 import { VIDEO_STYLE_OPTIONS } from "@/shared/constants/video-style.constants";
 import { VISUAL_STYLE_OPTIONS } from "@/shared/constants/visual-style.constants";
 import { formatDuration } from "@/shared/utils/formatters";
+import { parseAIResponseArray, parseAIResponseJSON } from "@/shared/utils/ai-response.util";
 
 const electronApi = (window as any).electronAPI;
 
@@ -165,7 +165,7 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
           outputText = JSON.stringify(response.data, null, 2);
         }
 
-        const topics = parseTopicsFromAIResponse(outputText);
+        const topics = parseAIResponseArray(outputText);
         setTopicSuggestions(topics);
         setSelectedTopicId(null);
       } else {
@@ -182,51 +182,6 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
     }
   };
 
-  // Helper function to parse topics from AI response
-  const parseTopicsFromAIResponse = (text: string): string[] => {
-    // Try to parse as JSON first (AI may return structured data)
-    try {
-      const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/m);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(parsed)) {
-          const topics = parsed
-            .map((item: any) => {
-              if (typeof item === "string") return item;
-              if (item.title) return item.title;
-              if (item.description) return item.description;
-              if (item.name) return item.name;
-              return null;
-            })
-            .filter((t: any) => t && typeof t === "string" && t.length > 0)
-            .slice(0, 10);
-          if (topics.length > 0) return topics;
-        }
-      }
-    } catch (e) {
-      // Not JSON, continue to text parsing
-    }
-
-    // Fall back to text parsing
-    const lines = text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("{") && !l.startsWith("["));
-
-    const topics: string[] = [];
-    for (const line of lines) {
-      const cleaned = line
-        .replace(/^[\d]+[\.\)]\s*|^[-*•]\s*/, "")
-        .replace(/^['"]|['"]$/g, "")
-        .trim();
-      if (cleaned && !cleaned.startsWith("{") && !cleaned.startsWith("[")) {
-        topics.push(cleaned);
-      }
-    }
-
-    return topics.slice(0, 10);
-  };
-
   const handleSelectSuggestedTopic = (topic: string, id: string) => {
     setSelectedTopicId(id);
     onTopicChange?.(topic);
@@ -237,11 +192,6 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
       setTopicSuggestions([]);
       setSelectedTopicId(null);
     }, 100);
-  };
-
-  const handleSelectHintTopic = (topic: string) => {
-    // Just fill the input, don't close - user will click Generate button
-    setHintInput(topic);
   };
 
   const handleClearSuggestions = () => {
@@ -292,27 +242,7 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
   };
 
   // Helper to parse JSON from a prompt string (similar approach used in PromptsOutputColumn)
-  const parsePromptJSON = (promptText: string): any | null => {
-    try {
-      let cleanText = promptText.trim();
-      if (cleanText.startsWith("```json")) {
-        cleanText = cleanText.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-      } else if (cleanText.startsWith("```")) {
-        cleanText = cleanText.replace(/^```\n?/, "").replace(/\n?```$/, "");
-      }
-      return JSON.parse(cleanText);
-    } catch {
-      const jsonMatch = promptText.match(/\[\s*\{[\s\S]*\}\s*\]/m);
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0]);
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    }
-  };
+  const parsePromptJSON = (promptText: string): any | null => parseAIResponseJSON(promptText);
 
   // Compute total scenes by parsing each prompt's JSON. If parsing fails, fall back to 1 scene per prompt.
   const totalScenes = useMemo(() => {
@@ -425,19 +355,15 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
                         {/* Quick Examples or AI Suggestions - More Compact */}
                         <div className="max-h-56 overflow-y-auto">
-                          {topicSuggestions.length === 0 ? (
-                            <HintForTopicPrompt onSelectTopic={handleSelectHintTopic} />
-                          ) : (
-                            <AITopicSuggestions
-                              suggestions={topicSuggestions}
-                              selectedTopicId={selectedTopicId}
-                              onSelectTopic={(topic, id) => {
-                                handleSelectSuggestedTopic(topic, id);
-                                setShowHintOverlay(false);
-                              }}
-                              onClearSuggestions={handleClearSuggestions}
-                            />
-                          )}
+                          <AITopicSuggestions
+                            suggestions={topicSuggestions}
+                            selectedTopicId={selectedTopicId}
+                            onSelectTopic={(topic, id) => {
+                              handleSelectSuggestedTopic(topic, id);
+                              setShowHintOverlay(false);
+                            }}
+                            onClearSuggestions={handleClearSuggestions}
+                          />
                         </div>
                       </div>
                     )}
@@ -468,48 +394,50 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TONE STYLE</label>
-            {simpleMode ? (
-              <IconSelect
-                options={videoStyleOptions as any}
-                value={videoStyle}
-                onChange={(id) => onVideoStyleChange?.(id as VideoStyle)}
-                placeholder="Choose tone style"
-                isOpen={openSelect === "videoStyle"}
-                onOpenChange={(open) => setOpenSelect(open ? "videoStyle" : null)}
-              />
-            ) : (
-              <select
-                value={videoStyle}
-                disabled
-                className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-              >
-                <option value={videoStyle}>{findVideoStyleLabel(videoStyle)}</option>
-              </select>
-            )}
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TONE STYLE</label>
+              {simpleMode ? (
+                <IconSelect
+                  options={videoStyleOptions as any}
+                  value={videoStyle}
+                  onChange={(id) => onVideoStyleChange?.(id as VideoStyle)}
+                  placeholder="Choose tone style"
+                  isOpen={openSelect === "videoStyle"}
+                  onOpenChange={(open) => setOpenSelect(open ? "videoStyle" : null)}
+                />
+              ) : (
+                <select
+                  value={videoStyle}
+                  disabled
+                  className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                >
+                  <option value={videoStyle}>{findVideoStyleLabel(videoStyle)}</option>
+                </select>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">VISUAL STYLE</label>
-            {simpleMode ? (
-              <IconSelect
-                options={visualStyleOptions as any}
-                value={visualStyle}
-                onChange={(id) => onVisualStyleChange?.(id as VisualStyle)}
-                placeholder="Choose visual style"
-                isOpen={openSelect === "visualStyle"}
-                onOpenChange={(open) => setOpenSelect(open ? "visualStyle" : null)}
-              />
-            ) : (
-              <select
-                value={visualStyle}
-                disabled
-                className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-              >
-                <option value={visualStyle}>{findVisualStyleLabel(visualStyle)}</option>
-              </select>
-            )}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">VISUAL STYLE</label>
+              {simpleMode ? (
+                <IconSelect
+                  options={visualStyleOptions as any}
+                  value={visualStyle}
+                  onChange={(id) => onVisualStyleChange?.(id as VisualStyle)}
+                  placeholder="Choose visual style"
+                  isOpen={openSelect === "visualStyle"}
+                  onOpenChange={(open) => setOpenSelect(open ? "visualStyle" : null)}
+                />
+              ) : (
+                <select
+                  value={visualStyle}
+                  disabled
+                  className="w-full px-3 py-2 border rounded text-gray-900 dark:text-white text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                >
+                  <option value={visualStyle}>{findVisualStyleLabel(visualStyle)}</option>
+                </select>
+              )}
+            </div>
           </div>
 
           <div>
@@ -586,10 +514,12 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
         )}
 
         {prompts.length > 0 && (
-          <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">GENERATED</div>
-            <div className="text-sm font-semibold text-green-900 dark:text-green-100">
-              {totalScenes} scenes × 8 seconds = {formatDuration(totalScenes * 8)} total
+          <div className="mt-2 mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="text-xs font-medium text-green-900 dark:text-green-100 mb-1">
+              GENERATED{" "}
+              <span className="text-sm font-semibold text-green-900 dark:text-green-100">
+                {totalScenes} scenes × 8 seconds = {formatDuration(totalScenes * 8)} total
+              </span>
             </div>
           </div>
         )}

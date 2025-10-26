@@ -143,7 +143,7 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
                 onClick={() => onStyleChange(style.id)}
                 onMouseEnter={() => setHoveredStyle(style.id)}
                 onMouseLeave={() => setHoveredStyle(null)}
-                className={`w-full h-20 p-3 rounded-lg border-2 transition-all flex items-center justify-between gap-2 ${getColorClasses(
+                className={`w-full h-20 pr-3 pl-3 rounded-lg border-2 transition-all flex items-center justify-between gap-2 ${getColorClasses(
                   style.colorClass,
                   isSelected
                 )}`}
@@ -186,45 +186,45 @@ export const ScriptStyleSelector: React.FC<StyleSelectorProps> = ({
       </div>
       {/* Script length presets */}
       <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Script Length Preset</label>
-        <div className="flex flex-wrap gap-2">
-          {presets.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => handlePresetChange(p.id)}
-              className={`px-4 py-2 text-sm rounded-full border transition-colors ${
-                localPreset === p.id
-                  ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400"
-              }`}
-            >
-              {p.label}
-              {p.id !== "custom" && (
-                <span className="ml-1 text-xs opacity-80">
-                  (~{p.words}w / {p.mins}m)
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        {localPreset === "custom" && (
-          <div className="mt-3">
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Word Count</label>
-            <input
-              type="number"
-              value={customWordCount}
-              onChange={(e) => onCustomWordCountChange?.(parseInt(e.target.value) || 0)}
-              min="0"
-              placeholder="Enter word count..."
-              className="w-48 px-3 py-2 border rounded-lg text-gray-900 dark:text-white text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        <div className="flex items-end gap-4 flex-wrap">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Script Length Preset</label>
+            <div className="flex flex-wrap gap-2">
+              {presets.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => handlePresetChange(p.id)}
+                  className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                    localPreset === p.id
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400"
+                  }`}
+                >
+                  {p.label}
+                  {p.id !== "custom" && (
+                    <span className="ml-1 text-xs opacity-80">
+                      (~{p.words}w / {p.mins}m)
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+          {localPreset === "custom" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Word Count</label>
+              <input
+                type="number"
+                value={customWordCount}
+                onChange={(e) => onCustomWordCountChange?.(parseInt(e.target.value) || 0)}
+                min="0"
+                placeholder="Enter word count..."
+                className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
       </div>
-      <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-        The style will influence the tone, pacing, visuals, and overall feel of your video script. Hover over each style to see
-        detailed characteristics.
-      </p>
     </>
   );
 };

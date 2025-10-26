@@ -31,7 +31,6 @@ interface Props {
 export function CookieRotationPanel({
   status: s,
   profiles,
-  onClose,
   onRefresh,
   onStartAll,
   onStartWorker,
@@ -92,7 +91,7 @@ export function CookieRotationPanel({
     return (
       <div
         ref={ref}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 p-0 w-[28rem] h-full overflow-hidden flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 p-0 w-full h-full overflow-hidden flex flex-col"
         role="dialog"
         aria-label="Worker Logs"
       >
@@ -111,29 +110,13 @@ export function CookieRotationPanel({
   return (
     <div
       ref={ref}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 p-3 w-[22rem] h-full flex flex-col"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 p-3 w-full h-full flex flex-col"
       role="dialog"
       aria-label="Cookie Rotation Dashboard"
     >
       <div className="flex items-start justify-between mb-2">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cookie Rotation</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRefresh}
-            className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-            title="Refresh status"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
-            aria-label="Close panel"
-          >
-            ✕
-          </button>
         </div>
       </div>
       {/* Dashboard cards - compact layout */}
@@ -144,9 +127,6 @@ export function CookieRotationPanel({
             <div className="flex items-center gap-2">
               <span className={`inline-block w-2 h-2 rounded-full ${s.isRunning ? "bg-green-500" : "bg-gray-400"}`} />
               <span className="font-semibold text-gray-900 dark:text-gray-100">{s.isRunning ? "Running" : "Stopped"}</span>
-            </div>
-            <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-              {s.running}/{s.total}
             </div>
           </div>
         </div>
@@ -166,7 +146,17 @@ export function CookieRotationPanel({
               <span className="w-2 h-2 rounded-full bg-red-500" />
               <span className="text-xs text-red-700 dark:text-red-300">{s.expired}</span>
             </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onRefresh}
+                className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                title="Refresh status"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
           {s.requiresHeadless > 0 && (
             <div className="flex items-center gap-2 text-xs text-amber-700">
               <svg className="w-3 h-3 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">

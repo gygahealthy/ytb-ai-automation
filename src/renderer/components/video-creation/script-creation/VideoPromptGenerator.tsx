@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, ChevronsLeftRightIcon } from "lucide-react";
+import { ArrowLeft, ChevronsLeftRightIcon, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { VideoStyle } from "./ScriptStyleSelector";
 import { VisualStyle } from "./VisualStyleSelector";
@@ -8,6 +8,7 @@ import { PromptsOutputColumn } from "./step-video-prompt/PromptsOutputColumn";
 import { useAlert } from "../../../hooks/useAlert";
 import { useScriptCreationStore } from "../../../store/script-creation.store";
 import { useVideoCreationStore } from "../../../store/video-creation.store";
+import { parseAIResponseJSON } from "@/shared/utils/ai-response.util";
 
 const electronApi = (window as any).electronAPI;
 
@@ -232,15 +233,28 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
             duration: item.duration || 8,
           }));
         } else if (typeof response.data === "string") {
-          // If response is text, parse it into prompts (split by scenes)
-          const scenes = response.data.split(/\n\n(?=Scene|\d+\.)/);
-          promptsData = scenes.map((scene: string, index: number) => ({
-            id: String(index + 1),
-            sceneNumber: index + 1,
-            text: `Scene ${index + 1}`,
-            prompt: scene.trim(),
-            duration: 8,
-          }));
+          // Try to parse the string as JSON first
+          const parsedJSON = parseAIResponseJSON(response.data);
+          if (parsedJSON && Array.isArray(parsedJSON)) {
+            // Successfully parsed JSON array - create a SEPARATE prompt card for EACH scene
+            promptsData = parsedJSON.map((sceneItem: any, index: number) => ({
+              id: String(index + 1),
+              sceneNumber: index + 1,
+              text: `Scene ${index + 1}`,
+              prompt: typeof sceneItem === "string" ? sceneItem : JSON.stringify(sceneItem), // Store individual scene as its own prompt
+              duration: 8,
+            }));
+          } else {
+            // Fallback: split by scenes
+            const scenes = response.data.split(/\n\n(?=Scene|\d+\.)/);
+            promptsData = scenes.map((scene: string, index: number) => ({
+              id: String(index + 1),
+              sceneNumber: index + 1,
+              text: `Scene ${index + 1}`,
+              prompt: scene.trim(),
+              duration: 8,
+            }));
+          }
         } else if (response.data?.prompts) {
           promptsData = response.data.prompts.map((item: any, index: number) => ({
             id: String(index + 1),
@@ -252,15 +266,28 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         }
 
         if (promptsData.length === 0) {
-          promptsData = [
-            {
-              id: "1",
-              sceneNumber: 1,
-              text: "Generated Prompt",
-              prompt: typeof response.data === "string" ? response.data : JSON.stringify(response.data),
-              duration: 8,
-            },
-          ];
+          // Last resort: try to parse the entire response as JSON
+          const lastAttempt = parseAIResponseJSON(JSON.stringify(response.data));
+          if (lastAttempt && Array.isArray(lastAttempt)) {
+            promptsData = lastAttempt.map((item: any, index: number) => ({
+              id: String(index + 1),
+              sceneNumber: index + 1,
+              text: item.text || item.title || `Scene ${index + 1}`,
+              prompt: JSON.stringify(item),
+              duration: item.duration || 8,
+            }));
+          } else {
+            // Absolute fallback
+            promptsData = [
+              {
+                id: "1",
+                sceneNumber: 1,
+                text: "Generated Prompt",
+                prompt: typeof response.data === "string" ? response.data : JSON.stringify(response.data),
+                duration: 8,
+              },
+            ];
+          }
         }
 
         setPrompts(promptsData);
@@ -310,30 +337,40 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
 
   return (
     <div className="h-full flex flex-col w-full">
+      {/* Header Section */}
+      <div className="pb-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-6 h-6 text-purple-500" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Generate Visual Prompts</h3>
+        </div>
+      </div>
+
       {/* Two Column Layout - Configuration (Left) | Output (Right) with Resizable Divider */}
       <div
         id="two-column-container"
         className="relative flex gap-0 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 w-full"
       >
         {/* LEFT COLUMN - Video Configuration Form */}
-        <div className="p-6 h-full overflow-hidden" style={{ width: `${leftColumnWidth}%` }}>
-          <VideoConfigurationColumn
-            topic={topic}
-            selectedTopic={selectedTopic} // ✅ Pass selectedTopic prop
-            videoStyle={videoStyle}
-            visualStyle={visualStyle}
-            scriptLengthPreset={scriptLengthPreset}
-            customWordCount={customWordCount}
-            script={script}
-            prompts={prompts}
-            simpleMode={true}
-            onTopicChange={onTopicChange}
-            onVideoStyleChange={onVideoStyleChange}
-            onVisualStyleChange={onVisualStyleChange}
-            onScriptLengthChange={onScriptLengthChange}
-            onCustomWordCountChange={onCustomWordCountChange}
-            onScriptChange={onScriptChange}
-          />
+        <div className="h-full overflow-hidden flex flex-col" style={{ width: `${leftColumnWidth}%` }}>
+          <div className="p-6 h-full overflow-auto">
+            <VideoConfigurationColumn
+              topic={topic}
+              selectedTopic={selectedTopic} // ✅ Pass selectedTopic prop
+              videoStyle={videoStyle}
+              visualStyle={visualStyle}
+              scriptLengthPreset={scriptLengthPreset}
+              customWordCount={customWordCount}
+              script={script}
+              prompts={prompts}
+              simpleMode={true}
+              onTopicChange={onTopicChange}
+              onVideoStyleChange={onVideoStyleChange}
+              onVisualStyleChange={onVisualStyleChange}
+              onScriptLengthChange={onScriptLengthChange}
+              onCustomWordCountChange={onCustomWordCountChange}
+              onScriptChange={onScriptChange}
+            />
+          </div>
         </div>
 
         {/* RESIZABLE DIVIDER */}
@@ -353,18 +390,20 @@ export const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({
         </div>
 
         {/* RIGHT COLUMN - AI Generated Prompts Output */}
-        <div className="p-6 h-full overflow-hidden" style={{ width: `${100 - leftColumnWidth}%` }}>
-          <PromptsOutputColumn
-            prompts={prompts}
-            isGenerating={isGenerating}
-            simpleMode={simpleMode}
-            topic={topic}
-            script={script}
-            onGenerate={handleGeneratePrompts}
-            onRegeneratePrompt={handleRegeneratePrompt}
-            onCopyPrompt={handleCopyPrompt}
-            onMakeVideos={handleMakeVideos}
-          />
+        <div className="h-full overflow-hidden flex flex-col" style={{ width: `${100 - leftColumnWidth}%` }}>
+          <div className="p-6 h-full overflow-hidden flex flex-col">
+            <PromptsOutputColumn
+              prompts={prompts}
+              isGenerating={isGenerating}
+              simpleMode={simpleMode}
+              topic={topic}
+              script={script}
+              onGenerate={handleGeneratePrompts}
+              onRegeneratePrompt={handleRegeneratePrompt}
+              onCopyPrompt={handleCopyPrompt}
+              onMakeVideos={handleMakeVideos}
+            />
+          </div>
         </div>
       </div>
 

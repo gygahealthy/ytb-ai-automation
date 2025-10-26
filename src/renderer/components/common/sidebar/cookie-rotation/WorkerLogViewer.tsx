@@ -33,8 +33,8 @@ export default function WorkerLogViewer({
   profileName,
   onClose,
   onBack,
-  maxHeight = "400px",
-}: WorkerLogViewerProps) {
+}: // maxHeight = "85vh",
+WorkerLogViewerProps) {
   const [logs, setLogs] = useState<WorkerLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,7 +160,7 @@ export default function WorkerLogViewer({
   };
 
   return (
-    <div className="flex flex-col bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden w-full overflow-x-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="p-3 flex items-center justify-between">
@@ -258,8 +258,7 @@ export default function WorkerLogViewer({
       {/* Log Content */}
       <div
         ref={logContainerRef}
-        className="overflow-y-auto p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 font-mono text-xs"
-        style={{ maxHeight }}
+        className="w-full h-full max-h-[72vh] overflow-x-hidden overflow-y-auto p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 font-mono text-xs whitespace-pre-wrap break-words"
       >
         {loading && logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
@@ -280,23 +279,30 @@ export default function WorkerLogViewer({
           filteredLogs.map((log, idx) => (
             <div
               key={`${log.timestamp}-${idx}`}
-              className="flex gap-2 p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
+              className="flex gap-3 p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
             >
-              <span className="text-gray-500 dark:text-gray-500 flex-shrink-0">{formatTimestamp(log.timestamp)}</span>
-              <span className={clsx("px-1.5 py-0.5 rounded text-xs font-semibold flex-shrink-0", getLevelColor(log.level))}>
-                {log.level.toUpperCase()}
-              </span>
-              {log.service && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
-                  {log.service.toUpperCase()}
+              {/* Left column: compact stacked metadata (time / level / service) */}
+              <div className="flex flex-col items-start gap-1 flex-shrink-0">
+                <span className="text-gray-500 dark:text-gray-500 text-xs font-mono">{formatTimestamp(log.timestamp)}</span>
+                <span className={clsx("px-1.5 py-0.5 rounded text-xs font-semibold", getLevelColor(log.level))}>
+                  {log.level.toUpperCase()}
                 </span>
-              )}
-              <span className="text-gray-800 dark:text-gray-200 break-all">
-                {log.message}
-                {log.args && log.args.length > 0 && (
-                  <span className="ml-2 text-gray-600 dark:text-gray-400">{formatArgs(log.args)}</span>
+                {log.service && (
+                  <span className="px-1 py-0.5 rounded text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                    {log.service.toUpperCase()}
+                  </span>
                 )}
-              </span>
+              </div>
+
+              {/* Message area - takes remaining width and wraps */}
+              <div className="flex-1">
+                <span className="text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+                  {log.message}
+                  {log.args && log.args.length > 0 && (
+                    <span className="ml-2 text-gray-600 dark:text-gray-400">{formatArgs(log.args)}</span>
+                  )}
+                </span>
+              </div>
             </div>
           ))
         )}

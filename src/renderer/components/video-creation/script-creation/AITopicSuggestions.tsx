@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, X, Check } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 
 interface AITopicSuggestionsProps {
   suggestions: string[];
@@ -12,33 +12,25 @@ export const AITopicSuggestions: React.FC<AITopicSuggestionsProps> = ({
   suggestions,
   selectedTopicId,
   onSelectTopic,
-  onClearSuggestions,
+  // onClearSuggestions,
 }) => {
-  if (suggestions.length === 0) {
+  // Filter out empty or invalid suggestions
+  const validSuggestions = suggestions.filter((s) => s && typeof s === "string" && s.trim().length > 0);
+
+  if (validSuggestions.length === 0) {
     return null;
   }
 
   return (
-    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-700 p-4">
+    <div className="h-64 overflow-y-auto bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-700 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-500" />
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            AI-Generated Topic Suggestions
-          </h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">AI-Generated Topic Suggestions</h3>
         </div>
-        {onClearSuggestions && (
-          <button
-            onClick={onClearSuggestions}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            title="Clear suggestions"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {suggestions.map((suggestion, index) => {
+        {validSuggestions.map((suggestion, index) => {
           const topicId = `topic-${index}`;
           const isSelected = selectedTopicId === topicId;
           return (
@@ -52,16 +44,11 @@ export const AITopicSuggestions: React.FC<AITopicSuggestionsProps> = ({
               }`}
             >
               <span className="flex-1">{suggestion}</span>
-              {isSelected && (
-                <Check className="w-5 h-5 flex-shrink-0 text-purple-600 dark:text-purple-300" />
-              )}
+              {isSelected && <Check className="w-5 h-5 flex-shrink-0 text-purple-600 dark:text-purple-300" />}
             </button>
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-        Click on any suggestion to use it as your video topic
-      </p>
     </div>
   );
 };
