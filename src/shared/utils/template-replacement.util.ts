@@ -76,10 +76,7 @@ function normalizeKey(key: string): string {
  * @param values - Values object with keys in potentially different case formats
  * @returns The value if found, undefined otherwise
  */
-function findValueByKey(
-  key: string,
-  values: TemplateValues
-): string | undefined {
+function findValueByKey(key: string, values: TemplateValues): string | undefined {
   const normalizedKey = normalizeKey(key);
 
   // Try direct match first (in case user provides exact key)
@@ -121,11 +118,7 @@ function findValueByKey(
  * // Result: "Topic: AI Trends. Style: Educational. Topic again: {video_topic}"
  * ```
  */
-export function replaceTemplate(
-  template: string,
-  values: TemplateValues,
-  occurrenceConfig?: VariableOccurrenceConfig
-): string {
+export function replaceTemplate(template: string, values: TemplateValues, occurrenceConfig?: VariableOccurrenceConfig): string {
   if (!template) return template;
 
   // Detect all variables in template
@@ -145,10 +138,7 @@ export function replaceTemplate(
   }
 
   // Build replacement map: track which placeholders should be replaced
-  const replacements = new Map<
-    number,
-    { original: string; replacement: string }
-  >();
+  const replacements = new Map<number, { original: string; replacement: string }>();
 
   for (const [varName, occurrences] of variablesByName.entries()) {
     const value = findValueByKey(varName, values);
@@ -167,17 +157,14 @@ export function replaceTemplate(
       continue;
     } else {
       // No config: replace all occurrences
-      indicesToReplace = new Set(
-        Array.from({ length: occurrences.length }, (_, i) => i)
-      );
+      indicesToReplace = new Set(Array.from({ length: occurrences.length }, (_, i) => i));
     }
 
     // Record which placeholders to replace
     for (let idx = 0; idx < occurrences.length; idx++) {
       if (indicesToReplace.has(idx)) {
         const occurrence = occurrences[idx];
-        const placeholder =
-          occurrence.syntax === "brace" ? `{${varName}}` : `[${varName}]`;
+        const placeholder = occurrence.syntax === "brace" ? `{${varName}}` : `[${varName}]`;
         replacements.set(occurrence.position, {
           original: placeholder,
           replacement: value,
@@ -187,9 +174,7 @@ export function replaceTemplate(
   }
 
   // Apply replacements from end to start to avoid position shifts
-  const replacementArray = Array.from(replacements.entries()).sort(
-    (a, b) => b[0] - a[0]
-  ); // Sort by position descending
+  const replacementArray = Array.from(replacements.entries()).sort((a, b) => b[0] - a[0]); // Sort by position descending
 
   let result = template;
   for (const [_position, { original, replacement }] of replacementArray) {
@@ -207,11 +192,123 @@ export function replaceTemplate(
  * @param values - Replacement values
  * @returns Template with all variables replaced
  */
-export function replaceAllTemplate(
-  template: string,
-  values: TemplateValues
-): string {
+export function replaceAllTemplate(template: string, values: TemplateValues): string {
   return replaceTemplate(template, values);
+}
+
+/**
+ * Replaces template variables using an array of values instead of an object.
+ * Values are matched by position in the array according to the occurrence config.
+ *
+ * This is useful when you want to provide replacement values in a specific order
+ * without worrying about matching keys. The array indices directly correspond to
+ * the occurrence indices in the config.
+ *
+ * @param template - Template string with variables like {video_topic} or [video_style]
+ * @param values - Array of replacement values in order
+ * @param occurrenceConfig - Which occurrences of each variable to replace.
+ *                          The array index maps to the occurrence index.
+ *                          Example: { "video_topic": [0, 2], "video_style": [1] }
+ *                          means values[0] replaces video_topic occurrence 0,
+ *                          values[1] replaces video_style occurrence 1,
+ *                          values[2] replaces video_topic occurrence 2
+ * @returns Template with selected variables replaced
+ *
+ * @example
+ * ```ts
+ * const template = "Topic: {video_topic}. Style: {video_style}. Topic again: {video_topic}";
+ * const values = ["AI Trends", "Educational", "Machine Learning"];
+ * const config = { "video_topic": [0, 2], "video_style": [1] };
+ *
+ * const result = replaceTemplateArray(template, values, config);
+ * // Result: "Topic: AI Trends. Style: Educational. Topic again: Machine Learning"
+ * // values[0] -> video_topic[0], values[1] -> video_style[1], values[2] -> video_topic[2]
+ * ```
+ */
+export function replaceTemplateArray(template: string, values: string[], occurrenceConfig: VariableOccurrenceConfig): string {
+  if (!template) return template;
+  if (!values || values.length === 0) return template;
+  if (!occurrenceConfig || Object.keys(occurrenceConfig).length === 0) {
+    return template;
+  }
+
+  // Detect all variables in template
+  const detectedVariables = detectTemplateVariables(template);
+
+  if (detectedVariables.length === 0) {
+    return template; // No variables to replace
+  }
+
+  // Group variables by name for tracking occurrences
+  const variablesByName = new Map<string, typeof detectedVariables>();
+  for (const variable of detectedVariables) {
+    const normalizedName = normalizeKey(variable.name);
+    if (!variablesByName.has(normalizedName)) {
+      variablesByName.set(normalizedName, []);
+    }
+    variablesByName.get(normalizedName)!.push(variable);
+  }
+
+  // Build a flat list of replacements ordered by array index
+  // Map: arrayIndex -> { position, original, replacement }
+  const replacementsByArrayIndex = new Map<
+    number,
+    Array<{
+      position: number;
+      original: string;
+      replacement: string;
+    }>
+  >();
+
+  // Iterate through occurrence config to map array indices to template positions
+  for (const [varName, occurrenceIndices] of Object.entries(occurrenceConfig)) {
+    const normalizedVarName = normalizeKey(varName);
+    const occurrences = variablesByName.get(normalizedVarName);
+
+    if (!occurrences) continue; // Variable not found in template
+
+    // For each occurrence index in the config
+    for (let arrayIdx = 0; arrayIdx < occurrenceIndices.length; arrayIdx++) {
+      const occurrenceIdx = occurrenceIndices[arrayIdx];
+
+      // Check if this occurrence exists in template
+      if (occurrenceIdx >= 0 && occurrenceIdx < occurrences.length) {
+        const occurrence = occurrences[occurrenceIdx];
+        const placeholder = occurrence.syntax === "brace" ? `{${occurrence.name}}` : `[${occurrence.name}]`;
+
+        if (!replacementsByArrayIndex.has(arrayIdx)) {
+          replacementsByArrayIndex.set(arrayIdx, []);
+        }
+
+        replacementsByArrayIndex.get(arrayIdx)!.push({
+          position: occurrence.position,
+          original: placeholder,
+          replacement: values[arrayIdx] || placeholder, // Use value or keep placeholder if missing
+        });
+      }
+    }
+  }
+
+  // Collect all replacements and sort by position (descending) to avoid index shifts
+  const allReplacements: Array<{ position: number; original: string; replacement: string }> = [];
+
+  for (const replacements of replacementsByArrayIndex.values()) {
+    allReplacements.push(...replacements);
+  }
+
+  allReplacements.sort((a, b) => b.position - a.position);
+
+  // Apply replacements from end to start
+  let result = template;
+  for (const { original, replacement } of allReplacements) {
+    // Replace only the first occurrence (since we're processing from end to start)
+    const index = result.indexOf(original);
+    if (index !== -1) {
+      result = result.substring(0, index) + replacement + result.substring(index + original.length);
+    }
+  }
+
+  return result;
 }
 
 /**

@@ -37,6 +37,7 @@ export default function CookieConfigCard({
 }: CookieConfigCardProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [newRequiredCookie, setNewRequiredCookie] = useState("");
 
   // Provide default config if missing
   const config: CookieRotationConfig = cookie.config || {
@@ -88,6 +89,24 @@ export default function CookieConfigCard({
     onUpdateConfig(cookie.cookieId, {
       rotationIntervalMinutes: Math.max(1, Math.min(1440, minutes)),
     });
+  };
+
+  const handleAddRequiredCookie = (value?: string) => {
+    const name = value?.trim() || newRequiredCookie.trim();
+    if (!name) return;
+    // read existing from raw cookie.config if present (type-unsafe, so use any)
+    const existing: string[] = ((cookie.config as any)?.requiredCookies as string[]) || [];
+    if (existing.includes(name)) return;
+    // send as any to avoid TS shape errors - repository/service layer should handle storing the extra field
+    onUpdateConfig(cookie.cookieId, { requiredCookies: [...existing, name] } as unknown as Partial<CookieRotationConfig>);
+    setNewRequiredCookie("");
+  };
+
+  const handleRemoveRequiredCookie = (name: string) => {
+    const existing: string[] = ((cookie.config as any)?.requiredCookies as string[]) || [];
+    onUpdateConfig(cookie.cookieId, {
+      requiredCookies: existing.filter((c: string) => c !== name),
+    } as unknown as Partial<CookieRotationConfig>);
   };
 
   const getMethodLabel = (method: RotationMethod): string => {
@@ -265,6 +284,53 @@ export default function CookieConfigCard({
               <Info className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      </div>
+      {/* Required Cookies (placed under header for consistent top placement) */}
+      <div className="mb-3 pt-0">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Required Cookies</label>
+          {/* keep space for potential actions */}
+          <div />
+        </div>
+        <div className="flex items-center gap-2 w-full mt-2">
+          <input
+            type="text"
+            value={newRequiredCookie}
+            onChange={(e) => setNewRequiredCookie(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Cookie name (e.g., __Secure-1PSID)"
+            className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddRequiredCookie();
+            }}
+            className="flex-shrink-0 text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Add
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {(((cookie.config as any)?.requiredCookies as string[]) || []).map((c) => (
+            <div
+              key={c}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-2 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
+            >
+              <span className="font-mono">{c}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveRequiredCookie(c);
+                }}
+                className="text-red-600 hover:text-red-700"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 

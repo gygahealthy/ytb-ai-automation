@@ -8,7 +8,6 @@ import { ScriptCreatePageToolbar } from "@components/video-creation/script-creat
 import { VideoStyle } from "@components/video-creation/script-creation/ScriptStyleSelector";
 import { useScriptCreationStore } from "@store/script-creation.store";
 import { useAlert } from "@hooks/useAlert";
-import { replaceTemplate } from "@shared/utils/template-replacement.util";
 import { VIDEO_STYLE_KEYWORD_MAP } from "@shared/constants/script-style.constants";
 
 const electronApi = (window as any).electronAPI;
@@ -120,39 +119,15 @@ const ScriptCreatePage: React.FC = () => {
 
     setIsGeneratingTopics(true);
     try {
-      const configResponse = await electronApi.aiPromptConf.getConfig("AITopicSuggestions");
-
-      if (!configResponse?.success || !configResponse.data) {
-        console.error("AITopicSuggestions config not found:", configResponse?.error);
-        return;
-      }
-
-      const config = configResponse.data;
-
-      const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-
-      if (!promptResponse?.success || !promptResponse.data) {
-        console.error("Failed to load master prompt");
-        return;
-      }
-
-      const masterPrompt = promptResponse.data;
-      const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
-
-      const variables = {
-        user_input_keywords: topic,
-        video_topic: topic,
-        topic_hint: topic,
-        number_of_topics: String(numberOfTopics),
-      };
-
-      const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
+      // Use array-based values in order matching occurrence config
+      const valuesArray = [
+        topic, // For user_input_keywords or video_topic
+        String(numberOfTopics), // For number_of_topics
+      ];
 
       const response = await electronApi.aiPromptConf.callAI({
-        componentName: config.componentName,
-        profileId: config.profileId || "default",
-        data: variables,
-        processedPrompt,
+        componentName: "AITopicSuggestions",
+        dataArray: valuesArray,
         stream: false,
       });
 
@@ -279,31 +254,25 @@ const ScriptCreatePage: React.FC = () => {
     }
     setIsGenerating(true);
     try {
-      // First, get the config for ScriptStyleSelector to retrieve the profile
-      const configResponse = await electronApi.aiPromptConf.getConfig("ScriptStyleSelector");
-      if (!configResponse?.success || !configResponse.data) {
-        throw new Error(configResponse?.error || "No configuration found for ScriptStyleSelector component");
-      }
+      // Use array-based values in order matching occurrence config
+      const valuesArray = [
+        topicToUse, // For video_topic
+        videoStyle, // For video_style
+        String(
+          scriptLengthPreset === "custom"
+            ? customWordCount
+            : scriptLengthPreset === "short"
+            ? 100
+            : scriptLengthPreset === "medium"
+            ? 150
+            : 250
+        ), // For target_word_count
+      ];
 
-      const componentConfig = configResponse.data;
-      const profileId = componentConfig.profileId || "default";
-
-      // Call AI service with real parameters using the profile from config
+      // Call AI service with array-based values
       const response = await electronApi.aiPromptConf.callAI({
         componentName: "ScriptStyleSelector",
-        profileId: profileId,
-        data: {
-          video_topic: topicToUse,
-          video_style: videoStyle,
-          target_word_count:
-            scriptLengthPreset === "custom"
-              ? customWordCount
-              : scriptLengthPreset === "short"
-              ? 100
-              : scriptLengthPreset === "medium"
-              ? 150
-              : 250,
-        },
+        dataArray: valuesArray,
         stream: false,
       });
 

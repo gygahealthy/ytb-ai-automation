@@ -40,6 +40,7 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
     rotationMethodOrder: ["refreshCreds", "rotateCookie", "headless"],
     launchWorkerOnStartup: false,
   });
+  const [newRequiredCookie, setNewRequiredCookie] = useState("");
 
   const handleClose = () => {
     // Reset form
@@ -67,13 +68,21 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
     setRotationConfig({ ...rotationConfig, enabledRotationMethods: newMethods });
   };
 
-  const handleAddCookie = () => {
-    const cookieName = prompt("Enter cookie name (e.g., __Secure-1PSID):");
+  const handleAddCookie = (cookieNameFromInput?: string) => {
+    // Prefer an explicit argument (from inline input), otherwise use the controlled input, otherwise fallback to prompt for backward-compatibility
+    const cookieName =
+      cookieNameFromInput && cookieNameFromInput.trim()
+        ? cookieNameFromInput.trim()
+        : newRequiredCookie && newRequiredCookie.trim()
+        ? newRequiredCookie.trim()
+        : prompt("Enter cookie name (e.g., __Secure-1PSID):");
+
     if (cookieName && cookieName.trim()) {
       setRotationConfig({
         ...rotationConfig,
         requiredCookies: [...rotationConfig.requiredCookies, cookieName.trim()],
       });
+      setNewRequiredCookie("");
     }
   };
 
@@ -279,25 +288,34 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Required Cookies</label>
-                <button
-                  type="button"
-                  onClick={handleAddCookie}
-                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  + Add Cookie
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newRequiredCookie}
+                    onChange={(e) => setNewRequiredCookie(e.target.value)}
+                    placeholder="Cookie name (e.g., __Secure-1PSID)"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddCookie()}
+                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {rotationConfig.requiredCookies.map((cookie) => (
-                  <span
+                  <div
                     key={cookie}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
                   >
-                    {cookie}
+                    <span className="font-mono">{cookie}</span>
                     <button type="button" onClick={() => handleRemoveCookie(cookie)} className="text-red-600 hover:text-red-700">
                       <X className="w-3 h-3" />
                     </button>
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -435,25 +453,34 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Required Cookies</label>
-                <button
-                  type="button"
-                  onClick={handleAddCookie}
-                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  + Add Cookie
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newRequiredCookie}
+                    onChange={(e) => setNewRequiredCookie(e.target.value)}
+                    placeholder="Cookie name (e.g., __Secure-1PSID)"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddCookie()}
+                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {rotationConfig.requiredCookies.map((cookie) => (
-                  <span
+                  <div
                     key={cookie}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
                   >
-                    {cookie}
+                    <span className="font-mono">{cookie}</span>
                     <button type="button" onClick={() => handleRemoveCookie(cookie)} className="text-red-600 hover:text-red-700">
                       <X className="w-3 h-3" />
                     </button>
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>

@@ -5,7 +5,6 @@ import { VisualStyle } from "../VisualStyleSelector";
 import { VideoPrompt } from "../VideoPromptGenerator";
 import { HintForTopicPrompt } from "../HintForTopicPrompt";
 import { AITopicSuggestions } from "../AITopicSuggestions";
-import { replaceTemplate } from "@/shared/utils/template-replacement.util";
 import { VIDEO_STYLE_OPTIONS } from "@/shared/constants/video-style.constants";
 import { VISUAL_STYLE_OPTIONS } from "@/shared/constants/visual-style.constants";
 
@@ -141,39 +140,15 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
     setIsGeneratingTopics(true);
     try {
-      const configResponse = await electronApi.aiPromptConf.getConfig("AITopicSuggestions");
-
-      if (!configResponse?.success || !configResponse.data) {
-        console.error("AITopicSuggestions config not found:", configResponse?.error);
-        return;
-      }
-
-      const config = configResponse.data;
-
-      const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-
-      if (!promptResponse?.success || !promptResponse.data) {
-        console.error("Failed to load master prompt:", promptResponse);
-        return;
-      }
-
-      const masterPrompt = promptResponse.data;
-      const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
-
-      const variables = {
-        user_input_keywords: hintInput,
-        video_topic: hintInput,
-        topic_hint: hintInput,
-        number_of_topics: "4",
-      };
-
-      const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
+      // Use array-based values in order matching occurrence config
+      const valuesArray = [
+        hintInput, // For user_input_keywords or video_topic
+        "4", // For number_of_topics
+      ];
 
       const response = await electronApi.aiPromptConf.callAI({
-        componentName: config.componentName,
-        profileId: config.profileId || "default",
-        data: variables,
-        processedPrompt,
+        componentName: "AITopicSuggestions",
+        dataArray: valuesArray,
         stream: false,
       });
 
@@ -278,44 +253,18 @@ export const VideoConfigurationColumn: React.FC<VideoConfigurationColumnProps> =
 
     setIsGeneratingScript(true);
     try {
-      const configResponse = await electronApi.aiPromptConf.getConfig("ScriptStyleSelector");
-
-      if (!configResponse?.success || !configResponse.data) {
-        console.error("ScriptStyleSelector config not found:", configResponse?.error);
-        return;
-      }
-
-      const config = configResponse.data;
-
-      const promptResponse = await electronApi.masterPrompts.getById(config.promptId);
-
-      if (!promptResponse?.success || !promptResponse.data) {
-        console.error("Failed to load master prompt:", promptResponse);
-        return;
-      }
-
-      const masterPrompt = promptResponse.data;
-      const promptTemplate = masterPrompt.promptTemplate || masterPrompt.prompt || "";
-
       const presetInfo = getPresetInfo(scriptLengthPreset);
-      const variables = {
-        topic: topic,
-        video_topic: topic,
-        video_style: videoStyle,
-        tone_style: videoStyle,
-        script_length_preset: scriptLengthPreset,
-        word_count: String(presetInfo.words),
-        duration_minutes: String(presetInfo.mins),
-        custom_word_count: String(customWordCount),
-      };
 
-      const processedPrompt = replaceTemplate(promptTemplate, variables, masterPrompt.variableOccurrencesConfig || undefined);
+      // Use array-based values in order matching occurrence config
+      const valuesArray = [
+        topic, // For video_topic
+        videoStyle, // For video_style
+        String(presetInfo.words), // For target_word_count
+      ];
 
       const response = await electronApi.aiPromptConf.callAI({
-        componentName: config.componentName,
-        profileId: config.profileId || "default",
-        data: variables,
-        processedPrompt,
+        componentName: "ScriptStyleSelector",
+        dataArray: valuesArray,
         stream: false,
       });
 

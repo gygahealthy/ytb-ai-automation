@@ -2,7 +2,7 @@ import { logger } from "../../../utils/logger-backend";
 import { sendChatMessage } from "../../gemini-apis/handlers/chat/sendChatMessage";
 import { GEMINI_CHAT_NORMAL_MODE_EPHEMERAL, type GeminiChatMode } from "../../../../shared/constants/gemini-chat.constants";
 import { promptRepository } from "../repository/master-prompt.repository";
-import { replaceTemplate } from "../../../../shared/utils/template-replacement.util";
+import { replaceTemplateArray } from "../../../../shared/utils/template-replacement.util";
 
 export interface AIChatRequest {
   profileId: string;
@@ -20,8 +20,7 @@ export interface AIChatRequest {
 
 export interface AIPromptCallRequest {
   componentName: string;
-  profileId: string;
-  data: Record<string, any>;
+  dataArray: string[];
   stream?: boolean;
   requestId?: string;
   processedPrompt?: string;
@@ -159,31 +158,34 @@ export class AIPromptChatService {
   }
 
   /**
-   * Process prompt template with data
-   * Replaces placeholders like {key} or [key] with actual values from data
-   * Respects occurrence config if provided (supports selective replacement)
+   * Process prompt template with array values
+   * Replaces placeholders using array-based position mapping
+   * More efficient when values are provided in a specific order
+   *
+   * @param template - Template string with variables
+   * @param values - Array of replacement values in order
+   * @param occurrenceConfig - Mapping of variable names to occurrence indices
+   * @returns Template with variables replaced by array values
    */
-  private processPromptWithData(
-    template: string,
-    data: Record<string, any>,
-    occurrenceConfig?: Record<string, number[]>
-  ): string {
-    // Delegate to shared template replacement util which normalizes keys to snake_case
-    // With occurrence config, only selected occurrences are replaced
-    return replaceTemplate(template, data || {}, occurrenceConfig);
+  private processPromptWithArray(template: string, values: string[], occurrenceConfig?: Record<string, number[]>): string {
+    if (!occurrenceConfig) {
+      return template;
+    }
+    // Delegate to array-based template replacement util
+    // This uses position-based mapping without key normalization overhead
+    return replaceTemplateArray(template, values, occurrenceConfig);
   }
 
   /**
    * Call AI with prompt for a specific component
+   * Uses array-based replacement for efficient position-based value mapping
    */
   async callAIWithPrompt(
     request: AIPromptCallRequest,
     getConfigForComponent: (componentName: string) => Promise<any>
   ): Promise<any> {
     try {
-      const { componentName, profileId, data, stream, requestId } = request;
-
-      logger.info(`[AIPromptChatService] Calling AI for component: ${componentName}`);
+      const { componentName, dataArray, stream, requestId } = request;
 
       // 1. Get configuration for component
       const configResult = await getConfigForComponent(componentName);
@@ -204,6 +206,9 @@ export class AIPromptChatService {
         };
       }
 
+      // Use profileId from config, not from request
+      const profileId = config.profileId || "default";
+
       // 2. Get the actual prompt template
       const prompt = await promptRepository.getById(config.promptId);
       if (!prompt) {
@@ -213,26 +218,33 @@ export class AIPromptChatService {
         };
       }
 
-      logger.info(`[AIPromptChatService] Found prompt: ${prompt.provider} (ID: ${prompt.id})`);
-
       // 3. Resolve the final prompt to send
-      // 'data' = user-supplied key-value pairs for placeholder replacement (e.g., { userName: "Alice" })
-      // 'processedPrompt' (from caller) = pre-expanded template (renderer already replaced placeholders)
+      // Use array-based replacement for efficient position-based mapping
       // If caller provided processedPrompt, use it directly (efficiency + consistency).
-      // Otherwise, process template server-side using shared replacer and caller's data.
-      // Pass the variableOccurrenceConfig for selective replacement (if user selected specific occurrences)
+      // Otherwise, process template server-side using array-based replacement
       const callerProcessed = (request as any).processedPrompt;
-      const processedPrompt = callerProcessed
-        ? callerProcessed
-        : this.processPromptWithData(prompt.promptTemplate, data || {}, prompt.variableOccurrencesConfig || undefined);
+      let processedPrompt: string;
 
-      logger.info(`[AIPromptChatService] Processed prompt (first 200 chars): ${processedPrompt.substring(0, 200)}...`);
+      if (callerProcessed) {
+        processedPrompt = callerProcessed;
+      } else if (dataArray && prompt.variableOccurrencesConfig) {
+        // Use array-based replacement
+        processedPrompt = this.processPromptWithArray(
+          prompt.promptTemplate,
+          dataArray,
+          prompt.variableOccurrencesConfig || undefined
+        );
+      } else {
+        // No dataArray or config provided - return template as-is or with basic replacement
+        logger.warn(`[AIPromptChatService] No dataArray or variableOccurrencesConfig provided for component=${componentName}`);
+        processedPrompt = prompt.promptTemplate;
+      }
 
       // 4. Call sendChatMessage with the final prompt
       logger.info(
-        `[AIPromptChatService] Sending chat message for profile=${profileId} promptId=${config.promptId} model=${
+        `[AIPromptChatService] Sending chat for component=${componentName}, profile=${profileId}, model=${
           config.aiModel || "GEMINI_2_5_PRO"
-        } promptLength=${processedPrompt?.length ?? 0}`
+        }`
       );
 
       const primaryModel = config.aiModel || "GEMINI_2_5_PRO";
@@ -247,8 +259,20 @@ export class AIPromptChatService {
         chatMode = "stateless";
       }
 
+      // TODO: Fallback logic will be implemented later
       // Use the AI chat service which handles fallback logic
-      const aiResponse = await this.sendChatWithFallback({
+      // const aiResponse = await this.sendChatWithFallback({
+      //   profileId,
+      //   prompt: processedPrompt,
+      //   stream: stream || false,
+      //   requestId: requestId,
+      //   model: primaryModel,
+      //   mode: chatMode as any,
+      //   conversationContext: (request as any).conversationContext,
+      // });
+
+      // Direct call without fallback for now
+      const aiResponse = await this.sendChat({
         profileId,
         prompt: processedPrompt,
         stream: stream || false,
@@ -269,8 +293,6 @@ export class AIPromptChatService {
           aiResponse.error = `${aiResponse.error} \n\nSuggestion: open the Profiles tab, select the profile used for this request and click 'Extract Cookies'. If prompted, log into Gemini in the extracted browser session and retry.`;
         }
       }
-
-      logger.info(`[AIPromptChatService] AI response received, success: ${aiResponse.success}`);
 
       return aiResponse;
     } catch (error) {
