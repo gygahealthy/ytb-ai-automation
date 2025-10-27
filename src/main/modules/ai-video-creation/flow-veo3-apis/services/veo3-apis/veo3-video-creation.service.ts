@@ -15,20 +15,38 @@ export interface ExtractedVideoMetadata {
   status: string;
 }
 
-export function extractVideoMetadata(rawData: any): ExtractedVideoMetadata {
-  const operation = rawData?.operations?.[0];
-  if (!operation) {
+export function extractVideoMetadata(rawData: unknown): ExtractedVideoMetadata {
+  // Type guard: ensure rawData is an object
+  if (typeof rawData !== "object" || rawData === null) {
     return { videoUrl: "", status: "UNKNOWN" };
   }
 
-  const status = operation?.status || "UNKNOWN";
-  const metadata = operation?.operation?.metadata;
-  const video = metadata?.video;
+  // Handle both types of responses:
+  // Type 1: Direct response with operations[0]
+  // Type 2: Wrapped response with raw.operations[0]
+  const data = rawData as Record<string, unknown>;
+  const operationsArray = (data.operations || data.raw) as unknown;
+  const operations = Array.isArray(operationsArray)
+    ? operationsArray
+    : ((operationsArray as Record<string, unknown>)?.operations as unknown);
+  const operation = Array.isArray(operations) ? operations[0] : null;
 
-  const mediaGenerationId = video?.mediaGenerationId || operation?.mediaGenerationId;
-  const fifeUrl = video?.fifeUrl;
-  const servingBaseUri = video?.servingBaseUri;
-  const videoUrl = fifeUrl || servingBaseUri || video?.url || operation?.videoUrl || "";
+  if (!operation || typeof operation !== "object") {
+    return { videoUrl: "", status: "UNKNOWN" };
+  }
+
+  const op = operation as Record<string, unknown>;
+  const status = (op.status as string) || "UNKNOWN";
+  const metadata = (op.operation as Record<string, unknown>)?.metadata as Record<string, unknown>;
+  const video = metadata?.video as Record<string, unknown>;
+
+  // Extract mediaGenerationId from multiple possible locations:
+  // 1. video.mediaGenerationId (inside metadata)
+  // 2. operation.mediaGenerationId (top-level operation property)
+  const mediaGenerationId = (video?.mediaGenerationId as string) || (op.mediaGenerationId as string);
+  const fifeUrl = video?.fifeUrl as string;
+  const servingBaseUri = video?.servingBaseUri as string;
+  const videoUrl = (fifeUrl || servingBaseUri || (video?.url as string) || (op.videoUrl as string) || "") as string;
 
   return { mediaGenerationId, fifeUrl, servingBaseUri, videoUrl, status };
 }
