@@ -1,4 +1,4 @@
-import { veo3AuthApiClient } from "./veo3/veo3-auth-api.client";
+import { extractBearerToken } from "../helpers/veo3-headers.helper";
 import { veo3ProjectApiClient } from "./veo3/veo3-project-api.client";
 import { veo3VideoApiClient } from "./veo3/veo3-video-api.client";
 
@@ -6,7 +6,7 @@ import { veo3VideoApiClient } from "./veo3/veo3-video-api.client";
  * VEO3 API Client - Main Facade
  *
  * This client acts as a backward-compatible facade that delegates to:
- * - VEO3AuthApiClient: Authentication and token management
+ * - extractBearerToken: Authentication and token management
  * - VEO3ProjectApiClient: Project CRUD operations
  * - VEO3VideoApiClient: Video generation and status checking
  *
@@ -40,14 +40,14 @@ export class VEO3ApiClient {
   }
 
   // ========================================
-  // AUTHENTICATION OPERATIONS (delegated to VEO3AuthApiClient)
+  // AUTHENTICATION OPERATIONS
   // ========================================
 
   /**
    * Extract Bearer token from Flow page HTML
    */
   async extractBearerToken(cookie: string): Promise<{ success: boolean; token?: string; error?: string }> {
-    return veo3AuthApiClient.extractBearerToken(cookie);
+    return extractBearerToken(cookie);
   }
 
   /**
@@ -92,6 +92,5 @@ export class VEO3ApiClient {
 export const veo3ApiClient = new VEO3ApiClient();
 
 // Also export the individual API clients for direct use
-export { veo3AuthApiClient } from "./veo3/veo3-auth-api.client";
 export { veo3ProjectApiClient } from "./veo3/veo3-project-api.client";
 export { veo3VideoApiClient } from "./veo3/veo3-video-api.client";

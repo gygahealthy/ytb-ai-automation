@@ -173,19 +173,13 @@ export const VideoHistoryProvider: React.FC<VideoHistoryProviderProps> = ({ chil
 
         if (result.success) {
           console.log(`[VideoHistory] Status refreshed for ${generation.id}:`, result.data);
-          // Refresh the current view
+          // Refresh the current view - this will update the video data silently
           await handleRefreshAll();
-
-          if (result.data?.status === "completed") {
-            alert(`Video completed! 🎉\nURL: ${result.data.videoUrl}`);
-          }
         } else {
           console.error("[VideoHistory] Failed to refresh status:", result.error);
-          alert(`Failed to refresh status: ${result.error}`);
         }
       } catch (error) {
         console.error("[VideoHistory] Error refreshing status:", error);
-        alert(`Error: ${error}`);
       } finally {
         setRefreshingId(null);
       }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { JsonDraft, Prompt, VideoCreationJob } from "../types/video-creation.types";
 
 interface VideoCreationStore {
@@ -46,6 +47,7 @@ interface VideoCreationStore {
   // Job Actions
   createJob: (promptId: string, promptText: string) => string;
   updateJobStatus: (jobId: string, status: VideoCreationJob["status"], data?: Partial<VideoCreationJob>) => void;
+  updateJobProgress: (jobId: string, progress: number) => void;
   removeJob: (jobId: string) => void;
 
   // UI Actions
@@ -65,298 +67,322 @@ const saveToHistory = (
   };
 };
 
-export const useVideoCreationStore = create<VideoCreationStore>((set, get) => ({
-  // Initial State
-  prompts: [{ id: generateId(), text: "", order: 0, selected: false, showPreview: false }],
-  jobs: [],
-  drafts: [],
-  history: {
-    past: [],
-    future: [],
-  },
-  globalPreviewMode: false,
-  statusFilter: "all",
-
-  // Prompt Actions
-  addPrompt: () => {
-    const { prompts, history } = get();
-    const newPrompt: Prompt = {
-      id: generateId(),
-      text: "",
-      order: 0,
-      selected: false,
-    };
-    // Add to top and reorder
-    const reorderedPrompts = [newPrompt, ...prompts.map((p) => ({ ...p, order: p.order + 1 }))];
-    set({
-      prompts: reorderedPrompts,
-      history: saveToHistory(prompts, history),
-    });
-  },
-
-  removePrompt: (id: string) => {
-    const { prompts, history } = get();
-    if (prompts.length > 1) {
-      set({
-        prompts: prompts.filter((p) => p.id !== id),
-        history: saveToHistory(prompts, history),
-      });
-    }
-  },
-
-  updatePrompt: (id: string, text: string) => {
-    const { prompts, history } = get();
-    const oldPrompts = [...prompts];
-    const newPrompts = prompts.map((p) => (p.id === id ? { ...p, text } : p));
-
-    set({
-      prompts: newPrompts,
-      history: saveToHistory(oldPrompts, history),
-    });
-  },
-
-  togglePromptSelection: (id: string) => {
-    set({
-      prompts: get().prompts.map((p) => (p.id === id ? { ...p, selected: !p.selected } : p)),
-    });
-  },
-
-  togglePromptPreview: (id: string) => {
-    set({
-      prompts: get().prompts.map((p) => (p.id === id ? { ...p, showPreview: !p.showPreview } : p)),
-    });
-  },
-
-  togglePromptProfileSelect: (id: string) => {
-    set({
-      prompts: get().prompts.map((p) => (p.id === id ? { ...p, showProfileSelect: !p.showProfileSelect } : p)),
-    });
-  },
-
-  updatePromptProfile: (id: string, profileId: string) => {
-    set({
-      prompts: get().prompts.map((p) => (p.id === id ? { ...p, profileId: profileId || undefined } : p)),
-    });
-  },
-  updatePromptProject: (id: string, projectId: string) => {
-    set({
-      prompts: get().prompts.map((p) => (p.id === id ? { ...p, projectId: projectId || undefined } : p)),
-    });
-  },
-
-  selectAllPrompts: () => {
-    set({
-      prompts: get().prompts.map((p) => ({ ...p, selected: true })),
-    });
-  },
-
-  clearAllSelections: () => {
-    set({
-      prompts: get().prompts.map((p) => ({ ...p, selected: false })),
-    });
-  },
-
-  toggleAllSelections: () => {
-    const { prompts } = get();
-    const allSelected = prompts.every((p) => p.selected);
-    set({
-      prompts: prompts.map((p) => ({ ...p, selected: !allSelected })),
-    });
-  },
-
-  removeSelectedPrompts: () => {
-    const { prompts, history } = get();
-    const newPrompts = prompts.filter((p) => !p.selected);
-    if (newPrompts.length === 0) {
-      // Keep at least one prompt
-      set({
-        prompts: [{ id: generateId(), text: "", order: 0, selected: false, showPreview: false }],
-        history: saveToHistory(prompts, history),
-      });
-    } else {
-      set({
-        prompts: newPrompts,
-        history: saveToHistory(prompts, history),
-      });
-    }
-  },
-
-  clearAllPrompts: () => {
-    const { prompts, history } = get();
-    set({
+export const useVideoCreationStore = create<VideoCreationStore>()(
+  persist(
+    (set, get) => ({
+      // Initial State
       prompts: [{ id: generateId(), text: "", order: 0, selected: false, showPreview: false }],
-      history: saveToHistory(prompts, history),
-    });
-  },
+      jobs: [],
+      drafts: [],
+      history: {
+        past: [],
+        future: [],
+      },
+      globalPreviewMode: false,
+      statusFilter: "all",
 
-  setPrompts: (prompts: Prompt[]) => {
-    const { history } = get();
-    set({
-      prompts,
-      history: saveToHistory(get().prompts, history),
-    });
-  },
+      // Prompt Actions
+      addPrompt: () => {
+        const { prompts, history } = get();
+        const newPrompt: Prompt = {
+          id: generateId(),
+          text: "",
+          order: 0,
+          selected: false,
+        };
+        // Add to top and reorder
+        const reorderedPrompts = [newPrompt, ...prompts.map((p) => ({ ...p, order: p.order + 1 }))];
+        set({
+          prompts: reorderedPrompts,
+          history: saveToHistory(prompts, history),
+        });
+      },
 
-  // JSON Actions
-  loadFromJson: (jsonString: string, mode: "replace" | "add") => {
-    try {
-      const parsed = JSON.parse(jsonString);
-      if (!Array.isArray(parsed)) {
-        return false;
-      }
+      removePrompt: (id: string) => {
+        const { prompts, history } = get();
+        if (prompts.length > 1) {
+          set({
+            prompts: prompts.filter((p) => p.id !== id),
+            history: saveToHistory(prompts, history),
+          });
+        }
+      },
 
-      const { prompts, history } = get();
-      const newPrompts: Prompt[] = parsed.map((item, idx) => ({
-        id: generateId(),
-        text: typeof item === "string" ? item : item.text || "",
-        order: idx,
-        selected: false,
-      }));
+      updatePrompt: (id: string, text: string) => {
+        const { prompts, history } = get();
+        const oldPrompts = [...prompts];
+        const newPrompts = prompts.map((p) => (p.id === id ? { ...p, text } : p));
 
-      if (mode === "add") {
-        // Check if we only have one empty prompt (initial state)
-        const hasOnlyEmptyPrompt = prompts.length === 1 && prompts[0].text.trim() === "";
+        set({
+          prompts: newPrompts,
+          history: saveToHistory(oldPrompts, history),
+        });
+      },
 
-        if (hasOnlyEmptyPrompt) {
-          // Replace the empty prompt instead of adding to it
+      togglePromptSelection: (id: string) => {
+        set({
+          prompts: get().prompts.map((p) => (p.id === id ? { ...p, selected: !p.selected } : p)),
+        });
+      },
+
+      togglePromptPreview: (id: string) => {
+        set({
+          prompts: get().prompts.map((p) => (p.id === id ? { ...p, showPreview: !p.showPreview } : p)),
+        });
+      },
+
+      togglePromptProfileSelect: (id: string) => {
+        set({
+          prompts: get().prompts.map((p) => (p.id === id ? { ...p, showProfileSelect: !p.showProfileSelect } : p)),
+        });
+      },
+
+      updatePromptProfile: (id: string, profileId: string) => {
+        set({
+          prompts: get().prompts.map((p) => (p.id === id ? { ...p, profileId: profileId || undefined } : p)),
+        });
+      },
+      updatePromptProject: (id: string, projectId: string) => {
+        set({
+          prompts: get().prompts.map((p) => (p.id === id ? { ...p, projectId: projectId || undefined } : p)),
+        });
+      },
+
+      selectAllPrompts: () => {
+        set({
+          prompts: get().prompts.map((p) => ({ ...p, selected: true })),
+        });
+      },
+
+      clearAllSelections: () => {
+        set({
+          prompts: get().prompts.map((p) => ({ ...p, selected: false })),
+        });
+      },
+
+      toggleAllSelections: () => {
+        const { prompts } = get();
+        const allSelected = prompts.every((p) => p.selected);
+        set({
+          prompts: prompts.map((p) => ({ ...p, selected: !allSelected })),
+        });
+      },
+
+      removeSelectedPrompts: () => {
+        const { prompts, history } = get();
+        const newPrompts = prompts.filter((p) => !p.selected);
+        if (newPrompts.length === 0) {
+          // Keep at least one prompt
+          set({
+            prompts: [{ id: generateId(), text: "", order: 0, selected: false, showPreview: false }],
+            history: saveToHistory(prompts, history),
+          });
+        } else {
           set({
             prompts: newPrompts,
             history: saveToHistory(prompts, history),
           });
-        } else {
-          // Add to top and reorder existing prompts
-          const reorderedExisting = prompts.map((p) => ({ ...p, order: p.order + newPrompts.length }));
+        }
+      },
+
+      clearAllPrompts: () => {
+        const { prompts, history } = get();
+        set({
+          prompts: [{ id: generateId(), text: "", order: 0, selected: false, showPreview: false }],
+          history: saveToHistory(prompts, history),
+        });
+      },
+
+      setPrompts: (prompts: Prompt[]) => {
+        const { history } = get();
+        set({
+          prompts,
+          history: saveToHistory(get().prompts, history),
+        });
+      },
+
+      // JSON Actions
+      loadFromJson: (jsonString: string, mode: "replace" | "add") => {
+        try {
+          const parsed = JSON.parse(jsonString);
+          if (!Array.isArray(parsed)) {
+            return false;
+          }
+
+          const { prompts, history } = get();
+          const newPrompts: Prompt[] = parsed.map((item, idx) => ({
+            id: generateId(),
+            text: typeof item === "string" ? item : item.text || "",
+            order: idx,
+            selected: false,
+          }));
+
+          if (mode === "add") {
+            // Check if we only have one empty prompt (initial state)
+            const hasOnlyEmptyPrompt = prompts.length === 1 && prompts[0].text.trim() === "";
+
+            if (hasOnlyEmptyPrompt) {
+              // Replace the empty prompt instead of adding to it
+              set({
+                prompts: newPrompts,
+                history: saveToHistory(prompts, history),
+              });
+            } else {
+              // Add to top and reorder existing prompts
+              const reorderedExisting = prompts.map((p) => ({ ...p, order: p.order + newPrompts.length }));
+              set({
+                prompts: [...newPrompts, ...reorderedExisting],
+                history: saveToHistory(prompts, history),
+              });
+            }
+          } else {
+            set({
+              prompts: newPrompts,
+              history: saveToHistory(prompts, history),
+            });
+          }
+          return true;
+        } catch (error) {
+          return false;
+        }
+      },
+
+      // History Actions
+      undo: () => {
+        const { history, prompts } = get();
+        if (history.past.length === 0) return;
+
+        const previous = history.past[history.past.length - 1];
+        const newPast = history.past.slice(0, -1);
+
+        set({
+          prompts: previous,
+          history: {
+            past: newPast,
+            future: [prompts, ...history.future],
+          },
+        });
+      },
+
+      redo: () => {
+        const { history, prompts } = get();
+        if (history.future.length === 0) return;
+
+        const next = history.future[0];
+        const newFuture = history.future.slice(1);
+
+        set({
+          prompts: next,
+          history: {
+            past: [...history.past, prompts],
+            future: newFuture,
+          },
+        });
+      },
+
+      canUndo: () => get().history.past.length > 0,
+      canRedo: () => get().history.future.length > 0,
+
+      // Draft Actions
+      saveDraft: (name: string) => {
+        const { prompts, drafts } = get();
+        const existingDraft = drafts.find((d) => d.name === name);
+
+        if (existingDraft) {
+          // Update existing draft
           set({
-            prompts: [...newPrompts, ...reorderedExisting],
+            drafts: drafts.map((d) =>
+              d.name === name ? { ...d, prompts: [...prompts], updatedAt: new Date().toISOString() } : d
+            ),
+          });
+        } else {
+          // Create new draft
+          const newDraft: JsonDraft = {
+            id: generateId(),
+            name,
+            prompts: [...prompts],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          set({ drafts: [...drafts, newDraft] });
+        }
+      },
+
+      loadDraft: (id: string) => {
+        const { drafts, prompts, history } = get();
+        const draft = drafts.find((d) => d.id === id);
+        if (draft) {
+          set({
+            prompts: draft.prompts.map((p) => ({ ...p, selected: false })),
             history: saveToHistory(prompts, history),
           });
         }
-      } else {
+      },
+
+      deleteDraft: (id: string) => {
+        set({ drafts: get().drafts.filter((d) => d.id !== id) });
+      },
+
+      // Job Actions
+      createJob: (promptId: string, promptText: string) => {
+        const jobId = generateId();
+        const newJob: VideoCreationJob = {
+          id: jobId,
+          promptId,
+          promptText,
+          status: "processing",
+          progress: 0,
+          createdAt: new Date().toISOString(),
+        };
+        set({ jobs: [newJob, ...get().jobs] });
+        return jobId;
+      },
+
+      updateJobStatus: (jobId: string, status: VideoCreationJob["status"], data?: Partial<VideoCreationJob>) => {
         set({
-          prompts: newPrompts,
-          history: saveToHistory(prompts, history),
+          jobs: get().jobs.map((job) =>
+            job.id === jobId
+              ? {
+                  ...job,
+                  status,
+                  ...data,
+                  ...(status === "completed" || status === "failed" ? { completedAt: new Date().toISOString() } : {}),
+                }
+              : job
+          ),
         });
-      }
-      return true;
-    } catch (error) {
-      return false;
-    }
-  },
-
-  // History Actions
-  undo: () => {
-    const { history, prompts } = get();
-    if (history.past.length === 0) return;
-
-    const previous = history.past[history.past.length - 1];
-    const newPast = history.past.slice(0, -1);
-
-    set({
-      prompts: previous,
-      history: {
-        past: newPast,
-        future: [prompts, ...history.future],
       },
-    });
-  },
 
-  redo: () => {
-    const { history, prompts } = get();
-    if (history.future.length === 0) return;
-
-    const next = history.future[0];
-    const newFuture = history.future.slice(1);
-
-    set({
-      prompts: next,
-      history: {
-        past: [...history.past, prompts],
-        future: newFuture,
+      updateJobProgress: (jobId: string, progress: number) => {
+        set({
+          jobs: get().jobs.map((job) => (job.id === jobId ? { ...job, progress: Math.min(progress, 99) } : job)),
+        });
       },
-    });
-  },
 
-  canUndo: () => get().history.past.length > 0,
-  canRedo: () => get().history.future.length > 0,
+      removeJob: (jobId: string) => {
+        set({ jobs: get().jobs.filter((job) => job.id !== jobId) });
+      },
 
-  // Draft Actions
-  saveDraft: (name: string) => {
-    const { prompts, drafts } = get();
-    const existingDraft = drafts.find((d) => d.name === name);
+      // UI Actions
+      toggleGlobalPreview: () => {
+        set({ globalPreviewMode: !get().globalPreviewMode });
+      },
 
-    if (existingDraft) {
-      // Update existing draft
-      set({
-        drafts: drafts.map((d) => (d.name === name ? { ...d, prompts: [...prompts], updatedAt: new Date().toISOString() } : d)),
-      });
-    } else {
-      // Create new draft
-      const newDraft: JsonDraft = {
-        id: generateId(),
-        name,
-        prompts: [...prompts],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      set({ drafts: [...drafts, newDraft] });
+      setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => {
+        set({ statusFilter: filter });
+      },
+    }),
+    {
+      name: "veo3-video-creation-store",
+      version: 1,
+      // Only persist these keys to avoid persisting history which can get large
+      partialize: (state) => ({
+        prompts: state.prompts,
+        jobs: state.jobs,
+        drafts: state.drafts,
+        globalPreviewMode: state.globalPreviewMode,
+        statusFilter: state.statusFilter,
+      }),
     }
-  },
-
-  loadDraft: (id: string) => {
-    const { drafts, prompts, history } = get();
-    const draft = drafts.find((d) => d.id === id);
-    if (draft) {
-      set({
-        prompts: draft.prompts.map((p) => ({ ...p, selected: false })),
-        history: saveToHistory(prompts, history),
-      });
-    }
-  },
-
-  deleteDraft: (id: string) => {
-    set({ drafts: get().drafts.filter((d) => d.id !== id) });
-  },
-
-  // Job Actions
-  createJob: (promptId: string, promptText: string) => {
-    const jobId = generateId();
-    const newJob: VideoCreationJob = {
-      id: jobId,
-      promptId,
-      promptText,
-      status: "processing",
-      progress: 0,
-      createdAt: new Date().toISOString(),
-    };
-    set({ jobs: [newJob, ...get().jobs] });
-    return jobId;
-  },
-
-  updateJobStatus: (jobId: string, status: VideoCreationJob["status"], data?: Partial<VideoCreationJob>) => {
-    set({
-      jobs: get().jobs.map((job) =>
-        job.id === jobId
-          ? {
-              ...job,
-              status,
-              ...data,
-              ...(status === "completed" || status === "failed" ? { completedAt: new Date().toISOString() } : {}),
-            }
-          : job
-      ),
-    });
-  },
-
-  removeJob: (jobId: string) => {
-    set({ jobs: get().jobs.filter((job) => job.id !== jobId) });
-  },
-
-  // UI Actions
-  toggleGlobalPreview: () => {
-    set({ globalPreviewMode: !get().globalPreviewMode });
-  },
-
-  setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => {
-    set({ statusFilter: filter });
-  },
-}));
+  )
+);

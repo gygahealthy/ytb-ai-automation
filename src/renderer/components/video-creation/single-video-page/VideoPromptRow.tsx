@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import profileIPC from "../../../ipc/profile";
 import veo3IPC from "../../../ipc/veo3";
 import useVeo3Store from "../../../store/veo3.store";
+import { useVideoCreationStore } from "../../../store/video-creation.store";
 import { Prompt, VideoCreationJob } from "../../../types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
 import ActionControls from "../video-prompt-row/ActionControls";
@@ -120,7 +121,8 @@ export default function VideoPromptRow({
     console.log(`[VideoPromptRow] ⚡ Job is processing - starting fake progress animation`);
 
     // Start fake progress animation while waiting for backend updates
-    // Use current job.progress as starting point
+    // Initialize from stored job.progress value (persisted in store)
+    const { updateJobProgress } = useVideoCreationStore.getState();
     let currentProgress = job.progress || 0;
     setPollingProgress(currentProgress);
 
@@ -128,6 +130,8 @@ export default function VideoPromptRow({
       currentProgress += 1;
       if (currentProgress <= 98) {
         setPollingProgress(currentProgress);
+        // Update progress in store so it persists across navigation
+        updateJobProgress(job.id, currentProgress);
       }
     }, 1000);
 
@@ -137,7 +141,7 @@ export default function VideoPromptRow({
       console.log(`[VideoPromptRow] 🛑 Cleaning up progress interval for job ${job.id}`);
       clearInterval(progressInterval);
     };
-  }, [job?.id, job?.generationId, job?.status, job?.progress]);
+  }, [job?.id, job?.generationId, job?.status, job]);
 
   const fetchProfiles = async () => {
     setLoading(true);

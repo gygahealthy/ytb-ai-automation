@@ -1,4 +1,5 @@
 import { Logger } from "../../../../../../shared/utils/logger";
+import { buildVEO3Headers } from "../../helpers/veo3-headers.helper";
 
 const logger = new Logger("VEO3ProjectApiClient");
 
@@ -8,28 +9,6 @@ const logger = new Logger("VEO3ProjectApiClient");
  */
 export class VEO3ProjectApiClient {
   private readonly baseUrl = "https://labs.google/fx/api/trpc";
-
-  /**
-   * Build request headers that mimic a real browser
-   */
-  private buildHeaders(cookie: string): HeadersInit {
-    return {
-      accept: "*/*",
-      "accept-language": "en-US,en;q=0.9",
-      "content-type": "application/json",
-      origin: "https://labs.google",
-      referer: "https://labs.google/fx/tools/flow",
-      "sec-ch-ua": '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-      "sec-ch-ua-mobile": "?0",
-      "sec-ch-ua-platform": '"Windows"',
-      "sec-fetch-dest": "empty",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-site": "same-origin",
-      "user-agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-      cookie: cookie,
-    };
-  }
 
   /**
    * List user projects from VEO3
@@ -67,7 +46,7 @@ export class VEO3ProjectApiClient {
       const response = await fetch(url, {
         method: "GET",
         headers: {
-          ...this.buildHeaders(cookie),
+          ...buildVEO3Headers(cookie),
           "cache-control": "no-cache",
           pragma: "no-cache",
         },
@@ -160,7 +139,7 @@ export class VEO3ProjectApiClient {
 
       const response = await fetch(url, {
         method: "POST",
-        headers: this.buildHeaders(cookie),
+        headers: buildVEO3Headers(cookie),
         body: JSON.stringify(payload),
       });
 

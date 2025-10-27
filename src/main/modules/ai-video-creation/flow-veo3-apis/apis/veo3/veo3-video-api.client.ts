@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { Logger } from "../../../../../../shared/utils/logger";
+import { buildGoogleApiHeaders } from "../../helpers/veo3-headers.helper";
 
 const logger = new Logger("VEO3VideoApiClient");
 
@@ -29,34 +30,6 @@ export class VEO3VideoApiClient {
     // Format as UUID string
     const hex = bytes.toString("hex");
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-  }
-
-  /**
-   * Build headers for Google AI Sandbox API requests
-   */
-  private buildGoogleApiHeaders(bearerToken: string): HeadersInit {
-    return {
-      accept: "*/*",
-      "accept-language": "en,en-US;q=0.9",
-      authorization: `Bearer ${bearerToken}`,
-      "cache-control": "no-cache",
-      "content-type": "text/plain;charset=UTF-8",
-      origin: "https://labs.google",
-      pragma: "no-cache",
-      priority: "u=1, i",
-      referer: "https://labs.google/",
-      "sec-ch-ua": '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-      "sec-ch-ua-mobile": "?0",
-      "sec-ch-ua-platform": '"Windows"',
-      "sec-fetch-dest": "empty",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-site": "cross-site",
-      "user-agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-      "x-browser-channel": "stable",
-      "x-browser-copyright": "Copyright 2025 Google LLC. All rights reserved.",
-      "x-browser-year": "2025",
-    };
   }
 
   /**
@@ -106,7 +79,7 @@ export class VEO3VideoApiClient {
 
       const response = await fetch(url, {
         method: "POST",
-        headers: this.buildGoogleApiHeaders(bearerToken),
+        headers: buildGoogleApiHeaders(bearerToken),
         body: JSON.stringify(payload),
       });
 
@@ -186,7 +159,7 @@ export class VEO3VideoApiClient {
 
       const response = await fetch(url, {
         method: "POST",
-        headers: this.buildGoogleApiHeaders(bearerToken),
+        headers: buildGoogleApiHeaders(bearerToken),
         body: JSON.stringify(payload),
       });
 

@@ -80,6 +80,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
     removeScene: (projectId: string, sceneId: string) => ipcRenderer.invoke("veo3:removeScene", { projectId, sceneId }),
     updatePrompt: (projectId: string, jsonPrompt: any) => ipcRenderer.invoke("veo3:updatePrompt", { projectId, jsonPrompt }),
     delete: (id: string) => ipcRenderer.invoke("veo3:delete", { id }),
+    downloadVideo: (videoUrl: string, filename?: string, downloadPath?: string) =>
+      ipcRenderer.invoke("veo3:downloadVideo", { videoUrl, filename, downloadPath }),
+    downloadMultipleVideos: (videos: Array<{ videoUrl: string; filename?: string }>, downloadPath?: string) =>
+      ipcRenderer.invoke("veo3:downloadMultipleVideos", { videos, downloadPath }),
+    downloadStatus: () => ipcRenderer.invoke("veo3:downloadStatus"),
+    onDownloadProgress: (callback: (result: any) => void) => {
+      const channel = "veo3:downloadProgress";
+      const listener = (_event: any, result: any) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
   },
 
   // YouTube APIs

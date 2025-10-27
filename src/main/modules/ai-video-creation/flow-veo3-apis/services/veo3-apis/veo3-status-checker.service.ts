@@ -95,6 +95,9 @@ export class VEO3StatusCheckerService {
       if (mediaStatus === "MEDIA_GENERATION_STATUS_SUCCESSFUL" || mediaStatus === "MEDIA_GENERATION_STATUS_COMPLETED") {
         const extracted = extractVideoMetadata(rawData);
         await videoGenerationRepository.updateStatus(generationId, "completed", {
+          mediaGenerationId: extracted.mediaGenerationId,
+          fifeUrl: extracted.fifeUrl,
+          servingBaseUri: extracted.servingBaseUri,
           videoUrl: extracted.videoUrl,
           rawResponse: JSON.stringify(rawData),
         });
@@ -218,6 +221,9 @@ export class VEO3StatusCheckerService {
         status === "completed"
       ) {
         await videoGenerationRepository.updateStatus(generationId, "completed", {
+          mediaGenerationId: extracted.mediaGenerationId,
+          fifeUrl: extracted.fifeUrl,
+          servingBaseUri: extracted.servingBaseUri,
           videoUrl: extracted.videoUrl,
           rawResponse: JSON.stringify(rawData),
         });

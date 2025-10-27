@@ -5,6 +5,7 @@ import PreviewPanel from "../../common/PreviewPanel";
 import StatusBadge from "./StatusBadge";
 import TechnicalDetails from "./TechnicalDetails";
 import VideoLink from "./VideoLink";
+import DownloadVideo from "./DownloadVideo";
 
 export default function GenerationCard({
   generation,
@@ -66,6 +67,8 @@ export default function GenerationCard({
                 <div className="flex items-center gap-2">
                   {/* External link icon near title */}
                   <VideoLink generation={generation} />
+                  {/* Download video button */}
+                  <DownloadVideo generation={generation} />
                   {/* Toggle preview */}
                   <button
                     onClick={() => setShowPreview((s) => !s)}
