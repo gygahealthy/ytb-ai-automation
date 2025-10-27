@@ -2,12 +2,12 @@ import clsx from "clsx";
 import { Settings, Terminal } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Page } from "../App";
-import { useLogStore } from "../store/log.store";
-import Logo from "./common/sidebar/Logo";
-import MenuGroup from "./common/sidebar/MenuGroup";
-import { routeConfig } from "./common/sidebar/routes.config";
-import CookieRotationIndicatorInner from "./common/sidebar/cookie-rotation/CookieRotationIndicator";
+import { Page } from "../../App";
+import { useLogStore } from "../../store/log.store";
+import Logo from "./sidebar/Logo";
+import MenuGroup from "./sidebar/MenuGroup";
+import { routeConfig } from "./sidebar/routes.config";
+import CookieRotationIndicatorInner from "./drawers/cookie-rotation/CookieRotationIndicator";
 
 interface SidebarProps {
   currentPage: Page;
@@ -15,11 +15,7 @@ interface SidebarProps {
   onSettingsClick: () => void;
 }
 
-export default function Sidebar({
-  currentPage,
-  onPageChange,
-  onSettingsClick,
-}: SidebarProps) {
+export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,10 +42,7 @@ export default function Sidebar({
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-      <Logo
-        isCollapsed={isCollapsed}
-        onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
-      />
+      <Logo isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">

@@ -1,5 +1,5 @@
 import { FileText, Trash2, X } from "lucide-react";
-import { JsonDraft } from "../../types/video-creation.types";
+import { JsonDraft } from "../../../types/video-creation.types";
 
 interface DraftManagerModalProps {
   isOpen: boolean;

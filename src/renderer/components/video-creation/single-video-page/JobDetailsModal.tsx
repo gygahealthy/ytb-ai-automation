@@ -1,8 +1,8 @@
 import { Download, FileText, FolderOpen, Image, Music, Video, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import veo3IPC from "../../ipc/veo3";
-import { useVideoCreationStore } from "../../store/video-creation.store";
-import { VideoCreationJob } from "../../types/video-creation.types";
+import veo3IPC from "../../../ipc/veo3";
+import { useVideoCreationStore } from "../../../store/video-creation.store";
+import { VideoCreationJob } from "../../../types/video-creation.types";
 
 interface JobDetailsModalProps {
   job: VideoCreationJob | null;

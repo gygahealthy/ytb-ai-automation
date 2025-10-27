@@ -1,12 +1,12 @@
 import { CheckCircle2, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import profileIPC from "../../ipc/profile";
-import veo3IPC from "../../ipc/veo3";
-import useVeo3Store from "../../store/veo3.store";
-import { Prompt, VideoCreationJob } from "../../types/video-creation.types";
-import PreviewPanel from "../common/PreviewPanel";
-import ActionControls from "./video-prompt-row/ActionControls";
-import ProfilePanel from "./video-prompt-row/ProfilePanel";
+import profileIPC from "../../../ipc/profile";
+import veo3IPC from "../../../ipc/veo3";
+import useVeo3Store from "../../../store/veo3.store";
+import { Prompt, VideoCreationJob } from "../../../types/video-creation.types";
+import PreviewPanel from "../../common/PreviewPanel";
+import ActionControls from "../video-prompt-row/ActionControls";
+import ProfilePanel from "../video-prompt-row/ProfilePanel";
 
 interface Profile {
   id: string;
@@ -85,7 +85,16 @@ export default function VideoPromptRow({
   }, [prompt.showProfileSelect, effectiveProfileId]);
 
   useEffect(() => {
-    console.log(`[VideoPromptRow] 🔄 Effect triggered - job:`, job?.id, `generationId:`, job?.generationId, `status:`, job?.status, `progress:`, job?.progress);
+    console.log(
+      `[VideoPromptRow] 🔄 Effect triggered - job:`,
+      job?.id,
+      `generationId:`,
+      job?.generationId,
+      `status:`,
+      job?.status,
+      `progress:`,
+      job?.progress
+    );
 
     // If job is completed, show 100%
     if (job?.status === "completed") {
@@ -121,7 +130,7 @@ export default function VideoPromptRow({
         setPollingProgress(currentProgress);
       }
     }, 1000);
-    
+
     console.log(`[VideoPromptRow] ⏱️ Fake progress animation started from ${currentProgress}%`);
 
     return () => {

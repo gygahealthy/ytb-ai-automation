@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import CookieConfigCard from "./CookieConfigCard";
 import AddCookieCard from "./AddCookieCard";
-import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
+import type { CookieRotationConfig } from "../../common/drawers/cookie-rotation/types";
 
 interface ProfileWithCookieConfig {
   profileId: string;

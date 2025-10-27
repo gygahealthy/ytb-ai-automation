@@ -1,5 +1,5 @@
 import CookieConfigCard from "./CookieConfigCard";
-import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
+import type { CookieRotationConfig } from "../../common/drawers/cookie-rotation/types";
 
 interface ProfileCookieConfigRowProps {
   cookie: {

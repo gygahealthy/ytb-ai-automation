@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, Pin, PinOff, Search, FileText, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { LogEntry, useLogStore } from "../store/log.store";
+import { LogEntry, useLogStore } from "../../../../store/log.store";
 import LogLine from "./LogLine";
 
 export default function LogDrawer() {

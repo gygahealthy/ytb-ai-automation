@@ -3,7 +3,7 @@ import electronApi from "../ipc";
 import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
 import React from "react";
-import CookieRotationDrawerContent from "@/renderer/components/common/sidebar/cookie-rotation/CookieRotationDrawerContent";
+import CookieRotationDrawerContent from "@/renderer/components/common/drawers/cookie-rotation/CookieRotationDrawerContent";
 import { RefreshCw } from "lucide-react";
 
 type ShortcutHandler = () => void;

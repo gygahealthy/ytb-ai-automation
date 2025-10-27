@@ -1,5 +1,5 @@
 import { Settings, RefreshCw, Cpu, Clock, ChevronUp, ChevronDown, Play, Square, Zap, Info, X, Edit } from "lucide-react";
-import type { CookieRotationConfig, RotationMethod } from "../../common/sidebar/cookie-rotation/types";
+import type { CookieRotationConfig, RotationMethod } from "../../common/drawers/cookie-rotation/types";
 import { useState } from "react";
 import CookieDetailModal from "../cookie/CookieDetailModal";
 import { CookieAddModal } from "./CookieAddModal";

@@ -17,7 +17,6 @@ import {
   BookOpen,
   PenTool,
   Camera,
-  Info,
 } from "lucide-react";
 
 export type VisualStyle =
@@ -65,8 +64,7 @@ const visualStyleOptions: VisualStyleOption[] = [
     name: "2D Cartoon",
     icon: <Palette className="w-6 h-6" />,
     category: "Animation",
-    description:
-      "Classic flat-style animations for storytelling and friendly content",
+    description: "Classic flat-style animations for storytelling and friendly content",
     colorClass: "blue",
   },
   {
@@ -280,9 +278,7 @@ const getColorClasses = (color: string, isSelected: boolean) => {
     amber: isSelected
       ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30"
       : "border-gray-200 dark:border-gray-700 hover:border-amber-300",
-    red: isSelected
-      ? "border-red-500 bg-red-50 dark:bg-red-900/30"
-      : "border-gray-200 dark:border-gray-700 hover:border-red-300",
+    red: isSelected ? "border-red-500 bg-red-50 dark:bg-red-900/30" : "border-gray-200 dark:border-gray-700 hover:border-red-300",
     cyan: isSelected
       ? "border-cyan-500 bg-cyan-50 dark:bg-cyan-900/30"
       : "border-gray-200 dark:border-gray-700 hover:border-cyan-300",
@@ -295,9 +291,7 @@ const getColorClasses = (color: string, isSelected: boolean) => {
     violet: isSelected
       ? "border-violet-500 bg-violet-50 dark:bg-violet-900/30"
       : "border-gray-200 dark:border-gray-700 hover:border-violet-300",
-    sky: isSelected
-      ? "border-sky-500 bg-sky-50 dark:bg-sky-900/30"
-      : "border-gray-200 dark:border-gray-700 hover:border-sky-300",
+    sky: isSelected ? "border-sky-500 bg-sky-50 dark:bg-sky-900/30" : "border-gray-200 dark:border-gray-700 hover:border-sky-300",
     rose: isSelected
       ? "border-rose-500 bg-rose-50 dark:bg-rose-900/30"
       : "border-gray-200 dark:border-gray-700 hover:border-rose-300",
@@ -305,54 +299,44 @@ const getColorClasses = (color: string, isSelected: boolean) => {
   return colors[color as keyof typeof colors] || colors.blue;
 };
 
-export const VisualStyleSelector: React.FC<VisualStyleSelectorProps> = ({
-  selectedStyle,
-  onStyleChange,
-}) => {
+export const VisualStyleSelector: React.FC<VisualStyleSelectorProps> = ({ selectedStyle, onStyleChange }) => {
   const categories = ["Animation", "Cinematic", "Digital", "Artistic"];
 
   return (
-    <div className="space-y-6">
-      {categories.map((category) => {
-        const categoryStyles = visualStyleOptions.filter(
-          (style) => style.category === category
-        );
+    <div className="grid grid-cols-4 gap-0 h-auto">
+      {categories.map((category, index) => {
+        const categoryStyles = visualStyleOptions.filter((style) => style.category === category);
         return (
-          <div key={category}>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {category} Styles
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div
+            key={category}
+            className={`flex flex-col p-4 ${
+              index < categories.length - 1 ? "border-r border-gray-200 dark:border-gray-700" : ""
+            }`}
+          >
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{category}</h3>
+            <div className="grid grid-cols-3 gap-2">
               {categoryStyles.map((style) => {
                 const isSelected = selectedStyle === style.id;
                 return (
                   <button
                     key={style.id}
                     onClick={() => onStyleChange(style.id)}
-                    className={`w-full h-20 p-3 rounded-lg border-2 transition-all flex items-center justify-between gap-2 ${getColorClasses(
+                    className={`w-full h-14 p-2 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-1 ${getColorClasses(
                       style.colorClass,
                       isSelected
                     )}`}
+                    title={style.description}
                   >
-                    <div
-                      className={`flex-shrink-0 ${
-                        isSelected
-                          ? "text-current"
-                          : "text-gray-400 dark:text-gray-500"
-                      }`}
-                    >
-                      {style.icon}
+                    <div className={`flex-shrink-0 ${isSelected ? "text-current" : "text-gray-400 dark:text-gray-500"}`}>
+                      {React.cloneElement(style.icon as React.ReactElement, { className: "w-4 h-4" })}
                     </div>
                     <div
-                      className={`text-sm font-semibold flex-1 text-center ${
-                        isSelected
-                          ? "text-current"
-                          : "text-gray-900 dark:text-white"
+                      className={`text-xs font-semibold text-center line-clamp-2 ${
+                        isSelected ? "text-current" : "text-gray-900 dark:text-white"
                       }`}
                     >
                       {style.name}
                     </div>
-                    <Info className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                   </button>
                 );
               })}

@@ -3,12 +3,12 @@ import { History, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppAlert from "@components/common/AppAlert";
-import AddJsonModal from "@components/video-creation/AddJsonModal";
-import DraftManagerModal from "@components/video-creation/DraftManagerModal";
-import JobDetailsModal from "@components/video-creation/JobDetailsModal";
-import JsonToolbar from "@components/video-creation/JsonToolbar";
-import ProfileDrawer from "@components/video-creation/ProfileDrawer";
-import VideoPromptRow from "@components/video-creation/VideoPromptRow";
+import AddJsonModal from "@/renderer/components/video-creation/single-video-page/AddJsonModal";
+import DraftManagerModal from "@/renderer/components/video-creation/single-video-page/DraftManagerModal";
+import JobDetailsModal from "@/renderer/components/video-creation/single-video-page/JobDetailsModal";
+import JsonToolbar from "@/renderer/components/video-creation/single-video-page/JsonToolbar";
+import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
+import VideoPromptRow from "@/renderer/components/video-creation/single-video-page/VideoPromptRow";
 import { useDrawer } from "@hooks/useDrawer";
 import { useVideoCreationStore } from "@store/video-creation.store";
 

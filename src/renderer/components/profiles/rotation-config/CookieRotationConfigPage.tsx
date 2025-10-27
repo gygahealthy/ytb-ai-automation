@@ -2,7 +2,7 @@ import { Zap, RotateCcw, Save, X, AlertCircle, CheckCircle, ChevronDown } from "
 import { useState, useEffect, useMemo } from "react";
 import CookieRotationConfigList from "./CookieRotationConfigList";
 import { CookieAddModal } from "./CookieAddModal";
-import type { CookieRotationConfig } from "../../common/sidebar/cookie-rotation/types";
+import type { CookieRotationConfig } from "../../common/drawers/cookie-rotation/types";
 import type { ApiResponse } from "@/shared/types";
 
 type ElectronCookiesBridge = {

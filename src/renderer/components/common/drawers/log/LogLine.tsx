@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import { LogEntry } from "../store/log.store";
+import { LogEntry } from "../../../../store/log.store";
 
 export default function LogLine({ log, highlight }: { log: LogEntry; highlight?: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);

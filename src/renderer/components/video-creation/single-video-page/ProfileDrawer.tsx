@@ -1,9 +1,9 @@
 import { FolderKanban, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAlert } from "../../hooks/useAlert";
-import profileIPC from "../../ipc/profile";
-import veo3IPC from "../../ipc/veo3";
-import useVeo3Store from "../../store/veo3.store";
+import { useAlert } from "../../../hooks/useAlert";
+import profileIPC from "../../../ipc/profile";
+import veo3IPC from "../../../ipc/veo3";
+import useVeo3Store from "../../../store/veo3.store";
 
 interface Profile {
   id: string;
@@ -24,20 +24,11 @@ interface ProfileDrawerProps {
   onClose?: () => void;
 }
 
-export default function ProfileDrawer({
-  initialProfileId,
-  initialProjectId,
-  onApply,
-  onClose,
-}: ProfileDrawerProps) {
+export default function ProfileDrawer({ initialProfileId, initialProjectId, onApply, onClose }: ProfileDrawerProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [localProfileId, setLocalProfileId] = useState<
-    string | null | undefined
-  >(initialProfileId);
-  const [localProjectId, setLocalProjectId] = useState<
-    string | null | undefined
-  >(initialProjectId);
+  const [localProfileId, setLocalProfileId] = useState<string | null | undefined>(initialProfileId);
+  const [localProjectId, setLocalProjectId] = useState<string | null | undefined>(initialProjectId);
   const [loading, setLoading] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [, setAuthErrorProfileId] = useState<string | null>(null);
@@ -89,8 +80,7 @@ export default function ProfileDrawer({
       if (cached) {
         const transformed = cached.map((p: any) => ({
           id: p.projectId || p.id,
-          name:
-            p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
           description: p.description || "",
         }));
         setProjects(transformed);
@@ -106,8 +96,7 @@ export default function ProfileDrawer({
         useVeo3Store.getState().setProjectsForProfile(profileId, projectsArr);
         const transformed = projectsArr.map((p: any) => ({
           id: p.projectId || p.id,
-          name:
-            p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
+          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
           description: p.description || "",
         }));
         setProjects(transformed);
@@ -122,9 +111,7 @@ export default function ProfileDrawer({
           errorMsg.includes("cookies") ||
           errorMsg.includes("expired")
         ) {
-          console.log(
-            `[ProfileDrawer] Authentication error detected for profile: ${profileId}`
-          );
+          console.log(`[ProfileDrawer] Authentication error detected for profile: ${profileId}`);
           setAuthErrorProfileId(profileId);
           setAuthErrorMessage(errorMsg);
           setShowAuthDialog(true);
@@ -202,8 +189,7 @@ export default function ProfileDrawer({
         {localProfileId && (
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-900 dark:text-blue-100">
-              This profile and project will be used globally for all video
-              creation unless overridden per-row.
+              This profile and project will be used globally for all video creation unless overridden per-row.
             </p>
           </div>
         )}
@@ -222,12 +208,7 @@ export default function ProfileDrawer({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-red-600 dark:text-red-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -237,16 +218,11 @@ export default function ProfileDrawer({
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Authentication Failed
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Authentication Failed</h3>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  Your session has expired or you are not logged in. Please log
-                  in to the profile again to fetch projects.
+                  Your session has expired or you are not logged in. Please log in to the profile again to fetch projects.
                 </p>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  {authErrorMessage}
-                </p>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{authErrorMessage}</p>
               </div>
             </div>
 
