@@ -2,7 +2,7 @@ import { collectModuleRegistrations } from "./module-loader";
 import { registerAll } from "../../core/ipc/registry";
 import { logger } from "../utils/logger-backend";
 import { IpcRegistration } from "../../core/ipc/types";
-import { registerDevToolsHandlers } from "./devtools";
+import { registerDevToolsHandlers } from "../modules/common/devtools";
 
 /**
  * Register all IPC handlers
@@ -18,9 +18,7 @@ export function registerIPCHandlers(): void {
     if (!uniqueMap.has(reg.channel)) {
       uniqueMap.set(reg.channel, reg);
     } else {
-      console.warn(
-        `Duplicate IPC registration for channel '${reg.channel}' detected — ignoring subsequent registration`
-      );
+      console.warn(`Duplicate IPC registration for channel '${reg.channel}' detected — ignoring subsequent registration`);
     }
   }
 

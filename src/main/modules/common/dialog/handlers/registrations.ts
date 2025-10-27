@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { IpcRegistration } from "@/core/ipc/types";
 import {
   selectFolder,
   getDefaultProfilePath,
@@ -7,13 +7,12 @@ import {
   selectBrowserExecutable,
   showOpenDialog,
   validateBrowserPath,
-} from '../../utils/dialog.service';
-import { IpcRegistration } from '../../../core/ipc/types';
+} from "../dialog.service";
 
-export const dialogRegistrations: IpcRegistration[] = [
+export const registrations: IpcRegistration[] = [
   {
-    channel: 'dialog:selectFolder',
-    description: 'Open folder selection dialog',
+    channel: "dialog:selectFolder",
+    description: "Open folder selection dialog",
     handler: async (req: any) => {
       const defaultPath = req as string | undefined;
       try {
@@ -25,8 +24,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'dialog:getDefaultProfilePath',
-    description: 'Get default profile path',
+    channel: "dialog:getDefaultProfilePath",
+    description: "Get default profile path",
     handler: async () => {
       try {
         const res = getDefaultProfilePath();
@@ -37,8 +36,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'dialog:generateUserAgent',
-    description: 'Generate a random user agent',
+    channel: "dialog:generateUserAgent",
+    description: "Generate a random user agent",
     handler: async () => {
       try {
         const res = generateUserAgent();
@@ -49,8 +48,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'dialog:getDefaultChromePath',
-    description: 'Get default Chrome path',
+    channel: "dialog:getDefaultChromePath",
+    description: "Get default Chrome path",
     handler: async () => {
       try {
         const res = getDefaultChromePath();
@@ -61,8 +60,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'dialog:selectBrowserExecutable',
-    description: 'Select browser executable',
+    channel: "dialog:selectBrowserExecutable",
+    description: "Select browser executable",
     handler: async () => {
       try {
         const res = await selectBrowserExecutable();
@@ -73,8 +72,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'dialog:showOpenDialog',
-    description: 'Show generic open dialog',
+    channel: "dialog:showOpenDialog",
+    description: "Show generic open dialog",
     handler: async (req: any) => {
       try {
         const options = req as Electron.OpenDialogOptions;
@@ -86,8 +85,8 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
   {
-    channel: 'validateBrowserPath',
-    description: 'Validate browser executable path',
+    channel: "validateBrowserPath",
+    description: "Validate browser executable path",
     handler: async (req: any) => {
       try {
         const browserPath = req as string;
@@ -99,20 +98,3 @@ export const dialogRegistrations: IpcRegistration[] = [
     },
   },
 ];
-
-export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
-  if (registrar) {
-    registrar(dialogRegistrations);
-    return;
-  }
-
-  // Register handlers directly when called without a registrar (fallback)
-  for (const reg of dialogRegistrations) {
-    ipcMain.handle(reg.channel, async (_event, ...args) => {
-      const req = args.length <= 1 ? args[0] : args;
-      return await reg.handler(req as any);
-    });
-  }
-
-  console.log('✅ Dialog module registered (src/main/modules/dialog/index.ts)');
-}
