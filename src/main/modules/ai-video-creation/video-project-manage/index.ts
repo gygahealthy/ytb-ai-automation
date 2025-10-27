@@ -1,6 +1,6 @@
-import { ipcMain } from 'electron';
-import { IpcRegistration } from '../../../core/ipc/types';
-import { veo3Registrations } from './handlers/registrations';
+import { ipcMain } from "electron";
+import { IpcRegistration } from "../../../../core/ipc/types";
+import { veo3Registrations } from "./handlers/registrations";
 
 export function registerModule(registrar?: (regs: IpcRegistration[]) => void): void {
   if (registrar) {

@@ -4,8 +4,8 @@ import { StringUtil } from "../../../../../shared/utils/string";
 import { profileRepository, veo3ProjectRepository } from "../../../../storage/database";
 import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
 import { cookieService } from "../../../common/cookie/services/cookie.service";
-import { veo3ApiClient } from "../../apis/veo3-api.client";
-import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../../veo3.types";
+import { veo3ApiClient } from "../../flow-veo3-apis/apis/veo3-api.client";
+import { CreateVEO3ProjectInput, VEO3Project, VideoScene } from "../veo3.types";
 
 const logger = new Logger("VEO3ProjectService");
 

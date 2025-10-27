@@ -1,9 +1,12 @@
 // Export all repositories
-export { Veo3ProjectRepository, veo3ProjectRepository } from "../../modules/ai-video-creation/repository/veo3-project.repository";
+export {
+  Veo3ProjectRepository,
+  veo3ProjectRepository,
+} from "../../modules/ai-video-creation/video-project-manage/repository/veo3-project.repository";
 export {
   VideoGenerationRepository,
   videoGenerationRepository,
-} from "../../modules/ai-video-creation/repository/video-generation.repository";
+} from "../../modules/ai-video-creation/flow-veo3-apis/repository/video-generation.repository";
 export { ProfileRepository, profileRepository } from "../../modules/profile-management/repository/profile.repository";
 export { promptRepository } from "../../modules/master-prompt-management/repository/master-prompt.repository";
 export {

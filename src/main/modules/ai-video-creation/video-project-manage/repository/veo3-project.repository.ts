@@ -1,5 +1,5 @@
-import { database } from "../../../storage/database";
-import { BaseRepository } from "../../../storage/repositories/base.repository";
+import { database } from "../../../../storage/database";
+import { BaseRepository } from "../../../../storage/repositories/base.repository";
 import { VEO3Project, VideoScene } from "../veo3.types";
 
 interface VEO3ProjectRow {

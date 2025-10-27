@@ -1,8 +1,8 @@
 import { ApiResponse } from "../../../../../shared/types";
 import { Logger } from "../../../../../shared/utils/logger";
-import { videoGenerationRepository } from "../../repository/video-generation.repository";
+import { videoGenerationRepository } from "../../flow-veo3-apis/repository/video-generation.repository";
 import { VideoGeneration } from "../../../../../shared/types/video-creation.types";
-import { extractVideoMetadata } from "./veo3-video-creation.service";
+import { extractVideoMetadata } from "../../flow-veo3-apis/services/veo3-apis/veo3-video-creation.service";
 
 const logger = new Logger("VEO3VideoHistoryService");
 
@@ -23,7 +23,7 @@ export interface PaginatedVideoHistory {
 
 /**
  * VEO3 Video History Service
- * 
+ *
  * Dedicated service for managing video generation history with efficient pagination,
  * filtering, and date-based queries for lazy loading.
  */
@@ -40,7 +40,7 @@ export class VEO3VideoHistoryService {
       logger.info(`Fetching video history: page=${page}, pageSize=${pageSize}`, filter);
 
       const offset = (page - 1) * pageSize;
-      
+
       // Fetch generations based on filters
       let generations: VideoGeneration[];
       let total: number;
@@ -68,22 +68,10 @@ export class VEO3VideoHistoryService {
           filter.startDate,
           filter.endDate
         );
-        total = await videoGenerationRepository.countByStatus(
-          filter.status,
-          filter.startDate,
-          filter.endDate
-        );
+        total = await videoGenerationRepository.countByStatus(filter.status, filter.startDate, filter.endDate);
       } else {
-        generations = await videoGenerationRepository.getAllPaginated(
-          pageSize,
-          offset,
-          filter?.startDate,
-          filter?.endDate
-        );
-        total = await videoGenerationRepository.countAll(
-          filter?.startDate,
-          filter?.endDate
-        );
+        generations = await videoGenerationRepository.getAllPaginated(pageSize, offset, filter?.startDate, filter?.endDate);
+        total = await videoGenerationRepository.countAll(filter?.startDate, filter?.endDate);
       }
 
       // Enrich data: extract videoUrl from rawResponse if missing
@@ -114,26 +102,28 @@ export class VEO3VideoHistoryService {
     page: number = 1,
     pageSize: number = 20,
     filter?: VideoHistoryFilter
-  ): Promise<ApiResponse<{
-    groups: Array<{
-      date: string;
-      dateLabel: string; // "Today", "Yesterday", "Oct 10, 2025"
-      items: VideoGeneration[];
-    }>;
-    total: number;
-    page: number;
-    pageSize: number;
-    hasMore: boolean;
-  }>> {
+  ): Promise<
+    ApiResponse<{
+      groups: Array<{
+        date: string;
+        dateLabel: string; // "Today", "Yesterday", "Oct 10, 2025"
+        items: VideoGeneration[];
+      }>;
+      total: number;
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+    }>
+  > {
     try {
       const result = await this.getVideoHistory(page, pageSize, filter);
-      
+
       if (!result.success || !result.data) {
         return { success: false, error: result.error };
       }
 
       const { items, total, hasMore } = result.data;
-      
+
       // Group items by date
       const grouped = this.groupByDate(items);
 
@@ -156,16 +146,18 @@ export class VEO3VideoHistoryService {
   /**
    * Get status counts for all videos
    */
-  async getStatusCounts(profileId?: string): Promise<ApiResponse<{
-    all: number;
-    pending: number;
-    processing: number;
-    completed: number;
-    failed: number;
-  }>> {
+  async getStatusCounts(profileId?: string): Promise<
+    ApiResponse<{
+      all: number;
+      pending: number;
+      processing: number;
+      completed: number;
+      failed: number;
+    }>
+  > {
     try {
       const counts = await videoGenerationRepository.getStatusCounts(profileId);
-      
+
       return {
         success: true,
         data: {
@@ -227,7 +219,7 @@ export class VEO3VideoHistoryService {
 
     // Convert to array and add labels
     const result: Array<{ date: string; dateLabel: string; items: VideoGeneration[] }> = [];
-    
+
     for (const [dateKey, items] of groups.entries()) {
       const date = new Date(dateKey);
       let dateLabel: string;
@@ -262,9 +254,7 @@ export class VEO3VideoHistoryService {
    */
   private isSameDay(date1: Date, date2: Date): boolean {
     return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
+      date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate()
     );
   }
 }

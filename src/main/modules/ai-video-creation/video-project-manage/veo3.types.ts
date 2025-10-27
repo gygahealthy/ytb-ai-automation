@@ -1,4 +1,4 @@
-import { ID } from "../../../shared/types";
+import { ID } from "../../../../shared/types";
 
 // ============= VEO3 Types =============
 export interface VEO3Project {
@@ -27,4 +27,3 @@ export interface CreateVEO3ProjectInput {
   scenes: Omit<VideoScene, "id">[];
   jsonPrompt?: Record<string, any>;
 }
-

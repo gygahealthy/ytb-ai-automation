@@ -1,7 +1,7 @@
-import { Logger } from "../../../../shared/utils/logger";
-import { database } from "../../../storage/database";
-import { SQLiteDatabase } from "../../../storage/sqlite-database";
-import type { VideoGeneration } from "../../../../shared/types/video-creation.types";
+import { Logger } from "../../../../../shared/utils/logger";
+import { database } from "../../../../storage/database";
+import { SQLiteDatabase } from "../../../../storage/sqlite-database";
+import type { VideoGeneration } from "../../../../../shared/types/video-creation.types";
 
 const logger = new Logger("VideoGenerationRepository");
 
@@ -405,11 +405,7 @@ export class VideoGenerationRepository {
   /**
    * Count video generations by status
    */
-  async countByStatus(
-    status: VideoGeneration["status"],
-    startDate?: string,
-    endDate?: string
-  ): Promise<number> {
+  async countByStatus(status: VideoGeneration["status"], startDate?: string, endDate?: string): Promise<number> {
     const whereClauses = ["status = ?"];
     const params: any[] = [status];
 

@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import { logger } from "../../../../utils/logger-backend";
+import { logger } from "../../../../../utils/logger-backend";
 import { videoGenerationRepository } from "../../repository/video-generation.repository";
 import { veo3StatusCheckerService } from "./veo3-status-checker.service";
 
@@ -41,7 +41,7 @@ export class VEO3PollingService {
       lastChecked: 0,
     });
 
-    logger.info(`[VEO3PollingService] Added generation ${generationId} to polling queue (promptId: ${promptId || 'none'})`);
+    logger.info(`[VEO3PollingService] Added generation ${generationId} to polling queue (promptId: ${promptId || "none"})`);
     logger.info(`[VEO3PollingService] Queue size: ${this.pollingJobs.size}`);
   }
 
@@ -75,9 +75,7 @@ export class VEO3PollingService {
       logger.info(`[VEO3PollingService] Checking ${this.pollingJobs.size} generation(s)...`);
 
       const now = Date.now();
-      const jobsToCheck = Array.from(this.pollingJobs.values()).filter(
-        (job) => now - job.lastChecked >= this.POLL_INTERVAL_MS
-      );
+      const jobsToCheck = Array.from(this.pollingJobs.values()).filter((job) => now - job.lastChecked >= this.POLL_INTERVAL_MS);
 
       for (const job of jobsToCheck) {
         await this.checkAndBroadcast(job);
@@ -103,24 +101,26 @@ export class VEO3PollingService {
    */
   private async checkAndBroadcast(job: PollingJob) {
     const { generationId, promptId } = job;
-    
+
     job.attempts++;
     job.lastChecked = Date.now();
 
     const timestamp = new Date().toLocaleTimeString();
-    logger.info(`[VEO3PollingService] [${timestamp}] Checking generation ${generationId} (attempt ${job.attempts}/${this.MAX_ATTEMPTS})`);
+    logger.info(
+      `[VEO3PollingService] [${timestamp}] Checking generation ${generationId} (attempt ${job.attempts}/${this.MAX_ATTEMPTS})`
+    );
 
     try {
       const result = await veo3StatusCheckerService.checkGenerationStatus(generationId);
 
       if (!result.success || !result.data) {
         logger.error(`[VEO3PollingService] Failed to check status: ${result.error}`);
-        
+
         // If too many attempts, remove from queue
         if (job.attempts >= this.MAX_ATTEMPTS) {
           logger.error(`[VEO3PollingService] Max attempts reached for ${generationId}, removing from queue`);
           this.removeFromPolling(generationId);
-          
+
           // Broadcast failure
           this.broadcastStatusUpdate({
             generationId,
@@ -129,7 +129,7 @@ export class VEO3PollingService {
             error: "Max polling attempts reached",
           });
         }
-        
+
         return;
       }
 
@@ -138,10 +138,10 @@ export class VEO3PollingService {
 
       if (status === "completed") {
         logger.info(`[VEO3PollingService] ✅ Video completed! URL: ${videoUrl?.substring(0, 50)}...`);
-        
+
         // Remove from polling queue
         this.removeFromPolling(generationId);
-        
+
         // Broadcast completion to all clients
         this.broadcastStatusUpdate({
           generationId,
@@ -151,13 +151,12 @@ export class VEO3PollingService {
           completedAt,
           progress: 100,
         });
-        
       } else if (status === "failed") {
         logger.error(`[VEO3PollingService] ❌ Video failed: ${errorMessage}`);
-        
+
         // Remove from polling queue
         this.removeFromPolling(generationId);
-        
+
         // Broadcast failure to all clients
         this.broadcastStatusUpdate({
           generationId,
@@ -166,11 +165,10 @@ export class VEO3PollingService {
           error: errorMessage,
           progress: 0,
         });
-        
       } else {
         // Still processing
         logger.info(`[VEO3PollingService] ⏳ Still processing (status: ${status})...`);
-        
+
         // Broadcast processing status with estimated progress
         const estimatedProgress = Math.min(95, Math.floor((job.attempts / this.MAX_ATTEMPTS) * 100));
         this.broadcastStatusUpdate({
@@ -180,15 +178,14 @@ export class VEO3PollingService {
           progress: estimatedProgress,
         });
       }
-      
     } catch (error) {
       logger.error(`[VEO3PollingService] Error checking generation ${generationId}:`, error);
-      
+
       // If too many attempts, remove from queue
       if (job.attempts >= this.MAX_ATTEMPTS) {
         logger.error(`[VEO3PollingService] Max attempts reached for ${generationId}, removing from queue`);
         this.removeFromPolling(generationId);
-        
+
         this.broadcastStatusUpdate({
           generationId,
           promptId,
@@ -212,13 +209,13 @@ export class VEO3PollingService {
     progress?: number;
   }) {
     const windows = BrowserWindow.getAllWindows();
-    
+
     logger.info(`[VEO3PollingService] Broadcasting status update to ${windows.length} window(s):`, {
       generationId: data.generationId,
       promptId: data.promptId,
       status: data.status,
     });
-    
+
     windows.forEach((win) => {
       if (!win.isDestroyed()) {
         win.webContents.send("veo3:generation:status", data);
@@ -232,7 +229,7 @@ export class VEO3PollingService {
   getQueueStatus() {
     return {
       size: this.pollingJobs.size,
-      jobs: Array.from(this.pollingJobs.values()).map(job => ({
+      jobs: Array.from(this.pollingJobs.values()).map((job) => ({
         generationId: job.generationId,
         promptId: job.promptId,
         attempts: job.attempts,
@@ -247,21 +244,19 @@ export class VEO3PollingService {
   async restorePendingGenerations() {
     try {
       logger.info("[Polling] Restoring pending generations from database...");
-      
+
       // Get all generations with pending or processing status
       const allGenerations = await videoGenerationRepository.getAll(1000, 0);
-      const pendingGenerations = allGenerations.filter(
-        (gen: any) => gen.status === "pending" || gen.status === "processing"
-      );
-      
+      const pendingGenerations = allGenerations.filter((gen: any) => gen.status === "pending" || gen.status === "processing");
+
       logger.info(`[Polling] Found ${pendingGenerations.length} pending/processing generation(s)`);
-      
+
       for (const gen of pendingGenerations) {
         // Note: promptId is not stored in VideoGeneration table, only in the request
         // So we'll add without promptId for restored generations
         this.addToPolling(gen.id);
       }
-      
+
       logger.info(`[Polling] Restored ${pendingGenerations.length} generation(s) to polling queue`);
     } catch (error) {
       logger.error("[Polling] Failed to restore pending generations:", error);

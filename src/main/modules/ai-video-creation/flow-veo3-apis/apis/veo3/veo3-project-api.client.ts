@@ -1,4 +1,4 @@
-import { Logger } from "../../../../../shared/utils/logger";
+import { Logger } from "../../../../../../shared/utils/logger";
 
 const logger = new Logger("VEO3ProjectApiClient");
 

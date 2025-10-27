@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { BrowserWindow } from "electron";
-import { ApiResponse } from "../../../../../shared/types";
-import { logger } from "../../../../utils/logger-backend";
+import { ApiResponse } from "../../../../../../shared/types";
+import { logger } from "../../../../../utils/logger-backend";
 import { veo3VideoCreationService } from "./veo3-video-creation.service";
 import { veo3PollingService } from "./veo3-polling.service";
 
@@ -46,7 +46,7 @@ export class VEO3BatchGenerationService {
   /**
    * Generate multiple videos asynchronously (non-blocking)
    * Returns immediately and processes videos in the background
-   * 
+   *
    * @param requests - Array of video generation requests
    * @param delayMs - Delay in milliseconds between each request (default: 1500ms)
    * @param onProgress - Callback function for progress updates (optional)
@@ -65,7 +65,7 @@ export class VEO3BatchGenerationService {
       broadcastToAllWindows("veo3:batch:started", {
         batchId,
         total: requests.length,
-        requestIds: requests.map(r => r.promptId),
+        requestIds: requests.map((r) => r.promptId),
       });
       logger.info(`[Batch ${batchId}] Sent batch-started event to all clients`);
 
@@ -88,7 +88,7 @@ export class VEO3BatchGenerationService {
   /**
    * Generate multiple videos synchronously (blocking)
    * Waits for all videos to be generated before returning
-   * 
+   *
    * @param requests - Array of video generation requests (without promptId)
    * @param delayMs - Delay in milliseconds between each request (default: 1500ms)
    * @returns Array of generation results
@@ -214,9 +214,7 @@ export class VEO3BatchGenerationService {
 
         if (result.success && result.data) {
           successCount++;
-          logger.info(
-            `[Batch ${batchId}] [${i + 1}/${requests.length}] ✅ Success: ${result.data.generationId}`
-          );
+          logger.info(`[Batch ${batchId}] [${i + 1}/${requests.length}] ✅ Success: ${result.data.generationId}`);
 
           // Add to backend polling service immediately
           veo3PollingService.addToPolling(result.data.generationId, request.promptId);
@@ -243,9 +241,7 @@ export class VEO3BatchGenerationService {
           }
         } else {
           failureCount++;
-          logger.error(
-            `[Batch ${batchId}] [${i + 1}/${requests.length}] ❌ Failed: ${result.error}`
-          );
+          logger.error(`[Batch ${batchId}] [${i + 1}/${requests.length}] ❌ Failed: ${result.error}`);
 
           const errorData: BatchGenerationProgress = {
             promptId: request.promptId,

@@ -27,7 +27,7 @@ tsConfigPaths.register({
 import { app, BrowserWindow, Menu } from "electron";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
-import { veo3PollingService } from "./modules/ai-video-creation/services/veo3.service";
+import { veo3PollingService } from "./modules/ai-video-creation/video-project-manage/services/veo3.service";
 import { getGlobalRotationWorkerManager } from "./modules/common/cookie-rotation/services/global-rotation-worker-manager.service";
 
 class ElectronApp {

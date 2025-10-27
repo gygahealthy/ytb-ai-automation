@@ -1,8 +1,8 @@
-import { ApiResponse } from "../../../../../shared/types";
-import { logger } from "../../../../utils/logger-backend";
-import { profileRepository } from "../../../../storage/database";
-import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
-import { cookieService } from "../../../common/cookie/services/cookie.service";
+import { ApiResponse } from "../../../../../../shared/types";
+import { logger } from "../../../../../utils/logger-backend";
+import { profileRepository } from "../../../../../storage/database";
+import { COOKIE_SERVICES } from "../../../../gemini-apis/shared/types";
+import { cookieService } from "../../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";
 import { videoGenerationRepository } from "../../repository/video-generation.repository";
 import { extractVideoMetadata } from "./veo3-video-creation.service";
