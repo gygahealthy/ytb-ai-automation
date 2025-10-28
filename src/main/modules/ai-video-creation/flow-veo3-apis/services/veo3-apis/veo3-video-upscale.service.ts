@@ -241,17 +241,39 @@ export class VEO3VideoUpscaleService {
 
       logger.info(`Video upscale started: operationName=${operationName}, sceneId=${sceneId}`);
 
-      await videoUpscaleRepository.create({
-        id: upscaleId,
-        sourceGenerationId,
-        profileId: sourceGeneration.profileId,
-        projectId: sourceGeneration.projectId,
-        sceneId,
-        operationName,
-        status: "pending",
-        model,
-        rawResponse: JSON.stringify(data),
-      });
+      try {
+        await videoUpscaleRepository.create({
+          id: upscaleId,
+          sourceGenerationId,
+          profileId: sourceGeneration.profileId,
+          projectId: sourceGeneration.projectId,
+          sceneId,
+          operationName,
+          status: "pending",
+          model,
+          rawResponse: JSON.stringify(data),
+        });
+      } catch (dbError: any) {
+        // Handle foreign key constraint errors with better diagnostics
+        if (dbError?.code === "SQLITE_CONSTRAINT" && dbError?.message?.includes("FOREIGN KEY")) {
+          logger.error("Foreign key constraint failed while creating upscale record", {
+            error: dbError,
+            sourceGenerationId,
+            profileId: sourceGeneration.profileId,
+            projectId: sourceGeneration.projectId,
+          });
+          // Log detailed context for debugging
+          logger.info(
+            `Source generation: id=${sourceGenerationId}, profileId=${sourceGeneration.profileId}, projectId=${sourceGeneration.projectId}`
+          );
+          return {
+            success: false,
+            error:
+              "Database constraint error - ensure referenced records exist. This typically resolves after database migration.",
+          };
+        }
+        throw dbError;
+      }
 
       // Add to polling manager (worker thread - non-blocking)
       veo3PollingManager.addToPolling(upscaleId, undefined, "upscale", sourceGeneration.profileId, operationName, sceneId);

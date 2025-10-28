@@ -22,8 +22,8 @@ interface ChannelCompetitorRow {
  * Repository for ChannelCompetitor entities
  */
 export class ChannelCompetitorRepository extends BaseRepository<ChannelCompetitor> {
-  constructor() {
-    super("channel_competitors", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channel_competitors", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ChannelCompetitorRow): ChannelCompetitor {
@@ -75,7 +75,7 @@ export class ChannelCompetitorRepository extends BaseRepository<ChannelCompetito
       `SELECT * FROM ${this.tableName} WHERE channel_id = ? ORDER BY subscriber_count DESC`,
       [channelId]
     );
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -139,5 +139,17 @@ export class ChannelCompetitorRepository extends BaseRepository<ChannelCompetito
   }
 }
 
-// Export singleton instance
-export const channelCompetitorRepository = new ChannelCompetitorRepository();
+let _channelCompetitorRepositoryInstance: ChannelCompetitorRepository | null = null;
+
+function getChannelCompetitorRepository(): ChannelCompetitorRepository {
+  if (!_channelCompetitorRepositoryInstance) {
+    _channelCompetitorRepositoryInstance = new ChannelCompetitorRepository();
+  }
+  return _channelCompetitorRepositoryInstance;
+}
+
+export const channelCompetitorRepository = new Proxy({} as ChannelCompetitorRepository, {
+  get(_target, prop) {
+    return getChannelCompetitorRepository()[prop as keyof ChannelCompetitorRepository];
+  },
+});

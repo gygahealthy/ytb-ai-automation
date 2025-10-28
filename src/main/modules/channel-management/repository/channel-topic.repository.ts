@@ -21,8 +21,8 @@ interface ChannelTopicRow {
  * Repository for ChannelTopic entities
  */
 export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
-  constructor() {
-    super("channel_topics", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channel_topics", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ChannelTopicRow): ChannelTopic {
@@ -76,7 +76,7 @@ export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
        target_date ASC`,
       [channelId]
     );
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -87,7 +87,7 @@ export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
       `SELECT * FROM ${this.tableName} WHERE channel_id = ? AND status = ? ORDER BY target_date ASC`,
       [channelId, status]
     );
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -100,8 +100,8 @@ export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
       channelId: input.channelId,
       topicTitle: input.topicTitle,
       topicDescription: input.topicDescription,
-      priority: input.priority || 'medium',
-      status: input.status || 'idea',
+      priority: input.priority || "medium",
+      status: input.status || "idea",
       targetDate: input.targetDate,
       tags: input.tags,
       notes: input.notes,
@@ -156,7 +156,7 @@ export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
 
     const params = limit ? [channelId, limit] : [channelId];
     const rows = await this.db.all<ChannelTopicRow>(sql, params);
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   private parseJson<T>(json: string): T | undefined {
@@ -168,5 +168,19 @@ export class ChannelTopicRepository extends BaseRepository<ChannelTopic> {
   }
 }
 
-// Export singleton instance
-export const channelTopicRepository = new ChannelTopicRepository();
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _channelTopicRepositoryInstance: ChannelTopicRepository | null = null;
+
+export function getChannelTopicRepository(): ChannelTopicRepository {
+  if (!_channelTopicRepositoryInstance) {
+    _channelTopicRepositoryInstance = new ChannelTopicRepository();
+  }
+  return _channelTopicRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const channelTopicRepository = new Proxy({} as ChannelTopicRepository, {
+  get(_target, prop) {
+    return getChannelTopicRepository()[prop as keyof ChannelTopicRepository];
+  },
+});

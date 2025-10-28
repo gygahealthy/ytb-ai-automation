@@ -8,7 +8,7 @@ import { Prompt, VideoCreationJob } from "../../../types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
 import ActionControls from "../video-prompt-row/ActionControls";
 import ProfilePanel from "../video-prompt-row/ProfilePanel";
-import { useGenerationPolling } from "../../../hooks/useGenerationPolling";
+import { useSingleGenerationPolling } from "../../../contexts/VideoGenerationPollingContext";
 
 interface Profile {
   id: string;
@@ -60,34 +60,31 @@ export default function VideoPromptRow({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pollingProgress, setPollingProgress] = useState(0); // Fake progress bar (smooth animation)
   const veo3Store = useVeo3Store();
   const { updateJobStatus } = useVideoCreationStore.getState();
 
-  // Set up polling for real generation status updates
-  useGenerationPolling(job?.generationId || null, {
-    enabled: job?.status === "processing",
-    interval: 10000, // Poll every 10 seconds
-    onStatusUpdate: (generation) => {
-      console.log(`[VideoPromptRow] 📡 Poll update for ${generation.id}: status=${generation.status}`);
+  // Use centralized polling context - automatically registers/unregisters this generation
+  const { generation: polledGeneration, progress: contextProgress } = useSingleGenerationPolling(job?.generationId);
 
-      // Update job status in store with real data from DB
-      if (generation.status === "completed") {
-        updateJobStatus(job!.id, "completed", {
-          videoUrl: generation.videoUrl,
-          completedAt: new Date().toISOString(),
-        });
-      } else if (generation.status === "failed") {
-        updateJobStatus(job!.id, "failed", {
-          error: generation.errorMessage,
-          completedAt: new Date().toISOString(),
-        });
-      }
-    },
-    onError: (error) => {
-      console.error(`[VideoPromptRow] ❌ Poll error: ${error.message}`);
-    },
-  });
+  // Sync polled data back to job store when status changes
+  useEffect(() => {
+    if (!polledGeneration || !job) return;
+
+    // Update job status in store when polled data changes
+    if (polledGeneration.status === "completed" && job.status !== "completed") {
+      console.log(`[VideoPromptRow] 📡 Generation ${polledGeneration.id} completed`);
+      updateJobStatus(job.id, "completed", {
+        videoUrl: polledGeneration.videoUrl,
+        completedAt: new Date().toISOString(),
+      });
+    } else if (polledGeneration.status === "failed" && job.status !== "failed") {
+      console.log(`[VideoPromptRow] 📡 Generation ${polledGeneration.id} failed`);
+      updateJobStatus(job.id, "failed", {
+        error: polledGeneration.errorMessage,
+        completedAt: new Date().toISOString(),
+      });
+    }
+  }, [polledGeneration?.status, polledGeneration?.videoUrl, polledGeneration?.errorMessage, job, updateJobStatus]);
 
   const isValid = prompt.text.trim().length > 0;
   // When globalPreviewMode is false (default), show all previews
@@ -120,55 +117,13 @@ export default function VideoPromptRow({
       job?.generationId,
       `status:`,
       job?.status,
-      `progress:`,
-      job?.progress
+      `contextProgress:`,
+      contextProgress
     );
 
-    // If job is completed, show 100%
-    if (job?.status === "completed") {
-      console.log(`[VideoPromptRow] ✅ Job completed - setting progress to 100%`);
-      setPollingProgress(100);
-      return;
-    }
-
-    // If job is failed, reset progress
-    if (job?.status === "failed") {
-      console.log(`[VideoPromptRow] ❌ Job failed - resetting progress`);
-      setPollingProgress(0);
-      return;
-    }
-
-    // If not processing or no generationId, reset
-    if (!job || !job.generationId || job.status !== "processing") {
-      console.log(`[VideoPromptRow] ⏭️ Not in processing state - resetting progress`);
-      setPollingProgress(0);
-      return;
-    }
-
-    console.log(`[VideoPromptRow] ⚡ Job is processing - starting fake progress animation`);
-
-    // Start fake progress animation while waiting for backend updates
-    // Initialize from stored job.progress value (persisted in store)
-    const { updateJobProgress } = useVideoCreationStore.getState();
-    let currentProgress = job.progress || 0;
-    setPollingProgress(currentProgress);
-
-    const progressInterval = setInterval(() => {
-      currentProgress += 1;
-      if (currentProgress <= 98) {
-        setPollingProgress(currentProgress);
-        // Update progress in store so it persists across navigation
-        updateJobProgress(job.id, currentProgress);
-      }
-    }, 1000);
-
-    console.log(`[VideoPromptRow] ⏱️ Fake progress animation started from ${currentProgress}%`);
-
-    return () => {
-      console.log(`[VideoPromptRow] 🛑 Cleaning up progress interval for job ${job.id}`);
-      clearInterval(progressInterval);
-    };
-  }, [job?.id, job?.generationId, job?.status, job]);
+    // Progress is now handled by centralized VideoGenerationPollingContext
+    // which automatically increments 1% per second during processing
+  }, [job?.id, job?.generationId, job?.status, contextProgress]);
 
   const fetchProfiles = async () => {
     setLoading(true);
@@ -291,7 +246,7 @@ export default function VideoPromptRow({
 
       {showPreview && (
         <div className="flex-shrink-0 w-64 h-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-          <PreviewPanel job={job} pollingProgress={pollingProgress} />
+          <PreviewPanel job={job} pollingProgress={contextProgress} />
         </div>
       )}
 
@@ -316,12 +271,12 @@ export default function VideoPromptRow({
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden shadow-inner">
               <div
                 className="bg-gradient-to-r from-primary-400 to-primary-600 h-2.5 rounded-full transition-all duration-300 ease-out shadow-sm"
-                style={{ width: `${pollingProgress}%` }}
+                style={{ width: `${contextProgress}%` }}
               />
             </div>
             <div className="flex items-center justify-between mt-1.5">
               <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">🎬 Generating video...</p>
-              <p className="text-xs text-primary-600 dark:text-primary-400 font-semibold">{pollingProgress}%</p>
+              <p className="text-xs text-primary-600 dark:text-primary-400 font-semibold">{contextProgress}%</p>
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Auto-checking every 10 seconds</p>
           </div>

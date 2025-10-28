@@ -34,8 +34,8 @@ interface VideoAnalysisRow {
  * Repository for YoutubeChannel entities
  */
 export class YoutubeChannelRepository extends BaseRepository<YoutubeChannel> {
-  constructor() {
-    super("channels", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channels", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: YoutubeChannelRow): YoutubeChannel {
@@ -132,8 +132,8 @@ export class YoutubeChannelRepository extends BaseRepository<YoutubeChannel> {
  * Repository for VideoAnalysis entities
  */
 export class VideoAnalysisRepository extends BaseRepository<VideoAnalysis> {
-  constructor() {
-    super("youtube_video_analyses", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("youtube_video_analyses", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: VideoAnalysisRow): VideoAnalysis {
@@ -193,5 +193,33 @@ export class VideoAnalysisRepository extends BaseRepository<VideoAnalysis> {
   }
 }
 
-export const youtubeChannelRepository = new YoutubeChannelRepository();
-export const videoAnalysisRepository = new VideoAnalysisRepository();
+// Lazy singletons to avoid triggering database access in worker threads during module import
+let _youtubeChannelRepositoryInstance: YoutubeChannelRepository | null = null;
+let _videoAnalysisRepositoryInstance: VideoAnalysisRepository | null = null;
+
+export function getYoutubeChannelRepository(): YoutubeChannelRepository {
+  if (!_youtubeChannelRepositoryInstance) {
+    _youtubeChannelRepositoryInstance = new YoutubeChannelRepository();
+  }
+  return _youtubeChannelRepositoryInstance;
+}
+
+export function getVideoAnalysisRepository(): VideoAnalysisRepository {
+  if (!_videoAnalysisRepositoryInstance) {
+    _videoAnalysisRepositoryInstance = new VideoAnalysisRepository();
+  }
+  return _videoAnalysisRepositoryInstance;
+}
+
+// Export singletons with lazy getters for backward compatibility
+export const youtubeChannelRepository = new Proxy({} as YoutubeChannelRepository, {
+  get(_target, prop) {
+    return getYoutubeChannelRepository()[prop as keyof YoutubeChannelRepository];
+  },
+});
+
+export const videoAnalysisRepository = new Proxy({} as VideoAnalysisRepository, {
+  get(_target, prop) {
+    return getVideoAnalysisRepository()[prop as keyof VideoAnalysisRepository];
+  },
+});

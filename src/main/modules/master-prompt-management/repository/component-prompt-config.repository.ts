@@ -368,5 +368,19 @@ export class ComponentPromptConfigRepository {
   }
 }
 
-// Singleton instance
-export const componentPromptConfigRepository = new ComponentPromptConfigRepository(database.getSQLiteDatabase());
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _componentPromptConfigRepositoryInstance: ComponentPromptConfigRepository | null = null;
+
+export function getComponentPromptConfigRepository(): ComponentPromptConfigRepository {
+  if (!_componentPromptConfigRepositoryInstance) {
+    _componentPromptConfigRepositoryInstance = new ComponentPromptConfigRepository(database.getSQLiteDatabase());
+  }
+  return _componentPromptConfigRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const componentPromptConfigRepository = new Proxy({} as ComponentPromptConfigRepository, {
+  get(_target, prop) {
+    return getComponentPromptConfigRepository()[prop as keyof ComponentPromptConfigRepository];
+  },
+});

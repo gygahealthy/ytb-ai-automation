@@ -101,9 +101,11 @@ export class VideoGenerationRepository {
 
   /**
    * Get video generation by ID
+   * (Reduced logging for frequent polling calls)
    */
   async getById(id: string): Promise<VideoGeneration | null> {
-    logger.info(`Fetching video generation by ID: ${id}`);
+    // Reduced from logger.info to logger.debug to avoid log spam during polling
+    logger.debug(`Fetching video generation by ID: ${id}`);
 
     const row = await this.db.get<any>(
       `SELECT 

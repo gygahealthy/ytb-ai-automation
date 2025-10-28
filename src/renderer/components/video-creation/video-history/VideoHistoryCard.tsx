@@ -7,6 +7,7 @@ import TechnicalDetails from "./history-card/TechnicalDetails";
 import VideoLink from "./history-card/VideoLink";
 import DownloadVideo from "./history-card/DownloadVideo";
 import UpscaleVideo from "./history-card/UpscaleVideo";
+import { useSingleGenerationPolling } from "../../../contexts/VideoGenerationPollingContext";
 
 export default function VideoHistoryCard({
   generation,
@@ -20,6 +21,10 @@ export default function VideoHistoryCard({
   globalPreview?: boolean;
 }) {
   const [showPreview, setShowPreview] = useState<boolean>(!!globalPreview);
+
+  // Only poll if generation is processing or pending (not completed/failed)
+  const shouldPoll = generation.status === "processing" || generation.status === "pending";
+  const { progress } = useSingleGenerationPolling(shouldPoll ? generation.id : null);
 
   // Sync showPreview when globalPreview changes
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function VideoHistoryCard({
         {(globalPreview || showPreview) && (
           <div className="w-72 p-4 border-r border-gray-100 dark:border-gray-700 flex-shrink-0">
             <div className="w-full h-40 bg-gray-50 dark:bg-gray-900/20 rounded-md overflow-hidden">
-              <PreviewPanel job={generation} pollingProgress={0} />
+              <PreviewPanel job={generation} pollingProgress={progress} />
             </div>
           </div>
         )}
@@ -100,6 +105,21 @@ export default function VideoHistoryCard({
               <StatusBadge status={generation.status} />
             </div>
           </div>
+
+          {generation.status === "processing" && (
+            <div className="mb-4 animate-pulse">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden shadow-inner mb-2">
+                <div
+                  className="bg-gradient-to-r from-primary-400 to-primary-600 h-2 rounded-full transition-all duration-300 ease-out shadow-sm"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">🎬 Generating video...</p>
+                <p className="text-xs text-primary-600 dark:text-primary-400 font-semibold">{progress}%</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">

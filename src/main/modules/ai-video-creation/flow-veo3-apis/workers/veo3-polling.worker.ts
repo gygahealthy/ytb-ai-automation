@@ -34,10 +34,6 @@ async function initializeWorker() {
     const apiModule = await import("../apis/veo3-api.client.js");
     veo3ApiClient = apiModule.veo3ApiClient;
 
-    // @ts-ignore - Path resolved at runtime after compilation
-    const cookieModule = await import("../../../common/cookie/services/cookie.service.js");
-    cookieService = cookieModule.cookieService;
-
     // Initialize database connection first (worker needs its own connection)
     // @ts-ignore - Path resolved at runtime after compilation
     const dbModule = await import("../../../../storage/sqlite-database.js");
@@ -59,6 +55,17 @@ async function initializeWorker() {
     const ProfileRepositoryModule = await import("../../../profile-management/repository/profile.repository.js");
     const ProfileRepositoryClass = ProfileRepositoryModule.ProfileRepository;
     profileRepository = new ProfileRepositoryClass(database);
+
+    // Initialize cookieService with worker's database instance (don't import singleton)
+    // @ts-ignore - Path resolved at runtime after compilation
+    const CookieRepositoryModule = await import("../../../common/cookie/repository/cookie.repository.js");
+    const CookieRepositoryClass = CookieRepositoryModule.CookieRepository;
+    const cookieRepository = new CookieRepositoryClass(database);
+
+    // @ts-ignore - Path resolved at runtime after compilation
+    const CookieServiceModule = await import("../../../common/cookie/services/cookie.service.js");
+    const CookieServiceClass = CookieServiceModule.CookieService;
+    cookieService = new CookieServiceClass(cookieRepository);
 
     sendMessage({ type: "initialized" });
   } catch (error) {
@@ -227,7 +234,7 @@ function stopPolling() {
 }
 
 /**
- * Poll next batch of jobs (throttled)
+ * Poll next batch of jobs (throttled with staggered delays)
  */
 async function pollNextBatch() {
   if (pollingJobs.size === 0) {
@@ -247,8 +254,21 @@ async function pollNextBatch() {
 
   log("info", `Checking ${jobsToCheck.length} job(s) (queue: ${pollingJobs.size})`);
 
-  // Process jobs in parallel (but throttled by MAX_CONCURRENT_CHECKS)
-  await Promise.allSettled(jobsToCheck.map((job) => checkJobStatus(job)));
+  // Process jobs with staggered delays (1 second between each)
+  // This prevents simultaneous API calls when polling multiple videos
+  for (let i = 0; i < jobsToCheck.length; i++) {
+    const job = jobsToCheck[i];
+    const delayMs = i * 1000; // 0s, 1s, 2s, 3s, etc.
+
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    // Check job status (don't await - let it run async)
+    checkJobStatus(job).catch((err) => {
+      log("error", `Error in staggered check for ${job.id}: ${err.message}`);
+    });
+  }
 }
 
 /**
@@ -292,7 +312,7 @@ async function checkJobStatus(job: PollingJob) {
     if (type === "upscale") {
       statusResult = await veo3ApiClient.checkUpscaleStatus(tokenResult.token, operationName, sceneId);
     } else {
-      statusResult = await veo3ApiClient.checkGenerationStatus(tokenResult.token, operationName, sceneId);
+      statusResult = await veo3ApiClient.checkVideoStatus(tokenResult.token, operationName, sceneId);
     }
 
     if (!statusResult.success || !statusResult.data) {

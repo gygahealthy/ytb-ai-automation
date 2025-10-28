@@ -11,6 +11,8 @@ import ProfileDrawer from "@/renderer/components/video-creation/single-video-pag
 import VideoPromptRow from "@/renderer/components/video-creation/single-video-page/VideoPromptRow";
 import { useDrawer } from "@hooks/useDrawer";
 import { useVideoCreationStore } from "@store/video-creation.store";
+import { useFilePathsStore } from "@store/file-paths.store";
+import { useToast } from "@hooks/useToast";
 
 export default function SingleVideoCreationPage() {
   const [showAddJsonModal, setShowAddJsonModal] = useState(false);
@@ -509,6 +511,58 @@ export default function SingleVideoCreationPage() {
     }
   };
 
+  const { singleVideoPath } = useFilePathsStore();
+  const toast = useToast();
+
+  const handleDownloadSelected = async () => {
+    const selectedPrompts = prompts.filter((p) => p.selected);
+    if (selectedPrompts.length === 0) {
+      setAlertState({ open: true, message: "Please select at least one prompt to download", severity: "error" });
+      return;
+    }
+
+    // Collect completed videos for selected prompts
+    const videos: Array<{ videoUrl: string; filename?: string }> = [];
+    for (const prompt of selectedPrompts) {
+      const job = jobs.find((j) => j.promptId === prompt.id && j.status === "completed");
+      if (job && job.videoUrl) {
+        videos.push({ videoUrl: job.videoUrl, filename: `video-${job.id}` });
+      }
+    }
+
+    if (videos.length === 0) {
+      setAlertState({ open: true, message: "No completed videos found for selected prompts", severity: "warning" });
+      return;
+    }
+
+    toast.info(`Downloading ${videos.length} video(s)...`, "Download", 3000);
+
+    try {
+      const result = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, singleVideoPath || undefined);
+
+      if (!result || !result.success) {
+        const message = result?.error || "Failed to start batch download";
+        toast.error(String(message), "Download Failed", 5000);
+        return;
+      }
+
+      const results: Array<any> = result.data || [];
+      const succeeded = results.filter((r) => r && r.success).length;
+      const failed = results.length - succeeded;
+
+      if (succeeded > 0) {
+        toast.success(`✓ ${succeeded} video(s) downloaded to ${singleVideoPath || "Downloads"}`, "Download Complete", 4000);
+      }
+      if (failed > 0) {
+        toast.error(`⚠️ ${failed} download(s) failed. Check logs for details.`, "Download Errors", 7000);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message, "Download Error", 5000);
+      console.error("Batch download error:", err);
+    }
+  };
+
   const handleSaveDraft = () => {
     setShowSaveDraftDialog(true);
   };
@@ -653,6 +707,7 @@ export default function SingleVideoCreationPage() {
             onToggleGlobalPreview={toggleGlobalPreview}
             onStatusFilterChange={setStatusFilter}
             onCreateMultiple={handleCreateMultiple}
+            onDownloadSelected={handleDownloadSelected}
             onSelectAll={useVideoCreationStore.getState().selectAllPrompts}
             onDeselectAll={useVideoCreationStore.getState().clearAllSelections}
           />

@@ -21,8 +21,8 @@ interface AutomationTaskRow {
  * Repository for AutomationTask entities
  */
 export class AutomationRepository extends BaseRepository<AutomationTask> {
-  constructor() {
-    super("automation_tasks", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("automation_tasks", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: AutomationTaskRow): AutomationTask {
@@ -102,4 +102,19 @@ export class AutomationRepository extends BaseRepository<AutomationTask> {
   }
 }
 
-export const automationRepository = new AutomationRepository();
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _automationRepositoryInstance: AutomationRepository | null = null;
+
+export function getAutomationRepository(): AutomationRepository {
+  if (!_automationRepositoryInstance) {
+    _automationRepositoryInstance = new AutomationRepository();
+  }
+  return _automationRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const automationRepository = new Proxy({} as AutomationRepository, {
+  get(_target, prop) {
+    return getAutomationRepository()[prop as keyof AutomationRepository];
+  },
+});

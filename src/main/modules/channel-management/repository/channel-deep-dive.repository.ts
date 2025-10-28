@@ -21,8 +21,8 @@ interface ChannelDeepDiveRow {
  * Repository for ChannelDeepDive entities
  */
 export class ChannelDeepDiveRepository extends BaseRepository<ChannelDeepDive> {
-  constructor() {
-    super("channel_deep_dive", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channel_deep_dives", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ChannelDeepDiveRow): ChannelDeepDive {
@@ -51,8 +51,10 @@ export class ChannelDeepDiveRepository extends BaseRepository<ChannelDeepDive> {
     if (entity.channelId) row.channel_id = entity.channelId;
     if (entity.strategyMarkdown !== undefined) row.strategy_markdown = entity.strategyMarkdown || null;
     if (entity.uspMarkdown !== undefined) row.usp_markdown = entity.uspMarkdown || null;
-    if (entity.targetAudience !== undefined) row.target_audience = entity.targetAudience ? JSON.stringify(entity.targetAudience) : null;
-    if (entity.contentPillars !== undefined) row.content_pillars = entity.contentPillars ? JSON.stringify(entity.contentPillars) : null;
+    if (entity.targetAudience !== undefined)
+      row.target_audience = entity.targetAudience ? JSON.stringify(entity.targetAudience) : null;
+    if (entity.contentPillars !== undefined)
+      row.content_pillars = entity.contentPillars ? JSON.stringify(entity.contentPillars) : null;
     if (entity.toneAndStyle !== undefined) row.tone_and_style = entity.toneAndStyle || null;
     if (entity.goals !== undefined) row.goals = entity.goals ? JSON.stringify(entity.goals) : null;
     if (entity.notes !== undefined) row.notes = entity.notes || null;
@@ -66,10 +68,7 @@ export class ChannelDeepDiveRepository extends BaseRepository<ChannelDeepDive> {
    * Find deep dive by channel ID
    */
   async findByChannelId(channelId: string): Promise<ChannelDeepDive | null> {
-    const row = await this.db.get<ChannelDeepDiveRow>(
-      `SELECT * FROM ${this.tableName} WHERE channel_id = ?`,
-      [channelId]
-    );
+    const row = await this.db.get<ChannelDeepDiveRow>(`SELECT * FROM ${this.tableName} WHERE channel_id = ?`, [channelId]);
     return row ? this.rowToEntity(row) : null;
   }
 
@@ -131,5 +130,17 @@ export class ChannelDeepDiveRepository extends BaseRepository<ChannelDeepDive> {
   }
 }
 
-// Export singleton instance
-export const channelDeepDiveRepository = new ChannelDeepDiveRepository();
+let _channelDeepDiveRepositoryInstance: ChannelDeepDiveRepository | null = null;
+
+function getChannelDeepDiveRepository(): ChannelDeepDiveRepository {
+  if (!_channelDeepDiveRepositoryInstance) {
+    _channelDeepDiveRepositoryInstance = new ChannelDeepDiveRepository();
+  }
+  return _channelDeepDiveRepositoryInstance;
+}
+
+export const channelDeepDiveRepository = new Proxy({} as ChannelDeepDiveRepository, {
+  get(_target, prop) {
+    return getChannelDeepDiveRepository()[prop as keyof ChannelDeepDiveRepository];
+  },
+});

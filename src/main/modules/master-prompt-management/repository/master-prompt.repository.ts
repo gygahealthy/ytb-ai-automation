@@ -13,12 +13,7 @@ export enum PromptType {
   AUDIO_PROMPT = "audio_prompt",
 }
 
-export const PROMPT_TYPES = [
-  PromptType.SCRIPT,
-  PromptType.TOPIC,
-  PromptType.VIDEO_PROMPT,
-  PromptType.AUDIO_PROMPT,
-];
+export const PROMPT_TYPES = [PromptType.SCRIPT, PromptType.TOPIC, PromptType.VIDEO_PROMPT, PromptType.AUDIO_PROMPT];
 
 export interface MasterPrompt {
   id?: number;
@@ -110,8 +105,7 @@ export class MasterPromptsRepository {
           tags: tryParseJson(r.tags) || [],
           isActive: r.isActive === 1 || r.isActive === true,
           archived: r.archived === 1 || r.archived === true,
-          variableOccurrencesConfig:
-            tryParseJson(r.variableOccurrencesConfig) || null,
+          variableOccurrencesConfig: tryParseJson(r.variableOccurrencesConfig) || null,
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         } as MasterPrompt)
@@ -167,8 +161,7 @@ export class MasterPromptsRepository {
       tags: tryParseJson(r.tags) || [],
       isActive: r.isActive === 1 || r.isActive === true,
       archived: r.archived === 1 || r.archived === true,
-      variableOccurrencesConfig:
-        tryParseJson(r.variableOccurrencesConfig) || null,
+      variableOccurrencesConfig: tryParseJson(r.variableOccurrencesConfig) || null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     } as MasterPrompt;
@@ -324,16 +317,10 @@ export class MasterPromptsRepository {
         input.promptTypeId,
         input.description || "",
         input.channelId || null,
-        input.tags
-          ? Array.isArray(input.tags)
-            ? JSON.stringify(input.tags)
-            : String(input.tags)
-          : JSON.stringify([]),
+        input.tags ? (Array.isArray(input.tags) ? JSON.stringify(input.tags) : String(input.tags)) : JSON.stringify([]),
         1,
         0,
-        input.variableOccurrencesConfig
-          ? JSON.stringify(input.variableOccurrencesConfig)
-          : null,
+        input.variableOccurrencesConfig ? JSON.stringify(input.variableOccurrencesConfig) : null,
         now,
         now,
       ]
@@ -342,10 +329,7 @@ export class MasterPromptsRepository {
     return (await this.getById(result.lastID!))!;
   }
 
-  async update(
-    id: number,
-    updates: UpdateMasterPromptInput
-  ): Promise<MasterPrompt | undefined> {
+  async update(id: number, updates: UpdateMasterPromptInput): Promise<MasterPrompt | undefined> {
     const existing = await this.getById(id);
     if (!existing) return undefined;
 
@@ -375,11 +359,7 @@ export class MasterPromptsRepository {
     }
     if ((updates as any).tags !== undefined) {
       fields.push("tags = ?");
-      values.push(
-        Array.isArray((updates as any).tags)
-          ? JSON.stringify((updates as any).tags)
-          : String((updates as any).tags)
-      );
+      values.push(Array.isArray((updates as any).tags) ? JSON.stringify((updates as any).tags) : String((updates as any).tags));
     }
     if ((updates as any).isActive !== undefined) {
       fields.push("is_active = ?");
@@ -391,11 +371,7 @@ export class MasterPromptsRepository {
     }
     if ((updates as any).variableOccurrencesConfig !== undefined) {
       fields.push("variable_occurrences_config = ?");
-      values.push(
-        (updates as any).variableOccurrencesConfig
-          ? JSON.stringify((updates as any).variableOccurrencesConfig)
-          : null
-      );
+      values.push((updates as any).variableOccurrencesConfig ? JSON.stringify((updates as any).variableOccurrencesConfig) : null);
     }
 
     if (fields.length === 0) return existing;
@@ -428,20 +404,12 @@ export class MasterPromptsRepository {
 
   async archive(id: number): Promise<boolean> {
     const now = new Date().toISOString();
-    const result = await this.db.run(
-      `UPDATE master_prompts SET archived = 1, updated_at = ? WHERE id = ?`,
-      [now, id]
-    );
-    return (
-      (result as any)?.changes !== undefined && (result as any).changes > 0
-    );
+    const result = await this.db.run(`UPDATE master_prompts SET archived = 1, updated_at = ? WHERE id = ?`, [now, id]);
+    return (result as any)?.changes !== undefined && (result as any).changes > 0;
   }
 
   async delete(id: number): Promise<boolean> {
-    const result = await this.db.run(
-      "DELETE FROM master_prompts WHERE id = ?",
-      [id]
-    );
+    const result = await this.db.run("DELETE FROM master_prompts WHERE id = ?", [id]);
     return result.changes !== undefined && result.changes > 0;
   }
 
@@ -511,10 +479,7 @@ export class MasterPromptsRepository {
    * @param channelId - Channel ID
    * @param promptType - Optional: filter by prompt type
    */
-  async getByChannel(
-    channelId: string,
-    promptType?: PromptType
-  ): Promise<MasterPrompt[]> {
+  async getByChannel(channelId: string, promptType?: PromptType): Promise<MasterPrompt[]> {
     let sql = `
 			SELECT 
 				mp.id,
@@ -649,10 +614,7 @@ export class MasterPromptsRepository {
     return matches ? matches.map((m) => m.slice(1, -1)) : [];
   }
 
-  populateTemplate(
-    template: string,
-    variables: Record<string, string>
-  ): string {
+  populateTemplate(template: string, variables: Record<string, string>): string {
     let result = template;
     for (const [key, value] of Object.entries(variables)) {
       result = result.replace(new RegExp(`\\[${key}\\]`, "g"), value);
@@ -661,10 +623,22 @@ export class MasterPromptsRepository {
   }
 }
 
-// Export module-level singleton
-export const promptRepository = new MasterPromptsRepository(
-  database.getSQLiteDatabase()
-);
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _promptRepositoryInstance: MasterPromptsRepository | null = null;
+
+export function getPromptRepository(): MasterPromptsRepository {
+  if (!_promptRepositoryInstance) {
+    _promptRepositoryInstance = new MasterPromptsRepository(database.getSQLiteDatabase());
+  }
+  return _promptRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const promptRepository = new Proxy({} as MasterPromptsRepository, {
+  get(_target, prop) {
+    return getPromptRepository()[prop as keyof MasterPromptsRepository];
+  },
+});
 
 function tryParseJson(raw: any): any | undefined {
   if (raw === null || raw === undefined) return undefined;

@@ -139,13 +139,7 @@ export class MasterPromptTypesRepository {
 				created_at
 			) VALUES (?, ?, ?, ?, ?)
 		`,
-      [
-        input.typeName,
-        input.typeCode,
-        input.description || "",
-        input.status ?? 1,
-        now,
-      ]
+      [input.typeName, input.typeCode, input.description || "", input.status ?? 1, now]
     );
 
     return (await this.getById(result.lastID!))!;
@@ -154,10 +148,7 @@ export class MasterPromptTypesRepository {
   /**
    * Update prompt type
    */
-  async update(
-    id: number,
-    updates: UpdateMasterPromptTypeInput
-  ): Promise<MasterPromptType | undefined> {
+  async update(id: number, updates: UpdateMasterPromptTypeInput): Promise<MasterPromptType | undefined> {
     const existing = await this.getById(id);
     if (!existing) return undefined;
 
@@ -184,9 +175,7 @@ export class MasterPromptTypesRepository {
     if (fields.length === 0) return existing;
 
     values.push(id);
-    const sql = `UPDATE master_prompt_types SET ${fields.join(
-      ", "
-    )} WHERE id = ?`;
+    const sql = `UPDATE master_prompt_types SET ${fields.join(", ")} WHERE id = ?`;
 
     try {
       const result = await this.db.run(sql, values);
@@ -211,10 +200,7 @@ export class MasterPromptTypesRepository {
    * Delete prompt type
    */
   async delete(id: number): Promise<boolean> {
-    const result = await this.db.run(
-      "DELETE FROM master_prompt_types WHERE id = ?",
-      [id]
-    );
+    const result = await this.db.run("DELETE FROM master_prompt_types WHERE id = ?", [id]);
     return result.changes !== undefined && result.changes > 0;
   }
 
@@ -255,7 +241,19 @@ export class MasterPromptTypesRepository {
   }
 }
 
-// Export singleton instance
-export const promptTypesRepository = new MasterPromptTypesRepository(
-  database.getSQLiteDatabase()
-);
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _promptTypesRepositoryInstance: MasterPromptTypesRepository | null = null;
+
+export function getPromptTypesRepository(): MasterPromptTypesRepository {
+  if (!_promptTypesRepositoryInstance) {
+    _promptTypesRepositoryInstance = new MasterPromptTypesRepository(database.getSQLiteDatabase());
+  }
+  return _promptTypesRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const promptTypesRepository = new Proxy({} as MasterPromptTypesRepository, {
+  get(_target, prop) {
+    return getPromptTypesRepository()[prop as keyof MasterPromptTypesRepository];
+  },
+});

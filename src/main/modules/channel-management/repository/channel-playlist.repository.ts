@@ -27,8 +27,8 @@ interface PlaylistVideoRow {
  * Repository for ChannelPlaylist entities
  */
 export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
-  constructor() {
-    super("channel_playlists", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channel_playlists", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ChannelPlaylistRow): ChannelPlaylist {
@@ -69,7 +69,7 @@ export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
       `SELECT * FROM ${this.tableName} WHERE channel_id = ? ORDER BY created_at DESC`,
       [channelId]
     );
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -116,16 +116,19 @@ export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
     const id = StringUtil.generateId("pv");
     const addedAt = new Date().toISOString();
 
-    await this.db.run(
-      `INSERT INTO playlist_videos (id, playlist_id, video_id, position, added_at) VALUES (?, ?, ?, ?, ?)`,
-      [id, playlistId, videoId, position || null, addedAt]
-    );
+    await this.db.run(`INSERT INTO playlist_videos (id, playlist_id, video_id, position, added_at) VALUES (?, ?, ?, ?, ?)`, [
+      id,
+      playlistId,
+      videoId,
+      position || null,
+      addedAt,
+    ]);
 
     // Update video count
-    await this.db.run(
-      `UPDATE channel_playlists SET video_count = video_count + 1, updated_at = ? WHERE id = ?`,
-      [addedAt, playlistId]
-    );
+    await this.db.run(`UPDATE channel_playlists SET video_count = video_count + 1, updated_at = ? WHERE id = ?`, [
+      addedAt,
+      playlistId,
+    ]);
 
     return {
       id,
@@ -140,17 +143,14 @@ export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
    * Remove video from playlist
    */
   async removeVideoFromPlaylist(playlistId: string, videoId: string): Promise<boolean> {
-    const result = await this.db.run(
-      `DELETE FROM playlist_videos WHERE playlist_id = ? AND video_id = ?`,
-      [playlistId, videoId]
-    );
+    const result = await this.db.run(`DELETE FROM playlist_videos WHERE playlist_id = ? AND video_id = ?`, [playlistId, videoId]);
 
     if (result.changes && result.changes > 0) {
       // Update video count
-      await this.db.run(
-        `UPDATE channel_playlists SET video_count = video_count - 1, updated_at = ? WHERE id = ?`,
-        [new Date().toISOString(), playlistId]
-      );
+      await this.db.run(`UPDATE channel_playlists SET video_count = video_count - 1, updated_at = ? WHERE id = ?`, [
+        new Date().toISOString(),
+        playlistId,
+      ]);
       return true;
     }
 
@@ -166,7 +166,7 @@ export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
       [playlistId]
     );
 
-    return rows.map(row => ({
+    return rows.map((row) => ({
       id: row.id,
       playlistId: row.playlist_id,
       videoId: row.video_id,
@@ -176,5 +176,17 @@ export class ChannelPlaylistRepository extends BaseRepository<ChannelPlaylist> {
   }
 }
 
-// Export singleton instance
-export const channelPlaylistRepository = new ChannelPlaylistRepository();
+let _channelPlaylistRepositoryInstance: ChannelPlaylistRepository | null = null;
+
+function getChannelPlaylistRepository(): ChannelPlaylistRepository {
+  if (!_channelPlaylistRepositoryInstance) {
+    _channelPlaylistRepositoryInstance = new ChannelPlaylistRepository();
+  }
+  return _channelPlaylistRepositoryInstance;
+}
+
+export const channelPlaylistRepository = new Proxy({} as ChannelPlaylistRepository, {
+  get(_target, prop) {
+    return getChannelPlaylistRepository()[prop as keyof ChannelPlaylistRepository];
+  },
+});

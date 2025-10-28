@@ -18,39 +18,42 @@ import ChannelDeepDivePage from "@pages/channel-management/ChannelDeepDivePage";
 import ChannelMonitoringPage from "@pages/channel-management/ChannelMonitoringPage";
 import CompetitorMonitoringPage from "@pages/channel-management/CompetitorMonitoringPage";
 import { VideoCreationProvider } from "@contexts/VideoCreationContext";
+import { VideoGenerationPollingProvider } from "@contexts/VideoGenerationPollingContext";
 
 export default function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/profiles" replace />} />
+    <VideoGenerationPollingProvider pollInterval={10000} staggerDelay={1000}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/profiles" replace />} />
 
-      {/* Profiles routes */}
-      <Route path="/profiles" element={<ProfilesPage />} />
-      <Route path="/profiles/cookie-rotation" element={<CookieRotationConfigPage />} />
+        {/* Profiles routes */}
+        <Route path="/profiles" element={<ProfilesPage />} />
+        <Route path="/profiles/cookie-rotation" element={<CookieRotationConfigPage />} />
 
-      <Route path="/automation" element={<AutomationPage />} />
-      <Route path="/automation/instance" element={<InstanceDashboard />} />
-      <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
-      <Route path="/master-prompt/dashboard" element={<MasterPromptPage />} />
-      <Route path="/master-prompt/master-prompts" element={<MasterPromptPage />} />
-      <Route path="/master-prompt/prompt-types" element={<PromptTypesPage />} />
-      <Route path="/master-prompt/ai-prompt-config" element={<AIPromptConfigPage />} />
-      <Route path="/master-prompt/prompt-playground" element={<PromptPlaygroundPage />} />
-      <Route path="/video-creation/channels" element={<AllChannelsOverviewPage />} />
-      <Route path="/video-creation/channels/:channelId" element={<ChannelDeepDivePage />} />
-      <Route path="/video-creation/channels/:channelId/monitoring" element={<ChannelMonitoringPage />} />
-      <Route path="/video-creation/channels/:channelId/competitors" element={<CompetitorMonitoringPage />} />
-      <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
-      <Route
-        path="/video-creation/script-create"
-        element={
-          <VideoCreationProvider>
-            <StoryCreatePage />
-          </VideoCreationProvider>
-        }
-      />
-      <Route path="/video-creation/script-editor" element={<ScriptEditorPage />} />
-      <Route path="/video-creation/history" element={<VideoHistoryPage />} />
-    </Routes>
+        <Route path="/automation" element={<AutomationPage />} />
+        <Route path="/automation/instance" element={<InstanceDashboard />} />
+        <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
+        <Route path="/master-prompt/dashboard" element={<MasterPromptPage />} />
+        <Route path="/master-prompt/master-prompts" element={<MasterPromptPage />} />
+        <Route path="/master-prompt/prompt-types" element={<PromptTypesPage />} />
+        <Route path="/master-prompt/ai-prompt-config" element={<AIPromptConfigPage />} />
+        <Route path="/master-prompt/prompt-playground" element={<PromptPlaygroundPage />} />
+        <Route path="/video-creation/channels" element={<AllChannelsOverviewPage />} />
+        <Route path="/video-creation/channels/:channelId" element={<ChannelDeepDivePage />} />
+        <Route path="/video-creation/channels/:channelId/monitoring" element={<ChannelMonitoringPage />} />
+        <Route path="/video-creation/channels/:channelId/competitors" element={<CompetitorMonitoringPage />} />
+        <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
+        <Route
+          path="/video-creation/script-create"
+          element={
+            <VideoCreationProvider>
+              <StoryCreatePage />
+            </VideoCreationProvider>
+          }
+        />
+        <Route path="/video-creation/script-editor" element={<ScriptEditorPage />} />
+        <Route path="/video-creation/history" element={<VideoHistoryPage />} />
+      </Routes>
+    </VideoGenerationPollingProvider>
   );
 }

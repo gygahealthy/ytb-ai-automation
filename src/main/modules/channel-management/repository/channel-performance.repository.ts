@@ -21,8 +21,8 @@ interface ChannelPerformanceRow {
  * Repository for ChannelPerformance entities
  */
 export class ChannelPerformanceRepository extends BaseRepository<ChannelPerformance> {
-  constructor() {
-    super("channel_performance_metrics", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("channel_performance", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ChannelPerformanceRow): ChannelPerformance {
@@ -69,10 +69,10 @@ export class ChannelPerformanceRepository extends BaseRepository<ChannelPerforma
     const sql = limit
       ? `SELECT * FROM ${this.tableName} WHERE channel_id = ? ORDER BY metric_date DESC LIMIT ?`
       : `SELECT * FROM ${this.tableName} WHERE channel_id = ? ORDER BY metric_date DESC`;
-    
+
     const params = limit ? [channelId, limit] : [channelId];
     const rows = await this.db.all<ChannelPerformanceRow>(sql, params);
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -91,7 +91,7 @@ export class ChannelPerformanceRepository extends BaseRepository<ChannelPerforma
    */
   async getMetricsWithGrowth(channelId: string): Promise<PerformanceMetrics | null> {
     const records = await this.findByChannelId(channelId, 2);
-    
+
     if (records.length === 0) return null;
 
     const current = records[0];
@@ -142,7 +142,7 @@ export class ChannelPerformanceRepository extends BaseRepository<ChannelPerforma
        ORDER BY metric_date ASC`,
       [channelId, startDate, endDate]
     );
-    return rows.map(row => this.rowToEntity(row));
+    return rows.map((row) => this.rowToEntity(row));
   }
 
   /**
@@ -151,16 +151,28 @@ export class ChannelPerformanceRepository extends BaseRepository<ChannelPerforma
   async cleanupOldRecords(channelId: string, keepDays: number): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - keepDays);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const cutoffStr = cutoffDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    const result = await this.db.run(
-      `DELETE FROM ${this.tableName} WHERE channel_id = ? AND metric_date < ?`,
-      [channelId, cutoffStr]
-    );
+    const result = await this.db.run(`DELETE FROM ${this.tableName} WHERE channel_id = ? AND metric_date < ?`, [
+      channelId,
+      cutoffStr,
+    ]);
 
     return result.changes || 0;
   }
 }
 
-// Export singleton instance
-export const channelPerformanceRepository = new ChannelPerformanceRepository();
+let _channelPerformanceRepositoryInstance: ChannelPerformanceRepository | null = null;
+
+function getChannelPerformanceRepository(): ChannelPerformanceRepository {
+  if (!_channelPerformanceRepositoryInstance) {
+    _channelPerformanceRepositoryInstance = new ChannelPerformanceRepository();
+  }
+  return _channelPerformanceRepositoryInstance;
+}
+
+export const channelPerformanceRepository = new Proxy({} as ChannelPerformanceRepository, {
+  get(_target, prop) {
+    return getChannelPerformanceRepository()[prop as keyof ChannelPerformanceRepository];
+  },
+});

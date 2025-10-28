@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
+import { Copy, Download, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
 // no local react state currently required
 
 interface JsonToolbarProps {
@@ -21,6 +21,7 @@ interface JsonToolbarProps {
   onToggleGlobalPreview: () => void;
   onStatusFilterChange: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
   onCreateMultiple?: (opts?: { skipConfirm?: boolean }) => void;
+  onDownloadSelected?: () => void;
   onSelectAll?: () => void;
   onDeselectAll?: () => void;
 }
@@ -44,6 +45,7 @@ export default function JsonToolbar({
   onToggleGlobalPreview,
   onStatusFilterChange,
   onCreateMultiple,
+  onDownloadSelected,
   onSelectAll,
   onDeselectAll,
 }: JsonToolbarProps) {
@@ -106,6 +108,29 @@ export default function JsonToolbar({
           >
             <Play className="w-5 h-5" />
             <span className="sr-only">Create Videos</span>
+          </button>
+
+          {/* Download selected completed videos */}
+          <button
+            onClick={() => {
+              if (!onDownloadSelected) return;
+              if (!hasSelection) {
+                window.alert("Please select at least one prompt to download videos");
+                return;
+              }
+
+              const confirmed = window.confirm(
+                `Download all selected videos to your configured folder?\n\nOnly prompts with completed videos will be downloaded.`
+              );
+
+              if (confirmed) onDownloadSelected();
+            }}
+            aria-label="Download selected videos"
+            title="Download selected videos to configured folder"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-blue-600 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+          >
+            <Download className="w-4 h-4" />
+            <span className="sr-only">Download</span>
           </button>
 
           {/* Clear All next to Create button */}
@@ -209,7 +234,7 @@ export default function JsonToolbar({
             title="Export to file"
           >
             <FileDown className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline">Export JSON</span>
           </button>
         </div>
       </div>

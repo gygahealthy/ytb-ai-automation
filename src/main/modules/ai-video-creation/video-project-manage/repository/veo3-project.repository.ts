@@ -18,8 +18,8 @@ interface VEO3ProjectRow {
  * Repository for VEO3Project entities
  */
 export class Veo3ProjectRepository extends BaseRepository<VEO3Project> {
-  constructor() {
-    super("veo3_projects", database.getSQLiteDatabase());
+  constructor(db?: any) {
+    super("veo3_projects", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: VEO3ProjectRow): VEO3Project {
@@ -101,4 +101,19 @@ export class Veo3ProjectRepository extends BaseRepository<VEO3Project> {
   }
 }
 
-export const veo3ProjectRepository = new Veo3ProjectRepository();
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _veo3ProjectRepositoryInstance: Veo3ProjectRepository | null = null;
+
+export function getVeo3ProjectRepository(): Veo3ProjectRepository {
+  if (!_veo3ProjectRepositoryInstance) {
+    _veo3ProjectRepositoryInstance = new Veo3ProjectRepository();
+  }
+  return _veo3ProjectRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const veo3ProjectRepository = new Proxy({} as Veo3ProjectRepository, {
+  get(_target, prop) {
+    return getVeo3ProjectRepository()[prop as keyof Veo3ProjectRepository];
+  },
+});

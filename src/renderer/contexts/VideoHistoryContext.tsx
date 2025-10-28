@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
 import veo3IPC from "../ipc/veo3";
 import { VideoGeneration } from "src/shared/types/video-creation.types";
-import { useMultipleGenerationPolling } from "../hooks/useGenerationPolling";
+import { useVideoGenerationPolling } from "./VideoGenerationPollingContext";
 
 interface DateGroup {
   date: string;
@@ -80,35 +80,8 @@ export const VideoHistoryProvider: React.FC<VideoHistoryProviderProps> = ({ chil
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Collect all processing generation IDs for polling
-  const processingGenerationIds = dateGroups.flatMap((group) =>
-    group.items.filter((item) => item.status === "processing" || item.status === "pending").map((item) => item.id)
-  );
-
-  // Set up polling for active generations
-  useMultipleGenerationPolling(processingGenerationIds, {
-    enabled: processingGenerationIds.length > 0,
-    interval: 10000, // Poll every 10 seconds
-    onStatusUpdate: (generation) => {
-      console.log(`[VideoHistory] 📡 Poll update for ${generation.id}: status=${generation.status}`);
-
-      // Update the generation in the dateGroups
-      setDateGroups((prevGroups) => {
-        return prevGroups.map((group) => ({
-          ...group,
-          items: group.items.map((item) => (item.id === generation.id ? generation : item)),
-        }));
-      });
-
-      // Update status counts if generation completed or failed
-      if (generation.status === "completed" || generation.status === "failed") {
-        fetchStatusCounts();
-      }
-    },
-    onError: (error) => {
-      console.error(`[VideoHistory] ❌ Poll error: ${error.message}`);
-    },
-  });
+  // Use centralized polling context
+  const { registerGeneration, activeGenerations } = useVideoGenerationPolling();
 
   const fetchStatusCounts = useCallback(async () => {
     try {
@@ -120,6 +93,52 @@ export const VideoHistoryProvider: React.FC<VideoHistoryProviderProps> = ({ chil
       console.error("[VideoHistory] Error fetching status counts:", error);
     }
   }, []);
+
+  // Register all processing/pending generations for polling
+  useEffect(() => {
+    const processingIds = dateGroups.flatMap((group) =>
+      group.items.filter((item) => item.status === "processing" || item.status === "pending").map((item) => item.id)
+    );
+
+    // Register each processing generation
+    processingIds.forEach((id) => {
+      registerGeneration(id);
+    });
+  }, [dateGroups, registerGeneration]);
+
+  // Sync polled data back to dateGroups when activeGenerations changes
+  useEffect(() => {
+    if (activeGenerations.size === 0) return;
+
+    setDateGroups((prevGroups) => {
+      let updated = false;
+      const newGroups = prevGroups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => {
+          const polledData = activeGenerations.get(item.id);
+          if (
+            polledData &&
+            (polledData.status !== item.status ||
+              polledData.videoUrl !== item.videoUrl ||
+              polledData.errorMessage !== item.errorMessage)
+          ) {
+            console.log(`[VideoHistory] 📡 Status changed for ${item.id}: ${polledData.status}`);
+            updated = true;
+
+            // Update status counts if generation completed or failed
+            if (polledData.status === "completed" || polledData.status === "failed") {
+              fetchStatusCounts();
+            }
+
+            return polledData;
+          }
+          return item;
+        }),
+      }));
+
+      return updated ? newGroups : prevGroups;
+    });
+  }, [activeGenerations, fetchStatusCounts]);
 
   const fetchHistory = useCallback(
     async (page: number, append: boolean = false) => {
