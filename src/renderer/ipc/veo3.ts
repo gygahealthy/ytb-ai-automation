@@ -163,6 +163,26 @@ const getStatusCounts = (profileId?: string) => {
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
+// DB-only status queries (no API calls - worker thread handles API polling)
+const getGenerationStatusFromDB = (generationId: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getGenerationStatusFromDB === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getGenerationStatusFromDB(generationId));
+  if (hasInvoke()) return invoke("veo3:getGenerationStatusFromDB", { generationId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const getMultipleGenerationStatusFromDB = (generationIds: string[]) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if (
+    (window as any).electronAPI.veo3 &&
+    typeof (window as any).electronAPI.veo3.getMultipleGenerationStatusFromDB === "function"
+  )
+    return safeCall(() => (window as any).electronAPI.veo3.getMultipleGenerationStatusFromDB(generationIds));
+  if (hasInvoke()) return invoke("veo3:getMultipleGenerationStatusFromDB", { generationIds });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
 export default {
   fetchProjectsFromAPI,
   createProjectViaAPI,
@@ -179,4 +199,7 @@ export default {
   getVideoHistory,
   getVideoHistoryGroupedByDate,
   getStatusCounts,
+  // DB-only status queries (no API calls - worker thread handles API polling)
+  getGenerationStatusFromDB,
+  getMultipleGenerationStatusFromDB,
 };

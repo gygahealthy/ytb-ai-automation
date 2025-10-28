@@ -91,6 +91,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
+    // DB-only status queries (no API calls - worker thread handles API polling)
+    getGenerationStatusFromDB: (generationId: string) => ipcRenderer.invoke("veo3:getGenerationStatusFromDB", { generationId }),
+    getMultipleGenerationStatusFromDB: (generationIds: string[]) =>
+      ipcRenderer.invoke("veo3:getMultipleGenerationStatusFromDB", { generationIds }),
   },
 
   // YouTube APIs

@@ -66,8 +66,10 @@ export class CookieExtractionService {
         browser = launchResult.browser;
         chromeProcess = (launchResult as any).chromeProcess || null;
 
+        const chromePid = chromeProcess?.pid;
         logger.info("[CookieExtractionService] Browser launched successfully", {
           headless,
+          chromePid,
         });
       } catch (launchError) {
         logger.error("[CookieExtractionService] Failed to launch browser", launchError);
@@ -303,6 +305,8 @@ export class CookieExtractionService {
    * @private
    */
   private async cleanup(page: any, browser: any, chromeProcess: any): Promise<void> {
+    const chromePid = chromeProcess?.pid;
+
     // Close page
     try {
       if (page) await page.close().catch(() => {});
@@ -321,13 +325,22 @@ export class CookieExtractionService {
       logger.debug("[CookieExtractionService] Error closing browser (ignored)", e);
     }
 
-    // Kill spawned chrome process
-    try {
-      if (chromeProcess && typeof chromeProcess.kill === "function") {
-        chromeProcess.kill();
+    // Kill spawned chrome process - use taskkill on Windows for forceful cleanup
+    if (chromeProcess) {
+      try {
+        if (process.platform === "win32" && chromePid) {
+          // Use Windows taskkill with /T flag to kill child processes too
+          logger.debug("[CookieExtractionService] Force killing Chrome process tree", { pid: chromePid });
+          const { execSync } = require("child_process");
+          execSync(`taskkill /F /PID ${chromePid} /T`, { timeout: 3000, windowsHide: true });
+          logger.debug("[CookieExtractionService] Chrome process killed successfully");
+        } else if (typeof chromeProcess.kill === "function") {
+          chromeProcess.kill("SIGKILL");
+          logger.debug("[CookieExtractionService] Chrome process killed (SIGKILL)");
+        }
+      } catch (e) {
+        logger.debug("[CookieExtractionService] Error killing chrome process (may have already exited)", e);
       }
-    } catch (e) {
-      logger.debug("[CookieExtractionService] Error killing chrome process (ignored)", e);
     }
   }
 }

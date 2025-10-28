@@ -169,17 +169,18 @@ export const VideoHistoryProvider: React.FC<VideoHistoryProviderProps> = ({ chil
     async (generation: VideoGeneration) => {
       setRefreshingId(generation.id);
       try {
-        const result = await veo3IPC.refreshVideoStatus(generation.operationName, generation.id);
+        // Query DB only - worker thread handles API polling automatically
+        const result = await veo3IPC.getGenerationStatusFromDB(generation.id);
 
         if (result.success) {
-          console.log(`[VideoHistory] Status refreshed for ${generation.id}:`, result.data);
+          console.log(`[VideoHistory] Status refreshed from DB for ${generation.id}:`, result.data);
           // Refresh the current view - this will update the video data silently
           await handleRefreshAll();
         } else {
-          console.error("[VideoHistory] Failed to refresh status:", result.error);
+          console.error("[VideoHistory] Failed to refresh status from DB:", result.error);
         }
       } catch (error) {
-        console.error("[VideoHistory] Error refreshing status:", error);
+        console.error("[VideoHistory] Error refreshing status from DB:", error);
       } finally {
         setRefreshingId(null);
       }

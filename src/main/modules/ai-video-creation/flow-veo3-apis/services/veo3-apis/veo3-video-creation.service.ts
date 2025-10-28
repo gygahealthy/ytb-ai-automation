@@ -6,6 +6,7 @@ import { COOKIE_SERVICES } from "../../../../gemini-apis/shared/types";
 import { cookieService } from "../../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";
 import { videoGenerationRepository } from "../../repository/video-generation.repository";
+import { veo3PollingManager } from "./veo3-polling-manager.service";
 
 export interface ExtractedVideoMetadata {
   mediaGenerationId?: string;
@@ -133,6 +134,10 @@ export class VEO3VideoCreationService {
         status: "pending",
         rawResponse: JSON.stringify(data),
       });
+
+      // Add to polling manager (worker thread - non-blocking)
+      veo3PollingManager.addToPolling(generationId, undefined, "generation", profileId, operationName, sceneId);
+      logger.info(`Added generation ${generationId} to polling worker thread`);
 
       return { success: true, data: { generationId, sceneId, operationName } };
     } catch (error) {

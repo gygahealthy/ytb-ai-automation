@@ -86,6 +86,30 @@ export class VEO3ApiClient {
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     return veo3VideoApiClient.checkVideoStatus(bearerToken, operationName, sceneId);
   }
+
+  /**
+   * Upscale a generated video to higher resolution (1080p)
+   */
+  async upscaleVideo(
+    bearerToken: string,
+    projectId: string,
+    sourceMediaGenerationId: string,
+    sourceSceneId: string,
+    model: string = "veo_2_1080p_upsampler_8s"
+  ): Promise<{ success: boolean; data?: any; sceneId?: string; error?: string }> {
+    return veo3VideoApiClient.upscaleVideo(bearerToken, projectId, sourceMediaGenerationId, sourceSceneId, model);
+  }
+
+  /**
+   * Check upscale status
+   */
+  async checkUpscaleStatus(
+    bearerToken: string,
+    operationName: string,
+    sceneId: string
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    return veo3VideoApiClient.checkUpscaleStatus(bearerToken, operationName, sceneId);
+  }
 }
 
 // Export singleton instance for backward compatibility

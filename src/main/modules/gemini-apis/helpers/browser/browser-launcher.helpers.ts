@@ -281,8 +281,9 @@ export async function launchBrowser(
         if (headless) {
           // Launch in HEADLESS (background) mode
           logger.info("[browser-launcher] Routing to HEADLESS launcher (background mode)");
-          const headlessBrowser = await launchHeadlessBrowser(executablePath, profile.userDataDir, debugPort, profile.userAgent);
-          return { browser: headlessBrowser, chromeProcess: null };
+          const result = await launchHeadlessBrowser(executablePath, profile.userDataDir, debugPort, profile.userAgent);
+          // launchHeadlessBrowser returns { browser, chromeProcess }, pass it through
+          return result;
         } else {
           // Launch in NON-HEADLESS (visible) mode
           logger.info("[browser-launcher] Routing to NON-HEADLESS launcher (visible mode)");

@@ -70,3 +70,26 @@ export interface VideoGeneration {
   updatedAt: string;
   completedAt?: string;
 }
+
+export interface VideoUpscale {
+  id: string;
+  sourceGenerationId: string; // References veo3_video_generations.id
+  profileId: string;
+  projectId: string;
+  sceneId: string;
+  operationName: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  model: string; // e.g., "veo_2_1080p_upsampler_8s"
+  seed?: number;
+  aspectRatio?: string;
+  mediaGenerationId?: string;
+  fifeUrl?: string;
+  servingBaseUri?: string;
+  videoUrl?: string;
+  videoPath?: string;
+  errorMessage?: string;
+  rawResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}

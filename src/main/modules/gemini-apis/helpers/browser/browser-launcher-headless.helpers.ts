@@ -8,9 +8,14 @@ import { logger } from "../../../../utils/logger-backend";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as fs from "fs";
+import { execSync } from "child_process";
+import { chromePIDRegistry } from "./chrome-pid-registry";
 
 // Add stealth plugin to puppeteer
 puppeteer.use(StealthPlugin());
+
+// Re-export for backward compatibility with main.ts imports
+export { killAllTrackedChromePIDs } from "./chrome-pid-registry";
 
 /**
  * Build Chrome arguments for HEADLESS mode with profile data
@@ -152,6 +157,8 @@ export async function launchHeadlessBrowser(
     argsCount: chromeArgs.length,
   });
 
+  let chromeProcess: any = null;
+
   try {
     // ALWAYS use spawn + connect pattern for consistency and proper profile loading
     // This works for both system Chrome and ensures user-data-dir is properly loaded
@@ -167,17 +174,25 @@ export async function launchHeadlessBrowser(
     }
 
     logger.info("[headless-launcher] Spawning Chrome process with user-data-dir (HEADLESS)");
-    const chromeProcess = spawn(executablePath, chromeArgs, {
+    chromeProcess = spawn(executablePath, chromeArgs, {
       detached: true,
       stdio: "ignore",
     });
 
+    // Track PID for cleanup
+    const chromePid = chromeProcess.pid;
+    logger.debug("[headless-launcher] Chrome process spawned", {
+      pid: chromePid,
+      debugPort,
+    });
+
+    // Register PID immediately for global tracking
+    chromePIDRegistry.register(chromePid);
+
     // Unref so the parent can exit independently
     chromeProcess.unref();
 
-    logger.info("[headless-launcher] Chrome process spawned, waiting for debugging port...");
-
-    // Give Chrome more time to initialize on Windows (headless mode needs 3-4 seconds to start debug server)
+    logger.info("[headless-launcher] Chrome process spawned, waiting for debugging port..."); // Give Chrome more time to initialize on Windows (headless mode needs 3-4 seconds to start debug server)
     logger.debug("[headless-launcher] Waiting 4000ms for Chrome to initialize debug port...");
     await new Promise((resolve) => setTimeout(resolve, 4000));
 
@@ -214,6 +229,26 @@ export async function launchHeadlessBrowser(
             attempts: maxRetries,
             suggestion: "Chrome may have failed to start on this port. Will try a different port.",
           });
+
+          // Force kill the Chrome process since we can't connect to it
+          if (chromeProcess && chromeProcess.pid) {
+            logger.warn("[headless-launcher] Force killing unresponsive Chrome process", {
+              pid: chromeProcess.pid,
+            });
+            try {
+              if (process.platform === "win32") {
+                // Use /T to kill entire process tree (parent + all children)
+                execSync(`taskkill /F /PID ${chromeProcess.pid} /T 2>nul`, { timeout: 2000, windowsHide: true });
+              } else {
+                process.kill(chromeProcess.pid, "SIGKILL");
+              }
+              chromePIDRegistry.unregister(chromeProcess.pid);
+            } catch (killErr) {
+              logger.debug("[headless-launcher] Failed to kill Chrome process (may have already exited)");
+              chromePIDRegistry.unregister(chromeProcess.pid);
+            }
+          }
+
           throw new Error(
             `Failed to connect to Chrome after ${maxRetries} attempts on port ${debugPort}. ` +
               `Chrome process may have failed to start or port is not responsive.`
@@ -230,9 +265,11 @@ export async function launchHeadlessBrowser(
     logger.debug("[headless-launcher] Browser details", {
       wsEndpoint: browser.wsEndpoint(),
       userDataDir,
+      chromePid: chromeProcess?.pid,
     });
 
-    return browser;
+    // Return browser with chromeProcess for cleanup
+    return { browser, chromeProcess };
   } catch (error) {
     logger.error("[headless-launcher] Failed to launch HEADLESS browser", {
       error: error instanceof Error ? error.message : String(error),
@@ -240,6 +277,26 @@ export async function launchHeadlessBrowser(
       userDataDir,
       executablePath: executablePath || "puppeteer-bundled",
     });
+
+    // Clean up Chrome process if it exists
+    if (chromeProcess && chromeProcess.pid) {
+      logger.warn("[headless-launcher] Cleaning up Chrome process after launch failure", {
+        pid: chromeProcess.pid,
+      });
+      try {
+        if (process.platform === "win32") {
+          // Use /T to kill entire process tree (parent + all children)
+          execSync(`taskkill /F /PID ${chromeProcess.pid} /T 2>nul`, { timeout: 2000, windowsHide: true });
+        } else {
+          process.kill(chromeProcess.pid, "SIGKILL");
+        }
+        chromePIDRegistry.unregister(chromeProcess.pid);
+      } catch (killErr) {
+        logger.debug("[headless-launcher] Failed to kill Chrome process (may have already exited)");
+        chromePIDRegistry.unregister(chromeProcess.pid);
+      }
+    }
+
     throw error;
   }
 }

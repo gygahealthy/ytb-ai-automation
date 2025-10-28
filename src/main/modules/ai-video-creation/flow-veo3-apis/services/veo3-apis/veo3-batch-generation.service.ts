@@ -3,7 +3,7 @@ import { BrowserWindow } from "electron";
 import { ApiResponse } from "../../../../../../shared/types";
 import { logger } from "../../../../../utils/logger-backend";
 import { veo3VideoCreationService } from "./veo3-video-creation.service";
-import { veo3PollingService } from "./veo3-polling.service";
+import { veo3PollingManager } from "./veo3-polling-manager.service";
 
 export interface BatchGenerationRequest {
   promptId: string;
@@ -216,9 +216,16 @@ export class VEO3BatchGenerationService {
           successCount++;
           logger.info(`[Batch ${batchId}] [${i + 1}/${requests.length}] ✅ Success: ${result.data.generationId}`);
 
-          // Add to backend polling service immediately
-          veo3PollingService.addToPolling(result.data.generationId, request.promptId);
-          logger.info(`[Batch ${batchId}] Added ${result.data.generationId} to backend polling queue`);
+          // Add to backend polling service immediately (worker thread - non-blocking)
+          veo3PollingManager.addToPolling(
+            result.data.generationId,
+            request.promptId,
+            "generation",
+            request.profileId,
+            result.data.operationName,
+            result.data.sceneId
+          );
+          logger.info(`[Batch ${batchId}] Added ${result.data.generationId} to backend polling queue (worker thread)`);
 
           const progressData: BatchGenerationProgress = {
             promptId: request.promptId,

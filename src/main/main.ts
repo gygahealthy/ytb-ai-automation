@@ -29,12 +29,83 @@ import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 import { veo3PollingService } from "./modules/ai-video-creation/video-project-manage/services/veo3.service";
 import { getGlobalRotationWorkerManager } from "./modules/common/cookie-rotation/services/global-rotation-worker-manager.service";
+import { killAllTrackedChromePIDs } from "./modules/gemini-apis/helpers/browser/browser-launcher-headless.helpers";
+import { execSync } from "child_process";
 
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;
 
   constructor() {
+    this.setupShutdownHandlers();
     this.initializeApp();
+  }
+
+  /**
+   * Setup graceful and forced shutdown handlers
+   * Ensures Chrome processes are cleaned up even on unexpected termination
+   */
+  private setupShutdownHandlers(): void {
+    process.on("SIGTERM", async () => {
+      console.log("[Electron] SIGTERM received - graceful shutdown");
+      await this.cleanupAndExit();
+    });
+
+    process.on("SIGINT", async () => {
+      console.log("[Electron] SIGINT received - graceful shutdown");
+      await this.cleanupAndExit();
+    });
+
+    process.on("uncaughtException", async (error) => {
+      console.error("[Electron] Uncaught exception:", error);
+      await this.cleanupAndExit(1);
+    });
+
+    process.on("unhandledRejection", async (reason) => {
+      console.error("[Electron] Unhandled rejection:", reason);
+      await this.cleanupAndExit(1);
+    });
+  }
+
+  /**
+   * Cleanup and exit helper - ensures Chrome processes are terminated
+   */
+  private async cleanupAndExit(exitCode: number = 0): Promise<void> {
+    console.log("[Electron] Starting cleanup routine before exit");
+
+    try {
+      const manager = await getGlobalRotationWorkerManager();
+      if (manager) {
+        await manager.stop();
+        console.log("✅ Rotation manager stopped");
+      }
+    } catch (error) {
+      console.error("⚠️ Error stopping rotation manager:", error);
+    }
+
+    // Kill all tracked Chrome PIDs first (most precise)
+    try {
+      console.log("[Electron] Killing all tracked Chrome processes");
+      killAllTrackedChromePIDs();
+      console.log("✅ Tracked Chrome processes cleaned up");
+    } catch (error) {
+      console.warn("⚠️ Error killing tracked Chrome processes:", error);
+    }
+
+    // Force kill any remaining Chrome processes as final safety net
+    if (process.platform === "win32") {
+      try {
+        console.log("[Electron] Force killing any remaining Chrome processes");
+        execSync("taskkill /F /IM chrome.exe 2>nul || true", {
+          windowsHide: true,
+          timeout: 5000,
+        });
+        console.log("✅ Chrome cleanup complete");
+      } catch (error) {
+        console.warn("⚠️ Failed to force kill Chrome processes:", error);
+      }
+    }
+
+    process.exit(exitCode);
   }
 
   private initializeApp(): void {
@@ -67,17 +138,35 @@ class ElectronApp {
       });
     });
 
-    app.on("before-quit", async () => {
-      // Final cleanup before app quits
+    app.on("before-quit", async (event) => {
+      event.preventDefault();
+      console.log("[Electron] Before-quit event - starting cleanup");
+
       try {
         const manager = await getGlobalRotationWorkerManager();
         if (manager) {
           await manager.stop();
           console.log("✅ Cookie rotation manager cleaned up on quit");
         }
+        // Kill tracked Chrome PIDs
+        try {
+          killAllTrackedChromePIDs();
+          console.log("✅ Tracked Chrome processes cleaned up");
+        } catch (e) {
+          /* ignore */
+        }
+        // Final safety net
+        if (process.platform === "win32") {
+          try {
+            execSync("taskkill /F /IM chrome.exe 2>nul || true", { windowsHide: true, timeout: 3000 });
+          } catch (e) {
+            /* ignore */
+          }
+        }
       } catch (error) {
         console.error("⚠️ Error during quit cleanup", error);
       }
+      app.exit(0);
     });
 
     app.on("window-all-closed", async () => {

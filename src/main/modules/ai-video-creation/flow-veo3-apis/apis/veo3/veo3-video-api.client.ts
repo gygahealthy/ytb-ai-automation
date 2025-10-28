@@ -208,6 +208,111 @@ export class VEO3VideoApiClient {
       };
     }
   }
+
+  /**
+   * Upscale a generated video to higher resolution (1080p)
+   * @param bearerToken - OAuth Bearer token
+   * @param projectId - Flow project ID
+   * @param sourceMediaGenerationId - Media generation ID from the original video
+   * @param sourceSceneId - Scene ID from the original video
+   * @param model - Upscaling model (default: "veo_2_1080p_upsampler_8s")
+   */
+  async upscaleVideo(
+    bearerToken: string,
+    projectId: string,
+    sourceMediaGenerationId: string,
+    sourceSceneId: string,
+    model: string = "veo_2_1080p_upsampler_8s"
+  ): Promise<{ success: boolean; data?: any; sceneId?: string; error?: string }> {
+    try {
+      const newSceneId = this.generateSceneId();
+      const url = `${this.googleApiUrl}/video:batchAsyncGenerateVideoText`;
+
+      logger.info(`Upscaling video (projectId: ${projectId}, sourceMediaGenerationId: ${sourceMediaGenerationId})`);
+      logger.info(`New sceneId: ${newSceneId}, model: ${model}`);
+
+      const payload = {
+        clientContext: {
+          projectId,
+          tool: "PINHOLE",
+          userPaygateTier: "PAYGATE_TIER_ONE",
+        },
+        requests: [
+          {
+            videoModelKey: model,
+            videoInput: {
+              mediaGenerationId: sourceMediaGenerationId,
+            },
+            metadata: {
+              sceneId: newSceneId,
+              referenceSceneId: sourceSceneId,
+            },
+          },
+        ],
+      };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: buildGoogleApiHeaders(bearerToken),
+        body: JSON.stringify(payload),
+      });
+
+      const rawText = await response.text();
+      logger.info(`Video upscale response (${response.status}): ${rawText.substring(0, 500)}`);
+
+      if (!response.ok) {
+        logger.error(`Failed to upscale video: ${response.status} - ${rawText}`);
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+          sceneId: newSceneId,
+        };
+      }
+
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        logger.error("Failed to parse video upscale response JSON", parseErr);
+      }
+
+      // Extract operation name (job ID) from response
+      const operationName = data?.operations?.[0]?.operation?.name;
+      logger.info(`Video upscale started. Operation: ${operationName}`);
+
+      return {
+        success: true,
+        data: {
+          name: operationName,
+          operationName,
+          sceneId: newSceneId,
+          raw: data,
+        },
+        sceneId: newSceneId,
+      };
+    } catch (error) {
+      logger.error("Error upscaling video", error);
+      return {
+        success: false,
+        error: String(error),
+      };
+    }
+  }
+
+  /**
+   * Check upscale status (uses same endpoint as regular video status)
+   * @param bearerToken - OAuth Bearer token
+   * @param operationName - Operation name from upscaleVideo response
+   * @param sceneId - Scene ID from upscaleVideo response
+   */
+  async checkUpscaleStatus(
+    bearerToken: string,
+    operationName: string,
+    sceneId: string
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    // Upscaling uses the same status check endpoint as regular video generation
+    return this.checkVideoStatus(bearerToken, operationName, sceneId);
+  }
 }
 
 export const veo3VideoApiClient = new VEO3VideoApiClient();

@@ -54,6 +54,9 @@ interface Window {
       downloadMultipleVideos: (videos: Array<{ videoUrl: string; filename?: string }>, downloadPath?: string) => Promise<any>;
       downloadStatus: () => Promise<any>;
       onDownloadProgress: (callback: (result: any) => void) => () => void;
+      // DB-only status queries (no API calls - worker thread handles API polling)
+      getGenerationStatusFromDB: (generationId: string) => Promise<any>;
+      getMultipleGenerationStatusFromDB: (generationIds: string[]) => Promise<any>;
     };
     youtube: {
       getAllChannels: () => Promise<any>;

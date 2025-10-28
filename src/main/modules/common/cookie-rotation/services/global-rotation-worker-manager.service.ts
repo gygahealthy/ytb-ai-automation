@@ -14,6 +14,7 @@ import { extractAndCreateHandler } from "../../cookie/handlers/extractAndCreate.
 import { BrowserWindow } from "electron";
 import { cookieRotationConfigService } from "./cookie-rotation-config.service.js";
 import { fork, type ChildProcess } from "child_process";
+import { execSync } from "child_process";
 import * as path from "path";
 
 /**
@@ -512,6 +513,7 @@ export class GlobalRotationWorkerManager {
 
   /**
    * Stop the global manager
+   * Forcefully terminates all spawned Chrome processes
    */
   async stop(): Promise<void> {
     if (!this.running) {
@@ -529,23 +531,82 @@ export class GlobalRotationWorkerManager {
     }
 
     // Stop all workers (both legacy and forked)
+    const workerStopPromises: Promise<void>[] = [];
+
     for (const [key, worker] of this.workers.entries()) {
-      try {
-        // Handle Phase 1 forked worker
-        if (worker.workerType === "phase1-forked" && worker.workerProcess) {
-          worker.workerProcess.send({ cmd: "stop" });
-          setTimeout(() => {
-            if (worker.workerProcess && !worker.workerProcess.killed) {
-              worker.workerProcess.kill();
+      const stopPromise = (async () => {
+        try {
+          // Handle Phase 1 forked worker
+          if (worker.workerType === "phase1-forked" && worker.workerProcess) {
+            logger.info(`[rotation-manager] Stopping forked worker ${key} (PID: ${worker.workerProcess.pid})`);
+
+            // Send graceful stop message
+            try {
+              worker.workerProcess.send({ cmd: "stop" });
+            } catch (e) {
+              logger.debug(`[rotation-manager] Could not send stop to worker ${key}`);
             }
-          }, 1000);
-        } else if (worker.cookieManagerDB) {
-          // Handle legacy worker
-          worker.cookieManagerDB.stop();
+
+            // Force kill after timeout with proper process cleanup
+            await new Promise<void>((resolve) => {
+              setTimeout(() => {
+                if (worker.workerProcess && !worker.workerProcess.killed) {
+                  logger.warn(`[rotation-manager] Force killing worker process ${key} (PID: ${worker.workerProcess.pid})`);
+
+                  try {
+                    if (process.platform === "win32") {
+                      // Windows: use taskkill with /T to kill process tree (children too)
+                      execSync(`taskkill /F /PID ${worker.workerProcess.pid} /T 2>nul || true`, {
+                        windowsHide: true,
+                        timeout: 2000,
+                      });
+                    } else {
+                      // Unix: use SIGKILL
+                      worker.workerProcess.kill("SIGKILL");
+                    }
+                  } catch (killErr) {
+                    logger.debug(`[rotation-manager] Error killing worker process:`, killErr);
+                  }
+                }
+                resolve();
+              }, 1500);
+            });
+          } else if (worker.cookieManagerDB) {
+            // Handle legacy worker
+            logger.info(`[rotation-manager] Stopping legacy worker for cookie ${key}`);
+            worker.cookieManagerDB.stop();
+          }
+
+          // Update status
+          await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
+        } catch (error) {
+          logger.error(`[rotation-manager] Failed to stop worker ${key}:`, error);
         }
-        await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
+      })();
+
+      workerStopPromises.push(stopPromise);
+    }
+
+    // Wait for all workers to stop (with timeout)
+    try {
+      await Promise.race([
+        Promise.all(workerStopPromises),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Worker cleanup timeout")), 10000)),
+      ]);
+    } catch (timeoutError) {
+      logger.warn("[rotation-manager] Worker cleanup timed out, forcing exit", timeoutError);
+    }
+
+    // Force kill any remaining Chrome processes on Windows
+    if (process.platform === "win32") {
+      try {
+        logger.info("[rotation-manager] Force killing any remaining Chrome processes");
+        execSync("taskkill /F /IM chrome.exe 2>nul || true", {
+          windowsHide: true,
+          timeout: 3000,
+        });
       } catch (error) {
-        logger.error(`[rotation-manager] Failed to stop worker ${key}`, error);
+        logger.debug("[rotation-manager] Failed to force kill Chrome (may have already exited)");
       }
     }
 

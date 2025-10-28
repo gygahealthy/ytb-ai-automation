@@ -18,6 +18,8 @@ export interface CookieRotationMonitor {
   consecutiveFailures: number;
   lastErrorMessage?: string;
   lastErrorAt?: string;
+  lastRotationSuccess?: boolean; // Track if last rotation succeeded (for UI indicators)
+  lastRotationMethod?: string; // Track which method was last used
   requiresHeadlessRefresh: boolean;
   lastHeadlessRefreshAt?: string;
   headlessRefreshCount: number;
@@ -44,6 +46,8 @@ interface CookieRotationMonitorRow {
   consecutive_failures: number;
   last_error_message?: string;
   last_error_at?: string;
+  last_rotation_success?: number; // 0 = false, 1 = true, NULL = unknown
+  last_rotation_method?: string; // 'headless' | 'refreshCreds' | 'rotateCookie'
   requires_headless_refresh: number;
   last_headless_refresh_at?: string;
   headless_refresh_count: number;
@@ -77,6 +81,8 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
       consecutiveFailures: r.consecutive_failures,
       lastErrorMessage: r.last_error_message,
       lastErrorAt: r.last_error_at,
+      lastRotationSuccess: r.last_rotation_success === 1 ? true : r.last_rotation_success === 0 ? false : undefined,
+      lastRotationMethod: r.last_rotation_method,
       requiresHeadlessRefresh: r.requires_headless_refresh === 1,
       lastHeadlessRefreshAt: r.last_headless_refresh_at,
       headlessRefreshCount: r.headless_refresh_count,
@@ -102,6 +108,8 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
       consecutive_failures: entity.consecutiveFailures,
       last_error_message: entity.lastErrorMessage,
       last_error_at: entity.lastErrorAt,
+      last_rotation_success: entity.lastRotationSuccess === true ? 1 : entity.lastRotationSuccess === false ? 0 : null,
+      last_rotation_method: entity.lastRotationMethod,
       requires_headless_refresh: entity.requiresHeadlessRefresh ? 1 : 0,
       last_headless_refresh_at: entity.lastHeadlessRefreshAt,
       headless_refresh_count: entity.headlessRefreshCount,
@@ -362,10 +370,12 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
               last_psidts_rotation_at = ?,
               consecutive_failures = 0,
               session_health = 'healthy',
+              last_rotation_success = 1,
+              last_rotation_method = ?,
               updated_at = ?
           WHERE id = ?
         `;
-        params.push(now, now, monitor.id);
+        params.push(now, method, now, monitor.id);
       } else {
         updateQuery = `
           UPDATE ${this.tableName}
@@ -378,10 +388,12 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
                 WHEN consecutive_failures + 1 >= 2 THEN 'degraded'
                 ELSE 'degraded'
               END,
+              last_rotation_success = 0,
+              last_rotation_method = ?,
               updated_at = ?
           WHERE id = ?
         `;
-        params.push(error || "Unknown error", now, now, monitor.id);
+        params.push(error || "Unknown error", now, method, now, monitor.id);
       }
     } else if (method === "headless") {
       // Headless refresh
@@ -393,6 +405,8 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
               consecutive_failures = 0,
               requires_headless_refresh = 0,
               session_health = 'healthy',
+              last_rotation_success = 1,
+              last_rotation_method = 'headless',
               updated_at = ?
           WHERE id = ?
         `;
@@ -404,6 +418,8 @@ export class CookieRotationMonitorRepository extends BaseRepository<CookieRotati
               last_error_message = ?,
               last_error_at = ?,
               session_health = 'expired',
+              last_rotation_success = 0,
+              last_rotation_method = 'headless',
               updated_at = ?
           WHERE id = ?
         `;

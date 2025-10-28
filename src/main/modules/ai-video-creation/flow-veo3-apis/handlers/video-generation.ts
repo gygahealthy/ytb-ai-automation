@@ -50,4 +50,20 @@ export const videoGenerationRegistrations: IpcRegistration[] = [
       return await flowVeo3ApiService.refreshVideoStatus((req as any).operationName, (req as any).generationId);
     },
   },
+  {
+    channel: "veo3:getGenerationStatusFromDB",
+    description: "Get video generation status from DB only (no API call)",
+    handler: async (req: { generationId: string }) => {
+      return await flowVeo3ApiService.getGenerationById((req as any).generationId);
+    },
+  },
+  {
+    channel: "veo3:getMultipleGenerationStatusFromDB",
+    description: "Get multiple video generation statuses from DB only (no API call)",
+    handler: async (req: { generationIds: string[] }) => {
+      const ids = (req as any).generationIds || [];
+      const results = await Promise.all(ids.map((id: string) => flowVeo3ApiService.getGenerationById(id)));
+      return { success: true, data: results.map((r: any) => r.data).filter(Boolean) };
+    },
+  },
 ];
