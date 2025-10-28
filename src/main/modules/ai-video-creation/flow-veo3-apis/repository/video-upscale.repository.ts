@@ -344,5 +344,19 @@ export class VideoUpscaleRepository {
   }
 }
 
-// Export singleton instance
-export const videoUpscaleRepository = new VideoUpscaleRepository(database.getSQLiteDatabase());
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _videoUpscaleRepositoryInstance: VideoUpscaleRepository | null = null;
+
+export function getVideoUpscaleRepository(): VideoUpscaleRepository {
+  if (!_videoUpscaleRepositoryInstance) {
+    _videoUpscaleRepositoryInstance = new VideoUpscaleRepository(database.getSQLiteDatabase());
+  }
+  return _videoUpscaleRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const videoUpscaleRepository = new Proxy({} as VideoUpscaleRepository, {
+  get(_target, prop) {
+    return getVideoUpscaleRepository()[prop as keyof VideoUpscaleRepository];
+  },
+});

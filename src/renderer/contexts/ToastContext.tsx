@@ -1,10 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import {
-  ToastMessage,
-  ToastType,
-  ToastPosition,
-  ToastContainer,
-} from "../components/common/Toast";
+import { ToastMessage, ToastType, ToastPosition, ToastContainer } from "../components/common/Toast";
 
 interface ToastContextValue {
   showToast: (options: {
@@ -14,37 +9,15 @@ interface ToastContextValue {
     duration?: number | null;
     position?: ToastPosition;
   }) => void;
-  success: (
-    message: string,
-    title?: string,
-    duration?: number,
-    position?: ToastPosition
-  ) => void;
-  error: (
-    message: string,
-    title?: string,
-    duration?: number,
-    position?: ToastPosition
-  ) => void;
-  info: (
-    message: string,
-    title?: string,
-    duration?: number,
-    position?: ToastPosition
-  ) => void;
-  warning: (
-    message: string,
-    title?: string,
-    duration?: number,
-    position?: ToastPosition
-  ) => void;
+  success: (message: string, title?: string, duration?: number, position?: ToastPosition) => void;
+  error: (message: string, title?: string, duration?: number, position?: ToastPosition) => void;
+  info: (message: string, title?: string, duration?: number, position?: ToastPosition) => void;
+  warning: (message: string, title?: string, duration?: number, position?: ToastPosition) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const generateId = useCallback(() => {
@@ -52,13 +25,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const showToast = useCallback(
-    (options: {
-      type: ToastType;
-      title?: string;
-      message: string;
-      duration?: number | null;
-      position?: ToastPosition;
-    }) => {
+    (options: { type: ToastType; title?: string; message: string; duration?: number | null; position?: ToastPosition }) => {
       const id = generateId();
       const newToast: ToastMessage = {
         id,
@@ -66,7 +33,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
         title: options.title,
         message: options.message,
         duration: options.duration ?? 4000, // Default 4s auto-dismiss
-        position: options.position ?? "bottom-right", // Default position
+        position: options.position ?? "top-right", // Default position
       };
 
       setToasts((prev) => [...prev, newToast]);
@@ -80,48 +47,28 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const success = useCallback(
-    (
-      message: string,
-      title?: string,
-      duration?: number,
-      position?: ToastPosition
-    ) => {
+    (message: string, title?: string, duration?: number, position?: ToastPosition) => {
       showToast({ type: "success", title, message, duration, position });
     },
     [showToast]
   );
 
   const error = useCallback(
-    (
-      message: string,
-      title?: string,
-      duration?: number,
-      position?: ToastPosition
-    ) => {
+    (message: string, title?: string, duration?: number, position?: ToastPosition) => {
       showToast({ type: "error", title, message, duration, position });
     },
     [showToast]
   );
 
   const info = useCallback(
-    (
-      message: string,
-      title?: string,
-      duration?: number,
-      position?: ToastPosition
-    ) => {
+    (message: string, title?: string, duration?: number, position?: ToastPosition) => {
       showToast({ type: "info", title, message, duration, position });
     },
     [showToast]
   );
 
   const warning = useCallback(
-    (
-      message: string,
-      title?: string,
-      duration?: number,
-      position?: ToastPosition
-    ) => {
+    (message: string, title?: string, duration?: number, position?: ToastPosition) => {
       showToast({ type: "warning", title, message, duration, position });
     },
     [showToast]
@@ -142,9 +89,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    console.warn(
-      "useToast used outside ToastProvider - falling back to console"
-    );
+    console.warn("useToast used outside ToastProvider - falling back to console");
     return {
       showToast: (options: {
         type: ToastType;
@@ -153,30 +98,10 @@ export const useToast = () => {
         duration?: number | null;
         position?: ToastPosition;
       }) => console.log("Toast:", options),
-      success: (
-        _message: string,
-        _title?: string,
-        _duration?: number,
-        _position?: ToastPosition
-      ) => console.log("Success"),
-      error: (
-        _message: string,
-        _title?: string,
-        _duration?: number,
-        _position?: ToastPosition
-      ) => console.error("Error"),
-      info: (
-        _message: string,
-        _title?: string,
-        _duration?: number,
-        _position?: ToastPosition
-      ) => console.info("Info"),
-      warning: (
-        _message: string,
-        _title?: string,
-        _duration?: number,
-        _position?: ToastPosition
-      ) => console.warn("Warning"),
+      success: (_message: string, _title?: string, _duration?: number, _position?: ToastPosition) => console.log("Success"),
+      error: (_message: string, _title?: string, _duration?: number, _position?: ToastPosition) => console.error("Error"),
+      info: (_message: string, _title?: string, _duration?: number, _position?: ToastPosition) => console.info("Info"),
+      warning: (_message: string, _title?: string, _duration?: number, _position?: ToastPosition) => console.warn("Warning"),
     };
   }
   return context;

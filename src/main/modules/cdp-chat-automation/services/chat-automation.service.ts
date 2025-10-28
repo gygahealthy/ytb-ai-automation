@@ -1,6 +1,6 @@
 import { Browser, Page, CDPSession } from "puppeteer";
 import { profileService } from "../../profile-management/services/profile.service";
-import { randomUUID } from 'crypto';
+import { generateUuid } from "../../../../core/id.js";
 import { browserManager } from "../../instance-management/services/browser-manager";
 import { Logger } from "../../../../shared/utils/logger";
 import { ApiResponse } from "../../../../shared/types";
@@ -108,11 +108,11 @@ export class ChatAutomationService {
         createdAt: new Date(),
       };
 
-  this.activeSessions.set(sessionId, session);
-  // If the browser manager returned the spawned process, register it so we can kill it on close
-  // @ts-ignore - some implementations include `process` in the return object
-  const spawnedProcess = (browserResult as any).process as any;
-  browserManager.registerBrowser(sessionId, browser, debugPort!, spawnedProcess);
+      this.activeSessions.set(sessionId, session);
+      // If the browser manager returned the spawned process, register it so we can kill it on close
+      // @ts-ignore - some implementations include `process` in the return object
+      const spawnedProcess = (browserResult as any).process as any;
+      browserManager.registerBrowser(sessionId, browser, debugPort!, spawnedProcess);
 
       logger.info(`Chat session ${sessionId} initialized successfully`);
 
@@ -151,9 +151,7 @@ export class ChatAutomationService {
       // Wait for response with timeout
       const response = await Promise.race([
         this.waitForMessage(sessionId),
-        new Promise<ChatMessage>((_, reject) =>
-          setTimeout(() => reject(new Error("Response timeout after 60s")), 60000)
-        ),
+        new Promise<ChatMessage>((_, reject) => setTimeout(() => reject(new Error("Response timeout after 60s")), 60000)),
       ]);
 
       logger.info(`Received response in session ${sessionId}`);
@@ -260,7 +258,7 @@ export class ChatAutomationService {
   private async sendChatGPTMessage(page: Page, message: string): Promise<void> {
     await page.waitForSelector("#prompt-textarea", { timeout: 5000 });
     await page.click("#prompt-textarea");
-  await this.safeWait(500);
+    await this.safeWait(500);
 
     await page.evaluate(() => {
       const editor = document.querySelector("#prompt-textarea");
@@ -275,13 +273,13 @@ export class ChatAutomationService {
       }
     });
 
-  await this.safeWait(300);
+    await this.safeWait(300);
 
     for (const char of message) {
       await page.type("#prompt-textarea", char, { delay: 20 });
     }
 
-  await this.safeWait(1000);
+    await this.safeWait(1000);
     await page.waitForSelector('[data-testid="send-button"]');
     await page.click('[data-testid="send-button"]');
 
@@ -293,15 +291,15 @@ export class ChatAutomationService {
    */
   private async sendGeminiMessage(page: Page, message: string): Promise<void> {
     // Wait for the rich-textarea element
-    await page.waitForSelector('rich-textarea .ql-editor', { timeout: 5000 });
-    
+    await page.waitForSelector("rich-textarea .ql-editor", { timeout: 5000 });
+
     // Click on the editor to focus
-    await page.click('rich-textarea .ql-editor');
-  await this.safeWait(500);
+    await page.click("rich-textarea .ql-editor");
+    await this.safeWait(500);
 
     // Clear any existing content using safe DOM methods (avoid innerHTML assignment)
     await page.evaluate(() => {
-      const editor = document.querySelector('rich-textarea .ql-editor');
+      const editor = document.querySelector("rich-textarea .ql-editor");
       if (editor) {
         // If editor is contentEditable, clear its text nodes safely
         try {
@@ -311,34 +309,32 @@ export class ChatAutomationService {
           }
 
           // Create an empty paragraph to preserve editor structure
-          const p = document.createElement('p');
-          const br = document.createElement('br');
+          const p = document.createElement("p");
+          const br = document.createElement("br");
           p.appendChild(br);
           editor.appendChild(p);
         } catch (e) {
           // Fallback: set textContent
-          (editor as HTMLElement).textContent = '';
+          (editor as HTMLElement).textContent = "";
         }
       }
     });
 
-  await this.safeWait(300);
+    await this.safeWait(300);
 
     // Type the message character by character
     for (const char of message) {
-      await page.type('rich-textarea .ql-editor', char, { delay: 20 });
+      await page.type("rich-textarea .ql-editor", char, { delay: 20 });
     }
 
-  await this.safeWait(1000);
+    await this.safeWait(1000);
 
     // Wait for send button to appear and click it
-    await page.waitForSelector('button.send-button', { timeout: 5000 });
-    await page.click('button.send-button');
+    await page.waitForSelector("button.send-button", { timeout: 5000 });
+    await page.click("button.send-button");
 
     logger.info("Gemini message sent");
   }
-
-
 
   /**
    * Wait for message response
@@ -369,7 +365,7 @@ export class ChatAutomationService {
    */
   getSessionByProfileId(profileId: string): { sessionId: string; debugPort: number; status: string } | undefined {
     for (const [id, session] of this.activeSessions.entries()) {
-      if (session.profileId === profileId && session.status === 'active') {
+      if (session.profileId === profileId && session.status === "active") {
         return { sessionId: id, debugPort: session.debugPort, status: session.status };
       }
     }
@@ -382,22 +378,22 @@ export class ChatAutomationService {
   async sendMessageToInstance(instanceId: string, message: string): Promise<ApiResponse<ChatMessage>> {
     try {
       const inst = instanceManager.getInstance(instanceId);
-      if (!inst) return { success: false, error: 'Instance not found' };
-      if (!inst.sessionId) return { success: false, error: 'Instance has no session' };
+      if (!inst) return { success: false, error: "Instance not found" };
+      if (!inst.sessionId) return { success: false, error: "Instance has no session" };
 
       // Persist user message immediately
-  const existingHistory = inst.chatHistory || [];
-  const now = new Date().toISOString();
-  const userMessage = { id: randomUUID(), from: 'user' as const, text: message, ts: now };
-  const updatedHistory = [...existingHistory, userMessage];
+      const existingHistory = inst.chatHistory || [];
+      const now = new Date().toISOString();
+      const userMessage = { id: generateUuid(), from: "user" as const, text: message, ts: now };
+      const updatedHistory = [...existingHistory, userMessage];
       instanceManager.updateInstanceState(instanceId, { chatHistory: updatedHistory });
 
       const res = await this.sendMessage(inst.sessionId, message);
 
       if (res.success && res.data) {
         const botMessage = {
-          id: randomUUID(),
-          from: 'bot' as const,
+          id: generateUuid(),
+          from: "bot" as const,
           text: res.data.content,
           ts: res.data.timestamp.toISOString(),
           messageId: res.data.messageId,

@@ -1,7 +1,7 @@
 ﻿import { randomBytes } from "crypto";
 import { ApiResponse } from "../../../../../../shared/types";
 import { logger } from "../../../../../utils/logger-backend";
-import { profileRepository } from "../../../../../storage/database";
+import { profileRepository } from "../../../../profile-management/repository/profile.repository";
 import { COOKIE_SERVICES } from "../../../../gemini-apis/shared/types";
 import { cookieService } from "../../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";

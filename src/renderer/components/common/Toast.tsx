@@ -1,18 +1,8 @@
 import React, { useEffect } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Info,
-  X,
-  AlertTriangle,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, X, AlertTriangle } from "lucide-react";
 
 export type ToastType = "success" | "error" | "info" | "warning";
-export type ToastPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
+export type ToastPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export interface ToastMessage {
   id: string;
@@ -95,12 +85,8 @@ const Toast: React.FC<ToastProps> = ({
     >
       <div className={style.text}>{style.icon}</div>
       <div className="flex-1 min-w-0">
-        {title && (
-          <p className={`${style.text} font-semibold text-sm mb-1`}>{title}</p>
-        )}
-        <p className={`${style.text} text-sm whitespace-pre-wrap break-words`}>
-          {message}
-        </p>
+        {title && <p className={`${style.text} font-semibold text-sm mb-1`}>{title}</p>}
+        <p className={`${style.text} text-sm whitespace-pre-wrap break-words`}>{message}</p>
       </div>
       <button
         onClick={() => onClose(id)}
@@ -129,8 +115,10 @@ const getPositionClasses = (position: ToastPosition): string => {
     case "bottom-left":
       return `${baseClasses} bottom-6 left-6`;
     case "bottom-right":
-    default:
       return `${baseClasses} bottom-6 right-6`;
+    default:
+      // Fallback default is top-right
+      return `${baseClasses} top-6 right-6`;
   }
 };
 
@@ -143,15 +131,14 @@ const getAnimationClasses = (position: ToastPosition): string => {
     case "bottom-left":
       return "animate-in slide-in-from-left-full";
     case "bottom-right":
+      return "animate-in slide-in-from-right-full";
     default:
+      // Fallback default animation matches top-right
       return "animate-in slide-in-from-right-full";
   }
 };
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({
-  toasts,
-  onClose,
-}) => {
+export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
   // Group toasts by position
   const toastsByPosition: Record<ToastPosition, ToastMessage[]> = {
     "top-left": [],
@@ -161,7 +148,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   };
 
   toasts.forEach((toast) => {
-    const position = toast.position || "bottom-right";
+    const position = toast.position || "top-right";
     toastsByPosition[position].push(toast);
   });
 
@@ -177,13 +164,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
         >
           {positionToasts.map((toast) => (
             <div key={toast.id} className="pointer-events-auto">
-              <Toast
-                {...toast}
-                onClose={onClose}
-                animationClass={getAnimationClasses(
-                  toast.position || "bottom-right"
-                )}
-              />
+              <Toast {...toast} onClose={onClose} animationClass={getAnimationClasses(toast.position || "top-right")} />
             </div>
           ))}
         </div>

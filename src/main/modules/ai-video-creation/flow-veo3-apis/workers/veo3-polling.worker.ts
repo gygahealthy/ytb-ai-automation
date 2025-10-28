@@ -34,26 +34,31 @@ async function initializeWorker() {
     const apiModule = await import("../apis/veo3-api.client.js");
     veo3ApiClient = apiModule.veo3ApiClient;
 
-    const genRepoModule = await import("../repository/video-generation.repository.js");
-    videoGenerationRepository = genRepoModule.videoGenerationRepository;
-
-    const upscaleRepoModule = await import("../repository/video-upscale.repository.js");
-    videoUpscaleRepository = upscaleRepoModule.videoUpscaleRepository;
-
     // @ts-ignore - Path resolved at runtime after compilation
     const cookieModule = await import("../../../common/cookie/services/cookie.service.js");
     cookieService = cookieModule.cookieService;
 
-    // @ts-ignore - Path resolved at runtime after compilation
-    const profileModule = await import("../../../../storage/database.js");
-    profileRepository = profileModule.profileRepository;
-
-    // Initialize database connection
+    // Initialize database connection first (worker needs its own connection)
     // @ts-ignore - Path resolved at runtime after compilation
     const dbModule = await import("../../../../storage/sqlite-database.js");
     SQLiteDatabase = dbModule.SQLiteDatabase;
     database = new SQLiteDatabase(dbPath);
     await database.waitForInit();
+
+    // Create repository instances with worker's database (don't import singletons)
+    const genRepoModule = await import("../repository/video-generation.repository.js");
+    const VideoGenerationRepositoryClass = genRepoModule.VideoGenerationRepository;
+    videoGenerationRepository = new VideoGenerationRepositoryClass(database);
+
+    const upscaleRepoModule = await import("../repository/video-upscale.repository.js");
+    const VideoUpscaleRepositoryClass = upscaleRepoModule.VideoUpscaleRepository;
+    videoUpscaleRepository = new VideoUpscaleRepositoryClass(database);
+
+    // Initialize profileRepository with worker's database instance
+    // @ts-ignore - Path resolved at runtime after compilation
+    const ProfileRepositoryModule = await import("../../../profile-management/repository/profile.repository.js");
+    const ProfileRepositoryClass = ProfileRepositoryModule.ProfileRepository;
+    profileRepository = new ProfileRepositoryClass(database);
 
     sendMessage({ type: "initialized" });
   } catch (error) {

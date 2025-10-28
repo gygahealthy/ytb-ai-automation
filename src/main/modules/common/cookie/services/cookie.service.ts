@@ -4,6 +4,7 @@ import { ApiResponse } from "../../../../../shared/types/index.js";
 // Removed top-level database import to support worker processes
 // import { database } from "@main/storage/database";
 import { cookieExtractionService } from "../../cookie-extraction/index.js";
+import { generateUuid } from "../../../../../core/id.js";
 import { CookieRepository } from "../repository/cookie.repository.js";
 
 /**
@@ -167,7 +168,6 @@ export class CookieService {
         };
       }
 
-      const { v4: uuidv4 } = await import("uuid");
       const now = new Date().toISOString();
 
       // Extract rotation config if provided in data.rotationConfig or at root level
@@ -179,7 +179,7 @@ export class CookieService {
         : ["__Secure-3PSIDCC"];
 
       const cookie: Cookie = {
-        id: uuidv4(),
+        id: generateUuid(),
         profileId,
         url,
         service,
@@ -502,9 +502,8 @@ export class CookieService {
         };
       } else {
         // ✅ CREATE new cookie
-        const { v4: uuidv4 } = await import("uuid");
         const newCookie: Cookie = {
-          id: uuidv4(),
+          id: generateUuid(),
           profileId: profileId, // Ensure profileId is explicitly set
           url: pageUrl, // Store full page URL
           service: service, // Ensure service is explicitly set

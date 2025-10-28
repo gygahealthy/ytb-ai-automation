@@ -28,6 +28,7 @@ import * as m024 from "./modules/024_add_cookie_rotation_config_columns";
 import * as m025 from "./modules/025_add_required_cookies_column";
 import * as m026 from "./modules/026_add_video_upscales_table";
 import * as m027 from "./modules/027_add_rotation_status_tracking";
+import * as m028 from "./modules/028_relax_upscale_foreign_keys";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -59,6 +60,7 @@ const modules: Migration[] = [
   m025,
   m026,
   m027,
+  m028,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

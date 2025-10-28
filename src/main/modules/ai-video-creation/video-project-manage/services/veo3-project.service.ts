@@ -1,7 +1,8 @@
 import { ApiResponse } from "../../../../../shared/types";
 import { Logger } from "../../../../../shared/utils/logger";
 import { StringUtil } from "../../../../../shared/utils/string";
-import { profileRepository, veo3ProjectRepository } from "../../../../storage/database";
+import { profileRepository } from "../../../profile-management/repository/profile.repository";
+import { veo3ProjectRepository } from "../repository/veo3-project.repository";
 import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
 import { cookieService } from "../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../flow-veo3-apis/apis/veo3-api.client";

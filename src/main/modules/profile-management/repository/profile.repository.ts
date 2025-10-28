@@ -1,6 +1,7 @@
 import { Profile } from "../profile.types";
 import { database } from "../../../storage/database";
 import { BaseRepository } from "../../../storage/repositories/base.repository";
+import { SQLiteDatabase } from "../../../storage/sqlite-database";
 
 interface ProfileRow {
   id: string;
@@ -22,9 +23,10 @@ interface ProfileRow {
  * Repository for Profile entities
  */
 export class ProfileRepository extends BaseRepository<Profile> {
-  constructor() {
-    // Use centralized Database singleton so all modules share the same DB file
-    super("profiles", database.getSQLiteDatabase());
+  constructor(db?: SQLiteDatabase) {
+    // Use provided database or centralized Database singleton
+    // Worker threads should provide their own db instance
+    super("profiles", db || database.getSQLiteDatabase());
   }
 
   protected rowToEntity(row: ProfileRow): Profile {
@@ -66,15 +68,11 @@ export class ProfileRepository extends BaseRepository<Profile> {
 
     if (entity.id) row.id = entity.id;
     if (entity.name) row.name = entity.name;
-    if (entity.browserPath !== undefined)
-      row.browser_path = entity.browserPath || null;
+    if (entity.browserPath !== undefined) row.browser_path = entity.browserPath || null;
     if (entity.userDataDir) row.user_data_dir = entity.userDataDir;
-    if (entity.userAgent !== undefined)
-      row.user_agent = entity.userAgent || null;
-    if (entity.creditRemaining !== undefined)
-      row.credit_remaining = entity.creditRemaining;
-    if (entity.isLoggedIn !== undefined)
-      row.is_logged_in = entity.isLoggedIn ? 1 : 0;
+    if (entity.userAgent !== undefined) row.user_agent = entity.userAgent || null;
+    if (entity.creditRemaining !== undefined) row.credit_remaining = entity.creditRemaining;
+    if (entity.isLoggedIn !== undefined) row.is_logged_in = entity.isLoggedIn ? 1 : 0;
 
     // Serialize proxy
     if (entity.proxy) {
@@ -85,10 +83,7 @@ export class ProfileRepository extends BaseRepository<Profile> {
 
     // Serialize tags
     if (entity.tags !== undefined) {
-      row.tags =
-        entity.tags && entity.tags.length > 0
-          ? JSON.stringify(entity.tags)
-          : null;
+      row.tags = entity.tags && entity.tags.length > 0 ? JSON.stringify(entity.tags) : null;
     }
 
     if (entity.createdAt) row.created_at = entity.createdAt.toISOString();
@@ -101,11 +96,27 @@ export class ProfileRepository extends BaseRepository<Profile> {
    * Update profile credit
    */
   async updateCredit(id: string, amount: number): Promise<void> {
-    await this.db.run(
-      `UPDATE ${this.tableName} SET credit_remaining = ?, updated_at = ? WHERE id = ?`,
-      [amount, new Date().toISOString(), id]
-    );
+    await this.db.run(`UPDATE ${this.tableName} SET credit_remaining = ?, updated_at = ? WHERE id = ?`, [
+      amount,
+      new Date().toISOString(),
+      id,
+    ]);
   }
 }
 
-export const profileRepository = new ProfileRepository();
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _profileRepositoryInstance: ProfileRepository | null = null;
+
+function getProfileRepository(): ProfileRepository {
+  if (!_profileRepositoryInstance) {
+    _profileRepositoryInstance = new ProfileRepository();
+  }
+  return _profileRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const profileRepository = new Proxy({} as ProfileRepository, {
+  get(_target, prop) {
+    return getProfileRepository()[prop as keyof ProfileRepository];
+  },
+});

@@ -1,10 +1,10 @@
-import { videoAnalysisRepository, youtubeChannelRepository } from "../../../storage/database";
+import { videoAnalysisRepository, youtubeChannelRepository } from "../repository/youtube.repository";
 import { ApiResponse } from "../../../../shared/types";
 import { Logger } from "../../../../shared/utils/logger";
 import { StringUtil } from "../../../../shared/utils/string";
-import { 
-  CreateChannelInput, 
-  VideoAnalysis, 
+import {
+  CreateChannelInput,
+  VideoAnalysis,
   YoutubeChannel,
   ChannelDeepDive,
   CreateDeepDiveInput,
@@ -22,7 +22,7 @@ import {
   ChannelTopic,
   CreateTopicInput,
   UpdateTopicInput,
-  ChannelCompleteView
+  ChannelCompleteView,
 } from "../youtube.types";
 import { channelDeepDiveRepository } from "../repository/channel-deep-dive.repository";
 import { channelPlaylistRepository } from "../repository/channel-playlist.repository";
@@ -260,10 +260,13 @@ export class YouTubeService {
   /**
    * Create or update channel deep dive
    */
-  async upsertChannelDeepDive(channelId: string, input: CreateDeepDiveInput | UpdateDeepDiveInput): Promise<ApiResponse<ChannelDeepDive>> {
+  async upsertChannelDeepDive(
+    channelId: string,
+    input: CreateDeepDiveInput | UpdateDeepDiveInput
+  ): Promise<ApiResponse<ChannelDeepDive>> {
     try {
       const existing = await channelDeepDiveRepository.findByChannelId(channelId);
-      
+
       let deepDive: ChannelDeepDive | null;
       if (existing) {
         deepDive = await channelDeepDiveRepository.updateByChannelId(channelId, input);
@@ -457,7 +460,10 @@ export class YouTubeService {
   /**
    * Update competitor metrics (from analysis)
    */
-  async updateCompetitorMetrics(id: string, metrics: { subscriberCount?: number; avgViews?: number }): Promise<ApiResponse<ChannelCompetitor>> {
+  async updateCompetitorMetrics(
+    id: string,
+    metrics: { subscriberCount?: number; avgViews?: number }
+  ): Promise<ApiResponse<ChannelCompetitor>> {
     try {
       const competitor = await channelCompetitorRepository.updateMetrics(id, metrics);
       if (!competitor) {
@@ -519,7 +525,11 @@ export class YouTubeService {
   /**
    * Get performance for date range
    */
-  async getPerformanceDateRange(channelId: string, startDate: string, endDate: string): Promise<ApiResponse<ChannelPerformance[]>> {
+  async getPerformanceDateRange(
+    channelId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<ApiResponse<ChannelPerformance[]>> {
     try {
       const performance = await channelPerformanceRepository.getDateRange(channelId, startDate, endDate);
       return { success: true, data: performance };
@@ -616,23 +626,16 @@ export class YouTubeService {
       }
 
       // Get all related data in parallel
-      const [
-        deepDive,
-        playlists,
-        competitors,
-        performanceMetrics,
-        recentVideos,
-        upcomingTopics,
-        assignedPromptsCount
-      ] = await Promise.all([
-        channelDeepDiveRepository.findByChannelId(channelId),
-        channelPlaylistRepository.findByChannelId(channelId),
-        channelCompetitorRepository.findByChannelId(channelId),
-        channelPerformanceRepository.getMetricsWithGrowth(channelId),
-        videoAnalysisRepository.findByChannelId(channelId),
-        channelTopicRepository.getUpcoming(channelId, 10),
-        promptRepository.countByChannelId(channelId)
-      ]);
+      const [deepDive, playlists, competitors, performanceMetrics, recentVideos, upcomingTopics, assignedPromptsCount] =
+        await Promise.all([
+          channelDeepDiveRepository.findByChannelId(channelId),
+          channelPlaylistRepository.findByChannelId(channelId),
+          channelCompetitorRepository.findByChannelId(channelId),
+          channelPerformanceRepository.getMetricsWithGrowth(channelId),
+          videoAnalysisRepository.findByChannelId(channelId),
+          channelTopicRepository.getUpcoming(channelId, 10),
+          promptRepository.countByChannelId(channelId),
+        ]);
 
       const completeView: ChannelCompleteView = {
         channel,
@@ -642,7 +645,7 @@ export class YouTubeService {
         performance: performanceMetrics || undefined,
         recentVideos: recentVideos.slice(0, 10), // Latest 10 videos
         upcomingTopics,
-        assignedPrompts: assignedPromptsCount
+        assignedPrompts: assignedPromptsCount,
       };
 
       return { success: true, data: completeView };

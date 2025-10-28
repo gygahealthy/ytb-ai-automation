@@ -16,6 +16,7 @@ import { cookieRotationConfigService } from "./cookie-rotation-config.service.js
 import { fork, type ChildProcess } from "child_process";
 import { execSync } from "child_process";
 import * as path from "path";
+import { generateUuid } from "../../../../../core/id.js";
 
 /**
  * Worker instance tracking
@@ -418,10 +419,8 @@ export class GlobalRotationWorkerManager {
    */
   private async createMonitor(profileId: string, cookieId: string): Promise<CookieRotationMonitor> {
     const now = new Date().toISOString();
-    // Use dynamic import for uuid to avoid ESM require errors in CJS runtime
-    const { v4: uuidv4 } = await import("uuid");
     const monitor: CookieRotationMonitor = {
-      id: uuidv4(),
+      id: generateUuid(),
       profileId,
       cookieId,
       workerStatus: "stopped",

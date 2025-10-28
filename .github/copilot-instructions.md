@@ -100,6 +100,11 @@ All database access through repositories. Example:
 ```typescript
 // src/main/modules/profile-management/repository/profile.repository.ts
 export class ProfileRepository extends BaseRepository<Profile> {
+  constructor(private db?: SQLiteDatabase) {
+    // Accept optional db for worker threads; use main process singleton if not provided
+    super("profiles", db || database.getSQLiteDatabase());
+  }
+
   async findById(id: string): Promise<Profile | null> {
     /* ... */
   }
@@ -108,10 +113,27 @@ export class ProfileRepository extends BaseRepository<Profile> {
   }
 }
 
-export const profileRepository = new ProfileRepository();
+// ⚠️ CRITICAL: Use lazy Proxy to avoid triggering database access at module import time
+// This is essential for worker threads, which cannot access main process database singletons
+let _profileRepositoryInstance: ProfileRepository | null = null;
+
+function getProfileRepository(): ProfileRepository {
+  if (!_profileRepositoryInstance) {
+    _profileRepositoryInstance = new ProfileRepository();
+  }
+  return _profileRepositoryInstance;
+}
+
+export const profileRepository = new Proxy({} as ProfileRepository, {
+  get(_target, prop) {
+    return getProfileRepository()[prop as keyof ProfileRepository];
+  },
+});
 ```
 
 **Never** use raw SQL in services or renderer—always delegate to repository.
+
+**⚠️ Worker Thread Safety**: Always export repository singletons via lazy Proxy pattern (as shown above), **never** as eager instantiation like `export const profileRepository = new ProfileRepository()`. Worker threads will fail if they import modules with eager database access. See `docs/WORKER_THREAD_SINGLETON_PATTERN.md` for details.
 
 ## IPC & Service Communication
 
@@ -159,6 +181,57 @@ export class CookieRotationService {
 
 export const cookieService = new CookieRotationService(cookieRepository);
 ```
+
+## Worker Threads (Critical Pattern)
+
+Worker threads cannot access the main Electron process database singleton or `app.getPath()`. Always follow this pattern:
+
+```typescript
+// src/main/modules/ai-video-creation/flow-veo3-apis/workers/my-worker.ts
+import { parentPort } from "worker_threads";
+
+async function initializeWorker() {
+  try {
+    // 1. Get database path from environment variable (set by parent)
+    const dbPath = process.env.DB_PATH;
+    if (!dbPath) throw new Error("DB_PATH environment variable not set");
+
+    // 2. Import database class and repository classes (NOT singletons)
+    const { SQLiteDatabase } = await import("../../../../storage/sqlite-database.js");
+    const { VideoGenerationRepository } = await import("../repository/video-generation.repository.js");
+
+    // 3. Create worker's own database instance
+    const database = new SQLiteDatabase(dbPath);
+    await database.waitForInit();
+
+    // 4. Instantiate repositories with worker's database
+    const videoGenerationRepository = new VideoGenerationRepository(database);
+
+    // Now ready to use repositories
+    sendMessage({ type: "initialized" });
+  } catch (error) {
+    sendMessage({ type: "error", error: String(error) });
+  }
+}
+
+initializeWorker();
+
+if (parentPort) {
+  parentPort.on("message", async (message) => {
+    // Handle messages from parent process
+  });
+}
+```
+
+**Critical Rules:**
+
+- Never import repository singletons (`videoGenerationRepository`)—import the class instead (`VideoGenerationRepository`)
+- Create worker's own `SQLiteDatabase` instance with provided `dbPath`
+- Pass worker's database to repository constructors
+- Parent process must set `DB_PATH` environment variable when spawning worker
+- All repository singletons must use **lazy Proxy pattern** for initialization safety
+
+See `docs/WORKER_THREAD_SINGLETON_PATTERN.md` for detailed architecture notes.
 
 ## React & Renderer Guidelines
 

@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "../../../storage/sqlite-database";
 import { database } from "../../../storage/database";
-import { randomUUID } from "crypto";
+import { generateUuid } from "../../../../core/id.js";
 
 export interface ComponentPromptConfig {
   id: string;
@@ -234,7 +234,7 @@ export class ComponentPromptConfigRepository {
    * Create a new configuration
    */
   async create(input: CreateConfigInput): Promise<ComponentPromptConfig> {
-    const id = randomUUID();
+    const id = generateUuid();
     const now = new Date().toISOString();
 
     await this.db.run(

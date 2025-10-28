@@ -1,5 +1,5 @@
 import puppeteer, { Browser, Page } from "puppeteer";
-import { automationRepository } from "../../../storage/database";
+import { automationRepository } from "../repository/automation.repository";
 import { AutomationTask, CreateAutomationTaskInput } from "../auto.types";
 import { Logger } from "../../../../shared/utils/logger";
 import { StringUtil } from "../../../../shared/utils/string";

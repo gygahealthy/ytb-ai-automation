@@ -4,7 +4,7 @@ import * as path from "path";
 // Use puppeteer-extra with stealth plugin for better automation detection bypass
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { profileRepository } from "../../../storage/database";
+import { profileRepository } from "../repository/profile.repository";
 import { ApiResponse } from "../../../../shared/types";
 import { Logger } from "../../../../shared/utils/logger";
 import { StringUtil } from "../../../../shared/utils/string";
@@ -48,16 +48,12 @@ export class ProfileService {
   /**
    * Create new profile
    */
-  async createProfile(
-    input: CreateProfileInput
-  ): Promise<ApiResponse<Profile>> {
+  async createProfile(input: CreateProfileInput): Promise<ApiResponse<Profile>> {
     try {
       const profileId = StringUtil.generateId("profile");
 
       // Sanitize profile name for use in folder name (replace spaces and special chars with underscore)
-      const sanitizedName = input.name
-        .replace(/[^a-zA-Z0-9]/g, "_")
-        .replace(/_+/g, "_");
+      const sanitizedName = input.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
       const folderName = `${sanitizedName}_${profileId}`;
 
       // Determine profile directory path
@@ -101,10 +97,7 @@ export class ProfileService {
   /**
    * Update profile
    */
-  async updateProfile(
-    id: string,
-    updates: Partial<Profile>
-  ): Promise<ApiResponse<Profile>> {
+  async updateProfile(id: string, updates: Partial<Profile>): Promise<ApiResponse<Profile>> {
     try {
       if (!(await profileRepository.exists(id))) {
         return { success: false, error: "Profile not found" };
@@ -145,10 +138,7 @@ export class ProfileService {
           fs.rmSync(profile.userDataDir, { recursive: true, force: true });
           logger.info(`Profile directory deleted: ${profile.userDataDir}`);
         } catch (dirError) {
-          logger.error(
-            `Failed to delete profile directory: ${profile.userDataDir}`,
-            dirError
-          );
+          logger.error(`Failed to delete profile directory: ${profile.userDataDir}`, dirError);
           // Don't fail the whole operation if directory deletion fails
           // The profile is already removed from database
         }
@@ -164,10 +154,7 @@ export class ProfileService {
   /**
    * Update credit
    */
-  async updateCredit(
-    id: string,
-    amount: number
-  ): Promise<ApiResponse<Profile>> {
+  async updateCredit(id: string, amount: number): Promise<ApiResponse<Profile>> {
     try {
       const profile = await profileRepository.findById(id);
       if (!profile) {

@@ -1,15 +1,8 @@
 import { create } from "zustand";
+import { generateUuid } from "@/core/id";
 
 export type Theme = "light" | "dark";
-export type ColorScheme =
-  | "blue"
-  | "purple"
-  | "green"
-  | "orange"
-  | "red"
-  | "pink"
-  | "teal"
-  | "indigo";
+export type ColorScheme = "blue" | "purple" | "green" | "orange" | "red" | "pink" | "teal" | "indigo";
 export type FontSize = "xs" | "sm" | "md" | "lg";
 
 export interface BrowserPath {
@@ -92,7 +85,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     localStorage.setItem("veo3-streaming-enabled", JSON.stringify(enabled));
   },
   addBrowserPath: (bp) => {
-    const id = crypto.randomUUID();
+    const id = generateUuid();
     const currentPaths = get().browserPaths;
     const hasDefault = currentPaths.some((p) => p.isDefault);
     const newPath: BrowserPath = {
@@ -105,9 +98,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
   },
   updateBrowserPath: (id, partial) => {
-    const updated = get().browserPaths.map((bp) =>
-      bp.id === id ? { ...bp, ...partial } : bp
-    );
+    const updated = get().browserPaths.map((bp) => (bp.id === id ? { ...bp, ...partial } : bp));
     set({ browserPaths: updated });
     localStorage.setItem("veo3-browser-paths", JSON.stringify(updated));
   },
@@ -152,9 +143,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
 // Initialize settings from localStorage
 const savedTheme = localStorage.getItem("veo3-theme") as Theme | null;
-const savedColorScheme = localStorage.getItem(
-  "veo3-color-scheme"
-) as ColorScheme | null;
+const savedColorScheme = localStorage.getItem("veo3-color-scheme") as ColorScheme | null;
 const savedCompactMode = localStorage.getItem("veo3-compact-mode");
 const savedFontSize = localStorage.getItem("veo3-font-size") as FontSize | null;
 const savedBrowserPaths = localStorage.getItem("veo3-browser-paths");
@@ -173,9 +162,7 @@ if (savedFontSize) {
   useSettingsStore.getState().setFontSize(savedFontSize);
 }
 if (savedStreamingEnabled !== null) {
-  useSettingsStore
-    .getState()
-    .setStreamingEnabled(JSON.parse(savedStreamingEnabled));
+  useSettingsStore.getState().setStreamingEnabled(JSON.parse(savedStreamingEnabled));
 }
 if (savedBrowserPaths) {
   try {

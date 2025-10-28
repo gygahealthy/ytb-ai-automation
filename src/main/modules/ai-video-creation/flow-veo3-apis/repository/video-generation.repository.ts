@@ -492,5 +492,19 @@ export class VideoGenerationRepository {
   }
 }
 
-// Export singleton instance
-export const videoGenerationRepository = new VideoGenerationRepository(database.getSQLiteDatabase());
+// Lazy singleton to avoid triggering database access in worker threads during module import
+let _videoGenerationRepositoryInstance: VideoGenerationRepository | null = null;
+
+export function getVideoGenerationRepository(): VideoGenerationRepository {
+  if (!_videoGenerationRepositoryInstance) {
+    _videoGenerationRepositoryInstance = new VideoGenerationRepository(database.getSQLiteDatabase());
+  }
+  return _videoGenerationRepositoryInstance;
+}
+
+// Export singleton with lazy getter for backward compatibility
+export const videoGenerationRepository = new Proxy({} as VideoGenerationRepository, {
+  get(_target, prop) {
+    return getVideoGenerationRepository()[prop as keyof VideoGenerationRepository];
+  },
+});
