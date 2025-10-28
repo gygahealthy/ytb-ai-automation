@@ -21,9 +21,13 @@ export const videoUpscaleRegistrations: IpcRegistration[] = [
         );
 
         if (result.success && result.data) {
-          // Add to polling service for automatic status tracking
-          veo3PollingService.addToPolling(result.data.upscaleId, undefined, "upscale");
-          logger.info(`[IPC] Added upscale ${result.data.upscaleId} to polling queue`);
+          // Only add to polling if it's not already completed
+          if (!result.data.alreadyCompleted) {
+            veo3PollingService.addToPolling(result.data.upscaleId, undefined, "upscale");
+            logger.info(`[IPC] Added upscale ${result.data.upscaleId} to polling queue`);
+          } else {
+            logger.info(`[IPC] Upscale already completed, skipping polling. Ready for immediate download.`);
+          }
         }
 
         return result;
@@ -89,6 +93,41 @@ export const videoUpscaleRegistrations: IpcRegistration[] = [
         return await veo3VideoUpscaleService.getUpscalesByProfile(req.profileId, req.limit || 50, req.offset || 0);
       } catch (error) {
         logger.error("[IPC] Error getting upscales by profile", error);
+        return { success: false, error: String(error) };
+      }
+    },
+  },
+
+  // Download upscaled video from base64 (when video is already upscaled)
+  {
+    channel: "veo3:upscale:downloadFromBase64",
+    description: "Download upscaled video from base64 rawBytes data (from DB record)",
+    handler: async (req: { upscaleId: string; outputPath?: string }) => {
+      try {
+        logger.info(`[IPC] Downloading upscaled video from base64: ${req.upscaleId}`);
+        return await veo3VideoUpscaleService.downloadUpscaledVideoFromBase64(req.upscaleId, req.outputPath);
+      } catch (error) {
+        logger.error("[IPC] Error downloading upscaled video from base64", error);
+        return { success: false, error: String(error) };
+      }
+    },
+  },
+
+  // Download base64 video directly (no DB record needed)
+  {
+    channel: "veo3:upscale:downloadBase64Directly",
+    description: "Download and decode base64 video data directly without DB dependency",
+    handler: async (req: { rawBytes: string; outputPath?: string; sourceGenerationId?: string; filenamePattern?: string }) => {
+      try {
+        logger.info(`[IPC] Downloading base64 video directly (${req.rawBytes?.length || 0} chars)`);
+        return await veo3VideoUpscaleService.downloadBase64VideoDirectly(
+          req.rawBytes,
+          req.outputPath,
+          req.sourceGenerationId,
+          req.filenamePattern
+        );
+      } catch (error) {
+        logger.error("[IPC] Error downloading base64 video directly", error);
         return { success: false, error: String(error) };
       }
     },

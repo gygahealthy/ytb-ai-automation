@@ -1,5 +1,5 @@
 import React from "react";
-import { VideoHistoryContent, VideoHistoryToolbar } from "@components/video-creation/video-history";
+import { VideoHistoryGrid, VideoHistoryToolbar } from "@components/video-creation/video-history";
 import { VideoHistoryProvider } from "@contexts/VideoHistoryContext";
 
 /**
@@ -20,7 +20,7 @@ const VideoHistoryPage: React.FC = () => {
       <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative animate-fadeIn">
         <VideoHistoryToolbar />
 
-        <VideoHistoryContent />
+        <VideoHistoryGrid />
       </div>
     </VideoHistoryProvider>
   );

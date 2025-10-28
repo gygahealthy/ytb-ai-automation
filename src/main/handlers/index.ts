@@ -3,6 +3,7 @@ import { registerAll } from "../../core/ipc/registry";
 import { logger } from "../utils/logger-backend";
 import { IpcRegistration } from "../../core/ipc/types";
 import { registerDevToolsHandlers } from "../modules/common/devtools";
+import { shellRegistrations } from "../modules/common/shell";
 
 /**
  * Register all IPC handlers
@@ -11,6 +12,9 @@ import { registerDevToolsHandlers } from "../modules/common/devtools";
 export function registerIPCHandlers(): void {
   // Collect registrations from modules
   const allRegistrations = collectModuleRegistrations();
+
+  // Add core shell utility handlers
+  allRegistrations.push(...shellRegistrations);
 
   // Deduplicate registrations by channel to avoid "second handler" errors
   const uniqueMap = new Map<string, IpcRegistration>();

@@ -212,40 +212,41 @@ export class VEO3VideoApiClient {
   /**
    * Upscale a generated video to higher resolution (1080p)
    * @param bearerToken - OAuth Bearer token
-   * @param projectId - Flow project ID
-   * @param sourceMediaGenerationId - Media generation ID from the original video
-   * @param sourceSceneId - Scene ID from the original video
+   * @param sourceMediaId - Media ID from the original video (mediaGenerationId)
+   * @param sourceAspectRatio - Aspect ratio from the original video
+   * @param sourceSeed - Optional seed from the original video (will generate new if not provided)
    * @param model - Upscaling model (default: "veo_2_1080p_upsampler_8s")
    */
   async upscaleVideo(
     bearerToken: string,
-    projectId: string,
-    sourceMediaGenerationId: string,
-    sourceSceneId: string,
+    sourceMediaId: string,
+    sourceAspectRatio: string,
+    sourceSeed?: number,
     model: string = "veo_2_1080p_upsampler_8s"
-  ): Promise<{ success: boolean; data?: any; sceneId?: string; error?: string }> {
+  ): Promise<{ success: boolean; data?: any; sceneId?: string; error?: string; alreadyCompleted?: boolean }> {
     try {
       const newSceneId = this.generateSceneId();
-      const url = `${this.googleApiUrl}/video:batchAsyncGenerateVideoText`;
+      const seed = sourceSeed || this.generateSeed();
+      const sessionId = `;${Date.now()}`; // ; + epoch time
+      const url = `${this.googleApiUrl}/video:batchAsyncGenerateVideoUpsampleVideo`;
 
-      logger.info(`Upscaling video (projectId: ${projectId}, sourceMediaGenerationId: ${sourceMediaGenerationId})`);
-      logger.info(`New sceneId: ${newSceneId}, model: ${model}`);
+      logger.info(`Upscaling video (sourceMediaId: ${sourceMediaId})`);
+      logger.info(`New sceneId: ${newSceneId}, seed: ${seed}, model: ${model}`);
 
       const payload = {
         clientContext: {
-          projectId,
-          tool: "PINHOLE",
-          userPaygateTier: "PAYGATE_TIER_ONE",
+          sessionId,
         },
         requests: [
           {
-            videoModelKey: model,
+            aspectRatio: sourceAspectRatio,
+            seed,
             videoInput: {
-              mediaGenerationId: sourceMediaGenerationId,
+              mediaId: sourceMediaId,
             },
+            videoModelKey: model,
             metadata: {
               sceneId: newSceneId,
-              referenceSceneId: sourceSceneId,
             },
           },
         ],
@@ -262,10 +263,36 @@ export class VEO3VideoApiClient {
 
       if (!response.ok) {
         logger.error(`Failed to upscale video: ${response.status} - ${rawText}`);
+
+        // Parse error response for better error messages
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorDetails: any = null;
+
+        try {
+          errorDetails = JSON.parse(rawText);
+          const apiError = errorDetails?.error;
+
+          if (response.status === 409 && apiError?.status === "ALREADY_EXISTS") {
+            // Handle 409 - upscale already in progress
+            const reason = apiError?.details?.[0]?.reason;
+            if (reason === "PUBLIC_ERROR_GENERATION_ALREADY_IN_PROGRESS") {
+              errorMessage = "Upscale already in progress for this video";
+            } else {
+              errorMessage = apiError?.message || "Video upscale already exists";
+            }
+          } else if (apiError?.message) {
+            errorMessage = apiError.message;
+          }
+        } catch (parseErr) {
+          // Keep default error message if parsing fails
+          logger.warn("Could not parse error response JSON", parseErr);
+        }
+
         return {
           success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          error: errorMessage,
           sceneId: newSceneId,
+          data: errorDetails,
         };
       }
 
@@ -276,8 +303,34 @@ export class VEO3VideoApiClient {
         logger.error("Failed to parse video upscale response JSON", parseErr);
       }
 
-      // Extract operation name (job ID) from response
-      const operationName = data?.operations?.[0]?.operation?.name;
+      // Check if video is already upscaled (has rawBytes in response)
+      const operation = data?.operations?.[0];
+      const rawBytes = operation?.rawBytes;
+      const mediaGenerationId = operation?.mediaGenerationId;
+      const status = operation?.status;
+
+      if (rawBytes && status === "MEDIA_GENERATION_STATUS_SUCCESSFUL") {
+        logger.info(`Video already upscaled! MediaGenerationId: ${mediaGenerationId}`);
+        logger.info(`RawBytes length: ${rawBytes.length} characters`);
+
+        return {
+          success: true,
+          alreadyCompleted: true,
+          data: {
+            name: undefined, // No operation name for already completed
+            operationName: undefined,
+            sceneId: newSceneId,
+            mediaGenerationId,
+            rawBytes,
+            status,
+            raw: data,
+          },
+          sceneId: newSceneId,
+        };
+      }
+
+      // Extract operation name (job ID) from response for pending upscale
+      const operationName = operation?.operation?.name;
       logger.info(`Video upscale started. Operation: ${operationName}`);
 
       return {
@@ -312,6 +365,48 @@ export class VEO3VideoApiClient {
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     // Upscaling uses the same status check endpoint as regular video generation
     return this.checkVideoStatus(bearerToken, operationName, sceneId);
+  }
+
+  /**
+   * Decode base64 video data and save to file
+   * @param base64Data - Base64 encoded video data (rawBytes from API)
+   * @param outputPath - Full path where to save the video file
+   * @returns Success status and file path
+   */
+  async decodeAndSaveBase64Video(
+    base64Data: string,
+    outputPath: string
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    try {
+      logger.info(`Decoding base64 video data (${base64Data.length} chars) to: ${outputPath}`);
+
+      // Import fs module dynamically
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      // Ensure output directory exists
+      const outputDir = path.dirname(outputPath);
+      await fs.mkdir(outputDir, { recursive: true });
+
+      // Decode base64 to buffer
+      const buffer = Buffer.from(base64Data, "base64");
+      logger.info(`Decoded buffer size: ${buffer.length} bytes (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
+
+      // Write buffer to file
+      await fs.writeFile(outputPath, buffer);
+      logger.info(`Video saved successfully to: ${outputPath}`);
+
+      return {
+        success: true,
+        filePath: outputPath,
+      };
+    } catch (error) {
+      logger.error("Failed to decode and save base64 video", error);
+      return {
+        success: false,
+        error: String(error),
+      };
+    }
   }
 }
 

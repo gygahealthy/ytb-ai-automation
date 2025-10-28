@@ -57,6 +57,14 @@ interface Window {
       // DB-only status queries (no API calls - worker thread handles API polling)
       getGenerationStatusFromDB: (generationId: string) => Promise<any>;
       getMultipleGenerationStatusFromDB: (generationIds: string[]) => Promise<any>;
+      // Lightweight polling methods for frequent UI updates
+      pollGenerationStatusDB: (generationId: string) => Promise<any>;
+      pollMultipleGenerationStatusDB: (generationIds: string[]) => Promise<any>;
+      // Upscale methods
+      startVideoUpscale: (sourceGenerationId: string, model?: string) => Promise<any>;
+      checkUpscaleStatus: (upscaleId: string) => Promise<any>;
+      getUpscaleById: (upscaleId: string) => Promise<any>;
+      getUpscalesBySourceGeneration: (sourceGenerationId: string) => Promise<any>;
     };
     youtube: {
       getAllChannels: () => Promise<any>;

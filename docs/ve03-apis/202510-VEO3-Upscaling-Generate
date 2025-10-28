@@ -1,0 +1,62 @@
+## VEO3 VIDEO UPSCALING URL ENDPOINT
+
+### SEND POST
+
+```
+curl 'https://aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoUpsampleVideo'
+  -H 'accept: /'
+  -H 'accept-language: en-US,en;q=0.9'
+  -H 'authorization: Bearer ya29.a0ATi6K2uu5rskYAlLvMN9UroPiP67Q64EBmpsl8tV1Zn6fptZQ8zU_lLwYF7vI9n_u723eUSUr_j2uM3-4GncAmmHZ77cRNtYpvyrmROvqO0Nt38ZkRBo-Aolsuq7nEyLwkAX0SaUKmnMExhosleIMEYTNGpRdqqMx97CHuzxaa1bv5wQm8HEPzgybeeUT3RbN7DzaK6iEftuTfxF1yFCDBl-4Et2rzLWZzJX5oTpvtMTid1eeuHD8Pdf5Bg9a6rumZ128K85OthAnBmvBtFLb8vRvXj1_XUcbVUzlvtsLLIqMjjR8JP2QlHsTawzQf3F1nxVcxN5ZsId3vWGWtxdM6HnqL5BIE56OM5_dehU0cIaCgYKAdsSARUSFQHGX2MiAKVBmbCxinKvPXhHhJPcyw0370'
+  -H 'content-type: text/plain;charset=UTF-8'
+  -H 'origin: https://labs.google'
+  -H 'priority: u=1, i'
+  -H 'referer: https://labs.google/'
+  -H 'sec-ch-ua: "Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"'
+  -H 'sec-ch-ua-mobile: ?0'
+  -H 'sec-ch-ua-platform: "Windows"'
+  -H 'sec-fetch-dest: empty'
+  -H 'sec-fetch-mode: cors'
+  -H 'sec-fetch-site: cross-site'
+  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+  -H 'x-browser-channel: stable'
+  -H 'x-browser-copyright: Copyright 2025 Google LLC. All rights reserved.'
+  -H 'x-browser-validation: AGaxImjg97xQkd0h3geRTArJi8Y='
+  -H 'x-browser-year: 2025'
+  -H 'x-client-data: CJK2yQEIpbbJAQipncoBCKLcygEIlKHLAQiwpMsBCIWgzQEI7I7PAQj4kM8B'
+  --data-raw '{"clientContext":{"sessionId":";1761554113921"},"requests":[{"aspectRatio":"VIDEO_ASPECT_RATIO_LANDSCAPE","seed":4254,"videoInput":{"mediaId":"CAUSJDkyMWIxNTM2LTM2NzItNDAyNS05ODNjLTBiYzc4ZTYyZmU3NBokZGQ1ZWU1MjMtOGNhMy00OGI3LWIxYmQtODlmOGNhNTgyN2Q2IgNDQUUqJGI5MTZiZDMzLTM3ZjMtNGQxZC1iOTI4LWIyODIzZTg1NjU0NQ"},"videoModelKey":"veo_2_1080p_upsampler_8s","metadata":{"sceneId":"af56d1cc-e32d-4be6-bb96-d54932b7bf67"}}]}'
+
+```
+
+### SAMPLE RESPONSE DATA
+
+```json
+{
+  "operations": [
+    {
+      "operation": {
+        "name": "5b769e4975d3dae482e8bc1193f4b5b9"
+      },
+      "sceneId": "42d43437-9029-43c1-8266-8c2bfba0473b",
+      "status": "MEDIA_GENERATION_STATUS_PENDING"
+    }
+  ],
+  "remainingCredits": 240
+}
+```
+---
+
+### RESPONSE DATA WHEN THERE IS THE UPSCALE ALREADY
+
+
+```json
+{
+    "operations": [
+        {
+            "mediaGenerationId": "CAUSJDkyMWIxNTM2LTM2NzItNDAyNS05ODNjLTBiYzc4ZTYyZmU3NBokMzM1OWJkZGItNmMzZC00NWU2LWJkMzItYzQ5YjQxMjZjNzJkIgNDQUUqLmI5MTZiZDMzLTM3ZjMtNGQxZC1iOTI4LWIyODIzZTg1NjU0NV91cHNhbXBsZWQ",
+            "rawBytes": "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAGGB1dWlk2P7D1hsOSDySl1go <long string>",
+            "status": "MEDIA_GENERATION_STATUS_SUCCESSFUL"
+        }
+    ],
+    "remainingCredits": 240
+}
+```

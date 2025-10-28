@@ -8,6 +8,7 @@ import { Prompt, VideoCreationJob } from "../../../types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
 import ActionControls from "../video-prompt-row/ActionControls";
 import ProfilePanel from "../video-prompt-row/ProfilePanel";
+import { useGenerationPolling } from "../../../hooks/useGenerationPolling";
 
 interface Profile {
   id: string;
@@ -59,8 +60,34 @@ export default function VideoPromptRow({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pollingProgress, setPollingProgress] = useState(0); // Fake progress bar
+  const [pollingProgress, setPollingProgress] = useState(0); // Fake progress bar (smooth animation)
   const veo3Store = useVeo3Store();
+  const { updateJobStatus } = useVideoCreationStore.getState();
+
+  // Set up polling for real generation status updates
+  useGenerationPolling(job?.generationId || null, {
+    enabled: job?.status === "processing",
+    interval: 10000, // Poll every 10 seconds
+    onStatusUpdate: (generation) => {
+      console.log(`[VideoPromptRow] 📡 Poll update for ${generation.id}: status=${generation.status}`);
+
+      // Update job status in store with real data from DB
+      if (generation.status === "completed") {
+        updateJobStatus(job!.id, "completed", {
+          videoUrl: generation.videoUrl,
+          completedAt: new Date().toISOString(),
+        });
+      } else if (generation.status === "failed") {
+        updateJobStatus(job!.id, "failed", {
+          error: generation.errorMessage,
+          completedAt: new Date().toISOString(),
+        });
+      }
+    },
+    onError: (error) => {
+      console.error(`[VideoPromptRow] ❌ Poll error: ${error.message}`);
+    },
+  });
 
   const isValid = prompt.text.trim().length > 0;
   // When globalPreviewMode is false (default), show all previews

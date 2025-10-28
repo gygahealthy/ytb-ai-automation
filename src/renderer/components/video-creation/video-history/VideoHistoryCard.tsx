@@ -2,12 +2,13 @@ import { Calendar, CheckCircle, ChevronLeft, ChevronRight, RefreshCw } from "luc
 import { useEffect, useState } from "react";
 import { VideoGeneration } from "src/shared/types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
-import StatusBadge from "./StatusBadge";
-import TechnicalDetails from "./TechnicalDetails";
-import VideoLink from "./VideoLink";
-import DownloadVideo from "./DownloadVideo";
+import StatusBadge from "./history-card/StatusBadge";
+import TechnicalDetails from "./history-card/TechnicalDetails";
+import VideoLink from "./history-card/VideoLink";
+import DownloadVideo from "./history-card/DownloadVideo";
+import UpscaleVideo from "./history-card/UpscaleVideo";
 
-export default function GenerationCard({
+export default function VideoHistoryCard({
   generation,
   onRefresh,
   refreshingId,
@@ -69,6 +70,8 @@ export default function GenerationCard({
                   <VideoLink generation={generation} />
                   {/* Download video button */}
                   <DownloadVideo generation={generation} />
+                  {/* Upscale video button */}
+                  <UpscaleVideo generation={generation} />
                   {/* Toggle preview */}
                   <button
                     onClick={() => setShowPreview((s) => !s)}

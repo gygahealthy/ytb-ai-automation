@@ -39,12 +39,16 @@ export function parseCookieHeader(header: string): CookieCollection {
 /**
  * Convert cookie object to header string
  * Used to format extracted cookies into HTTP Cookie header format
+ * Filters out metadata properties that should NOT be included as cookies
  * @param cookies - Cookie object
  * @returns Cookie header string
  */
 export function cookiesToHeader(cookies: CookieCollection): string {
+  // Metadata properties that should NOT be serialized as cookies
+  const metadataKeys = new Set(["rawCookieString", "cookieString"]);
+
   return Object.entries(cookies)
-    .filter(([_, value]) => value !== undefined && value !== "")
+    .filter(([name, value]) => !metadataKeys.has(name) && value !== undefined && value !== "")
     .map(([name, value]) => `${name}=${value}`)
     .join("; ");
 }

@@ -1,8 +1,8 @@
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { VideoGeneration } from "src/shared/types/video-creation.types";
-import { useFilePathsStore } from "../../../store/file-paths.store";
-import { useToast } from "../../../hooks/useToast";
+import { useFilePathsStore } from "../../../../store/file-paths.store";
+import { useToast } from "../../../../hooks/useToast";
 
 export default function DownloadVideo({ generation }: { generation: VideoGeneration }) {
   const [isDownloading, setIsDownloading] = useState(false);

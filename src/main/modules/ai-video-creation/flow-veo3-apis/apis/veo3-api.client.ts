@@ -92,12 +92,12 @@ export class VEO3ApiClient {
    */
   async upscaleVideo(
     bearerToken: string,
-    projectId: string,
-    sourceMediaGenerationId: string,
-    sourceSceneId: string,
+    sourceMediaId: string,
+    sourceAspectRatio: string,
+    sourceSeed?: number,
     model: string = "veo_2_1080p_upsampler_8s"
   ): Promise<{ success: boolean; data?: any; sceneId?: string; error?: string }> {
-    return veo3VideoApiClient.upscaleVideo(bearerToken, projectId, sourceMediaGenerationId, sourceSceneId, model);
+    return veo3VideoApiClient.upscaleVideo(bearerToken, sourceMediaId, sourceAspectRatio, sourceSeed, model);
   }
 
   /**

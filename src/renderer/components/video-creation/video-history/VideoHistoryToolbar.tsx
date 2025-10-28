@@ -1,7 +1,7 @@
 import React from "react";
 import { Video, RefreshCw } from "lucide-react";
 import { useVideoHistory } from "../../../contexts/VideoHistoryContext";
-import DateRangePicker from "./DateRangePicker";
+import DateRangePicker from "./history-card/DateRangePicker";
 
 const VideoHistoryToolbar: React.FC = () => {
   const { filter, globalPreview, statusCounts, setFilter, setGlobalPreview } = useVideoHistory();

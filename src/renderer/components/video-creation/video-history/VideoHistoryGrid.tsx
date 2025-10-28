@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { Loader2, Video } from "lucide-react";
 import { useVideoHistory } from "../../../contexts/VideoHistoryContext";
-import GenerationCard from "./GenerationCard";
+import VideoHistoryCard from "./VideoHistoryCard";
 
-const VideoHistoryContent: React.FC = () => {
+const VideoHistoryGrid: React.FC = () => {
   const {
     dateGroups,
     loading,
@@ -38,8 +38,8 @@ const VideoHistoryContent: React.FC = () => {
         observer.unobserve(observerTarget.current);
       }
     };
-  // Re-run when list size or load states change so the observer will attach to the
-  // correct sentinel element if it moved (we render the sentinel earlier in the list).
+    // Re-run when list size or load states change so the observer will attach to the
+    // correct sentinel element if it moved (we render the sentinel earlier in the list).
   }, [hasMore, loading, loadingMore, loadMoreVideos, /* reattach when list changes */ total]);
 
   const totalItems = dateGroups.reduce((sum, group) => sum + group.items.length, 0);
@@ -83,7 +83,7 @@ const VideoHistoryContent: React.FC = () => {
                     {group.items.map((generation) => {
                       cumIndex += 1;
                       const item = (
-                        <GenerationCard
+                        <VideoHistoryCard
                           key={generation.id}
                           generation={generation}
                           refreshingId={refreshingId}
@@ -124,10 +124,10 @@ const VideoHistoryContent: React.FC = () => {
             </div>
           )}
 
-      {/* Note: sentinel is injected earlier in the list (see above). If the list was too
+          {/* Note: sentinel is injected earlier in the list (see above). If the list was too
         short to inject the sentinel, render a fallback sentinel here so the observer
         always has an element to attach to. */}
-          { /* Fallback sentinel (rendered only when not replaced by injected sentinel) */ }
+          {/* Fallback sentinel (rendered only when not replaced by injected sentinel) */}
           <div ref={observerTarget} className="h-4" />
 
           {/* End of List */}
@@ -144,4 +144,4 @@ const VideoHistoryContent: React.FC = () => {
   );
 };
 
-export default VideoHistoryContent;
+export default VideoHistoryGrid;

@@ -66,4 +66,21 @@ export const videoGenerationRegistrations: IpcRegistration[] = [
       return { success: true, data: results.map((r: any) => r.data).filter(Boolean) };
     },
   },
+  // Lightweight polling handlers for frontend frequent updates
+  {
+    channel: "veo3:pollGenerationStatusDB",
+    description: "Lightweight poll for single generation status from DB (for UI polling)",
+    handler: async (req: { generationId: string }) => {
+      return await flowVeo3ApiService.getGenerationById((req as any).generationId);
+    },
+  },
+  {
+    channel: "veo3:pollMultipleGenerationStatusDB",
+    description: "Lightweight poll for multiple generation statuses from DB (for UI polling)",
+    handler: async (req: { generationIds: string[] }) => {
+      const ids = (req as any).generationIds || [];
+      const results = await Promise.all(ids.map((id: string) => flowVeo3ApiService.getGenerationById(id)));
+      return { success: true, data: results.map((r: any) => r.data).filter(Boolean) };
+    },
+  },
 ];

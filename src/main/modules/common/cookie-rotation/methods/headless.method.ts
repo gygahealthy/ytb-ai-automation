@@ -245,10 +245,13 @@ export class HeadlessMethod implements RotationMethodExecutor {
 
   /**
    * Parse Puppeteer cookies array into CookieCollection format
+   * NOTE: Does NOT include rawCookieString in the collection to prevent
+   * it from being treated as an actual cookie name in subsequent rotations.
+   * rawCookieString is stored separately in the database.
    */
   private parseCookiesToCollection(
     extractedCookies: Array<{ name: string; value: string; domain?: string }>,
-    cookieString: string
+    _cookieString: string
   ): CookieCollection {
     const collection: Partial<CookieCollection> = {};
 
@@ -259,8 +262,8 @@ export class HeadlessMethod implements RotationMethodExecutor {
       }
     }
 
-    // Ensure rawCookieString is included
-    (collection as any).rawCookieString = cookieString;
+    // DO NOT add rawCookieString here - it's metadata, not a cookie
+    // It gets stored in the database via storeCookiesFromPage()
 
     return collection as CookieCollection;
   }

@@ -17,8 +17,21 @@ export async function up(db: SQLiteDatabase, logger?: Logger): Promise<void> {
     return;
   }
 
+  // Check if veo3_projects table exists (it should be in base schema)
+  const projectsTableExists = await db.get<{ name: string }>(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='veo3_projects'"
+  );
+
+  if (!projectsTableExists) {
+    logger?.warn(
+      `[Migration ${version}] veo3_projects table not found. Creating veo3_video_upscales without project_id foreign key constraint.`
+    );
+  }
+
   // Create veo3_video_upscales table
-  await db.run(`
+  // Note: Only add project_id FK if veo3_projects table exists
+  const createTableSQL = projectsTableExists
+    ? `
     CREATE TABLE IF NOT EXISTS veo3_video_upscales (
       id TEXT PRIMARY KEY,
       source_generation_id TEXT NOT NULL,
@@ -44,7 +57,35 @@ export async function up(db: SQLiteDatabase, logger?: Logger): Promise<void> {
       FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
       FOREIGN KEY (project_id) REFERENCES veo3_projects(id) ON DELETE CASCADE
     )
-  `);
+  `
+    : `
+    CREATE TABLE IF NOT EXISTS veo3_video_upscales (
+      id TEXT PRIMARY KEY,
+      source_generation_id TEXT NOT NULL,
+      profile_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      scene_id TEXT NOT NULL,
+      operation_name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      model TEXT NOT NULL DEFAULT 'veo_2_1080p_upsampler_8s',
+      seed INTEGER,
+      aspect_ratio TEXT,
+      media_generation_id TEXT,
+      fife_url TEXT,
+      serving_base_uri TEXT,
+      video_url TEXT,
+      video_path TEXT,
+      error_message TEXT,
+      raw_response TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (source_generation_id) REFERENCES veo3_video_generations(id) ON DELETE CASCADE,
+      FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+    )
+  `;
+
+  await db.run(createTableSQL);
 
   logger?.info(`[Migration ${version}] Created table veo3_video_upscales`);
 

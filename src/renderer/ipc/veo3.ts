@@ -183,6 +183,56 @@ const getMultipleGenerationStatusFromDB = (generationIds: string[]) => {
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
+// Lightweight polling methods for frequent UI updates (same as DB queries, but semantically for polling)
+const pollGenerationStatusDB = (generationId: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.pollGenerationStatusDB === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.pollGenerationStatusDB(generationId));
+  if (hasInvoke()) return invoke("veo3:pollGenerationStatusDB", { generationId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const pollMultipleGenerationStatusDB = (generationIds: string[]) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.pollMultipleGenerationStatusDB === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.pollMultipleGenerationStatusDB(generationIds));
+  if (hasInvoke()) return invoke("veo3:pollMultipleGenerationStatusDB", { generationIds });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+// Upscale methods
+const startVideoUpscale = (sourceGenerationId: string, model?: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.startVideoUpscale === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.startVideoUpscale(sourceGenerationId, model));
+  if (hasInvoke()) return invoke("veo3:upscale:start", { sourceGenerationId, model });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const checkUpscaleStatus = (upscaleId: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.checkUpscaleStatus === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.checkUpscaleStatus(upscaleId));
+  if (hasInvoke()) return invoke("veo3:upscale:checkStatus", { upscaleId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const getUpscaleById = (upscaleId: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getUpscaleById === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getUpscaleById(upscaleId));
+  if (hasInvoke()) return invoke("veo3:upscale:getById", { upscaleId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
+const getUpscalesBySourceGeneration = (sourceGenerationId: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getUpscalesBySourceGeneration === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.getUpscalesBySourceGeneration(sourceGenerationId));
+  if (hasInvoke()) return invoke("veo3:upscale:getBySourceGeneration", { sourceGenerationId });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
 export default {
   fetchProjectsFromAPI,
   createProjectViaAPI,
@@ -202,4 +252,12 @@ export default {
   // DB-only status queries (no API calls - worker thread handles API polling)
   getGenerationStatusFromDB,
   getMultipleGenerationStatusFromDB,
+  // Lightweight polling methods for UI updates
+  pollGenerationStatusDB,
+  pollMultipleGenerationStatusDB,
+  // Upscale methods
+  startVideoUpscale,
+  checkUpscaleStatus,
+  getUpscaleById,
+  getUpscalesBySourceGeneration,
 };

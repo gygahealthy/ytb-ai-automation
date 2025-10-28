@@ -385,9 +385,14 @@ export class CookieRotationWorker extends EventEmitter {
 
   /**
    * Build cookie string from CookieCollection
+   * Filters out metadata properties that should NOT be included as cookies
    */
   private buildCookieString(cookies: CookieCollection): string {
+    // Metadata properties that should NOT be serialized as cookies
+    const metadataKeys = new Set(["rawCookieString", "cookieString"]);
+
     return Object.entries(cookies)
+      .filter(([key, _]) => !metadataKeys.has(key)) // Filter out metadata
       .map(([key, value]) => `${key}=${value}`)
       .join("; ");
   }

@@ -95,6 +95,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getGenerationStatusFromDB: (generationId: string) => ipcRenderer.invoke("veo3:getGenerationStatusFromDB", { generationId }),
     getMultipleGenerationStatusFromDB: (generationIds: string[]) =>
       ipcRenderer.invoke("veo3:getMultipleGenerationStatusFromDB", { generationIds }),
+    // Lightweight polling methods for frequent UI updates
+    pollGenerationStatusDB: (generationId: string) => ipcRenderer.invoke("veo3:pollGenerationStatusDB", { generationId }),
+    pollMultipleGenerationStatusDB: (generationIds: string[]) =>
+      ipcRenderer.invoke("veo3:pollMultipleGenerationStatusDB", { generationIds }),
+    // Upscale methods
+    startVideoUpscale: (sourceGenerationId: string, model?: string) =>
+      ipcRenderer.invoke("veo3:upscale:start", { sourceGenerationId, model }),
+    checkUpscaleStatus: (upscaleId: string) => ipcRenderer.invoke("veo3:upscale:checkStatus", { upscaleId }),
+    getUpscaleById: (upscaleId: string) => ipcRenderer.invoke("veo3:upscale:getById", { upscaleId }),
+    getUpscalesBySourceGeneration: (sourceGenerationId: string) =>
+      ipcRenderer.invoke("veo3:upscale:getBySourceGeneration", { sourceGenerationId }),
   },
 
   // YouTube APIs
