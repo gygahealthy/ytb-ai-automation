@@ -4,7 +4,7 @@
 curl 'https://aisandbox-pa.googleapis.com/v1/video:batchCheckAsyncVideoGenerationStatus' \
   -H 'accept: */*' \
   -H 'accept-language: en-US,en;q=0.9' \
-  -H 'authorization: Bearer ya29.a0ATi6K2uu5rskYAlLvMN9UroPiP67Q64EBmpsl8tV1Zn6fptZQ8zU_lLwYF7vI9n_u723eUSUr_j2uM3-4GncAmmHZ77cRNtYpvyrmROvqO0Nt38ZkRBo-Aolsuq7nEyLwkAX0SaUKmnMExhosleIMEYTNGpRdqqMx97CHuzxaa1bv5wQm8HEPzgybeeUT3RbN7DzaK6iEftuTfxF1yFCDBl-4Et2rzLWZzJX5oTpvtMTid1eeuHD8Pdf5Bg9a6rumZ128K85OthAnBmvBtFLb8vRvXj1_XUcbVUzlvtsLLIqMjjR8JP2QlHsTawzQf3F1nxVcxN5ZsId3vWGWtxdM6HnqL5BIE56OM5_dehU0cIaCgYKAdsSARUSFQHGX2MiAKVBmbCxinKvPXhHhJPcyw0370' \
+  -H 'authorization: Bearer <some_secret>' \
   -H 'content-type: text/plain;charset=UTF-8' \
   -H 'origin: https://labs.google' \
   -H 'priority: u=1, i' \
