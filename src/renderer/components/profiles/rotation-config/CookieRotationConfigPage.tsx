@@ -35,7 +35,8 @@ export default function CookieRotationConfigPage() {
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const [selectedProfileForCookie, setSelectedProfileForCookie] = useState<string | null>(null);
-  const [allExpanded, setAllExpanded] = useState(false);
+  // Default to open all cards on first load
+  const [allExpanded, setAllExpanded] = useState(true);
 
   // Check if there are unsaved changes
   const hasChanges = useMemo(() => {

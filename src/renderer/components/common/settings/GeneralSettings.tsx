@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { Maximize2, Moon, Palette, Sun, Type, Zap } from "lucide-react";
 // no default React import needed with modern JSX transform
 import { ColorScheme, FontSize, useSettingsStore } from "../../../store/settings.store";
+import ToggleSwitch from "../ToggleSwitch";
 
 const colorSchemes: { value: ColorScheme; label: string; color: string }[] = [
   { value: "blue", label: "Blue", color: "bg-blue-500" },
@@ -54,7 +55,7 @@ export default function GeneralSettings() {
             )}
           >
             <Sun className="w-4 h-4" />
-            Light
+            <span className="text-gray-800 dark:text-gray-100">Light</span>
           </button>
           <button
             onClick={() => setTheme("dark")}
@@ -66,7 +67,7 @@ export default function GeneralSettings() {
             )}
           >
             <Moon className="w-4 h-4" />
-            Dark
+            <span className="text-gray-800 dark:text-gray-100">Dark</span>
           </button>
         </div>
       </div>
@@ -102,30 +103,10 @@ export default function GeneralSettings() {
           <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           <label className="font-semibold text-gray-900 dark:text-gray-100">Compact Mode</label>
         </div>
-        <button
-          onClick={() => setCompactMode(!compactMode)}
-          className={clsx(
-            "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
-            compactMode
-              ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
-              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
-          )}
-        >
-          <span>Reduce spacing and padding</span>
-          <div
-            className={clsx(
-              "w-12 h-6 rounded-full transition-colors relative",
-              compactMode ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
-            )}
-          >
-            <div
-              className={clsx(
-                "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
-                compactMode ? "translate-x-6" : "translate-x-0.5"
-              )}
-            />
-          </div>
-        </button>
+        <div className="flex items-center justify-between p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+          <span className="text-gray-700 dark:text-gray-300">Reduce spacing and padding</span>
+          <ToggleSwitch checked={compactMode} onChange={setCompactMode} size="md" color="primary" />
+        </div>
       </div>
 
       {/* Font Size */}
@@ -146,7 +127,7 @@ export default function GeneralSettings() {
                   : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
               )}
             >
-              <span className={size.size}>{size.label}</span>
+              <span className={clsx(size.size, "text-gray-800 dark:text-gray-100")}>{size.label}</span>
             </button>
           ))}
         </div>
@@ -158,30 +139,10 @@ export default function GeneralSettings() {
           <Zap className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           <label className="font-semibold text-gray-900 dark:text-gray-100">Streaming Response</label>
         </div>
-        <button
-          onClick={() => setStreamingEnabled(!streamingEnabled)}
-          className={clsx(
-            "w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 font-medium transition-all",
-            streamingEnabled
-              ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-600 dark:text-white"
-              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:bg-gray-800"
-          )}
-        >
-          <span>Stream chat responses in real-time</span>
-          <div
-            className={clsx(
-              "w-12 h-6 rounded-full transition-colors relative",
-              streamingEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
-            )}
-          >
-            <div
-              className={clsx(
-                "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
-                streamingEnabled ? "translate-x-6" : "translate-x-0.5"
-              )}
-            />
-          </div>
-        </button>
+        <div className="flex items-center justify-between p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+          <span className="text-gray-700 dark:text-gray-300">Stream chat responses in real-time</span>
+          <ToggleSwitch checked={streamingEnabled} onChange={setStreamingEnabled} size="md" color="primary" />
+        </div>
       </div>
     </div>
   );

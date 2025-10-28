@@ -42,7 +42,8 @@ export default function CookieRotationConfigList({
   allExpanded = false,
 }: CookieRotationConfigListProps) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
-  const prevAllExpandedRef = useRef<boolean>(allExpanded);
+  // Use null so we treat the initial prop value as a "change" and apply it on mount
+  const prevAllExpandedRef = useRef<boolean | null>(null);
 
   const toggleProfile = (profileId: string) => {
     setExpandedProfiles((prev) => {
@@ -58,7 +59,7 @@ export default function CookieRotationConfigList({
 
   // Handle allExpanded prop changes - only when allExpanded actually changes, not when profiles update
   useEffect(() => {
-    // Only update if allExpanded prop actually changed
+    // Only update if allExpanded prop actually changed (including initial mount)
     if (prevAllExpandedRef.current !== allExpanded) {
       prevAllExpandedRef.current = allExpanded;
 
@@ -93,7 +94,11 @@ export default function CookieRotationConfigList({
             {/* Profile Header Card (always visible) */}
             <button
               onClick={() => toggleProfile(profile.profileId)}
-              className="w-full bg-white dark:bg-gray-800 rounded-t-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all px-4 py-3 flex items-center justify-between"
+              className={`w-full rounded-t-xl border shadow-sm hover:shadow-md transition-all px-4 py-3 flex items-center justify-between ${
+                isExpanded
+                  ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800"
+                  : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}>

@@ -202,8 +202,8 @@ export default function VideoPromptRow({
     <div
       className={`relative flex gap-3 p-3 rounded-lg transition-transform transform will-change-transform ${
         prompt.selected
-          ? "bg-primary-50 dark:bg-primary-900/20 shadow-2xl -translate-y-1"
-          : "bg-white dark:bg-gray-800 shadow-md -translate-y-0.5 hover:shadow-2xl hover:-translate-y-1.5"
+          ? "bg-primary-50 dark:bg-slate-900/30 shadow-2xl -translate-y-1"
+          : "bg-white dark:bg-slate-900 shadow-md -translate-y-0.5 hover:shadow-2xl hover:-translate-y-1.5"
       }`}
       style={{ height: "180px" }}
     >
@@ -239,8 +239,15 @@ export default function VideoPromptRow({
       </div>
 
       <div className="flex-shrink-0 flex items-start pt-1">
-        <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold text-sm">
-          {index + 1}
+        <div
+          className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-sm border border-gray-200 dark:border-gray-700"
+          aria-hidden
+          style={{
+            // ensure strong dark background and contrast for the index bubble
+            backgroundColor: undefined,
+          }}
+        >
+          <span className="dark:bg-slate-800 dark:text-gray-100 px-2 py-1 rounded-full">{index + 1}</span>
         </div>
       </div>
 
@@ -287,7 +294,9 @@ export default function VideoPromptRow({
             value={prompt.text}
             onChange={(e) => onUpdate(prompt.id, e.target.value)}
             placeholder={`Enter prompt ${index + 1}...`}
-            className="w-full h-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm"
+            className={
+              "w-full h-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm leading-relaxed caret-primary-600 selection:bg-primary-300 selection:text-white dark:selection:bg-primary-600 whitespace-pre-wrap"
+            }
             style={{ minHeight: "100%" }}
           />
         </div>

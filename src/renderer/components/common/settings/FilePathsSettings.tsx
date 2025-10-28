@@ -1,18 +1,8 @@
-import {
-  FolderOpen,
-  FileText,
-  Folder,
-  Info,
-  Eye,
-  EyeOff,
-  X,
-  Briefcase,
-  Video,
-  Clock,
-} from "lucide-react";
+import { FolderOpen, FileText, Folder, Info, Eye, EyeOff, X, Settings } from "lucide-react";
 import { useFilePathsStore } from "../../../store/file-paths.store";
 import { useSettingsStore } from "../../../store/settings.store";
 import electronApi from "../../../ipc";
+import ToggleSwitch from "../ToggleSwitch";
 
 export default function FilePathsSettings() {
   const {
@@ -20,18 +10,18 @@ export default function FilePathsSettings() {
     singleVideoPath,
     fileNaming,
     folderNaming,
+    options,
     setChannelProjectsPath,
     setSingleVideoPath,
     setFileNamingConvention,
     setFolderNamingConvention,
+    setFilePathsOption,
     resetToDefaults,
   } = useFilePathsStore();
   const { tempVideoPath, setTempVideoPath } = useFilePathsStore();
   const { visibleSections = {}, setVisibleSection } = useSettingsStore();
 
-  const handleBrowseFolder = async (
-    type: "channelProjects" | "singleVideo" | "tempVideo"
-  ) => {
+  const handleBrowseFolder = async (type: "channelProjects" | "singleVideo" | "tempVideo") => {
     try {
       // Request folder selection from main process; prefer directory picker options
       const result = await electronApi.invoke("dialog:showOpenDialog", {
@@ -40,15 +30,11 @@ export default function FilePathsSettings() {
       });
 
       // Normalize possible wrapper shapes (e.g. { success, data })
-      const dialogResult =
-        result && typeof result === "object" && "success" in result
-          ? (result as any).data
-          : result;
+      const dialogResult = result && typeof result === "object" && "success" in result ? (result as any).data : result;
 
       if (dialogResult && !dialogResult.canceled) {
         const selectedPath =
-          Array.isArray(dialogResult.filePaths) &&
-          dialogResult.filePaths.length > 0
+          Array.isArray(dialogResult.filePaths) && dialogResult.filePaths.length > 0
             ? dialogResult.filePaths[0]
             : dialogResult.filePath || dialogResult.file || undefined;
 
@@ -123,12 +109,9 @@ export default function FilePathsSettings() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-          File Paths & Naming
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">File Paths & Naming</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Configure default locations and naming conventions for your projects
-          and media files.
+          Configure default locations and naming conventions for your projects and media files.
         </p>
       </div>
 
@@ -142,10 +125,7 @@ export default function FilePathsSettings() {
           <button
             onClick={() =>
               setVisibleSection &&
-              setVisibleSection(
-                "filePaths.defaultLocations",
-                !(visibleSections as any)["filePaths.defaultLocations"]
-              )
+              setVisibleSection("filePaths.defaultLocations", !(visibleSections as any)["filePaths.defaultLocations"])
             }
             className="p-2 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition-colors"
             title="Toggle Default Locations"
@@ -162,24 +142,19 @@ export default function FilePathsSettings() {
           <>
             {/* Channel Projects Path */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                All Video Channel Projects
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="flex items-center justify-center w-9 h-9 text-gray-600 dark:text-gray-300">
-                  <Briefcase className="w-5 h-5" aria-hidden />
-                </div>
-                <input
-                  type="text"
-                  value={channelProjectsPath}
-                  onChange={(e) => setChannelProjectsPath(e.target.value)}
-                  placeholder="e.g., C:\Projects\Channels"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                />
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 items-center gap-3">
+                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">All Video Channel Projects</div>
+                <div className="col-span-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={channelProjectsPath}
+                    onChange={(e) => setChannelProjectsPath(e.target.value)}
+                    placeholder="e.g., C:\Projects\Channels"
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                  />
                   <button
                     onClick={() => handleBrowseFolder("channelProjects")}
-                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Browse folder"
                     aria-label="Browse channel projects folder"
                   >
@@ -187,7 +162,7 @@ export default function FilePathsSettings() {
                   </button>
                   <button
                     onClick={() => setChannelProjectsPath("")}
-                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Clear"
                     aria-label="Clear channel projects path"
                   >
@@ -195,31 +170,23 @@ export default function FilePathsSettings() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Root directory where all channel project folders will be created
-              </p>
             </div>
 
             {/* Single Video Path */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Single Video Creation (Out of Project)
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="flex items-center justify-center w-9 h-9 text-gray-600 dark:text-gray-300">
-                  <Video className="w-5 h-5" aria-hidden />
-                </div>
-                <input
-                  type="text"
-                  value={singleVideoPath}
-                  onChange={(e) => setSingleVideoPath(e.target.value)}
-                  placeholder="e.g., C:\Projects\SingleVideos"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                />
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 items-center gap-3">
+                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">Single Video Creations Path</div>
+                <div className="col-span-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={singleVideoPath}
+                    onChange={(e) => setSingleVideoPath(e.target.value)}
+                    placeholder="e.g., C:\Projects\SingleVideos"
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                  />
                   <button
                     onClick={() => handleBrowseFolder("singleVideo")}
-                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Browse folder"
                     aria-label="Browse single video folder"
                   >
@@ -227,7 +194,7 @@ export default function FilePathsSettings() {
                   </button>
                   <button
                     onClick={() => setSingleVideoPath("")}
-                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Clear"
                     aria-label="Clear single video path"
                   >
@@ -235,32 +202,23 @@ export default function FilePathsSettings() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Default location for standalone video projects not tied to a
-                channel
-              </p>
             </div>
 
             {/* Temp Video Creation Path */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Temp Video Creation Folder
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="flex items-center justify-center w-9 h-9 text-gray-600 dark:text-gray-300">
-                  <Clock className="w-5 h-5" aria-hidden />
-                </div>
-                <input
-                  type="text"
-                  value={tempVideoPath}
-                  onChange={(e) => setTempVideoPath(e.target.value)}
-                  placeholder="e.g., C:\Projects\TempVideos"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                />
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 items-center gap-3">
+                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">Temp Video Creation Folder</div>
+                <div className="col-span-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={tempVideoPath}
+                    onChange={(e) => setTempVideoPath(e.target.value)}
+                    placeholder="e.g., C:\Projects\TempVideos"
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                  />
                   <button
                     onClick={() => handleBrowseFolder("tempVideo")}
-                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Browse folder"
                     aria-label="Browse temp video folder"
                   >
@@ -268,7 +226,7 @@ export default function FilePathsSettings() {
                   </button>
                   <button
                     onClick={() => setTempVideoPath("")}
-                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Clear"
                     aria-label="Clear temp video path"
                   >
@@ -276,12 +234,73 @@ export default function FilePathsSettings() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Temporary folder used during single video creation and
-                intermediate renders
-              </p>
             </div>
           </>
+        )}
+      </div>
+
+      {/* File Paths Options */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-md font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            File Creation Options
+          </h4>
+          <button
+            onClick={() =>
+              setVisibleSection && setVisibleSection("filePaths.options", !(visibleSections as any)["filePaths.options"])
+            }
+            className="p-2 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition-colors"
+            title="Toggle File Creation Options"
+          >
+            {(visibleSections as any)["filePaths.options"] ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {(visibleSections as any)["filePaths.options"] !== false && (
+          <div className="space-y-4">
+            {/* Auto Create Date Folder */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Create YYYY-MM-DD</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Create dated folders</div>
+              </div>
+              <ToggleSwitch
+                checked={options.autoCreateDateFolder}
+                onChange={(checked: boolean) => setFilePathsOption("autoCreateDateFolder", checked)}
+                size="md"
+                color="primary"
+              />
+            </div>
+
+            {/* Auto Index Filename */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Index Filename</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Auto-increment names</div>
+              </div>
+              <ToggleSwitch
+                checked={options.autoIndexFilename}
+                onChange={(checked: boolean) => setFilePathsOption("autoIndexFilename", checked)}
+                size="md"
+                color="primary"
+              />
+            </div>
+
+            {/* Add Epoch Time to Filename */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Add Epoch to Filename</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Append epoch ms</div>
+              </div>
+              <ToggleSwitch
+                checked={options.addEpochTimeToFilename}
+                onChange={(checked: boolean) => setFilePathsOption("addEpochTimeToFilename", checked)}
+                size="md"
+                color="primary"
+              />
+            </div>
+          </div>
         )}
       </div>
 
@@ -294,40 +313,28 @@ export default function FilePathsSettings() {
           </h4>
           <button
             onClick={() =>
-              setVisibleSection &&
-              setVisibleSection(
-                "filePaths.fileNaming",
-                !(visibleSections as any)["filePaths.fileNaming"]
-              )
+              setVisibleSection && setVisibleSection("filePaths.fileNaming", !(visibleSections as any)["filePaths.fileNaming"])
             }
             className="p-2 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition-colors"
             title="Toggle File Naming Conventions"
           >
-            {(visibleSections as any)["filePaths.fileNaming"] ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <EyeOff className="w-4 h-4" />
-            )}
+            {(visibleSections as any)["filePaths.fileNaming"] ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
         </div>
 
         {(visibleSections as any)["filePaths.fileNaming"] !== false && (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-3">
             {fileTypes.map((fileType) => (
-              <div key={fileType.key} className="flex items-center gap-3">
-                <span className="text-2xl w-8 flex-shrink-0">
-                  {fileType.icon}
-                </span>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {fileType.label}
-                  </label>
+              <div key={fileType.key} className="grid grid-cols-3 items-center gap-3">
+                <div className="col-span-1 flex items-center gap-2">
+                  <span className="text-2xl w-8 flex-shrink-0">{fileType.icon}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{fileType.label}</span>
+                </div>
+                <div className="col-span-2">
                   <input
                     type="text"
                     value={fileNaming[fileType.key]}
-                    onChange={(e) =>
-                      setFileNamingConvention(fileType.key, e.target.value)
-                    }
+                    onChange={(e) => setFileNamingConvention(fileType.key, e.target.value)}
                     placeholder={`e.g., {name}_{timestamp}${fileType.extension}`}
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                   />
@@ -348,19 +355,12 @@ export default function FilePathsSettings() {
           <button
             onClick={() =>
               setVisibleSection &&
-              setVisibleSection(
-                "filePaths.folderNaming",
-                !(visibleSections as any)["filePaths.folderNaming"]
-              )
+              setVisibleSection("filePaths.folderNaming", !(visibleSections as any)["filePaths.folderNaming"])
             }
             className="p-2 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition-colors"
             title="Toggle Folder Naming Conventions"
           >
-            {(visibleSections as any)["filePaths.folderNaming"] ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <EyeOff className="w-4 h-4" />
-            )}
+            {(visibleSections as any)["filePaths.folderNaming"] ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
         </div>
 
@@ -368,25 +368,15 @@ export default function FilePathsSettings() {
           <div className="space-y-3">
             {folderTypes.map((folderType) => (
               <div key={folderType.key} className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {folderType.label}
-                </label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{folderType.label}</label>
                 <input
                   type="text"
                   value={folderNaming[folderType.key]}
-                  onChange={(e) =>
-                    setFolderNamingConvention(folderType.key, e.target.value)
-                  }
-                  placeholder={
-                    folderType.key === "project"
-                      ? "{channel_name}_{date}"
-                      : folderType.label.toLowerCase()
-                  }
+                  onChange={(e) => setFolderNamingConvention(folderType.key, e.target.value)}
+                  placeholder={folderType.key === "project" ? "{channel_name}_{date}" : folderType.label.toLowerCase()}
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {folderType.description}
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{folderType.description}</p>
               </div>
             ))}
           </div>

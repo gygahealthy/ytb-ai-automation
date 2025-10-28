@@ -3,6 +3,7 @@ import type { CookieRotationConfig, RotationMethod } from "../../common/drawers/
 import { useState } from "react";
 import CookieDetailModal from "../cookie/CookieDetailModal";
 import { CookieAddModal } from "./CookieAddModal";
+import ToggleSwitch from "../../common/ToggleSwitch";
 
 interface CookieConfigCardProps {
   cookie: {
@@ -48,10 +49,9 @@ export default function CookieConfigCard({
     rotationIntervalMinutes: 60,
   };
 
-  const handleToggleLaunchOnStartup = (e: React.MouseEvent | React.ChangeEvent) => {
-    e.stopPropagation();
+  const handleToggleLaunchOnStartupSwitch = (checked: boolean) => {
     onUpdateConfig(cookie.cookieId, {
-      launchWorkerOnStartup: !config.launchWorkerOnStartup,
+      launchWorkerOnStartup: checked,
     });
   };
 
@@ -345,15 +345,14 @@ export default function CookieConfigCard({
               <span className="text-xs font-bold text-gray-900 dark:text-white">Launch At Startup</span>
             </div>
             <div className="flex items-center justify-end">
-              <label className="inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
+              <div onClick={(e) => e.stopPropagation()}>
+                <ToggleSwitch
                   checked={config.launchWorkerOnStartup}
-                  onChange={handleToggleLaunchOnStartup}
-                  className="sr-only peer"
+                  onChange={handleToggleLaunchOnStartupSwitch}
+                  size="sm"
+                  color="primary"
                 />
-                <div className="relative w-6 h-3.5 bg-gray-300 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-2.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-blue-500 dark:peer-checked:bg-blue-600" />
-              </label>
+              </div>
             </div>
           </div>
 
