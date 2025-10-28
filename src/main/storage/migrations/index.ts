@@ -29,6 +29,7 @@ import * as m025 from "./modules/025_add_required_cookies_column";
 import * as m026 from "./modules/026_add_video_upscales_table";
 import * as m027 from "./modules/027_add_rotation_status_tracking";
 import * as m028 from "./modules/028_relax_upscale_foreign_keys";
+import * as m029 from "./modules/029_ensure_veo3_video_generation_columns";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -61,6 +62,7 @@ const modules: Migration[] = [
   m026,
   m027,
   m028,
+  m029,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
