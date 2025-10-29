@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 import { Worker } from "worker_threads";
+import { app } from "electron";
 
 interface DownloadJob {
   id: string;
@@ -8,6 +9,9 @@ interface DownloadJob {
   filename: string;
   downloadPath: string;
   videoIndex?: number;
+  // Pass paths to worker (cannot use app.getPath in worker threads)
+  userDataPath?: string;
+  homeDir?: string;
 }
 
 interface DownloadResult {
@@ -109,6 +113,9 @@ export class Veo3VideoDownloadService {
         filename: finalFilename,
         downloadPath: downloadPath || "",
         videoIndex,
+        // Pass paths from main process to worker
+        userDataPath: app.getPath("userData"),
+        homeDir: app.getPath("home"),
       };
 
       const pendingDownload: PendingDownload = {
@@ -127,14 +134,19 @@ export class Veo3VideoDownloadService {
    * Download multiple videos concurrently
    */
   async downloadMultipleVideos(
-    videos: Array<{ videoUrl: string; filename?: string }>,
+    videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
     onProgress?: (result: DownloadResult) => void,
     downloadPath?: string
   ): Promise<DownloadResult[]> {
     console.log(`[Veo3VideoDownloadService] Starting batch download of ${videos.length} videos`);
 
-    const downloadPromises = videos.map((video) =>
-      this.downloadVideo(video.videoUrl, video.filename, downloadPath).then((result) => {
+    const downloadPromises = videos.map((video, index) =>
+      this.downloadVideo(
+        video.videoUrl,
+        video.filename,
+        downloadPath,
+        video.videoIndex !== undefined ? video.videoIndex : index
+      ).then((result) => {
         if (onProgress) {
           onProgress(result as DownloadResult);
         }

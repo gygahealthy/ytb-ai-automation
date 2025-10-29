@@ -117,6 +117,7 @@ export async function showOpenDialog(options: Electron.OpenDialogOptions) {
   }
 
   const result = await dialog.showOpenDialog(mainWindow, options);
+  console.log("[DialogService] showOpenDialog result:", JSON.stringify(result, null, 2));
   return result;
 }
 
@@ -141,7 +142,7 @@ export async function validateBrowserPath(browserPath: string): Promise<{
     // Try to detect browser name from path
     const fileName = path.basename(browserPath).toLowerCase();
     let detectedName = "Browser";
-    
+
     if (fileName.includes("chrome")) detectedName = "Chrome";
     else if (fileName.includes("brave")) detectedName = "Brave";
     else if (fileName.includes("edge")) detectedName = "Edge";

@@ -119,8 +119,18 @@ export default function JsonToolbar({
           {/* Download selected completed videos */}
           <button
             onClick={() => {
-              if (!onDownloadSelected) return;
+              console.log("[JsonToolbar] Download button clicked");
+              console.log("[JsonToolbar] onDownloadSelected exists:", !!onDownloadSelected);
+              console.log("[JsonToolbar] hasSelection:", hasSelection);
+              console.log("[JsonToolbar] selectedCount:", selectedCount);
+
+              if (!onDownloadSelected) {
+                console.log("[JsonToolbar] No onDownloadSelected handler");
+                return;
+              }
+
               if (!hasSelection) {
+                console.log("[JsonToolbar] No selection, showing alert");
                 alert.show({
                   title: "No Selection",
                   message: "Please select at least one prompt to download videos",
@@ -129,6 +139,7 @@ export default function JsonToolbar({
                 return;
               }
 
+              console.log("[JsonToolbar] Calling onDownloadSelected");
               onDownloadSelected();
             }}
             aria-label="Download selected videos"

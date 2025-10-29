@@ -55,6 +55,10 @@ interface VideoCreationStore {
   toggleGlobalPreview: () => void;
   setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
   setSortBy: (sortBy: "index" | "status") => void;
+
+  // DB Sync Actions
+  loadJobsFromDB: (generations: any[]) => void;
+  syncJobFromDB: (generation: any) => void;
 }
 
 const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -378,14 +382,71 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
       setSortBy: (sortBy: "index" | "status") => {
         set({ sortBy });
       },
+
+      // DB Sync Actions
+      loadJobsFromDB: (generations: any[]) => {
+        // Convert DB generations to jobs and match them with prompts
+        const jobs: VideoCreationJob[] = generations.map((gen) => ({
+          id: gen.id,
+          promptId: gen.id, // Use generation.id as promptId for now
+          promptText: gen.prompt || "",
+          generationId: gen.id,
+          status: gen.status === "pending" ? "processing" : gen.status,
+          progress: gen.status === "completed" ? 100 : gen.status === "processing" ? 50 : 0,
+          createdAt: gen.createdAt || new Date().toISOString(),
+          completedAt: gen.completedAt,
+          videoUrl: gen.videoUrl,
+          error: gen.errorMessage,
+        }));
+
+        console.log(`[VideoCreationStore] Loaded ${jobs.length} jobs from DB`);
+        set({ jobs });
+      },
+
+      syncJobFromDB: (generation: any) => {
+        const { jobs } = get();
+
+        // Find existing job by generationId
+        const existingJobIndex = jobs.findIndex((j) => j.generationId === generation.id);
+
+        if (existingJobIndex >= 0) {
+          // Update existing job
+          const updatedJobs = [...jobs];
+          updatedJobs[existingJobIndex] = {
+            ...updatedJobs[existingJobIndex],
+            status: generation.status === "pending" ? "processing" : generation.status,
+            progress: generation.status === "completed" ? 100 : generation.status === "processing" ? 50 : 0,
+            videoUrl: generation.videoUrl,
+            error: generation.errorMessage,
+            completedAt: generation.completedAt,
+          };
+          set({ jobs: updatedJobs });
+        } else {
+          // Create new job from generation
+          const newJob: VideoCreationJob = {
+            id: generation.id,
+            promptId: generation.id,
+            promptText: generation.prompt || "",
+            generationId: generation.id,
+            status: generation.status === "pending" ? "processing" : generation.status,
+            progress: generation.status === "completed" ? 100 : generation.status === "processing" ? 50 : 0,
+            createdAt: generation.createdAt || new Date().toISOString(),
+            completedAt: generation.completedAt,
+            videoUrl: generation.videoUrl,
+            error: generation.errorMessage,
+          };
+          set({ jobs: [newJob, ...jobs] });
+        }
+      },
     }),
     {
       name: "veo3-video-creation-store",
-      version: 1,
-      // Only persist these keys to avoid persisting history which can get large
+      version: 3, // Increment version to enable job persistence
+      // Persist jobs to maintain video generation state across app reloads
+      // The polling context will refresh stale data automatically
       partialize: (state) => ({
         prompts: state.prompts,
-        jobs: state.jobs,
+        jobs: state.jobs, // NOW ENABLED - persist jobs for video generation continuity
         drafts: state.drafts,
         globalPreviewMode: state.globalPreviewMode,
         statusFilter: state.statusFilter,

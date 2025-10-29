@@ -3,11 +3,13 @@
  *
  * This worker runs in a separate thread to handle video downloads
  * without blocking the main application.
+ *
+ * CRITICAL: Cannot use Electron's 'app' module in worker threads.
+ * All paths must be passed via environment variables or message data.
  */
 
 import * as fs from "fs";
 import * as path from "path";
-import { app } from "electron";
 import { parentPort } from "worker_threads";
 
 interface DownloadJob {
@@ -16,6 +18,9 @@ interface DownloadJob {
   filename: string;
   downloadPath: string;
   videoIndex?: number;
+  // Pass paths from parent instead of using app.getPath()
+  userDataPath?: string;
+  homeDir?: string;
 }
 
 interface DownloadResult {
@@ -28,17 +33,19 @@ interface DownloadResult {
 
 async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
   try {
-    const { id, videoUrl, filename, downloadPath } = job;
+    const { id, videoUrl, filename, downloadPath, homeDir, userDataPath } = job;
 
     if (!videoUrl) {
       throw new Error("Video URL is required");
     }
 
     // Use provided downloadPath or default to Downloads folder
-    let targetPath = downloadPath || path.join(app.getPath("home"), "Downloads");
+    // Support both Windows and macOS/Linux home directory patterns
+    const fallbackHome = homeDir || process.env.HOME || process.env.USERPROFILE || "";
+    let targetPath = downloadPath || path.join(fallbackHome, "Downloads");
 
     // Load settings to check if auto-create date folder is enabled
-    const settings = loadSettings();
+    const settings = loadSettings(userDataPath);
     if (settings?.options?.autoCreateDateFolder) {
       const today = new Date();
       const dateFolder = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
@@ -47,7 +54,7 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
       targetPath = path.join(targetPath, dateFolder);
     }
 
-    // Ensure target folder exists
+    // Ensure target folder exists (Node's path module handles OS-specific separators)
     if (!fs.existsSync(targetPath)) {
       fs.mkdirSync(targetPath, { recursive: true });
     }
@@ -55,6 +62,7 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
     const filePath = path.join(targetPath, filename);
 
     console.log(`[Download Worker] Starting download ${id}: ${videoUrl}`);
+    console.log(`[Download Worker] Target path: ${filePath}`);
 
     // Dynamically import got to avoid ESM module issues
     const got = await import("got");
@@ -91,11 +99,16 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
 
 /**
  * Load settings from localStorage file (persisted by zustand)
+ * @param userDataPath - Path to user data directory (passed from parent)
  */
-function loadSettings(): any {
+function loadSettings(userDataPath?: string): any {
   try {
-    const userDataPath = app.getPath("userData");
-    const settingsPath = path.join(userDataPath, "file-paths-storage");
+    if (!userDataPath) {
+      console.warn("[Download Worker] No userDataPath provided, skipping settings load");
+      return null;
+    }
+
+    const settingsPath = path.join(userDataPath, "file-paths-storage.json");
 
     if (fs.existsSync(settingsPath)) {
       const data = fs.readFileSync(settingsPath, "utf-8");

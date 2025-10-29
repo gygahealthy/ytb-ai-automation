@@ -61,30 +61,33 @@ export default function VideoPromptRow({
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const veo3Store = useVeo3Store();
-  const { updateJobStatus } = useVideoCreationStore.getState();
 
   // Use centralized polling context - automatically registers/unregisters this generation
   const { generation: polledGeneration, progress: contextProgress } = useSingleGenerationPolling(job?.generationId);
 
-  // Sync polled data back to job store when status changes
+  // Sync polled data back to job store ONLY for persistence (completed/failed status)
+  // Do NOT use store for display - display uses polledGeneration directly (same as VideoHistoryCard)
   useEffect(() => {
     if (!polledGeneration || !job) return;
 
-    // Update job status in store when polled data changes
+    // Only sync terminal states (completed/failed) to store for persistence
+    // Display will use polledGeneration directly
     if (polledGeneration.status === "completed" && job.status !== "completed") {
-      console.log(`[VideoPromptRow] 📡 Generation ${polledGeneration.id} completed`);
-      updateJobStatus(job.id, "completed", {
+      console.log(`[VideoPromptRow] � Persisting completed status to store for job ${job.id}`);
+      const { updateJobStatus: update } = useVideoCreationStore.getState();
+      update(job.id, "completed", {
         videoUrl: polledGeneration.videoUrl,
         completedAt: new Date().toISOString(),
       });
     } else if (polledGeneration.status === "failed" && job.status !== "failed") {
-      console.log(`[VideoPromptRow] 📡 Generation ${polledGeneration.id} failed`);
-      updateJobStatus(job.id, "failed", {
+      console.log(`[VideoPromptRow] 💾 Persisting failed status to store for job ${job.id}`);
+      const { updateJobStatus: update } = useVideoCreationStore.getState();
+      update(job.id, "failed", {
         error: polledGeneration.errorMessage,
         completedAt: new Date().toISOString(),
       });
     }
-  }, [polledGeneration?.status, polledGeneration?.videoUrl, polledGeneration?.errorMessage, job, updateJobStatus]);
+  }, [polledGeneration?.status, polledGeneration?.videoUrl, polledGeneration?.errorMessage, job?.id, job?.status]);
 
   const isValid = prompt.text.trim().length > 0;
   // When globalPreviewMode is false (default), show all previews
@@ -174,7 +177,11 @@ export default function VideoPromptRow({
     }
   };
 
-  const rawStatus = job?.status ?? "new";
+  // CRITICAL: Use polled generation status as source of truth (database is always fresher than store cache)
+  // Only use job.status as fallback if no polling data exists yet
+  const displayStatus = job?.generationId && polledGeneration?.status ? polledGeneration.status : job?.status || "new";
+  const effectiveStatus = displayStatus;
+  const rawStatus = effectiveStatus;
   const status = rawStatus === "idle" ? "new" : rawStatus;
   const isArchived = (prompt as any)?.archived === true;
 
@@ -194,7 +201,8 @@ export default function VideoPromptRow({
       failed: { label: "Failed", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
       idle: { label: "Idle", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
     };
-    const config = statusConfig[job.status] || statusConfig.idle;
+    // Use display status (polled data takes absolute precedence for accuracy)
+    const config = statusConfig[displayStatus] || statusConfig.idle;
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}>{config.label}</span>;
   };
 
@@ -273,7 +281,7 @@ export default function VideoPromptRow({
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {job && <div className="flex-shrink-0 mb-2">{getStatusBadge()}</div>}
 
-        {job && job.status === "processing" && job.generationId && !showPreview && (
+        {job && displayStatus === "processing" && job.generationId && !showPreview && (
           <div className="flex-shrink-0 mb-2 animate-pulse">
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden shadow-inner">
               <div

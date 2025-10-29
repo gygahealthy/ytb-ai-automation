@@ -50,8 +50,11 @@ interface Window {
       removeScene: (projectId: string, sceneId: string) => Promise<any>;
       updatePrompt: (projectId: string, jsonPrompt: any) => Promise<any>;
       delete: (id: string) => Promise<any>;
-      downloadVideo: (videoUrl: string, filename?: string, downloadPath?: string) => Promise<any>;
-      downloadMultipleVideos: (videos: Array<{ videoUrl: string; filename?: string }>, downloadPath?: string) => Promise<any>;
+      downloadVideo: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) => Promise<any>;
+      downloadMultipleVideos: (
+        videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
+        downloadPath?: string
+      ) => Promise<any>;
       downloadStatus: () => Promise<any>;
       onDownloadProgress: (callback: (result: any) => void) => () => void;
       // DB-only status queries (no API calls - worker thread handles API polling)

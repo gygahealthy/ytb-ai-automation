@@ -41,7 +41,7 @@ export const downloadRegistrations: IpcRegistration[] = [
     description: "Download multiple videos concurrently",
     handler: async (
       req: {
-        videos: Array<{ videoUrl: string; filename?: string }>;
+        videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>;
         downloadPath?: string;
       },
       event?: Electron.IpcMainInvokeEvent
@@ -50,14 +50,14 @@ export const downloadRegistrations: IpcRegistration[] = [
         const win = event ? BrowserWindow.fromWebContents(event.sender) : null;
 
         const results = await veo3VideoDownloadService.downloadMultipleVideos(
-          (req as any).videos,
+          req.videos,
           (result) => {
             // Send progress event to renderer for each completed download
             if (win && !win.isDestroyed()) {
               win.webContents.send("veo3:downloadProgress", result);
             }
           },
-          (req as any).downloadPath
+          req.downloadPath
         );
 
         return {

@@ -293,18 +293,23 @@ CREATE TABLE IF NOT EXISTS veo3_video_generations (
   id TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL,
   project_id TEXT NOT NULL,
-  video_id TEXT NOT NULL UNIQUE,
-  title TEXT NOT NULL,
-  description TEXT,
-  status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')) DEFAULT 'pending',
-  progress_percent INTEGER DEFAULT 0,
+  scene_id TEXT,
+  operation_name TEXT,
+  prompt TEXT,
+  seed INTEGER,
+  aspect_ratio TEXT,
+  status TEXT,
+  media_generation_id TEXT,
+  fife_url TEXT,
+  serving_base_uri TEXT,
+  video_url TEXT,
+  video_path TEXT,
   error_message TEXT,
-  metadata TEXT, -- JSON metadata about the video
-  generated_at TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-  FOREIGN KEY (project_id) REFERENCES veo3_projects(id) ON DELETE CASCADE
+  raw_response TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  completed_at TEXT,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 -- Create additional indexes for better performance

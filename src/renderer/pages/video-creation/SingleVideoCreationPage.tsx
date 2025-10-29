@@ -574,7 +574,11 @@ export default function SingleVideoCreationPage() {
   const { singleVideoPath, setSingleVideoPath } = useFilePathsStore();
 
   const handleDownloadSelected = async () => {
+    console.log("[SingleVideoCreationPage] handleDownloadSelected called");
+
     const selectedPrompts = prompts.filter((p) => p.selected);
+    console.log(`[SingleVideoCreationPage] Selected prompts: ${selectedPrompts.length}`);
+
     if (selectedPrompts.length === 0) {
       alert.show({
         title: "No Selection",
@@ -585,13 +589,23 @@ export default function SingleVideoCreationPage() {
     }
 
     // Collect completed videos for selected prompts
-    const videos: Array<{ videoUrl: string; filename?: string }> = [];
+    const videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }> = [];
     for (const prompt of selectedPrompts) {
       const job = jobs.find((j) => j.promptId === prompt.id && j.status === "completed");
+      console.log(
+        `[SingleVideoCreationPage] Prompt ${prompt.id}: job found=${!!job}, status=${job?.status}, videoUrl=${job?.videoUrl}`
+      );
+
       if (job && job.videoUrl) {
-        videos.push({ videoUrl: job.videoUrl, filename: `video-${job.id}` });
+        videos.push({
+          videoUrl: job.videoUrl,
+          filename: prompt.text ? `${prompt.text.substring(0, 50).replace(/[<>:"|?*]/g, "-")}` : `video-${job.id}`,
+          videoIndex: prompt.order,
+        });
       }
     }
+
+    console.log(`[SingleVideoCreationPage] Videos to download: ${videos.length}`);
 
     if (videos.length === 0) {
       alert.show({
@@ -604,23 +618,36 @@ export default function SingleVideoCreationPage() {
 
     // Show folder selection dialog
     try {
+      console.log("[SingleVideoCreationPage] Opening folder selection dialog...");
+
       const result = await (window as any).electronAPI.invoke("dialog:showOpenDialog", {
         properties: ["openDirectory", "createDirectory"],
         title: "Select Download Folder",
         defaultPath: singleVideoPath || undefined,
       });
 
-      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-        // User cancelled - don't proceed with download
+      console.log("[SingleVideoCreationPage] Dialog result:", result);
+
+      // Dialog handler wraps response in {success, data}, extract the actual dialog result
+      const dialogResult = result.success ? result.data : result;
+
+      if (dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
+        console.log("[SingleVideoCreationPage] Dialog cancelled");
         return;
       }
 
-      const selectedFolder = result.filePaths[0];
+      const selectedFolder = dialogResult.filePaths[0];
+      console.log(`[SingleVideoCreationPage] Selected folder: ${selectedFolder}`);
+
       setSingleVideoPath(selectedFolder);
 
       toast.info(`Downloading ${videos.length} video(s)...`, "Download", 3000);
 
-      const downloadResult = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, selectedFolder || undefined);
+      console.log(`[SingleVideoCreationPage] Calling downloadMultipleVideos with ${videos.length} videos to ${selectedFolder}`);
+
+      const downloadResult = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, selectedFolder);
+
+      console.log("[SingleVideoCreationPage] Download result:", downloadResult);
 
       if (!downloadResult || !downloadResult.success) {
         const message = downloadResult?.error || "Failed to start batch download";
@@ -640,12 +667,12 @@ export default function SingleVideoCreationPage() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error("[SingleVideoCreationPage] Download error:", error);
       alert.show({
         title: "Download Error",
         message: message,
         severity: "error",
       });
-      console.error("Download error:", error);
     }
   };
 
