@@ -70,8 +70,8 @@ export class VEO3VideoCreationService {
   > {
     try {
       const profile = await profileRepository.findById(profileId);
-      if (!profile || !profile.isLoggedIn) {
-        return { success: false, error: "Profile not found or not logged in" };
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
       }
 
       logger.info(`Starting video generation for profile: ${profile.name}, project: ${projectId}`);

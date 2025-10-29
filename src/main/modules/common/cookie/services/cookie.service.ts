@@ -337,14 +337,14 @@ export class CookieService {
         return { success: false, error: "Cookie ID is required" };
       }
 
-      const exists = await this.cookieRepository.exists(id);
-      if (!exists) {
+      const cookie = await this.cookieRepository.findById(id);
+      if (!cookie) {
         return { success: false, error: "Cookie not found" };
       }
 
       await this.cookieRepository.delete(id);
 
-      logger.info("[cookie.service] Deleted cookie", { id });
+      logger.info("[cookie.service] Deleted cookie", { id, profileId: cookie.profileId });
 
       return { success: true };
     } catch (error) {

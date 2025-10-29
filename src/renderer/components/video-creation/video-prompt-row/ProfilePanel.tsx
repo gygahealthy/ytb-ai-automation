@@ -41,11 +41,13 @@ export default function ProfilePanel({
 
   useEffect(() => {
     if (prompt.showProfileSelect && effectiveProfileId) {
+      let isMounted = true;
+
       (async () => {
         setLoading(true);
         try {
           const cached = useVeo3Store.getState().getProjectsForProfile(effectiveProfileId);
-          if (cached) {
+          if (cached && isMounted) {
             const transformed = cached.map((p: any) => ({
               id: p.projectId || p.id,
               name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
@@ -57,6 +59,8 @@ export default function ProfilePanel({
           }
 
           const response = await veo3IPC.fetchProjectsFromAPI(effectiveProfileId);
+          if (!isMounted) return;
+
           if (response && response.success) {
             const arr = Array.isArray(response.data) ? response.data : response.data?.projects || [];
             useVeo3Store.getState().setProjectsForProfile(effectiveProfileId, arr);
@@ -96,6 +100,7 @@ export default function ProfilePanel({
             }
           }
         } catch (err) {
+          if (!isMounted) return;
           console.error("[ProfilePanel] Failed to fetch projects", err);
           setProjects([]);
           showAlert({
@@ -105,13 +110,18 @@ export default function ProfilePanel({
             duration: null,
           });
         } finally {
-          setLoading(false);
+          if (isMounted) setLoading(false);
         }
       })();
+
+      return () => {
+        isMounted = false;
+      };
     } else {
       setProjects([]);
     }
-  }, [prompt.showProfileSelect, effectiveProfileId, showAlert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt.showProfileSelect, effectiveProfileId]);
 
   if (!prompt.showProfileSelect) return null;
 

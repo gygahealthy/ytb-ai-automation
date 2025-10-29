@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   proxy_password TEXT,
   credit_remaining REAL DEFAULT 0,
   tags TEXT, -- JSON array of tags
-  is_logged_in INTEGER DEFAULT 0, -- 0 = false, 1 = true
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

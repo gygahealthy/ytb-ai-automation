@@ -465,7 +465,6 @@ export class GlobalRotationWorkerManager {
         proxyUsername: row.proxy_username || undefined,
         proxyPassword: row.proxy_password || undefined,
         creditRemaining: row.credit_remaining,
-        isLoggedIn: row.is_logged_in === 1,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -552,30 +551,30 @@ export class GlobalRotationWorkerManager {
                 if (worker.workerProcess && !worker.workerProcess.killed) {
                   logger.warn(`[rotation-manager] Force killing worker process ${key} (PID: ${worker.workerProcess.pid})`);
 
-                    try {
-                      if (process.platform === "win32") {
-                        // Windows: use taskkill with /T to kill process tree (children too)
-                        execSync(`taskkill /F /PID ${worker.workerProcess.pid} /T 2>nul || true`, {
-                          windowsHide: true,
-                          timeout: 2000,
-                        });
-                      } else {
-                        // Unix-like: try to kill child processes first, then kill parent
-                        try {
-                          execSync(`pkill -P ${worker.workerProcess.pid} 2>/dev/null || true`, { timeout: 2000 });
-                        } catch (_e) {
-                          // ignore
-                        }
-
-                        try {
-                          worker.workerProcess.kill("SIGKILL");
-                        } catch (_e) {
-                          // ignore
-                        }
+                  try {
+                    if (process.platform === "win32") {
+                      // Windows: use taskkill with /T to kill process tree (children too)
+                      execSync(`taskkill /F /PID ${worker.workerProcess.pid} /T 2>nul || true`, {
+                        windowsHide: true,
+                        timeout: 2000,
+                      });
+                    } else {
+                      // Unix-like: try to kill child processes first, then kill parent
+                      try {
+                        execSync(`pkill -P ${worker.workerProcess.pid} 2>/dev/null || true`, { timeout: 2000 });
+                      } catch (_e) {
+                        // ignore
                       }
-                    } catch (killErr) {
-                      logger.debug(`[rotation-manager] Error killing worker process:`, killErr);
+
+                      try {
+                        worker.workerProcess.kill("SIGKILL");
+                      } catch (_e) {
+                        // ignore
+                      }
                     }
+                  } catch (killErr) {
+                    logger.debug(`[rotation-manager] Error killing worker process:`, killErr);
+                  }
                 }
                 resolve();
               }, 1500);

@@ -36,15 +36,17 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
   const { show: showAlert } = useAlert();
 
   useEffect(() => {
-    fetchProfiles();
+    void fetchProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (localProfileId) {
-      fetchProjects(localProfileId);
+      void fetchProjects(localProfileId);
     } else {
       setProjects([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localProfileId]);
 
   const handleProfileSelect = async (profileId: string) => {

@@ -1,16 +1,18 @@
-import { ID } from "../../../shared/types";
-
 // ============= Profile Types =============
 export interface Profile {
-  id: ID;
+  id: string;
   name: string;
   browserPath?: string;
   userDataDir: string;
   userAgent?: string;
-  proxy?: ProxyConfig;
+  proxy?: {
+    server: string;
+    username?: string;
+    password?: string;
+  };
   creditRemaining: number;
   tags?: string[];
-  isLoggedIn?: boolean;
+  // Note: Removed isLoggedIn - check cookies table for login status
   createdAt: Date;
   updatedAt: Date;
 }

@@ -17,22 +17,29 @@ export class VEO3ProjectApiService {
    */
   async fetchProjectsFromAPI(profileId: string): Promise<ApiResponse<any[]>> {
     try {
-      // Get profile to ensure it exists and is logged in
+      logger.info(`[fetchProjectsFromAPI] Starting - profileId: ${profileId}`);
+
+      // Get profile to ensure it exists
       const profile = await profileRepository.findById(profileId);
       if (!profile) {
+        logger.warn(`[fetchProjectsFromAPI] Profile not found: ${profileId}`);
         return { success: false, error: "Profile not found" };
       }
 
-      if (!profile.isLoggedIn) {
-        return {
-          success: false,
-          error: "Profile is not logged in. Please login first.",
-        };
-      }
+      logger.info(`[fetchProjectsFromAPI] Profile found: ${profile.name}`);
 
       // Get cookies for the profile from CookieRepository
+      logger.info(`[fetchProjectsFromAPI] Fetching cookies for profile: ${profileId}`);
       const cookieResult = await cookieService.getCookiesByProfile(profileId);
+
+      logger.info(`[fetchProjectsFromAPI] Cookie fetch result:`, {
+        success: cookieResult.success,
+        cookieCount: cookieResult.data?.length || 0,
+        error: cookieResult.error,
+      });
+
       if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
+        logger.warn(`[fetchProjectsFromAPI] No cookies found for profile: ${profileId}`);
         return {
           success: false,
           error: "Profile has no cookies. Please login first.",
@@ -41,7 +48,16 @@ export class VEO3ProjectApiService {
 
       // Find the "flow" service cookie
       const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
+
+      logger.info(`[fetchProjectsFromAPI] Cookie search:`, {
+        totalCookies: cookieResult.data.length,
+        cookieServices: cookieResult.data.map((c) => c.service),
+        flowCookieFound: !!flowCookie,
+        flowCookieStatus: flowCookie?.status,
+      });
+
       if (!flowCookie || !flowCookie.rawCookieString) {
+        logger.warn(`[fetchProjectsFromAPI] No active flow cookie found for profile: ${profileId}`);
         return {
           success: false,
           error: "Profile has no active 'flow' cookies. Please login first.",
@@ -53,7 +69,14 @@ export class VEO3ProjectApiService {
       // Call VEO3 API to list projects
       const result = await veo3ApiClient.listProjects(flowCookie.rawCookieString);
 
+      logger.info(`[fetchProjectsFromAPI] API call result:`, {
+        success: result.success,
+        error: result.error,
+        hasData: !!result.data,
+      });
+
       if (!result.success) {
+        logger.error(`[fetchProjectsFromAPI] API call failed: ${result.error}`);
         return {
           success: false,
           error: result.error || "Failed to fetch projects from VEO3 API",
@@ -70,23 +93,15 @@ export class VEO3ProjectApiService {
       return { success: false, error: String(error) };
     }
   }
-
   /**
    * Create a new project via VEO3 API using profile's cookies
    */
   async createProjectViaAPI(profileId: string, projectTitle: string): Promise<ApiResponse<any>> {
     try {
-      // Get profile to ensure it exists and is logged in
+      // Get profile to ensure it exists
       const profile = await profileRepository.findById(profileId);
       if (!profile) {
         return { success: false, error: "Profile not found" };
-      }
-
-      if (!profile.isLoggedIn) {
-        return {
-          success: false,
-          error: "Profile is not logged in. Please login first.",
-        };
       }
 
       // Get cookies for the profile from CookieRepository

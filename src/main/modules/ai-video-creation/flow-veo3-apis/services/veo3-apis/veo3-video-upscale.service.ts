@@ -123,8 +123,8 @@ export class VEO3VideoUpscaleService {
       }
 
       const profile = await profileRepository.findById(sourceGeneration.profileId);
-      if (!profile || !profile.isLoggedIn) {
-        return { success: false, error: "Profile not found or not logged in" };
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
       }
 
       logger.info(
@@ -308,8 +308,8 @@ export class VEO3VideoUpscaleService {
       }
 
       const profile = await profileRepository.findById(upscale.profileId);
-      if (!profile || !profile.isLoggedIn) {
-        return { success: false, error: "Profile not found or not logged in" };
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
       }
 
       // Get cookies for the profile

@@ -285,8 +285,8 @@ async function checkJobStatus(job: PollingJob) {
 
     // Get profile cookies
     const profile = await profileRepository.findById(profileId);
-    if (!profile || !profile.isLoggedIn) {
-      throw new Error("Profile not found or not logged in");
+    if (!profile) {
+      throw new Error("Profile not found");
     }
 
     const cookieResult = await cookieService.getCookiesByProfile(profileId);

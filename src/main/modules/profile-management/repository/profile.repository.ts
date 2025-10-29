@@ -14,7 +14,6 @@ interface ProfileRow {
   proxy_password: string | null;
   credit_remaining: number;
   tags: string | null;
-  is_logged_in: number;
   created_at: string;
   updated_at: string;
 }
@@ -37,7 +36,6 @@ export class ProfileRepository extends BaseRepository<Profile> {
       userDataDir: row.user_data_dir,
       userAgent: row.user_agent || undefined,
       creditRemaining: row.credit_remaining,
-      isLoggedIn: row.is_logged_in === 1,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -72,7 +70,6 @@ export class ProfileRepository extends BaseRepository<Profile> {
     if (entity.userDataDir) row.user_data_dir = entity.userDataDir;
     if (entity.userAgent !== undefined) row.user_agent = entity.userAgent || null;
     if (entity.creditRemaining !== undefined) row.credit_remaining = entity.creditRemaining;
-    if (entity.isLoggedIn !== undefined) row.is_logged_in = entity.isLoggedIn ? 1 : 0;
 
     // Serialize proxy
     if (entity.proxy) {

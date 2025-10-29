@@ -35,7 +35,7 @@ export class CookieExtractionService {
       targetUrl = "https://gemini.google.com",
       headless = false,
       requiredCookies = [],
-      maxWaitMs = 5 * 60 * 1000, // 5 minutes
+      maxWaitMs = 10 * 1000, // 10 seconds (shorter interactive wait for visible mode)
       inactivityThresholdMs = 30000, // 30 seconds
     } = options;
 
