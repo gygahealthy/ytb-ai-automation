@@ -106,6 +106,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getUpscaleById: (upscaleId: string) => ipcRenderer.invoke("veo3:upscale:getById", { upscaleId }),
     getUpscalesBySourceGeneration: (sourceGenerationId: string) =>
       ipcRenderer.invoke("veo3:upscale:getBySourceGeneration", { sourceGenerationId }),
+    // Project API methods
+    fetchProjectsFromAPI: (profileId: string) => ipcRenderer.invoke("veo3:fetchProjectsFromAPI", { profileId }),
+    createProjectViaAPI: (profileId: string, projectTitle: string) =>
+      ipcRenderer.invoke("veo3:createProjectViaAPI", { profileId, projectTitle }),
+    updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) =>
+      ipcRenderer.invoke("veo3:updateProjectTitleViaAPI", { profileId, projectId, projectTitle }),
   },
 
   // YouTube APIs

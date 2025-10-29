@@ -141,6 +141,55 @@ export class VEO3ProjectApiService {
       return { success: false, error: String(error) };
     }
   }
+
+  /**
+   * Update a project title via VEO3 API using profile's cookies
+   */
+  async updateProjectTitleViaAPI(profileId: string, projectId: string, projectTitle: string): Promise<ApiResponse<any>> {
+    try {
+      // Get profile to ensure it exists
+      const profile = await profileRepository.findById(profileId);
+      if (!profile) {
+        return { success: false, error: "Profile not found" };
+      }
+
+      // Get cookies for the profile from CookieRepository
+      const cookieResult = await cookieService.getCookiesByProfile(profileId);
+      if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
+        return {
+          success: false,
+          error: "Profile has no cookies. Please login first.",
+        };
+      }
+
+      // Find the "flow" service cookie
+      const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
+      if (!flowCookie || !flowCookie.rawCookieString) {
+        return {
+          success: false,
+          error: "Profile has no active 'flow' cookies. Please login first.",
+        };
+      }
+
+      logger.info(`Updating VEO3 project "${projectId}" to title: "${projectTitle}" for profile: ${profile.name}`);
+
+      // Call VEO3 API to update project title
+      const result = await veo3ApiClient.updateProjectTitle(flowCookie.rawCookieString, projectId, projectTitle);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || "Failed to update project title via VEO3 API",
+        };
+      }
+
+      logger.info(`Successfully updated VEO3 project: ${projectId}`);
+      return { success: true, data: result.data };
+    } catch (error) {
+      logger.error("Failed to update project title via API", error);
+      return { success: false, error: String(error) };
+    }
+  }
 }
 
 export const veo3ProjectApiService = new VEO3ProjectApiService();

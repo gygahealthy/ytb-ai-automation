@@ -65,6 +65,10 @@ interface Window {
       checkUpscaleStatus: (upscaleId: string) => Promise<any>;
       getUpscaleById: (upscaleId: string) => Promise<any>;
       getUpscalesBySourceGeneration: (sourceGenerationId: string) => Promise<any>;
+      // Project API methods
+      fetchProjectsFromAPI: (profileId: string) => Promise<any>;
+      createProjectViaAPI: (profileId: string, projectTitle: string) => Promise<any>;
+      updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) => Promise<any>;
     };
     youtube: {
       getAllChannels: () => Promise<any>;

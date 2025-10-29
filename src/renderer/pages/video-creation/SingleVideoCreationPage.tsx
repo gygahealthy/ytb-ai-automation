@@ -29,7 +29,7 @@ export default function SingleVideoCreationPage() {
     severity: "info" | "success" | "warning" | "error";
   }>({ open: false, message: "", severity: "info" });
 
-  const { openDrawer } = useDrawer();
+  const { openDrawer, closeDrawer } = useDrawer();
   const navigate = useNavigate();
 
   // Subscribe to specific store values to ensure re-renders
@@ -736,6 +736,7 @@ export default function SingleVideoCreationPage() {
             setSelectedProfileId(p || "");
             setSelectedProjectId(pr || "");
           }}
+          onClose={closeDrawer}
         />
       ),
     });

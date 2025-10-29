@@ -41,4 +41,25 @@ export const veo3ProjectApiRegistrations: IpcRegistration[] = [
       return result;
     },
   },
+  {
+    channel: "veo3:updateProjectTitleViaAPI",
+    description: "Update project title via VEO3 API",
+    handler: async (req: { profileId: string; projectId: string; projectTitle: string }) => {
+      const profileId = (req as any).profileId;
+      const projectId = (req as any).projectId;
+      const projectTitle = (req as any).projectTitle;
+      logger.info(
+        `[Handler] updateProjectTitleViaAPI called with profileId: ${profileId}, projectId: ${projectId}, title: ${projectTitle}`
+      );
+
+      const result = await veo3ProjectApiService.updateProjectTitleViaAPI(profileId, projectId, projectTitle);
+
+      logger.info(`[Handler] updateProjectTitleViaAPI result:`, {
+        success: result.success,
+        error: result.error,
+      });
+
+      return result;
+    },
+  },
 ];

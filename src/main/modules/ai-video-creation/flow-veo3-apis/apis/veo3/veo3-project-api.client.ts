@@ -181,6 +181,79 @@ export class VEO3ProjectApiClient {
   }
 
   /**
+   * Update a VEO3 project title
+   * @param cookie - Authentication cookie string from profile
+   * @param projectId - Project ID to update
+   * @param projectTitle - New project title
+   * @param toolName - Tool name (default: "PINHOLE")
+   */
+  async updateProjectTitle(
+    cookie: string,
+    projectId: string,
+    projectTitle: string,
+    toolName: string = "PINHOLE"
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const url = `${this.baseUrl}/project.updateProject`;
+
+      const payload = {
+        json: {
+          projectId,
+          projectInfo: {
+            projectTitle,
+          },
+          updateMasks: ["projectTitle"],
+          toolName,
+        },
+      };
+
+      logger.info(`Updating VEO3 project "${projectId}" to title: "${projectTitle}"`);
+      logger.info(`VEO3 endpoint: ${url}`);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: buildVEO3Headers(cookie),
+        body: JSON.stringify(payload),
+      });
+
+      const rawText = await response.text();
+      logger.info(`VEO3 update raw response (truncated 2000 chars): ${rawText.slice(0, 2000)}`);
+
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        logger.error("Failed to parse VEO3 update response JSON", parseErr);
+      }
+
+      if (!response.ok) {
+        logger.error(`Failed to update project: ${response.status} - ${rawText}`);
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      logger.info(`Successfully updated project: ${projectId}`);
+
+      return {
+        success: true,
+        data: {
+          result: data?.result?.data?.json || data,
+          rawText,
+          endpoint: url,
+        },
+      };
+    } catch (error) {
+      logger.error("Error updating project", error);
+      return {
+        success: false,
+        error: String(error),
+      };
+    }
+  }
+
+  /**
    * Validate cookie by attempting to list projects
    * Returns true if cookie is valid and not expired
    */

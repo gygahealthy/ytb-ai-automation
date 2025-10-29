@@ -16,6 +16,14 @@ const createProjectViaAPI = (profileId: string, projectTitle: string) => {
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
+const updateProjectTitleViaAPI = (profileId: string, projectId: string, projectTitle: string) => {
+  if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
+  if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.updateProjectTitleViaAPI === "function")
+    return safeCall(() => (window as any).electronAPI.veo3.updateProjectTitleViaAPI(profileId, projectId, projectTitle));
+  if (hasInvoke()) return invoke("veo3:updateProjectTitleViaAPI", { profileId, projectId, projectTitle });
+  return Promise.resolve({ success: false, error: "ipc-not-available" });
+};
+
 const getAll = () => {
   if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
   if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.getAll === "function")
@@ -236,6 +244,7 @@ const getUpscalesBySourceGeneration = (sourceGenerationId: string) => {
 export default {
   fetchProjectsFromAPI,
   createProjectViaAPI,
+  updateProjectTitleViaAPI,
   getAll,
   startVideoGeneration,
   checkGenerationStatus,

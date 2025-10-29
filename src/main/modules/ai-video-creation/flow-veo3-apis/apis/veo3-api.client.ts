@@ -39,6 +39,18 @@ export class VEO3ApiClient {
     return veo3ProjectApiClient.createProject(cookie, projectTitle, toolName);
   }
 
+  /**
+   * Update a VEO3 project title
+   */
+  async updateProjectTitle(
+    cookie: string,
+    projectId: string,
+    projectTitle: string,
+    toolName: string = "PINHOLE"
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    return veo3ProjectApiClient.updateProjectTitle(cookie, projectId, projectTitle, toolName);
+  }
+
   // ========================================
   // AUTHENTICATION OPERATIONS
   // ========================================
