@@ -80,15 +80,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     removeScene: (projectId: string, sceneId: string) => ipcRenderer.invoke("veo3:removeScene", { projectId, sceneId }),
     updatePrompt: (projectId: string, jsonPrompt: any) => ipcRenderer.invoke("veo3:updatePrompt", { projectId, jsonPrompt }),
     delete: (id: string) => ipcRenderer.invoke("veo3:delete", { id }),
+    // Download APIs now delegated to common/video-download module
     downloadVideo: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) =>
-      ipcRenderer.invoke("veo3:downloadVideo", { videoUrl, filename, downloadPath, videoIndex }),
+      ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex }),
     downloadMultipleVideos: (
       videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
       downloadPath?: string
-    ) => ipcRenderer.invoke("veo3:downloadMultipleVideos", { videos, downloadPath }),
-    downloadStatus: () => ipcRenderer.invoke("veo3:downloadStatus"),
+    ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath }),
+    downloadStatus: () => ipcRenderer.invoke("video:download:status"),
     onDownloadProgress: (callback: (result: any) => void) => {
-      const channel = "veo3:downloadProgress";
+      const channel = "video:downloadProgress";
       const listener = (_event: any, result: any) => callback(result);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
@@ -295,6 +296,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       const listener = (_event: any, data: any) => callback(data);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
+
+  // Video Download APIs (common module)
+  video: {
+    download: {
+      single: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) =>
+        ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex }),
+      batch: (videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>, downloadPath?: string) =>
+        ipcRenderer.invoke("video:download:batch", { videos, downloadPath }),
+      status: () => ipcRenderer.invoke("video:download:status"),
     },
   },
 

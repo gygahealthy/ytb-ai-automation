@@ -291,39 +291,18 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
       canRedo: () => get().history.future.length > 0,
 
       // Draft Actions
-      saveDraft: (name: string) => {
-        const { prompts, drafts } = get();
-        const existingDraft = drafts.find((d) => d.name === name);
-
-        if (existingDraft) {
-          // Update existing draft
-          set({
-            drafts: drafts.map((d) =>
-              d.name === name ? { ...d, prompts: [...prompts], updatedAt: new Date().toISOString() } : d
-            ),
-          });
-        } else {
-          // Create new draft
-          const newDraft: JsonDraft = {
-            id: generateId(),
-            name,
-            prompts: [...prompts],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          set({ drafts: [...drafts, newDraft] });
-        }
+      // Draft actions have been deprecated: persistence is now automatic
+      saveDraft: (_name: string) => {
+        // no-op: drafts are now persisted automatically via zustand
+        // Kept for backward compatibility
+        // eslint-disable-next-line no-console
+        console.warn("saveDraft is deprecated: drafts are persisted automatically.");
       },
 
-      loadDraft: (id: string) => {
-        const { drafts, prompts, history } = get();
-        const draft = drafts.find((d) => d.id === id);
-        if (draft) {
-          set({
-            prompts: draft.prompts.map((p) => ({ ...p, selected: false })),
-            history: saveToHistory(prompts, history),
-          });
-        }
+      loadDraft: (_id: string) => {
+        // no-op: manual draft loading is deprecated
+        // eslint-disable-next-line no-console
+        console.warn("loadDraft is deprecated: drafts are persisted and restored automatically.");
       },
 
       deleteDraft: (id: string) => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpDown, Copy, Download, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
+import { ArrowUpDown, Copy, Download, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Trash2, Undo } from "lucide-react";
 import { useAlert } from "../../../hooks/useAlert";
+import { useConfirm } from "../../../hooks/useConfirm";
 // no local react state currently required
 
 interface JsonToolbarProps {
@@ -15,8 +16,6 @@ interface JsonToolbarProps {
   onRedo: () => void;
   onAddJson: () => void;
   onClearAll: () => void;
-  onSaveDraft: () => void;
-  onLoadDraft: () => void;
   onExportJson: () => void;
   onCopyJson: () => void;
   onToggleGlobalPreview: () => void;
@@ -41,8 +40,7 @@ export default function JsonToolbar({
   onRedo,
   onAddJson,
   onClearAll,
-  onSaveDraft,
-  onLoadDraft,
+
   onExportJson,
   onCopyJson,
   onToggleGlobalPreview,
@@ -58,6 +56,7 @@ export default function JsonToolbar({
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement | null>(null);
   const alert = useAlert();
+  const confirm = useConfirm();
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -92,20 +91,26 @@ export default function JsonToolbar({
           </div>
 
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!onCreateMultiple) return;
               if (!hasSelection) {
-                window.alert("Please select at least one prompt to generate videos");
+                alert.show({
+                  title: "No Selection",
+                  message: "Please select at least one prompt to generate videos",
+                  severity: "warning",
+                });
                 return;
               }
 
-              const countText = selectedCount > 0 ? `${selectedCount} selected` : "selected";
-              const confirmed = window.confirm(
-                `Generate videos for ${countText} prompt(s)?\n\nCompleted videos will be automatically skipped.\n\nThis will start video generation with a small delay between each request.`
-              );
+              // Show single confirmation dialog with video count
+              const confirmed = await confirm({
+                title: "Generate Videos",
+                message: `Generate videos for ${selectedCount} prompt(s)?\n\nCompleted videos will be automatically skipped.`,
+              });
 
               if (confirmed) {
-                onCreateMultiple();
+                // Execute generation with skipConfirm to avoid duplicate confirmation
+                onCreateMultiple({ skipConfirm: true });
               }
             }}
             aria-label="Generate videos for selected prompts"
@@ -207,26 +212,8 @@ export default function JsonToolbar({
           </button>
         </div>
 
-        {/* Draft & Export grouped compact - preview toggle moved here */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onSaveDraft}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
-            title="Save as draft"
-          >
-            <Save className="w-4 h-4" />
-            <span className="hidden sm:inline">Save</span>
-          </button>
-
-          <button
-            onClick={onLoadDraft}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
-            title="Load draft"
-          >
-            <FileUp className="w-4 h-4" />
-            <span className="hidden sm:inline">Load</span>
-          </button>
-
+        {/* Export group - Copy, Export JSON, Preview toggle */}
+        <div className="flex items-center gap-2 pr-2 border-r border-gray-200 dark:border-gray-700">
           <button
             onClick={onToggleGlobalPreview}
             className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
@@ -255,7 +242,6 @@ export default function JsonToolbar({
           </button>
         </div>
       </div>
-
       {/* Status Filter - Right Side: single toggle that opens a popover */}
       <div className="flex items-center gap-2 ml-auto" ref={filterRef}>
         <button

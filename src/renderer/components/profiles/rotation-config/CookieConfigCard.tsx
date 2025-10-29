@@ -4,6 +4,7 @@ import { useState } from "react";
 import CookieDetailModal from "../cookie/CookieDetailModal";
 import { CookieAddModal } from "./CookieAddModal";
 import ToggleSwitch from "../../common/ToggleSwitch";
+import { useConfirm } from "../../../hooks/useConfirm";
 
 interface CookieConfigCardProps {
   cookie: {
@@ -39,6 +40,7 @@ export default function CookieConfigCard({
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newRequiredCookie, setNewRequiredCookie] = useState("");
+  const confirm = useConfirm();
 
   // Provide default config if missing
   const config: CookieRotationConfig = cookie.config || {
@@ -176,9 +178,13 @@ export default function CookieConfigCard({
             {/* Delete Button - X in Top Right Corner */}
             {onDeleteCookie && (
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Delete cookie for ${cookie.service}?`)) {
+                  const confirmed = await confirm({
+                    title: "Delete Cookie",
+                    message: `Delete cookie for ${cookie.service}?`,
+                  });
+                  if (confirmed) {
                     onDeleteCookie(cookie.cookieId);
                   }
                 }}

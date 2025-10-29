@@ -1,0 +1,7 @@
+{
+  "id": "video-download",
+  "name": "Video Download",
+  "version": "0.1.0",
+  "disabled": false,
+  "description": "Video download service with worker thread support for concurrent downloads without blocking the main process"
+}

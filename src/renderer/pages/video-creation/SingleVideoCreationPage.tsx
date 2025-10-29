@@ -9,7 +9,7 @@ import { useFilePathsStore } from "@store/file-paths.store";
 import { useToast } from "@hooks/useToast";
 import AppAlert from "@components/common/AppAlert";
 import AddJsonModal from "@/renderer/components/video-creation/single-video-page/AddJsonModal";
-import DraftManagerModal from "@/renderer/components/video-creation/single-video-page/DraftManagerModal";
+// Draft manager removed: drafts are persisted automatically to zustand
 import JobDetailsModal from "@/renderer/components/video-creation/single-video-page/JobDetailsModal";
 import JsonToolbar from "@/renderer/components/video-creation/single-video-page/JsonToolbar";
 import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
@@ -17,9 +17,6 @@ import VideoPromptRow from "@/renderer/components/video-creation/single-video-pa
 
 export default function SingleVideoCreationPage() {
   const [showAddJsonModal, setShowAddJsonModal] = useState(false);
-  const [showDraftManager, setShowDraftManager] = useState(false);
-  const [draftName, setDraftName] = useState("");
-  const [showSaveDraftDialog, setShowSaveDraftDialog] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -35,7 +32,8 @@ export default function SingleVideoCreationPage() {
   // Subscribe to specific store values to ensure re-renders
   const prompts = useVideoCreationStore((state) => state.prompts);
   const jobs = useVideoCreationStore((state) => state.jobs);
-  const drafts = useVideoCreationStore((state) => state.drafts);
+  // drafts are persisted automatically in the store; manual manager removed
+
   const globalPreviewMode = useVideoCreationStore((state) => state.globalPreviewMode);
   const statusFilter = useVideoCreationStore((state) => state.statusFilter);
   const sortBy = useVideoCreationStore((state) => state.sortBy);
@@ -54,9 +52,7 @@ export default function SingleVideoCreationPage() {
   const redo = useVideoCreationStore((state) => state.redo);
   const canUndo = useVideoCreationStore((state) => state.canUndo);
   const canRedo = useVideoCreationStore((state) => state.canRedo);
-  const saveDraft = useVideoCreationStore((state) => state.saveDraft);
-  const loadDraft = useVideoCreationStore((state) => state.loadDraft);
-  const deleteDraft = useVideoCreationStore((state) => state.deleteDraft);
+  // saveDraft/loadDraft deprecated; methods are no-ops in the store
   const createJob = useVideoCreationStore((state) => state.createJob);
   const updateJobStatus = useVideoCreationStore((state) => state.updateJobStatus);
   const clearAllPrompts = useVideoCreationStore((state) => state.clearAllPrompts);
@@ -435,13 +431,16 @@ export default function SingleVideoCreationPage() {
       return;
     }
 
-    // Confirm action (skip if already confirmed by toolbar)
+    // Confirmation is handled in toolbar for toolbar clicks (skipConfirm=true)
+    // This fallback message only shows if called programmatically without confirmation
     if (!opts?.skipConfirm) {
-      const skippedMessage = skippedCount > 0 ? `\n\n${skippedCount} completed prompt(s) will be skipped.` : "";
-      const confirmed = window.confirm(
-        `Generate videos for ${promptsToGenerate.length} prompt(s)?${skippedMessage}\n\nThis will start video generation for all selected prompts with a small delay between each to avoid rate limiting.`
-      );
-      if (!confirmed) return;
+      const skippedMessage = skippedCount > 0 ? ` (${skippedCount} completed will be skipped)` : "";
+      alert.show({
+        title: "Starting Video Generation",
+        message: `Generating videos for ${promptsToGenerate.length} prompt(s)${skippedMessage}...`,
+        severity: "success",
+        duration: 2000, // Auto-dismiss after 2 seconds
+      });
     }
 
     console.log(`[MultiGen] Starting batch generation for ${promptsToGenerate.length} prompts (${skippedCount} skipped)`);
@@ -643,9 +642,9 @@ export default function SingleVideoCreationPage() {
 
       toast.info(`Downloading ${videos.length} video(s)...`, "Download", 3000);
 
-      console.log(`[SingleVideoCreationPage] Calling downloadMultipleVideos with ${videos.length} videos to ${selectedFolder}`);
+      console.log(`[SingleVideoCreationPage] Calling video:download:batch with ${videos.length} videos to ${selectedFolder}`);
 
-      const downloadResult = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, selectedFolder);
+      const downloadResult = await (window as any).electronAPI.video.download.batch(videos, selectedFolder);
 
       console.log("[SingleVideoCreationPage] Download result:", downloadResult);
 
@@ -676,24 +675,7 @@ export default function SingleVideoCreationPage() {
     }
   };
 
-  const handleSaveDraft = () => {
-    setShowSaveDraftDialog(true);
-  };
-
-  const handleSaveDraftConfirm = () => {
-    if (!draftName.trim()) {
-      alert.show({
-        title: "Invalid Draft Name",
-        message: "Please enter a draft name",
-        severity: "warning",
-      });
-      return;
-    }
-    saveDraft(draftName);
-    setDraftName("");
-    setShowSaveDraftDialog(false);
-    toast.success("Draft saved successfully", "Save Complete", 3000);
-  };
+  // manual save/load handlers removed - drafts are auto-persisted
 
   const handleExportJson = () => {
     const json = JSON.stringify(
@@ -825,8 +807,6 @@ export default function SingleVideoCreationPage() {
             onRedo={redo}
             onAddJson={() => setShowAddJsonModal(true)}
             onClearAll={clearAllPrompts}
-            onSaveDraft={handleSaveDraft}
-            onLoadDraft={() => setShowDraftManager(true)}
             onExportJson={handleExportJson}
             onCopyJson={handleCopyJson}
             onToggleGlobalPreview={toggleGlobalPreview}
@@ -911,55 +891,7 @@ export default function SingleVideoCreationPage() {
         onDownload={handleDownload}
       />
 
-      <DraftManagerModal
-        isOpen={showDraftManager}
-        drafts={drafts}
-        onClose={() => setShowDraftManager(false)}
-        onLoad={loadDraft}
-        onDelete={deleteDraft}
-      />
-
-      {/* Save Draft Dialog */}
-      {showSaveDraftDialog && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Save Draft</h3>
-            <input
-              type="text"
-              value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
-              placeholder="Enter draft name..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSaveDraftConfirm();
-                }
-              }}
-            />
-            <div className="flex items-center gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowSaveDraftDialog(false);
-                  setDraftName("");
-                }}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveDraftConfirm}
-                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Draft manager and manual save dialog removed - drafts persist automatically */}
 
       {/* AppAlert for validation and notifications */}
       {alertState.open && (

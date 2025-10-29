@@ -73,6 +73,16 @@ interface Window {
       createProjectViaAPI: (profileId: string, projectTitle: string) => Promise<any>;
       updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) => Promise<any>;
     };
+    video: {
+      download: {
+        single: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) => Promise<any>;
+        batch: (
+          videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
+          downloadPath?: string
+        ) => Promise<any>;
+        status: () => Promise<any>;
+      };
+    };
     youtube: {
       getAllChannels: () => Promise<any>;
       getChannelById: (id: string) => Promise<any>;

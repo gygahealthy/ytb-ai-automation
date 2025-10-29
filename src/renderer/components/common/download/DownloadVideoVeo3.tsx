@@ -55,10 +55,10 @@ export default function DownloadVideoVeo3({
       }
 
       // Call main process via preload bridge
-      // Expected to invoke "veo3:downloadVideo" on main process
-      const result = await (window as any).electronAPI.veo3.downloadVideo(videoUrl, filename, downloadPath, videoIndex);
+      // Uses common/video-download module via video.download.single channel
+      const result = await (window as any).electronAPI.video.download.single(videoUrl, filename, downloadPath, videoIndex);
 
-      // Check for success flag in response
+      // Check for success flag in response (ApiResponse format)
       if (!result.success) {
         const errorMessage = result.error || "Download failed";
         setError(errorMessage);
@@ -69,7 +69,7 @@ export default function DownloadVideoVeo3({
         return;
       }
 
-      // Trigger success callback
+      // Trigger success callback with data from response
       if (onSuccess) {
         onSuccess(result.data || result);
       }
