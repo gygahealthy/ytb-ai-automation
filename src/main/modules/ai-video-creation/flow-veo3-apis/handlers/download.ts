@@ -6,12 +6,13 @@ export const downloadRegistrations: IpcRegistration[] = [
   {
     channel: "veo3:downloadVideo",
     description: "Download video from URL to local file system",
-    handler: async (req: { videoUrl: string; filename?: string; downloadPath?: string }) => {
+    handler: async (req: { videoUrl: string; filename?: string; downloadPath?: string; videoIndex?: number }) => {
       try {
         const result = await veo3VideoDownloadService.downloadVideo(
           (req as any).videoUrl,
           (req as any).filename,
-          (req as any).downloadPath
+          (req as any).downloadPath,
+          (req as any).videoIndex
         );
 
         if (!result.success) {

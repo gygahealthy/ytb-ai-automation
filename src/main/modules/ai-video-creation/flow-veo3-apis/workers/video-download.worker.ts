@@ -15,6 +15,7 @@ interface DownloadJob {
   videoUrl: string;
   filename: string;
   downloadPath: string;
+  videoIndex?: number;
 }
 
 interface DownloadResult {
@@ -34,7 +35,17 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
     }
 
     // Use provided downloadPath or default to Downloads folder
-    const targetPath = downloadPath || path.join(app.getPath("home"), "Downloads");
+    let targetPath = downloadPath || path.join(app.getPath("home"), "Downloads");
+
+    // Load settings to check if auto-create date folder is enabled
+    const settings = loadSettings();
+    if (settings?.options?.autoCreateDateFolder) {
+      const today = new Date();
+      const dateFolder = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+        today.getDate()
+      ).padStart(2, "0")}`;
+      targetPath = path.join(targetPath, dateFolder);
+    }
 
     // Ensure target folder exists
     if (!fs.existsSync(targetPath)) {
@@ -76,6 +87,25 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
       error: message,
     };
   }
+}
+
+/**
+ * Load settings from localStorage file (persisted by zustand)
+ */
+function loadSettings(): any {
+  try {
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "file-paths-storage");
+
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, "utf-8");
+      const parsed = JSON.parse(data);
+      return parsed.state || parsed;
+    }
+  } catch (error) {
+    console.error("[Download Worker] Failed to load settings:", error);
+  }
+  return null;
 }
 
 // Listen for download jobs from the main thread

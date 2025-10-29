@@ -13,6 +13,7 @@ interface VideoCreationStore {
   };
   globalPreviewMode: boolean;
   statusFilter: "all" | "idle" | "processing" | "completed" | "failed";
+  sortBy: "index" | "status"; // Sort by array index or by status
 
   // Prompt Actions
   addPrompt: () => void;
@@ -53,6 +54,7 @@ interface VideoCreationStore {
   // UI Actions
   toggleGlobalPreview: () => void;
   setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
+  setSortBy: (sortBy: "index" | "status") => void;
 }
 
 const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -80,6 +82,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
       },
       globalPreviewMode: false,
       statusFilter: "all",
+      sortBy: "index",
 
       // Prompt Actions
       addPrompt: () => {
@@ -371,6 +374,10 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
       setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => {
         set({ statusFilter: filter });
       },
+
+      setSortBy: (sortBy: "index" | "status") => {
+        set({ sortBy });
+      },
     }),
     {
       name: "veo3-video-creation-store",
@@ -382,6 +389,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
         drafts: state.drafts,
         globalPreviewMode: state.globalPreviewMode,
         statusFilter: state.statusFilter,
+        sortBy: state.sortBy,
       }),
     }
   )

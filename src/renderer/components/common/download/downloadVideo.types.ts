@@ -21,6 +21,9 @@ export interface DownloadVideoProps {
   /** Absolute path where video should be saved. If omitted, worker uses default. */
   downloadPath?: string;
 
+  /** Index of the video for auto-indexing (e.g., 1 -> 001) */
+  videoIndex?: number;
+
   /** Called when download starts */
   onStart?: () => void;
 

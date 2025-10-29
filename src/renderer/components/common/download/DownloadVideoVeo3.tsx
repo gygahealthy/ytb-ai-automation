@@ -12,6 +12,7 @@ import { DownloadVideoProps } from "./downloadVideo.types";
  *   - videoUrl (required): URL to download from
  *   - filename (optional): Base filename; .mp4 added by service
  *   - downloadPath (optional): Absolute path for destination; worker uses fallback if omitted
+ *   - videoIndex (optional): Index for auto-indexing filename (e.g., 001, 002)
  *   - onStart, onSuccess, onError, onProgress: Lifecycle callbacks
  *   - disabled, className, iconSize, showSpinner, tooltipText: UI options
  *
@@ -20,6 +21,7 @@ import { DownloadVideoProps } from "./downloadVideo.types";
  *     videoUrl="https://example.com/video.mp4"
  *     filename="my-video"
  *     downloadPath="C:\\Users\\User\\Downloads"
+ *     videoIndex={5}
  *     onSuccess={() => showToast("Downloaded!")}
  *     onError={(err) => showToast(String(err))}
  *   />
@@ -28,6 +30,7 @@ export default function DownloadVideoVeo3({
   videoUrl,
   filename,
   downloadPath,
+  videoIndex,
   onStart,
   onSuccess,
   onError,
@@ -53,7 +56,7 @@ export default function DownloadVideoVeo3({
 
       // Call main process via preload bridge
       // Expected to invoke "veo3:downloadVideo" on main process
-      const result = await (window as any).electronAPI.veo3.downloadVideo(videoUrl, filename, downloadPath);
+      const result = await (window as any).electronAPI.veo3.downloadVideo(videoUrl, filename, downloadPath, videoIndex);
 
       // Check for success flag in response
       if (!result.success) {

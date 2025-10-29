@@ -1,7 +1,12 @@
-import veo3IPC from "../../ipc/veo3";
+import { useEffect, useState, useMemo } from "react";
 import { History, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import veo3IPC from "../../ipc/veo3";
 import { useNavigate } from "react-router-dom";
+import { useDrawer } from "@hooks/useDrawer";
+import { useAlert } from "@hooks/useAlert";
+import { useVideoCreationStore } from "@store/video-creation.store";
+import { useFilePathsStore } from "@store/file-paths.store";
+import { useToast } from "@hooks/useToast";
 import AppAlert from "@components/common/AppAlert";
 import AddJsonModal from "@/renderer/components/video-creation/single-video-page/AddJsonModal";
 import DraftManagerModal from "@/renderer/components/video-creation/single-video-page/DraftManagerModal";
@@ -9,10 +14,6 @@ import JobDetailsModal from "@/renderer/components/video-creation/single-video-p
 import JsonToolbar from "@/renderer/components/video-creation/single-video-page/JsonToolbar";
 import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
 import VideoPromptRow from "@/renderer/components/video-creation/single-video-page/VideoPromptRow";
-import { useDrawer } from "@hooks/useDrawer";
-import { useVideoCreationStore } from "@store/video-creation.store";
-import { useFilePathsStore } from "@store/file-paths.store";
-import { useToast } from "@hooks/useToast";
 
 export default function SingleVideoCreationPage() {
   const [showAddJsonModal, setShowAddJsonModal] = useState(false);
@@ -31,36 +32,40 @@ export default function SingleVideoCreationPage() {
   const { openDrawer } = useDrawer();
   const navigate = useNavigate();
 
-  const {
-    prompts,
-    jobs,
-    drafts,
-    globalPreviewMode,
-    statusFilter,
-    addPrompt,
-    removePrompt,
-    updatePrompt,
-    togglePromptSelection,
-    togglePromptPreview,
-    togglePromptProfileSelect,
-    updatePromptProfile,
-    updatePromptProject,
-    loadFromJson,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    saveDraft,
-    loadDraft,
-    deleteDraft,
-    createJob,
-    updateJobStatus,
-    clearAllPrompts,
-    toggleGlobalPreview,
-    setStatusFilter,
-  } = useVideoCreationStore();
+  // Subscribe to specific store values to ensure re-renders
+  const prompts = useVideoCreationStore((state) => state.prompts);
+  const jobs = useVideoCreationStore((state) => state.jobs);
+  const drafts = useVideoCreationStore((state) => state.drafts);
+  const globalPreviewMode = useVideoCreationStore((state) => state.globalPreviewMode);
+  const statusFilter = useVideoCreationStore((state) => state.statusFilter);
+  const sortBy = useVideoCreationStore((state) => state.sortBy);
 
-  // Ensure global previews are enabled by default when entering the single creation page
+  // Actions
+  const addPrompt = useVideoCreationStore((state) => state.addPrompt);
+  const removePrompt = useVideoCreationStore((state) => state.removePrompt);
+  const updatePrompt = useVideoCreationStore((state) => state.updatePrompt);
+  const togglePromptSelection = useVideoCreationStore((state) => state.togglePromptSelection);
+  const togglePromptPreview = useVideoCreationStore((state) => state.togglePromptPreview);
+  const togglePromptProfileSelect = useVideoCreationStore((state) => state.togglePromptProfileSelect);
+  const updatePromptProfile = useVideoCreationStore((state) => state.updatePromptProfile);
+  const updatePromptProject = useVideoCreationStore((state) => state.updatePromptProject);
+  const loadFromJson = useVideoCreationStore((state) => state.loadFromJson);
+  const undo = useVideoCreationStore((state) => state.undo);
+  const redo = useVideoCreationStore((state) => state.redo);
+  const canUndo = useVideoCreationStore((state) => state.canUndo);
+  const canRedo = useVideoCreationStore((state) => state.canRedo);
+  const saveDraft = useVideoCreationStore((state) => state.saveDraft);
+  const loadDraft = useVideoCreationStore((state) => state.loadDraft);
+  const deleteDraft = useVideoCreationStore((state) => state.deleteDraft);
+  const createJob = useVideoCreationStore((state) => state.createJob);
+  const updateJobStatus = useVideoCreationStore((state) => state.updateJobStatus);
+  const clearAllPrompts = useVideoCreationStore((state) => state.clearAllPrompts);
+  const toggleGlobalPreview = useVideoCreationStore((state) => state.toggleGlobalPreview);
+  const setStatusFilter = useVideoCreationStore((state) => state.setStatusFilter);
+  const setSortBy = useVideoCreationStore((state) => state.setSortBy);
+
+  const toast = useToast();
+  const alert = useAlert(); // Ensure global previews are enabled by default when entering the single creation page
   useEffect(() => {
     // Ensure global preview mode is enabled. toggleGlobalPreview is a toggle (no args),
     // so call it only when the current mode is false.
@@ -77,18 +82,51 @@ export default function SingleVideoCreationPage() {
 
   const hasSelection = prompts.some((p) => p.selected);
 
-  // Filter prompts based on status
-  const filteredPrompts = prompts.filter((prompt) => {
-    if (statusFilter === "all") return true;
+  // Filter and sort prompts based on status and sort preference
+  const filteredPrompts = useMemo(() => {
+    return prompts
+      .filter((prompt) => {
+        if (statusFilter === "all") return true;
 
-    const job = jobs.find((j) => j.promptId === prompt.id);
+        const job = jobs.find((j) => j.promptId === prompt.id);
 
-    if (statusFilter === "idle") {
-      return !job; // No job exists for this prompt
-    }
+        if (statusFilter === "idle") {
+          return !job; // No job exists for this prompt
+        }
 
-    return job?.status === statusFilter;
-  });
+        return job?.status === statusFilter;
+      })
+      .sort((a, b) => {
+        if (sortBy === "status") {
+          // Sort by status priority
+          const statusPriority: Record<string, number> = {
+            failed: 1,
+            processing: 2,
+            completed: 3,
+            idle: 4,
+          };
+
+          const jobA = jobs.find((j) => j.promptId === a.id);
+          const jobB = jobs.find((j) => j.promptId === b.id);
+
+          const statusA = jobA?.status || "idle";
+          const statusB = jobB?.status || "idle";
+
+          const priorityA = statusPriority[statusA] || 999;
+          const priorityB = statusPriority[statusB] || 999;
+
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+          }
+
+          // Within same status, sort by array index
+          return a.order - b.order;
+        }
+
+        // Sort by index (array order)
+        return a.order - b.order;
+      });
+  }, [prompts, jobs, statusFilter, sortBy]);
 
   // Listen for custom event to toggle profile drawer
   useEffect(() => {
@@ -213,14 +251,20 @@ export default function SingleVideoCreationPage() {
 
   const handleCreateVideo = async (promptId: string, promptText: string) => {
     if (!promptText.trim()) {
-      alert("Prompt text cannot be empty");
+      alert.show({
+        message: "Prompt text cannot be empty",
+        severity: "warning",
+      });
       return;
     }
 
     // Get the prompt to determine which profile/project to use
     const prompt = prompts.find((p) => p.id === promptId);
     if (!prompt) {
-      alert("Prompt not found");
+      alert.show({
+        message: "Prompt not found",
+        severity: "error",
+      });
       return;
     }
 
@@ -229,12 +273,20 @@ export default function SingleVideoCreationPage() {
     const effectiveProjectId = prompt.projectId || selectedProjectId;
 
     if (!effectiveProfileId) {
-      alert("Please select a profile first (use the Profile button or set per-row profile)");
+      alert.show({
+        title: "Profile Required",
+        message: "Please select a profile first (use the Profile button or set per-row profile)",
+        severity: "warning",
+      });
       return;
     }
 
     if (!effectiveProjectId) {
-      alert("Please select a project first (use the Profile button or set per-row project)");
+      alert.show({
+        title: "Project Required",
+        message: "Please select a project first (use the Profile button or set per-row project)",
+        severity: "warning",
+      });
       return;
     }
 
@@ -254,7 +306,11 @@ export default function SingleVideoCreationPage() {
 
       if (!result.success) {
         console.error("[VideoCreation] Failed to start video generation:", result.error);
-        alert(`Failed to start video generation: ${result.error}`);
+        alert.show({
+          title: "Generation Failed",
+          message: `Failed to start video generation: ${result.error}`,
+          severity: "error",
+        });
         // Update job status to failed using store method
         updateJobStatus(jobId, "failed", {
           error: result.error,
@@ -276,8 +332,12 @@ export default function SingleVideoCreationPage() {
         `[VideoCreation] Job ${jobId} updated with generationId: ${generationId}. VideoPromptRow will now poll for status updates.`
       );
     } catch (error) {
-      console.error("[VideoCreation] Error starting video generation:", error);
-      alert(`Error: ${error}`);
+      console.error("[VideoCreation] Exception during video generation:", error);
+      alert.show({
+        title: "Error",
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        severity: "error",
+      });
       // Update job status to failed using store method
       updateJobStatus(jobId, "failed", {
         error: String(error),
@@ -511,13 +571,16 @@ export default function SingleVideoCreationPage() {
     }
   };
 
-  const { singleVideoPath } = useFilePathsStore();
-  const toast = useToast();
+  const { singleVideoPath, setSingleVideoPath } = useFilePathsStore();
 
   const handleDownloadSelected = async () => {
     const selectedPrompts = prompts.filter((p) => p.selected);
     if (selectedPrompts.length === 0) {
-      setAlertState({ open: true, message: "Please select at least one prompt to download", severity: "error" });
+      alert.show({
+        title: "No Selection",
+        message: "Please select at least one prompt to download videos",
+        severity: "warning",
+      });
       return;
     }
 
@@ -531,35 +594,58 @@ export default function SingleVideoCreationPage() {
     }
 
     if (videos.length === 0) {
-      setAlertState({ open: true, message: "No completed videos found for selected prompts", severity: "warning" });
+      alert.show({
+        title: "No Completed Videos",
+        message: "No completed videos found for selected prompts",
+        severity: "warning",
+      });
       return;
     }
 
-    toast.info(`Downloading ${videos.length} video(s)...`, "Download", 3000);
-
+    // Show folder selection dialog
     try {
-      const result = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, singleVideoPath || undefined);
+      const result = await (window as any).electronAPI.invoke("dialog:showOpenDialog", {
+        properties: ["openDirectory", "createDirectory"],
+        title: "Select Download Folder",
+        defaultPath: singleVideoPath || undefined,
+      });
 
-      if (!result || !result.success) {
-        const message = result?.error || "Failed to start batch download";
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        // User cancelled - don't proceed with download
+        return;
+      }
+
+      const selectedFolder = result.filePaths[0];
+      setSingleVideoPath(selectedFolder);
+
+      toast.info(`Downloading ${videos.length} video(s)...`, "Download", 3000);
+
+      const downloadResult = await (window as any).electronAPI.veo3.downloadMultipleVideos(videos, selectedFolder || undefined);
+
+      if (!downloadResult || !downloadResult.success) {
+        const message = downloadResult?.error || "Failed to start batch download";
         toast.error(String(message), "Download Failed", 5000);
         return;
       }
 
-      const results: Array<any> = result.data || [];
+      const results: Array<any> = downloadResult.data || [];
       const succeeded = results.filter((r) => r && r.success).length;
       const failed = results.length - succeeded;
 
       if (succeeded > 0) {
-        toast.success(`✓ ${succeeded} video(s) downloaded to ${singleVideoPath || "Downloads"}`, "Download Complete", 4000);
+        toast.success(`✓ ${succeeded} video(s) downloaded to ${selectedFolder}`, "Download Complete", 4000);
       }
       if (failed > 0) {
         toast.error(`⚠️ ${failed} download(s) failed. Check logs for details.`, "Download Errors", 7000);
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      toast.error(message, "Download Error", 5000);
-      console.error("Batch download error:", err);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert.show({
+        title: "Download Error",
+        message: message,
+        severity: "error",
+      });
+      console.error("Download error:", error);
     }
   };
 
@@ -569,13 +655,17 @@ export default function SingleVideoCreationPage() {
 
   const handleSaveDraftConfirm = () => {
     if (!draftName.trim()) {
-      alert("Please enter a draft name");
+      alert.show({
+        title: "Invalid Draft Name",
+        message: "Please enter a draft name",
+        severity: "warning",
+      });
       return;
     }
     saveDraft(draftName);
     setDraftName("");
     setShowSaveDraftDialog(false);
-    alert("Draft saved successfully");
+    toast.success("Draft saved successfully", "Save Complete", 3000);
   };
 
   const handleExportJson = () => {
@@ -599,8 +689,9 @@ export default function SingleVideoCreationPage() {
       null,
       2
     );
-    navigator.clipboard.writeText(json);
-    alert("JSON copied to clipboard");
+    navigator.clipboard.writeText(json).then(() => {
+      toast.success("✓ JSON copied to clipboard", "Copy Complete", 3000);
+    });
   };
 
   const handleShowInfo = (promptId: string) => {
@@ -613,13 +704,19 @@ export default function SingleVideoCreationPage() {
   const handleShowInFolder = (path: string) => {
     // TODO: Implement with IPC
     console.log("Show in folder:", path);
-    alert("This will open the folder in your OS explorer");
+    alert.show({
+      message: "This will open the folder in your OS explorer",
+      severity: "info",
+    });
   };
 
   const handleDownload = (url: string) => {
     // TODO: Implement download
     console.log("Download:", url);
-    alert("Download functionality will be implemented");
+    alert.show({
+      message: "Download functionality will be implemented",
+      severity: "info",
+    });
   };
 
   const handleOpenHistory = () => {
@@ -706,6 +803,8 @@ export default function SingleVideoCreationPage() {
             onCopyJson={handleCopyJson}
             onToggleGlobalPreview={toggleGlobalPreview}
             onStatusFilterChange={setStatusFilter}
+            onSortChange={setSortBy}
+            currentSort={sortBy}
             onCreateMultiple={handleCreateMultiple}
             onDownloadSelected={handleDownloadSelected}
             onSelectAll={useVideoCreationStore.getState().selectAllPrompts}

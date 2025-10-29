@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Download, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
+import { ArrowUpDown, Copy, Download, Eye, EyeOff, FileDown, FileUp, Filter, Play, Redo, Save, Trash2, Undo } from "lucide-react";
+import { useAlert } from "../../../hooks/useAlert";
 // no local react state currently required
 
 interface JsonToolbarProps {
@@ -20,6 +21,8 @@ interface JsonToolbarProps {
   onCopyJson: () => void;
   onToggleGlobalPreview: () => void;
   onStatusFilterChange: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
+  onSortChange?: (sortBy: "index" | "status") => void;
+  currentSort?: "index" | "status";
   onCreateMultiple?: (opts?: { skipConfirm?: boolean }) => void;
   onDownloadSelected?: () => void;
   onSelectAll?: () => void;
@@ -44,14 +47,17 @@ export default function JsonToolbar({
   onCopyJson,
   onToggleGlobalPreview,
   onStatusFilterChange,
+  onSortChange,
+  currentSort = "index",
   onCreateMultiple,
   onDownloadSelected,
   onSelectAll,
   onDeselectAll,
 }: JsonToolbarProps) {
-  // Note: alerts are shown inline via window.alert/confirm in this toolbar
+  // Note: alerts are shown via useAlert hook
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement | null>(null);
+  const alert = useAlert();
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -115,15 +121,15 @@ export default function JsonToolbar({
             onClick={() => {
               if (!onDownloadSelected) return;
               if (!hasSelection) {
-                window.alert("Please select at least one prompt to download videos");
+                alert.show({
+                  title: "No Selection",
+                  message: "Please select at least one prompt to download videos",
+                  severity: "warning",
+                });
                 return;
               }
 
-              const confirmed = window.confirm(
-                `Download all selected videos to your configured folder?\n\nOnly prompts with completed videos will be downloaded.`
-              );
-
-              if (confirmed) onDownloadSelected();
+              onDownloadSelected();
             }}
             aria-label="Download selected videos"
             title="Download selected videos to configured folder"
@@ -215,8 +221,8 @@ export default function JsonToolbar({
             className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             title={globalPreviewMode ? "Hide all previews" : "Show all previews"}
           >
-            {globalPreviewMode ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span className="hidden sm:inline">{globalPreviewMode ? "Hide Previews" : "Show Previews"}</span>
+            {globalPreviewMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <span className="hidden sm:inline">{globalPreviewMode ? "Previews" : "Previews"}</span>
           </button>
 
           <button
@@ -259,7 +265,7 @@ export default function JsonToolbar({
           <span className="hidden sm:inline text-xs text-gray-600 dark:text-gray-400 font-medium">Filter</span>
           {statusFilter !== "all" && (
             <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-500 text-white">
-              {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+              {statusFilter === "idle" ? "Not Created" : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
             </span>
           )}
         </button>
@@ -267,8 +273,8 @@ export default function JsonToolbar({
         {/* Popover */}
         {filterOpen && (
           <div className="absolute right-3 mt-12 z-50">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-2 px-2 w-40">
-              {(["completed", "processing", "failed"] as const).map((filter) => (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-2 px-2 w-48">
+              {(["idle", "completed", "processing", "failed"] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => {
@@ -281,7 +287,7 @@ export default function JsonToolbar({
                       : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                   }`}
                 >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter === "idle" ? "Not Created" : filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </button>
               ))}
               <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
@@ -298,6 +304,21 @@ export default function JsonToolbar({
             </div>
           </div>
         )}
+
+        {/* Sort Button */}
+        <button
+          onClick={() => {
+            const nextSort: "index" | "status" = currentSort === "index" ? "status" : "index";
+            onSortChange?.(nextSort);
+          }}
+          title={`Sort by: ${currentSort === "index" ? "Array Index" : "Status"}`}
+          className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+        >
+          <ArrowUpDown className="w-4 h-4 text-gray-500" />
+          <span className="hidden sm:inline text-xs text-gray-600 dark:text-gray-400 font-medium">
+            {currentSort === "index" ? "By Index" : "By Status"}
+          </span>
+        </button>
       </div>
     </div>
   );

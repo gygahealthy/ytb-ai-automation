@@ -7,7 +7,7 @@ import { veo3VideoCreationService } from "./veo3-apis/veo3-video-creation.servic
  * VEO3 Service - Main Facade
  *
  * This service acts as a backward-compatible facade that delegates to specialized services:
- * - VEO3ProjectService: All project-related operations
+ * - VideoProjectService: All project-related operations
  * - VEO3VideoCreationService: Single video generation operations
  * - VEO3BatchGenerationService: Multiple video generation operations
  * - VEO3StatusCheckerService: Video status checking and refreshing

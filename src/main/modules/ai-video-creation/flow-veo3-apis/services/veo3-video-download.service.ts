@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs";
 import { Worker } from "worker_threads";
 
 interface DownloadJob {
@@ -6,6 +7,7 @@ interface DownloadJob {
   videoUrl: string;
   filename: string;
   downloadPath: string;
+  videoIndex?: number;
 }
 
 interface DownloadResult {
@@ -94,9 +96,10 @@ export class Veo3VideoDownloadService {
   async downloadVideo(
     videoUrl: string,
     filename?: string,
-    downloadPath?: string
+    downloadPath?: string,
+    videoIndex?: number
   ): Promise<{ success: boolean; filePath?: string; message?: string; error?: string }> {
-    const finalFilename = this.sanitizeFilename(filename);
+    const finalFilename = this.sanitizeFilename(filename, videoIndex);
     const id = this.generateId();
 
     return new Promise((resolve, reject) => {
@@ -105,6 +108,7 @@ export class Veo3VideoDownloadService {
         videoUrl,
         filename: finalFilename,
         downloadPath: downloadPath || "",
+        videoIndex,
       };
 
       const pendingDownload: PendingDownload = {
@@ -178,20 +182,63 @@ export class Veo3VideoDownloadService {
   }
 
   /**
-   * Sanitize filename and ensure .mp4 extension
+   * Sanitize filename and apply naming conventions (indexing, epoch)
+   * Also ensure .mp4 extension
    */
-  private sanitizeFilename(filename?: string): string {
-    let finalFilename = filename || `video-${Date.now()}`;
+  private sanitizeFilename(filename?: string, videoIndex?: number): string {
+    let baseName = filename || `video-${Date.now()}`;
 
-    // Add .mp4 extension if not present
-    if (!finalFilename.endsWith(".mp4")) {
-      finalFilename = `${finalFilename}.mp4`;
+    // Remove .mp4 extension if present (we'll add it back at the end)
+    if (baseName.endsWith(".mp4")) {
+      baseName = baseName.slice(0, -4);
+    }
+
+    // Apply auto-indexing if videoIndex is provided
+    // Read from store settings (we'll import the store data via app.getPath userData)
+    const settingsPath = this.getSettingsPath();
+    const settings = this.loadSettings(settingsPath);
+
+    if (settings?.options?.autoIndexFilename && videoIndex !== undefined) {
+      const paddedIndex = String(videoIndex).padStart(3, "0");
+      baseName = `${paddedIndex}_${baseName}`;
+    }
+
+    // Apply epoch timestamp if enabled
+    if (settings?.options?.addEpochTimeToFilename) {
+      const epoch = Date.now();
+      baseName = `${baseName}_${epoch}`;
     }
 
     // Remove invalid characters
-    finalFilename = finalFilename.replace(/[<>:"|?*]/g, "-");
+    baseName = baseName.replace(/[<>:"|?*]/g, "-");
 
-    return finalFilename;
+    // Add .mp4 extension
+    return `${baseName}.mp4`;
+  }
+
+  /**
+   * Get settings path from app userData
+   */
+  private getSettingsPath(): string {
+    const { app } = require("electron");
+    const userDataPath = app.getPath("userData");
+    return path.join(userDataPath, "file-paths-storage.json");
+  }
+
+  /**
+   * Load settings from localStorage file (persisted by zustand)
+   */
+  private loadSettings(settingsPath: string): any {
+    try {
+      if (fs.existsSync(settingsPath)) {
+        const data = fs.readFileSync(settingsPath, "utf-8");
+        const parsed = JSON.parse(data);
+        return parsed.state || parsed;
+      }
+    } catch (error) {
+      console.error("[Veo3VideoDownloadService] Failed to load settings:", error);
+    }
+    return null;
   }
 
   /**

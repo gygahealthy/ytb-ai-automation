@@ -27,7 +27,7 @@ tsConfigPaths.register({
 import { app, BrowserWindow, Menu } from "electron";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
-import { veo3PollingService } from "./modules/ai-video-creation/video-project-manage/services/veo3.service";
+import { veo3PollingService } from "./modules/ai-video-creation/flow-veo3-apis/services/veo3-apis/veo3-polling.service";
 import { getGlobalRotationWorkerManager } from "./modules/common/cookie-rotation/services/global-rotation-worker-manager.service";
 import { killAllTrackedChromePIDs } from "./modules/gemini-apis/helpers/browser/browser-launcher-headless.helpers";
 import { execSync } from "child_process";
