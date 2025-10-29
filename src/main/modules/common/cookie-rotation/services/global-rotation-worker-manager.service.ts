@@ -552,20 +552,30 @@ export class GlobalRotationWorkerManager {
                 if (worker.workerProcess && !worker.workerProcess.killed) {
                   logger.warn(`[rotation-manager] Force killing worker process ${key} (PID: ${worker.workerProcess.pid})`);
 
-                  try {
-                    if (process.platform === "win32") {
-                      // Windows: use taskkill with /T to kill process tree (children too)
-                      execSync(`taskkill /F /PID ${worker.workerProcess.pid} /T 2>nul || true`, {
-                        windowsHide: true,
-                        timeout: 2000,
-                      });
-                    } else {
-                      // Unix: use SIGKILL
-                      worker.workerProcess.kill("SIGKILL");
+                    try {
+                      if (process.platform === "win32") {
+                        // Windows: use taskkill with /T to kill process tree (children too)
+                        execSync(`taskkill /F /PID ${worker.workerProcess.pid} /T 2>nul || true`, {
+                          windowsHide: true,
+                          timeout: 2000,
+                        });
+                      } else {
+                        // Unix-like: try to kill child processes first, then kill parent
+                        try {
+                          execSync(`pkill -P ${worker.workerProcess.pid} 2>/dev/null || true`, { timeout: 2000 });
+                        } catch (_e) {
+                          // ignore
+                        }
+
+                        try {
+                          worker.workerProcess.kill("SIGKILL");
+                        } catch (_e) {
+                          // ignore
+                        }
+                      }
+                    } catch (killErr) {
+                      logger.debug(`[rotation-manager] Error killing worker process:`, killErr);
                     }
-                  } catch (killErr) {
-                    logger.debug(`[rotation-manager] Error killing worker process:`, killErr);
-                  }
                 }
                 resolve();
               }, 1500);
@@ -596,17 +606,25 @@ export class GlobalRotationWorkerManager {
       logger.warn("[rotation-manager] Worker cleanup timed out, forcing exit", timeoutError);
     }
 
-    // Force kill any remaining Chrome processes on Windows
-    if (process.platform === "win32") {
-      try {
-        logger.info("[rotation-manager] Force killing any remaining Chrome processes");
+    // Force kill any remaining Chrome processes as a final safety-net
+    try {
+      if (process.platform === "win32") {
+        logger.info("[rotation-manager] Force killing any remaining Chrome processes (Windows)");
         execSync("taskkill /F /IM chrome.exe 2>nul || true", {
           windowsHide: true,
           timeout: 3000,
         });
-      } catch (error) {
-        logger.debug("[rotation-manager] Failed to force kill Chrome (may have already exited)");
+      } else {
+        logger.info("[rotation-manager] Force killing any remaining Chrome processes (Unix-like)");
+        try {
+          // pkill by process name is a best-effort approach on macOS/Linux
+          execSync("pkill -f chrome 2>/dev/null || true", { timeout: 3000 });
+        } catch (_e) {
+          // ignore
+        }
       }
+    } catch (error) {
+      logger.debug("[rotation-manager] Failed to force kill Chrome (may have already exited)");
     }
 
     this.workers.clear();

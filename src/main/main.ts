@@ -24,7 +24,8 @@ tsConfigPaths.register({
   },
 });
 
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, Menu, nativeImage } from "electron";
+import * as fs from "fs";
 import { database } from "./storage/database";
 import { registerIPCHandlers } from "./handlers";
 import { veo3PollingService } from "./modules/ai-video-creation/flow-veo3-apis/services/veo3-apis/veo3-polling.service";
@@ -92,17 +93,29 @@ class ElectronApp {
     }
 
     // Force kill any remaining Chrome processes as final safety net
-    if (process.platform === "win32") {
-      try {
-        console.log("[Electron] Force killing any remaining Chrome processes");
-        execSync("taskkill /F /IM chrome.exe 2>nul || true", {
-          windowsHide: true,
-          timeout: 5000,
-        });
-        console.log("✅ Chrome cleanup complete");
-      } catch (error) {
-        console.warn("⚠️ Failed to force kill Chrome processes:", error);
+    try {
+      if (process.platform === "win32") {
+        try {
+          console.log("[Electron] Force killing any remaining Chrome processes (Windows)");
+          execSync("taskkill /F /IM chrome.exe 2>nul || true", {
+            windowsHide: true,
+            timeout: 5000,
+          });
+          console.log("✅ Chrome cleanup complete");
+        } catch (error) {
+          console.warn("⚠️ Failed to force kill Chrome processes:", error);
+        }
+      } else {
+        try {
+          console.log("[Electron] Force killing any remaining Chrome processes (Unix-like)");
+          execSync("pkill -f chrome 2>/dev/null || true", { timeout: 3000 });
+          console.log("✅ Chrome cleanup complete");
+        } catch (error) {
+          console.warn("⚠️ Failed to force kill Chrome processes:", error);
+        }
       }
+    } catch (error) {
+      console.warn("⚠️ Failed to run final Chrome cleanup:", error);
     }
 
     process.exit(exitCode);
@@ -111,6 +124,46 @@ class ElectronApp {
   private initializeApp(): void {
     // Register app lifecycle handlers first
     app.on("ready", async () => {
+      // macOS: set Dock icon from project assets if available
+      try {
+        if (process.platform === "darwin") {
+          const devIcns = path.join(__dirname, "../../src/renderer/assets/icon.icns");
+          const prodIcns = path.join(__dirname, "../renderer/assets/icon.icns");
+          const devPng = path.join(__dirname, "../../src/renderer/assets/icon.png");
+          const prodPng = path.join(__dirname, "../renderer/assets/icon.png");
+
+          let iconPath: string | null = null;
+          if (process.env.NODE_ENV === "development" && fs.existsSync(devIcns)) {
+            iconPath = devIcns;
+          } else if (fs.existsSync(prodIcns)) {
+            iconPath = prodIcns;
+          } else if (process.env.NODE_ENV === "development" && fs.existsSync(devPng)) {
+            iconPath = devPng;
+          } else if (fs.existsSync(prodPng)) {
+            iconPath = prodPng;
+          }
+
+          if (iconPath) {
+            try {
+              const img = nativeImage.createFromPath(iconPath);
+              if (!img.isEmpty()) {
+                app.dock.setIcon(img);
+                console.log(`[Electron] macOS dock icon set from ${iconPath}`);
+              } else {
+                console.warn("[Electron] macOS dock icon loaded but appears empty");
+              }
+            } catch (err) {
+              console.warn("[Electron] Failed to set macOS dock icon:", err);
+            }
+          } else {
+            console.warn(
+              "[Electron] No macOS icon found in renderer assets. Add 'icon.icns' to src/renderer/assets and include it in your build for an app dock icon."
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("[Electron] Error while attempting to set macOS dock icon:", err);
+      }
       // Initialize database when app is ready
       await database.initialize();
 
@@ -155,13 +208,23 @@ class ElectronApp {
         } catch (e) {
           /* ignore */
         }
-        // Final safety net
-        if (process.platform === "win32") {
-          try {
-            execSync("taskkill /F /IM chrome.exe 2>nul || true", { windowsHide: true, timeout: 3000 });
-          } catch (e) {
-            /* ignore */
+        // Final safety net: try platform-appropriate Chrome process cleanup
+        try {
+          if (process.platform === "win32") {
+            try {
+              execSync("taskkill /F /IM chrome.exe 2>nul || true", { windowsHide: true, timeout: 3000 });
+            } catch (e) {
+              /* ignore */
+            }
+          } else {
+            try {
+              execSync("pkill -f chrome 2>/dev/null || true", { timeout: 3000 });
+            } catch (e) {
+              /* ignore */
+            }
           }
+        } catch (e) {
+          /* ignore */
         }
       } catch (error) {
         console.error("⚠️ Error during quit cleanup", error);

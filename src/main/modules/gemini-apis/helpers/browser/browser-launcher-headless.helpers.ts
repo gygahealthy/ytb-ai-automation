@@ -231,7 +231,7 @@ export async function launchHeadlessBrowser(
           });
 
           // Force kill the Chrome process since we can't connect to it
-          if (chromeProcess && chromeProcess.pid) {
+              if (chromeProcess && chromeProcess.pid) {
             logger.warn("[headless-launcher] Force killing unresponsive Chrome process", {
               pid: chromeProcess.pid,
             });
@@ -240,7 +240,17 @@ export async function launchHeadlessBrowser(
                 // Use /T to kill entire process tree (parent + all children)
                 execSync(`taskkill /F /PID ${chromeProcess.pid} /T 2>nul`, { timeout: 2000, windowsHide: true });
               } else {
-                process.kill(chromeProcess.pid, "SIGKILL");
+                // Unix-like: attempt to kill children first, then kill parent
+                try {
+                  execSync(`pkill -P ${chromeProcess.pid} 2>/dev/null || true`, { timeout: 2000 });
+                } catch (_e) {
+                  // ignore
+                }
+                try {
+                  process.kill(chromeProcess.pid, "SIGKILL");
+                } catch (_e) {
+                  // ignore
+                }
               }
               chromePIDRegistry.unregister(chromeProcess.pid);
             } catch (killErr) {
@@ -288,7 +298,16 @@ export async function launchHeadlessBrowser(
           // Use /T to kill entire process tree (parent + all children)
           execSync(`taskkill /F /PID ${chromeProcess.pid} /T 2>nul`, { timeout: 2000, windowsHide: true });
         } else {
-          process.kill(chromeProcess.pid, "SIGKILL");
+          try {
+            execSync(`pkill -P ${chromeProcess.pid} 2>/dev/null || true`, { timeout: 2000 });
+          } catch (_e) {
+            // ignore
+          }
+          try {
+            process.kill(chromeProcess.pid, "SIGKILL");
+          } catch (_e) {
+            // ignore
+          }
         }
         chromePIDRegistry.unregister(chromeProcess.pid);
       } catch (killErr) {

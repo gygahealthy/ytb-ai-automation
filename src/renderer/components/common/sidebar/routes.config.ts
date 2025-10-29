@@ -42,6 +42,13 @@ export const routeConfig: RouteConfig[] = [
         path: "/profiles/cookie-rotation",
         page: "profiles.cookie-rotation",
       },
+      {
+        id: "profiles.instance-dashboard",
+        label: "Instances",
+        icon: PlayCircle,
+        path: "/profiles/instance",
+        page: "profiles.instance",
+      },
     ],
   },
   {
@@ -115,22 +122,6 @@ export const routeConfig: RouteConfig[] = [
         icon: FlaskConical,
         path: "/master-prompt/prompt-playground",
         page: "master-prompt.prompt-playground",
-      },
-    ],
-  },
-  {
-    id: "automation",
-    label: "Automation",
-    icon: PlayCircle,
-    page: "automation",
-    defaultOpen: true,
-    children: [
-      {
-        id: "automation.dashboard",
-        label: "Browser Instance",
-        icon: LayoutDashboard,
-        path: "/automation/instance",
-        page: "automation.dashboard",
       },
     ],
   },

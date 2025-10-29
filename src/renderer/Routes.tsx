@@ -29,9 +29,9 @@ export default function AppRoutes() {
         {/* Profiles routes */}
         <Route path="/profiles" element={<ProfilesPage />} />
         <Route path="/profiles/cookie-rotation" element={<CookieRotationConfigPage />} />
-
         <Route path="/automation" element={<AutomationPage />} />
-        <Route path="/automation/instance" element={<InstanceDashboard />} />
+        <Route path="/profiles/instance" element={<InstanceDashboard />} />
+        <Route path="/profiles/instance/:profileId" element={<InstanceDashboard />} />
         <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
         <Route path="/master-prompt/dashboard" element={<MasterPromptPage />} />
         <Route path="/master-prompt/master-prompts" element={<MasterPromptPage />} />

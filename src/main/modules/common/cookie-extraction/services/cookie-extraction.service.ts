@@ -335,8 +335,27 @@ export class CookieExtractionService {
           execSync(`taskkill /F /PID ${chromePid} /T`, { timeout: 3000, windowsHide: true });
           logger.debug("[CookieExtractionService] Chrome process killed successfully");
         } else if (typeof chromeProcess.kill === "function") {
-          chromeProcess.kill("SIGKILL");
-          logger.debug("[CookieExtractionService] Chrome process killed (SIGKILL)");
+          // Attempt to kill child processes first on Unix-like systems, then kill the parent
+          try {
+            if (process.platform === "darwin" || process.platform === "linux") {
+              const { execSync } = require("child_process");
+              try {
+                // Kill child processes of the Chrome PID (best-effort)
+                execSync(`pkill -P ${chromePid} 2>/dev/null || true`, { timeout: 2000 });
+              } catch (_e) {
+                // ignore
+              }
+            }
+          } catch (_err) {
+            // ignore
+          }
+
+          try {
+            chromeProcess.kill("SIGKILL");
+            logger.debug("[CookieExtractionService] Chrome process killed (SIGKILL)");
+          } catch (killErr) {
+            logger.debug("[CookieExtractionService] Error killing chrome process (may have already exited)", killErr);
+          }
         }
       } catch (e) {
         logger.debug("[CookieExtractionService] Error killing chrome process (may have already exited)", e);

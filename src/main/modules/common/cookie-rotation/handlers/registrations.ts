@@ -13,7 +13,21 @@ export const registrations: any[] = [
       try {
         // Ensure manager is initialized (this initializes cookieRotationConfigService)
         await getGlobalRotationWorkerManager();
-        const data = await cookieRotationConfigService.getAll();
+        let data = await cookieRotationConfigService.getAll();
+
+        // If there are no cookies configured yet, return a list of all profiles
+        // with empty cookies arrays so the renderer can show per-profile add actions.
+        if (!data || data.length === 0) {
+          try {
+            const { profileRepository } = await import("../../../profile-management/repository/profile.repository.js");
+            const profiles = await profileRepository.findAll();
+            data = profiles.map((p: any) => ({ profileId: p.id, profileName: p.name, cookies: [] }));
+          } catch (err) {
+            // If profile repository isn't available for some reason, fall back to empty array
+            data = [];
+          }
+        }
+
         return { success: true, data };
       } catch (error: any) {
         return { success: false, error: error.message || String(error) };

@@ -97,8 +97,18 @@ class ChromePIDRegistry {
             windowsHide: true,
           });
         } else {
-          // Unix/Mac: send SIGKILL signal
-          process.kill(pid, "SIGKILL");
+          // Unix/Mac: try to kill child processes first, then kill parent
+          try {
+            execSync(`pkill -P ${pid} 2>/dev/null || true`, { timeout: 2000 });
+          } catch (_e) {
+            // ignore
+          }
+
+          try {
+            process.kill(pid, "SIGKILL");
+          } catch (_e) {
+            // ignore
+          }
         }
         this.unregister(pid);
         killedCount++;

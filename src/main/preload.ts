@@ -217,7 +217,57 @@ contextBridge.exposeInMainWorld("electronAPI", {
   cookieRotation: {
     getStatus: () => ipcRenderer.invoke("cookie-rotation:get-status"),
     getProfiles: () => ipcRenderer.invoke("cookie-rotation:get-profiles"),
-    getProfilesConfig: () => ipcRenderer.invoke("cookie-rotation:get-profiles-config"),
+    // Resilient wrapper: try cookie-rotation:get-profiles-config first; if it
+    // returns no data, fall back to listing all profiles so the renderer can
+    // render per-profile empty states and Add Cookie actions.
+    getProfilesConfig: async () => {
+      try {
+        const result = await ipcRenderer.invoke("cookie-rotation:get-profiles-config");
+        // If the handler returned a shape like { success: true, data: [...] }, use it
+        if (result && typeof result === "object" && (result.success === true || result.success === false)) {
+          // If success but empty data, attempt to fall back
+          if (result.success && Array.isArray(result.data) && result.data.length === 0) {
+            try {
+              const profiles = await ipcRenderer.invoke("profile:getAll");
+              if (profiles && Array.isArray(profiles) && profiles.length > 0) {
+                const mapped = profiles.map((p: any) => ({ profileId: p.id, profileName: p.name, cookies: [] }));
+                return { success: true, data: mapped };
+              }
+            } catch (_e) {
+              // ignore fallback errors
+            }
+          }
+          return result;
+        }
+
+        // Otherwise if the direct invoke returned array (legacy), use it or fall back
+        if (Array.isArray(result) && result.length === 0) {
+          try {
+            const profiles = await ipcRenderer.invoke("profile:getAll");
+            if (profiles && Array.isArray(profiles)) {
+              const mapped = profiles.map((p: any) => ({ profileId: p.id, profileName: p.name, cookies: [] }));
+              return { success: true, data: mapped };
+            }
+          } catch (_e) {
+            // ignore
+          }
+        }
+
+        return { success: true, data: result };
+      } catch (err) {
+        // On error, attempt fallback to profile:getAll
+        try {
+          const profiles = await ipcRenderer.invoke("profile:getAll");
+          if (profiles && Array.isArray(profiles)) {
+            const mapped = profiles.map((p: any) => ({ profileId: p.id, profileName: p.name, cookies: [] }));
+            return { success: true, data: mapped };
+          }
+        } catch (_e) {
+          // final fallback - return empty
+        }
+        return { success: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
     updateCookieConfig: (cookieId: string, config: any) =>
       ipcRenderer.invoke("cookie-rotation:update-cookie-config", cookieId, config),
     getCookieConfig: (cookieId: string) => ipcRenderer.invoke("cookie-rotation:get-cookie-config", cookieId),

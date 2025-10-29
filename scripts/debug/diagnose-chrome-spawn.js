@@ -96,11 +96,22 @@ async function testSpawn() {
         checkPortInUse();
       }
 
-      // Kill any lingering Chrome processes
+      // Kill any lingering Chrome processes (platform-appropriate)
       console.log("\n🧹 Cleaning up test processes...");
-      require("child_process").execSync(
-        "taskkill /F /IM chrome.exe /T 2>nul || exit 0"
-      );
+      try {
+        if (process.platform === "win32") {
+          require("child_process").execSync("taskkill /F /IM chrome.exe /T 2>nul || exit 0");
+        } else {
+          // macOS / Linux - best-effort using pkill
+          try {
+            require("child_process").execSync("pkill -f chrome 2>/dev/null || true");
+          } catch (_e) {
+            // ignore
+          }
+        }
+      } catch (_e) {
+        // ignore cleanup errors
+      }
 
       resolve(!portResponding);
     }, 500);
@@ -151,7 +162,9 @@ testSpawn().then((hasProblem) => {
   if (hasProblem) {
     console.log("⚠️  DIAGNOSIS: Chrome spawn issue detected");
     console.log("\nRecommended fixes:");
-    console.log("1. Kill all Chrome instances: taskkill /F /IM chrome.exe");
+  console.log("1. Kill all Chrome instances:");
+  console.log("   - Windows: taskkill /F /IM chrome.exe");
+  console.log("   - macOS / Linux: pkill -f chrome  (or: killall -q chrome)");
     console.log("2. Check if profile dir is locked");
     console.log("3. Try with stdio: 'pipe' to capture errors");
   } else {

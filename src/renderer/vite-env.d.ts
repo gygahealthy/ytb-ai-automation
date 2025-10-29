@@ -127,7 +127,23 @@ interface Window {
     cookieRotation: {
       getStatus: () => Promise<any>;
       getProfiles: () => Promise<any>;
-      getProfilesConfig: () => Promise<any>;
+      // Returns ApiResponse-like shape: { success: boolean; data: ProfileWithCookieConfig[] }
+      getProfilesConfig: () => Promise<{
+        success: boolean;
+        data: Array<{
+          profileId: string;
+          profileName?: string;
+          cookies: Array<{
+            cookieId: string;
+            service: string;
+            url: string;
+            status: string;
+            lastRotatedAt?: string;
+            config?: any;
+          }>;
+        }>;
+        error?: string;
+      }>;
       updateCookieConfig: (cookieId: string, config: any) => Promise<any>;
       getCookieConfig: (cookieId: string) => Promise<any>;
       startWorker: (profileId: string, cookieId: string) => Promise<any>;

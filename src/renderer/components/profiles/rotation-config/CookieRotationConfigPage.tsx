@@ -52,8 +52,31 @@ export default function CookieRotationConfigPage() {
     try {
       const result = await window.electronAPI.cookieRotation.getProfilesConfig();
       if (result.success && result.data) {
-        setProfiles(result.data);
-        setOriginalProfiles(JSON.parse(JSON.stringify(result.data)));
+        // Normalize incoming data to ensure every cookie has a valid config
+        const normalized: ProfileWithCookieConfig[] = (result.data as any[]).map((p: any) => ({
+          profileId: p.profileId,
+          profileName: p.profileName,
+          cookies: (p.cookies || []).map((c: any) => ({
+            cookieId: c.cookieId,
+            service: c.service,
+            url: c.url,
+            status: c.status,
+            rawCookieString: c.rawCookieString ?? null,
+            lastRotatedAt: c.lastRotatedAt,
+            config:
+              c.config ||
+              ({
+                cookieId: c.cookieId,
+                launchWorkerOnStartup: false,
+                enabledRotationMethods: ["refreshCreds", "rotateCookie"],
+                rotationMethodOrder: ["refreshCreds", "rotateCookie"],
+                rotationIntervalMinutes: 60,
+              } as CookieRotationConfig),
+          })),
+        }));
+
+        setProfiles(normalized);
+        setOriginalProfiles(JSON.parse(JSON.stringify(normalized)));
       } else {
         console.error("Failed to load profiles config:", result.error);
         setSaveMessage({ type: "error", text: `Failed to load profiles: ${result.error || "unknown error"}` });

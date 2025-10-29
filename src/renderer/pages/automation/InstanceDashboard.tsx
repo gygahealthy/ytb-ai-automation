@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { Play, Settings } from 'lucide-react';
 import { useAlert } from '../../hooks/useAlert';
@@ -11,6 +12,8 @@ export default function InstanceDashboard() {
   const alertApi = useAlert();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  // Read optional profileId param from the route
+  const { profileId: routeProfileIdParam } = useParams<{ profileId?: string }>();
   const [instances, setInstances] = useState<InstanceState[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
@@ -28,12 +31,22 @@ export default function InstanceDashboard() {
   const loadProfiles = async () => {
     const res = await window.electronAPI.profile.getAll();
     if (res?.success && res.data) {
-      setProfiles(res.data.map((p: any) => ({ id: p.id, name: p.name })));
-      if (res.data.length > 0) {
-        setSelectedProfileId(res.data[0].id);
+      const list = res.data.map((p: any) => ({ id: p.id, name: p.name }));
+      setProfiles(list);
+
+  // If a profileId was passed in the route params, prefer that as the selected profile
+  if (routeProfileIdParam) {
+        // ensure the passed id exists in the list
+        const exists = list.find((p: any) => p.id === routeProfileIdParam);
+        if (exists) setSelectedProfileId(routeProfileIdParam);
+        else if (list.length > 0) setSelectedProfileId(list[0].id);
+      } else {
+        if (list.length > 0) setSelectedProfileId(list[0].id);
       }
     }
   };
+
+  
 
   const loadInstances = async () => {
     // use multi-instance specific API
