@@ -85,7 +85,7 @@ export class ImageVEO3ApiClient {
       }
 
       const data: FlowUploadImageResponse = await response.json();
-      logger.info(`Successfully uploaded image. MediaGenerationId: ${data.mediaGenerationId?.workflowId}`);
+      logger.info(`Successfully uploaded image. MediaGenerationId: ${data.mediaGenerationId?.mediaGenerationId}`);
 
       return {
         success: true,
@@ -190,13 +190,15 @@ export class ImageVEO3ApiClient {
    * Fetch a single image by its name (mediaGenerationId)
    * @param bearerToken - Bearer token for authentication
    * @param imageName - Image name from Flow API (CAMa...)
+   * @param apiKey - FLOW_NEXT_KEY extracted from Next.js app (AIzaSy...)
    */
   async fetchImage(
     bearerToken: string,
-    imageName: string
+    imageName: string,
+    apiKey: string
   ): Promise<{ success: boolean; data?: FlowFetchImageResponse; error?: string }> {
     try {
-      const url = `${this.mediaBaseUrl}/media/${imageName}?key=[SECRET]&clientContext.tool=PINHOLE`;
+      const url = `${this.mediaBaseUrl}/media/${imageName}?key=${apiKey}&clientContext.tool=PINHOLE`;
 
       logger.info(`Fetching image: ${imageName}`);
 

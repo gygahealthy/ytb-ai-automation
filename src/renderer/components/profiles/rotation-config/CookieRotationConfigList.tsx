@@ -28,6 +28,7 @@ interface CookieRotationConfigListProps {
   onStartWorker?: (profileId: string, cookieId: string) => Promise<void>;
   onStopWorker?: (profileId: string, cookieId: string) => Promise<void>;
   allExpanded?: boolean;
+  showAllProfiles?: boolean;
 }
 
 export default function CookieRotationConfigList({
@@ -40,6 +41,7 @@ export default function CookieRotationConfigList({
   onStartWorker,
   onStopWorker,
   allExpanded = false,
+  showAllProfiles = false,
 }: CookieRotationConfigListProps) {
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
   // Use null so we treat the initial prop value as a "change" and apply it on mount
@@ -78,8 +80,17 @@ export default function CookieRotationConfigList({
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
           <span className="text-3xl">🍪</span>
         </div>
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No profiles with cookies found</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Add cookies to profiles to configure rotation settings</p>
+        {showAllProfiles ? (
+          <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No profiles found</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Create a profile to get started</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No profiles with cookies found</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Add cookies to profiles to configure rotation settings</p>
+          </>
+        )}
       </div>
     );
   }

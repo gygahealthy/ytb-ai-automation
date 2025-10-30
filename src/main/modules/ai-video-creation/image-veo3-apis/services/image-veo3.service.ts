@@ -8,6 +8,7 @@ import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
 import { extractBearerToken } from "../../flow-veo3-apis/helpers/veo3-headers.helper";
 import { imageVEO3ApiClient } from "../apis/image-veo3-api.client";
 import { veo3ImageRepository } from "../repository/image.repository";
+import { secretExtractionService } from "../../../common/secret-extraction/services/secret-extraction.service";
 import type { Veo3ImageGeneration, FlowUserWorkflow } from "../types/image.types";
 
 const logger = new Logger("ImageVeo3Service");
@@ -54,48 +55,35 @@ export class ImageVeo3Service {
         return { success: false, error: uploadResult.error || "Failed to upload image" };
       }
 
-      const { mediaGenerationId } = uploadResult.data;
-      if (!mediaGenerationId) {
+      const { mediaGenerationId: mediaIdObj } = uploadResult.data;
+      if (!mediaIdObj || !mediaIdObj.mediaGenerationId) {
         return { success: false, error: "Invalid upload response: missing mediaGenerationId" };
       }
 
-      // Fetch the uploaded image to get the full metadata including fifeUrl
-      const imageName = `CAMa${mediaGenerationId.workflowId}${Buffer.from(mediaGenerationId.workflowStepId).toString(
-        "base64"
-      )}${Buffer.from(mediaGenerationId.mediaKey).toString("base64")}`;
+      // The mediaGenerationId is already a complete string (CAMa...)
+      const imageName = mediaIdObj.mediaGenerationId;
+
+      logger.info(`Generated image name: ${imageName}`);
 
       // Wait a bit for the image to be available
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const fetchResult = await imageVEO3ApiClient.fetchImage(tokenResult.token, imageName);
-      if (!fetchResult.success || !fetchResult.data) {
-        logger.warn("Failed to fetch uploaded image metadata, continuing without fifeUrl");
+      // Use downloadSingleImage to fetch and save the image (consistent with sync flow)
+      const downloadResult = await this.downloadSingleImage(profileId, imageName, localStoragePath);
+      if (!downloadResult.success) {
+        logger.warn("Failed to download uploaded image, saving metadata only");
       }
 
-      // Download and save locally
-      let localPath: string | undefined;
-      if (fetchResult.success && fetchResult.data?.userUploadedImage?.fifeUrl) {
-        const downloadResult = await this.downloadAndSaveImage(
-          fetchResult.data.userUploadedImage.fifeUrl,
-          localStoragePath,
-          mediaGenerationId.mediaKey
-        );
-        if (downloadResult.success) {
-          localPath = downloadResult.path;
-        }
+      // Get the saved image from database (downloadSingleImage creates it)
+      const savedImage = await veo3ImageRepository.findByName(imageName);
+      if (!savedImage) {
+        return { success: false, error: "Failed to save image to database" };
       }
 
-      // Save to database
-      const imageGeneration = await veo3ImageRepository.createImageGeneration({
-        profileId,
-        name: imageName,
+      const imageGeneration: Veo3ImageGeneration = {
+        ...savedImage,
         aspectRatio,
-        workflowId: mediaGenerationId.workflowId,
-        mediaKey: mediaGenerationId.mediaKey,
-        localPath,
-        fifeUrl: fetchResult.data?.userUploadedImage?.fifeUrl,
-        createdAt: new Date(),
-      });
+      };
 
       logger.info(`Successfully uploaded and saved image: ${imageGeneration.id}`);
 
@@ -157,31 +145,26 @@ export class ImageVeo3Service {
   }
 
   /**
-   * Sync images from Flow server to local database and storage
+   * Sync image metadata from Flow server to local database (without downloading images)
    * @param profileId - Profile ID
-   * @param localStoragePath - Directory to save images
-   * @param maxPages - Maximum number of pages to sync (default: 5)
+   * @param maxPages - Maximum number of pages to sync (default: all available)
+   * @param startCursor - Optional cursor to resume from
+   * @returns Synced count, skipped count, and last cursor for next fetch
    */
-  async syncImagesFromFlow(
+  async syncImageMetadata(
     profileId: string,
-    localStoragePath: string,
-    maxPages: number = 5
-  ): Promise<ApiResponse<{ synced: number; skipped: number }>> {
+    maxPages?: number,
+    startCursor?: string | null
+  ): Promise<ApiResponse<{ synced: number; skipped: number; lastCursor?: string; hasMore: boolean }>> {
     try {
-      let cursor: string | null = null;
+      let cursor: string | null = startCursor || null;
       let synced = 0;
       let skipped = 0;
       let pagesProcessed = 0;
 
-      // Get bearer token for image downloads
-      const tokenResult = await this.getBearerToken(profileId);
-      if (!tokenResult.success || !tokenResult.token) {
-        return { success: false, error: tokenResult.error || "Failed to get bearer token" };
-      }
+      logger.info(`Starting image metadata sync for profile: ${profileId}`);
 
-      logger.info(`Starting image sync for profile: ${profileId}`);
-
-      while (pagesProcessed < maxPages) {
+      while (!maxPages || pagesProcessed < maxPages) {
         const fetchResult = await this.fetchUserImages(profileId, 18, cursor);
         if (!fetchResult.success || !fetchResult.data) {
           break;
@@ -201,32 +184,27 @@ export class ImageVeo3Service {
             continue;
           }
 
-          // Extract IDs from name (this is a simplified extraction - may need refinement)
-          const workflowId = name.substring(4, 40); // Approximate extraction
-          const mediaKey = name.substring(name.length - 36); // Approximate extraction
-
-          // Download and save locally if fifeUrl is available
-          let localPath: string | undefined;
-          if (workflow.media.userUploadedImage?.fifeUrl) {
-            const downloadResult = await this.downloadAndSaveImage(
-              workflow.media.userUploadedImage.fifeUrl,
-              localStoragePath,
-              mediaKey
-            );
-            if (downloadResult.success) {
-              localPath = downloadResult.path;
-            }
+          // Extract IDs from workflow.media.mediaGenerationId
+          const mediaGenerationId = workflow.media.mediaGenerationId;
+          if (!mediaGenerationId) {
+            logger.warn(`Skipping image ${name}: missing mediaGenerationId`);
+            skipped++;
+            continue;
           }
 
-          // Save to database
+          const workflowId = mediaGenerationId.workflowId;
+          const mediaKey = mediaGenerationId.mediaKey;
+          const fifeUrl = workflow.media.userUploadedImage?.fifeUrl;
+
+          // Save metadata to database (without localPath - images not downloaded yet)
           await veo3ImageRepository.createImageGeneration({
             profileId,
             name,
             aspectRatio: workflow.media.userUploadedImage?.aspectRatio,
             workflowId,
             mediaKey,
-            localPath,
-            fifeUrl: workflow.media.userUploadedImage?.fifeUrl,
+            localPath: undefined, // Will be set when image is downloaded
+            fifeUrl,
             createdAt: new Date(workflow.createTime),
           });
 
@@ -241,13 +219,121 @@ export class ImageVeo3Service {
         pagesProcessed++;
       }
 
-      logger.info(`Image sync completed: ${synced} synced, ${skipped} skipped`);
+      logger.info(`Image metadata sync completed: ${synced} synced, ${skipped} skipped, lastCursor: ${cursor || 'none'}`);
 
-      return { success: true, data: { synced, skipped } };
+      return { success: true, data: { synced, skipped, lastCursor: cursor || undefined, hasMore: !!cursor } };
     } catch (error) {
-      logger.error("Error syncing images from Flow", error);
+      logger.error("Error syncing image metadata from Flow", error);
       return { success: false, error: String(error) };
     }
+  }
+
+  /**
+   * Download and save a single image by its name (mediaGenerationId)
+   * @param profileId - Profile ID
+   * @param imageName - Image name from Flow API (CAMa...)
+   * @param localStoragePath - Directory to save the image
+   * @returns Success status and local path
+   */
+  async downloadSingleImage(
+    profileId: string,
+    imageName: string,
+    localStoragePath: string
+  ): Promise<ApiResponse<{ localPath: string }>> {
+    try {
+      // Get existing image record
+      const existing = await veo3ImageRepository.findByName(imageName);
+      if (!existing) {
+        return { success: false, error: "Image not found in database. Sync metadata first." };
+      }
+
+      // Check if already downloaded
+      if (existing.localPath) {
+        logger.info(`Image ${imageName} already downloaded at: ${existing.localPath}`);
+        return { success: true, data: { localPath: existing.localPath } };
+      }
+
+      // Get bearer token
+      const tokenResult = await this.getBearerToken(profileId);
+      if (!tokenResult.success || !tokenResult.token) {
+        return { success: false, error: tokenResult.error || "Failed to get bearer token" };
+      }
+
+      // Get FLOW_NEXT_KEY
+      let flowNextKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+      if (!flowNextKey) {
+        logger.warn("No FLOW_NEXT_KEY found. Attempting to extract...");
+        const extractResult = await secretExtractionService.extractSecrets(profileId);
+        if (!extractResult.success) {
+          return { success: false, error: "Failed to extract FLOW_NEXT_KEY. Please ensure profile cookies are valid." };
+        }
+        flowNextKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+        if (!flowNextKey) {
+          return { success: false, error: "Failed to obtain FLOW_NEXT_KEY after extraction." };
+        }
+      }
+
+      // Fetch image with base64 data
+      const fetchResult = await imageVEO3ApiClient.fetchImage(tokenResult.token, imageName, flowNextKey);
+      if (!fetchResult.success || !fetchResult.data?.userUploadedImage?.image) {
+        return { success: false, error: fetchResult.error || "Failed to fetch image data" };
+      }
+
+      // Save base64 to local storage
+      const downloadResult = await this.saveBase64Image(
+        fetchResult.data.userUploadedImage.image,
+        localStoragePath,
+        existing.mediaKey
+      );
+
+      if (!downloadResult.success) {
+        return { success: false, error: downloadResult.error || "Failed to save image" };
+      }
+
+      // Update database with local path
+      await veo3ImageRepository.update(existing.id, { localPath: downloadResult.path });
+
+      logger.info(`Successfully downloaded image ${imageName} to ${downloadResult.path}`);
+
+      return { success: true, data: { localPath: downloadResult.path! } };
+    } catch (error) {
+      logger.error(`Error downloading image ${imageName}`, error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Download multiple images in batch
+   * @param profileId - Profile ID
+   * @param imageNames - Array of image names to download
+   * @param localStoragePath - Directory to save images
+   * @returns Success count and failed count
+   */
+  async downloadImages(
+    profileId: string,
+    imageNames: string[],
+    localStoragePath: string
+  ): Promise<ApiResponse<{ downloaded: number; failed: number; failedNames: string[] }>> {
+    let downloaded = 0;
+    let failed = 0;
+    const failedNames: string[] = [];
+
+    logger.info(`Starting batch download of ${imageNames.length} images...`);
+
+    for (const imageName of imageNames) {
+      const result = await this.downloadSingleImage(profileId, imageName, localStoragePath);
+      if (result.success) {
+        downloaded++;
+      } else {
+        failed++;
+        failedNames.push(imageName);
+        logger.warn(`Failed to download ${imageName}: ${result.error}`);
+      }
+    }
+
+    logger.info(`Batch download completed: ${downloaded} success, ${failed} failed`);
+
+    return { success: true, data: { downloaded, failed, failedNames } };
   }
 
   /**
@@ -265,35 +351,32 @@ export class ImageVeo3Service {
   }
 
   /**
-   * Download and save image from fifeUrl
+   * Save base64 image data to local file
    */
-  private async downloadAndSaveImage(
-    fifeUrl: string,
+  private async saveBase64Image(
+    base64Data: string,
     storageDir: string,
     mediaKey: string
   ): Promise<{ success: boolean; path?: string; error?: string }> {
     try {
-      // Ensure storage directory exists
-      await fs.mkdir(storageDir, { recursive: true });
+      // Create yyyy-mm-dd folder structure
+      const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+      const dateFolder = path.join(storageDir, today);
+      await fs.mkdir(dateFolder, { recursive: true });
 
-      // Download image
-      const response = await fetch(fifeUrl);
-      if (!response.ok) {
-        return { success: false, error: `HTTP ${response.status}` };
-      }
-
-      const buffer = Buffer.from(await response.arrayBuffer());
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data, 'base64');
 
       // Save to file
       const filename = `${mediaKey}.jpg`;
-      const filepath = path.join(storageDir, filename);
+      const filepath = path.join(dateFolder, filename);
       await fs.writeFile(filepath, buffer);
 
-      logger.info(`Downloaded image to: ${filepath}`);
+      logger.info(`Saved image to: ${filepath}`);
 
       return { success: true, path: filepath };
     } catch (error) {
-      logger.error("Error downloading image", error);
+      logger.error("Error saving base64 image", error);
       return { success: false, error: String(error) };
     }
   }

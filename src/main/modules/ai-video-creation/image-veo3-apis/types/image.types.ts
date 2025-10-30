@@ -56,7 +56,10 @@ export interface Veo3ImageGenerationRow {
  * Flow API response for user image upload
  */
 export interface FlowUploadImageResponse {
-  mediaGenerationId: MediaGenerationId;
+  mediaGenerationId: {
+    mediaGenerationId: string; // Base64-encoded media ID string (e.g., CAMa...)
+  };
+  width: number;
   height: number;
 }
 
@@ -66,10 +69,12 @@ export interface FlowUploadImageResponse {
 export interface FlowUserWorkflow {
   name: string;
   media: {
+    name: string;
     userUploadedImage?: {
       aspectRatio: ImageAspectRatio;
       fifeUrl?: string;
     };
+    mediaGenerationId?: MediaGenerationId;
   };
   createTime: string;
 }

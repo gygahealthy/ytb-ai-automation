@@ -1,0 +1,8 @@
+{
+  "name": "secret-extraction",
+  "version": "1.0.0",
+  "description": "Extracts and manages API secrets from Next.js applications for profile-based authentication",
+  "disabled": false,
+  "category": "common",
+  "dependencies": ["cookie", "profile-management"]
+}

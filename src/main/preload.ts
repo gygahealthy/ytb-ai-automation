@@ -332,9 +332,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("image-veo3:upload", { profileId, imagePath, localStoragePath, aspectRatio }),
     fetchUserImages: (profileId: string, pageSize?: number, cursor?: string | null) =>
       ipcRenderer.invoke("image-veo3:fetch-user-images", { profileId, pageSize, cursor }),
-    syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) =>
-      ipcRenderer.invoke("image-veo3:sync-from-flow", { profileId, localStoragePath, maxPages }),
+    syncMetadata: (profileId: string, maxPages?: number, startCursor?: string | null) =>
+      ipcRenderer.invoke("image-veo3:sync-metadata", { profileId, maxPages, startCursor }),
+    downloadSingle: (profileId: string, imageName: string, localStoragePath: string) =>
+      ipcRenderer.invoke("image-veo3:download-single", { profileId, imageName, localStoragePath }),
+    downloadBatch: (profileId: string, imageNames: string[], localStoragePath: string) =>
+      ipcRenderer.invoke("image-veo3:download-batch", { profileId, imageNames, localStoragePath }),
     getLocalImages: (profileId: string) => ipcRenderer.invoke("image-veo3:get-local-images", { profileId }),
+    readImageFile: (filePath: string) => ipcRenderer.invoke("image-veo3:read-image-file", { filePath }),
+    // Deprecated - use syncMetadata + downloadBatch instead
+    syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) =>
+      ipcRenderer.invoke("image-veo3:sync-metadata", { profileId, maxPages }).then(async (metadataResult: any) => {
+        if (!metadataResult.success) return metadataResult;
+        // Auto-download all synced images for backward compatibility
+        const images = await ipcRenderer.invoke("image-veo3:get-local-images", { profileId });
+        if (!images.success) return { success: true, data: { synced: metadataResult.data.synced, skipped: metadataResult.data.skipped } };
+        const pendingImages = images.data.filter((img: any) => !img.localPath).map((img: any) => img.name);
+        if (pendingImages.length === 0) return { success: true, data: { synced: metadataResult.data.synced, skipped: metadataResult.data.skipped } };
+        const downloadResult = await ipcRenderer.invoke("image-veo3:download-batch", { profileId, imageNames: pendingImages, localStoragePath });
+        return { success: true, data: { synced: downloadResult.data?.downloaded || 0, skipped: metadataResult.data.skipped } };
+      }),
   },
 
   // Generic invoke for other channels

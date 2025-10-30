@@ -87,8 +87,13 @@ interface Window {
     imageVeo3: {
       upload: (profileId: string, imagePath: string, localStoragePath: string, aspectRatio?: string) => Promise<any>;
       fetchUserImages: (profileId: string, pageSize?: number, cursor?: string | null) => Promise<any>;
-      syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
+      syncMetadata: (profileId: string, maxPages?: number, startCursor?: string | null) => Promise<any>;
+      downloadSingle: (profileId: string, imageName: string, localStoragePath: string) => Promise<any>;
+      downloadBatch: (profileId: string, imageNames: string[], localStoragePath: string) => Promise<any>;
       getLocalImages: (profileId: string) => Promise<any>;
+      readImageFile: (filePath: string) => Promise<any>;
+      /** @deprecated Use syncMetadata + downloadBatch for better control */
+      syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
     };
     youtube: {
       getAllChannels: () => Promise<any>;

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Image, Upload, FolderOpen, RefreshCw, Loader2, CheckCircle2 } from "lucide-react";
+import { Image, Upload, RefreshCw, Loader2, CheckCircle2 } from "lucide-react";
 import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
+import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
 
 interface LocalImage {
   id: string;
@@ -29,17 +30,63 @@ interface LocalImage {
  */
 export default function ImageGalleryDrawerContent() {
   const [images, setImages] = useState<LocalImage[]>([]);
+  const [imageSrcCache, setImageSrcCache] = useState<Record<string, string>>({});
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ synced: number; skipped: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isExtractingSecret, setIsExtractingSecret] = useState(false);
 
   const { veo3ImagesPath } = useFilePathsStore();
   const { flowProfileId } = useDefaultProfileStore();
+  const flowNextKey = useFlowNextKey(flowProfileId || "");
+  const extractSecrets = useSecretStore((state) => state.extractSecrets);
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
+
+  /**
+   * Ensure FLOW_NEXT_KEY secret is available (extract if needed)
+   */
+  const ensureSecretExtracted = async (): Promise<boolean> => {
+    if (!currentProfileId) return false;
+
+    // Already have the secret
+    if (flowNextKey) {
+      return true;
+    }
+
+    // Attempt to extract
+    setIsExtractingSecret(true);
+    try {
+      const success = await extractSecrets(currentProfileId);
+      if (!success) {
+        setError("Failed to extract API secret. Please ensure profile has active cookies.");
+        return false;
+      }
+      return true;
+    } finally {
+      setIsExtractingSecret(false);
+    }
+  };
+
+  /**
+   * Load image file and convert to data URL
+   */
+  const loadImageDataUrl = async (filePath: string): Promise<string | null> => {
+    try {
+      const result = await (window as any).electronAPI.imageVeo3.readImageFile(filePath);
+      if (result.success && result.data?.dataUrl) {
+        return result.data.dataUrl;
+      }
+      console.error("Failed to read image file:", result.error);
+      return null;
+    } catch (error) {
+      console.error("Error loading image data URL:", error);
+      return null;
+    }
+  };
 
   /**
    * Load images from local database (DB only - no API calls)
@@ -55,6 +102,19 @@ export default function ImageGalleryDrawerContent() {
 
       if (result.success && result.data) {
         setImages(result.data);
+        // Preload image data URLs for images with localPath
+        const cache: Record<string, string> = {};
+        for (const image of result.data) {
+          if (image.localPath && !imageSrcCache[image.id]) {
+            const dataUrl = await loadImageDataUrl(image.localPath);
+            if (dataUrl) {
+              cache[image.id] = dataUrl;
+            }
+          }
+        }
+        if (Object.keys(cache).length > 0) {
+          setImageSrcCache((prev) => ({ ...prev, ...cache }));
+        }
       } else {
         setError(result.error || "Failed to load images");
       }
@@ -77,6 +137,12 @@ export default function ImageGalleryDrawerContent() {
 
     if (!veo3ImagesPath) {
       setError("Please configure VEO3 Images storage path in Settings > File Paths");
+      return;
+    }
+
+    // Ensure secret is extracted before uploading
+    const secretReady = await ensureSecretExtracted();
+    if (!secretReady) {
       return;
     }
 
@@ -129,6 +195,12 @@ export default function ImageGalleryDrawerContent() {
 
     if (!veo3ImagesPath) {
       setError("Please configure VEO3 Images storage path in Settings > File Paths");
+      return;
+    }
+
+    // Ensure secret is extracted before syncing
+    const secretReady = await ensureSecretExtracted();
+    if (!secretReady) {
       return;
     }
 
@@ -188,54 +260,41 @@ export default function ImageGalleryDrawerContent() {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2 mb-2">
-          <Image className="w-5 h-5 text-purple-500" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Image Gallery</h2>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Manage images for ingredient-based video generation</p>
-      </div>
-
       {/* Action Buttons */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <button
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white rounded-lg transition-colors"
             onClick={handleUploadImage}
-            disabled={isLoading || isSyncing || !veo3ImagesPath || !currentProfileId}
+            disabled={isLoading || isSyncing || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
             title={
               !currentProfileId
                 ? "Configure Flow profile in Settings first"
                 : !veo3ImagesPath
                 ? "Configure storage path in Settings first"
+                : isExtractingSecret
+                ? "Extracting API secret..."
                 : "Upload local image to Flow"
             }
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            <span>Upload Image</span>
+            {isLoading || isExtractingSecret ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            <span>{isExtractingSecret ? "Extracting Secret..." : "Upload Image"}</span>
           </button>
           <button
             className="px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
             onClick={handleSyncFromFlow}
-            disabled={isLoading || isSyncing || !veo3ImagesPath || !currentProfileId}
+            disabled={isLoading || isSyncing || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
             title={
               !currentProfileId
                 ? "Configure Flow profile in Settings first"
                 : !veo3ImagesPath
                 ? "Configure storage path in Settings first"
+                : isExtractingSecret
+                ? "Extracting API secret..."
                 : "Sync images from Flow server"
             }
           >
-            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          </button>
-          <button
-            className="px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
-            onClick={loadLocalImages}
-            disabled={isLoading || isSyncing || !currentProfileId}
-            title={!currentProfileId ? "Configure Flow profile in Settings first" : "Refresh local images"}
-          >
-            <FolderOpen className="w-4 h-4" />
+            {isSyncing || isExtractingSecret ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </button>
         </div>
 
@@ -286,7 +345,7 @@ export default function ImageGalleryDrawerContent() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {images.map((image) => (
               <div
                 key={image.id}
@@ -298,34 +357,43 @@ export default function ImageGalleryDrawerContent() {
                 onClick={() => toggleImageSelection(image.id)}
               >
                 {/* Image Thumbnail */}
-                <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  {image.localPath ? (
+                <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative">
+                  {image.localPath && imageSrcCache[image.id] ? (
                     <img
-                      src={`file://${image.localPath}`}
+                      src={imageSrcCache[image.id]}
                       alt={image.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Fallback if image fails to load
-                        (e.target as HTMLImageElement).style.display = "none";
+                        const target = e.target as HTMLImageElement;
+                        console.error('Failed to load image:', image.localPath);
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.image-error-placeholder')) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'image-error-placeholder w-full h-full flex flex-col items-center justify-center gap-1';
+                          placeholder.innerHTML = '<svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="text-xs text-red-400">Failed to load</span>';
+                          parent.appendChild(placeholder);
+                        }
                       }}
                     />
+                  ) : image.localPath ? (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                      <span className="text-xs text-gray-400">Loading...</span>
+                    </div>
                   ) : (
-                    <Image className="w-8 h-8 text-gray-400" />
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Image className="w-8 h-8 text-gray-400" />
+                      <span className="text-xs text-gray-400">Not downloaded</span>
+                    </div>
                   )}
-                </div>
-
-                {/* Selection Indicator */}
-                {selectedImages.has(image.id) && (
-                  <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  </div>
-                )}
-
-                {/* Image Info */}
-                <div className="p-2 bg-white dark:bg-gray-800">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate" title={image.name}>
-                    {image.aspectRatio?.replace("IMAGE_ASPECT_RATIO_", "") || "N/A"}
-                  </p>
+                  
+                  {/* Selection Indicator - Overlay */}
+                  {selectedImages.has(image.id) && (
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

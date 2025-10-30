@@ -35,6 +35,7 @@ export default function CookieRotationConfigPage() {
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const [selectedProfileForCookie, setSelectedProfileForCookie] = useState<string | null>(null);
+  const [showAllProfiles, setShowAllProfiles] = useState(false);
   // Default to open all cards on first load
   const [allExpanded, setAllExpanded] = useState(true);
 
@@ -44,8 +45,16 @@ export default function CookieRotationConfigPage() {
   }, [profiles, originalProfiles]);
 
   useEffect(() => {
+    // Initial load - only run on mount
     loadProfiles();
   }, []);
+
+  useEffect(() => {
+    // When showAllProfiles changes, reload appropriately
+    if (showAllProfiles) {
+      handleShowAllProfiles();
+    }
+  }, [showAllProfiles]);
 
   const loadProfiles = async () => {
     setIsLoading(true);
@@ -83,6 +92,78 @@ export default function CookieRotationConfigPage() {
       }
     } catch (error) {
       console.error("Failed to load profiles config:", error);
+      setSaveMessage({ type: "error", text: `Error loading profiles: ${String(error)}` });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleShowAllProfiles = async () => {
+    setIsLoading(true);
+    try {
+      console.log("[CookieRotationConfigPage] Fetching all profiles...");
+      // Fetch all profiles including those without cookies
+      const response = await window.electronAPI.profile.getAll();
+      console.log("[CookieRotationConfigPage] All profiles response:", response);
+      
+      // Check if response is an ApiResponse object or direct array
+      const allProfiles = response && typeof response === "object" && "data" in response 
+        ? response.data 
+        : response;
+      
+      console.log("[CookieRotationConfigPage] Processed profiles:", allProfiles);
+      
+      if (!allProfiles || !Array.isArray(allProfiles)) {
+        console.error("[CookieRotationConfigPage] Invalid response from profile.getAll():", allProfiles);
+        setSaveMessage({ type: "error", text: "Failed to load profiles - invalid response" });
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[CookieRotationConfigPage] Fetching profiles with cookies...");
+      // Get existing profiles with cookies
+      const result = await window.electronAPI.cookieRotation.getProfilesConfig();
+      console.log("[CookieRotationConfigPage] Profiles with cookies:", result);
+      
+      const profilesWithCookiesMap = new Map(
+        result.success && result.data ? (result.data as any[]).map((p: any) => [p.profileId, p]) : []
+      );
+
+      console.log("[CookieRotationConfigPage] Building normalized profiles list...");
+      // Create list with all profiles
+      const allProfilesNormalized: ProfileWithCookieConfig[] = allProfiles.map((p: any) => {
+        const profileData = profilesWithCookiesMap.get(p.id);
+
+        return {
+          profileId: p.id,
+          profileName: p.name,
+          cookies: profileData?.cookies 
+            ? (profileData.cookies as any[]).map((c: any) => ({
+                cookieId: c.cookieId,
+                service: c.service,
+                url: c.url,
+                status: c.status,
+                rawCookieString: c.rawCookieString ?? null,
+                lastRotatedAt: c.lastRotatedAt,
+                config:
+                  c.config ||
+                  ({
+                    cookieId: c.cookieId,
+                    launchWorkerOnStartup: false,
+                    enabledRotationMethods: ["refreshCreds", "rotateCookie"],
+                    rotationMethodOrder: ["refreshCreds", "rotateCookie"],
+                    rotationIntervalMinutes: 60,
+                  } as CookieRotationConfig),
+              }))
+            : [],
+        };
+      });
+
+      console.log("[CookieRotationConfigPage] Normalized profiles:", allProfilesNormalized);
+      setProfiles(allProfilesNormalized);
+      setOriginalProfiles(JSON.parse(JSON.stringify(allProfilesNormalized)));
+    } catch (error) {
+      console.error("[CookieRotationConfigPage] Failed to load all profiles:", error);
       setSaveMessage({ type: "error", text: `Error loading profiles: ${String(error)}` });
     } finally {
       setIsLoading(false);
@@ -380,6 +461,19 @@ export default function CookieRotationConfigPage() {
               />
             </div>
 
+            {/* View Toggle Button */}
+            <button
+              onClick={() => setShowAllProfiles(!showAllProfiles)}
+              title={showAllProfiles ? "Show only profiles with cookies" : "Show all profiles"}
+              className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                showAllProfiles
+                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
+            >
+              {showAllProfiles ? "All Profiles" : "With Cookies"}
+            </button>
+
             {/* Expand/Collapse All */}
             <button
               onClick={() => setAllExpanded(!allExpanded)}
@@ -452,6 +546,7 @@ export default function CookieRotationConfigPage() {
           onStartWorker={handleStartWorker}
           onStopWorker={handleStopWorker}
           allExpanded={allExpanded}
+          showAllProfiles={showAllProfiles}
         />
       </div>
 
