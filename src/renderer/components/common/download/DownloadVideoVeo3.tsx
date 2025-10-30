@@ -31,6 +31,7 @@ export default function DownloadVideoVeo3({
   filename,
   downloadPath,
   videoIndex,
+  settings,
   onStart,
   onSuccess,
   onError,
@@ -56,7 +57,13 @@ export default function DownloadVideoVeo3({
 
       // Call main process via preload bridge
       // Uses common/video-download module via video.download.single channel
-      const result = await (window as any).electronAPI.video.download.single(videoUrl, filename, downloadPath, videoIndex);
+      const result = await (window as any).electronAPI.video.download.single(
+        videoUrl,
+        filename,
+        downloadPath,
+        videoIndex,
+        settings
+      );
 
       // Check for success flag in response (ApiResponse format)
       if (!result.success) {

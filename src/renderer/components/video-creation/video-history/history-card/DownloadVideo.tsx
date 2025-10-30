@@ -14,7 +14,7 @@ import { DownloadVideoVeo3 as CommonDownloadVideo } from "../../../common/downlo
  * - Showing toast notifications for success/error
  */
 export default function DownloadVideo({ generation }: { generation: VideoGeneration }) {
-  const { singleVideoPath } = useFilePathsStore();
+  const { singleVideoPath, options } = useFilePathsStore();
   const toast = useToast();
 
   if (!generation.videoUrl) return null;
@@ -30,6 +30,11 @@ export default function DownloadVideo({ generation }: { generation: VideoGenerat
         filename={`video-${generation.sceneId || generation.id}`}
         downloadPath={singleVideoPath}
         videoIndex={videoIndex}
+        settings={{
+          autoCreateDateFolder: options.autoCreateDateFolder,
+          autoIndexFilename: options.autoIndexFilename,
+          addEpochTimeToFilename: options.addEpochTimeToFilename,
+        }}
         onSuccess={() => {
           toast.success(`✓ Video downloaded successfully!`, "Download Complete", 3000);
         }}

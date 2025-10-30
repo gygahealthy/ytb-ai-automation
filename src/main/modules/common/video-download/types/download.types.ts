@@ -13,6 +13,12 @@ export interface DownloadJob {
   // Pass paths from parent instead of using app.getPath()
   userDataPath?: string;
   homeDir?: string;
+  // File path settings from renderer
+  settings?: {
+    autoCreateDateFolder?: boolean;
+    autoIndexFilename?: boolean;
+    addEpochTimeToFilename?: boolean;
+  };
 }
 
 export interface DownloadResult {

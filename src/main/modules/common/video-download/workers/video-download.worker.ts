@@ -15,7 +15,7 @@ import type { DownloadJob, DownloadResult } from "../types/download.types";
 
 async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
   try {
-    const { id, videoUrl, filename, downloadPath, homeDir, userDataPath } = job;
+    const { id, videoUrl, filename, downloadPath, homeDir, settings } = job;
 
     if (!videoUrl) {
       throw new Error("Video URL is required");
@@ -26,22 +26,28 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
     const fallbackHome = homeDir || process.env.HOME || process.env.USERPROFILE || "";
     let targetPath = downloadPath || path.join(fallbackHome, "Downloads");
 
-    // Load settings to check if auto-create date folder is enabled
-    const settings = loadSettings(userDataPath) as Record<string, unknown> | null;
-    if (
-      settings &&
-      typeof settings === "object" &&
-      "options" in settings &&
-      settings.options &&
-      typeof settings.options === "object" &&
-      "autoCreateDateFolder" in settings.options &&
-      (settings.options as Record<string, unknown>).autoCreateDateFolder
-    ) {
+    // Check if auto-create date folder is enabled
+    if (settings?.autoCreateDateFolder) {
       const today = new Date();
       const dateFolder = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
         today.getDate()
       ).padStart(2, "0")}`;
-      targetPath = path.join(targetPath, dateFolder);
+
+      // Check if the target path already ends with today's date folder (YYYY-MM-DD pattern)
+      // to prevent creating duplicate nested date folders (e.g., YYYY-MM-DD/YYYY-MM-DD)
+      const lastFolder = path.basename(targetPath);
+      const datePattern = /^\d{4}-\d{2}-\d{2}$/; // Matches YYYY-MM-DD format
+
+      if (lastFolder === dateFolder || (datePattern.test(lastFolder) && lastFolder === dateFolder)) {
+        // Path already ends with today's date folder, don't create it again
+        console.log(`[Download Worker] Target path already ends with ${dateFolder}, skipping duplicate date folder creation`);
+      } else if (datePattern.test(lastFolder)) {
+        // Path ends with a different date folder, still add today's date folder
+        targetPath = path.join(targetPath, dateFolder);
+      } else {
+        // Path doesn't end with any date folder, add today's date folder
+        targetPath = path.join(targetPath, dateFolder);
+      }
     }
 
     // Ensure target folder exists (Node's path module handles OS-specific separators)
@@ -85,30 +91,6 @@ async function downloadVideo(job: DownloadJob): Promise<DownloadResult> {
       error: message,
     };
   }
-}
-
-/**
- * Load settings from localStorage file (persisted by zustand)
- * @param userDataPath - Path to user data directory (passed from parent)
- */
-function loadSettings(userDataPath?: string): unknown {
-  try {
-    if (!userDataPath) {
-      console.warn("[Download Worker] No userDataPath provided, skipping settings load");
-      return null;
-    }
-
-    const settingsPath = path.join(userDataPath, "file-paths-storage.json");
-
-    if (fs.existsSync(settingsPath)) {
-      const data = fs.readFileSync(settingsPath, "utf-8");
-      const parsed = JSON.parse(data);
-      return parsed.state || parsed;
-    }
-  } catch (error) {
-    console.error("[Download Worker] Failed to load settings:", error);
-  }
-  return null;
 }
 
 // Listen for download jobs from the main thread

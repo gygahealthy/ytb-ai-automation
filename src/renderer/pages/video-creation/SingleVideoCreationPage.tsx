@@ -570,7 +570,7 @@ export default function SingleVideoCreationPage() {
     }
   };
 
-  const { singleVideoPath, setSingleVideoPath } = useFilePathsStore();
+  const { singleVideoPath, setSingleVideoPath, options } = useFilePathsStore();
 
   const handleDownloadSelected = async () => {
     console.log("[SingleVideoCreationPage] handleDownloadSelected called");
@@ -598,8 +598,8 @@ export default function SingleVideoCreationPage() {
       if (job && job.videoUrl) {
         videos.push({
           videoUrl: job.videoUrl,
-          filename: prompt.text ? `${prompt.text.substring(0, 50).replace(/[<>:"|?*]/g, "-")}` : `video-${job.id}`,
-          videoIndex: prompt.order,
+          filename: prompt.text ? `${prompt.text.substring(0, 50).replace(/[<>:|"|?*]/g, "-")}` : `video-${job.id}`,
+          videoIndex: (prompt.order || 0) + 1, // Start from 1 for user-friendly numbering (e.g., 001, 002, 003)
         });
       }
     }
@@ -644,7 +644,11 @@ export default function SingleVideoCreationPage() {
 
       console.log(`[SingleVideoCreationPage] Calling video:download:batch with ${videos.length} videos to ${selectedFolder}`);
 
-      const downloadResult = await (window as any).electronAPI.video.download.batch(videos, selectedFolder);
+      const downloadResult = await (window as any).electronAPI.video.download.batch(videos, selectedFolder, {
+        autoCreateDateFolder: options.autoCreateDateFolder,
+        autoIndexFilename: options.autoIndexFilename,
+        addEpochTimeToFilename: options.addEpochTimeToFilename,
+      });
 
       console.log("[SingleVideoCreationPage] Download result:", downloadResult);
 

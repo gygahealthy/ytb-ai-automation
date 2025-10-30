@@ -81,12 +81,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     updatePrompt: (projectId: string, jsonPrompt: any) => ipcRenderer.invoke("veo3:updatePrompt", { projectId, jsonPrompt }),
     delete: (id: string) => ipcRenderer.invoke("veo3:delete", { id }),
     // Download APIs now delegated to common/video-download module
-    downloadVideo: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) =>
-      ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex }),
+    downloadVideo: (
+      videoUrl: string,
+      filename?: string,
+      downloadPath?: string,
+      videoIndex?: number,
+      settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean }
+    ) => ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex, settings }),
     downloadMultipleVideos: (
       videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
-      downloadPath?: string
-    ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath }),
+      downloadPath?: string,
+      settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean }
+    ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath, settings }),
     downloadStatus: () => ipcRenderer.invoke("video:download:status"),
     onDownloadProgress: (callback: (result: any) => void) => {
       const channel = "video:downloadProgress";
@@ -302,10 +308,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Video Download APIs (common module)
   video: {
     download: {
-      single: (videoUrl: string, filename?: string, downloadPath?: string, videoIndex?: number) =>
-        ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex }),
-      batch: (videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>, downloadPath?: string) =>
-        ipcRenderer.invoke("video:download:batch", { videos, downloadPath }),
+      single: (
+        videoUrl: string,
+        filename?: string,
+        downloadPath?: string,
+        videoIndex?: number,
+        settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean }
+      ) => ipcRenderer.invoke("video:download:single", { videoUrl, filename, downloadPath, videoIndex, settings }),
+      batch: (
+        videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
+        downloadPath?: string,
+        settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean }
+      ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath, settings }),
       status: () => ipcRenderer.invoke("video:download:status"),
     },
   },

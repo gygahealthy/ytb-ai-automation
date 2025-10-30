@@ -6,13 +6,20 @@ export const downloadRegistrations: IpcRegistration[] = [
   {
     channel: "veo3:downloadVideo",
     description: "Download video from URL to local file system",
-    handler: async (req: { videoUrl: string; filename?: string; downloadPath?: string; videoIndex?: number }) => {
+    handler: async (req: {
+      videoUrl: string;
+      filename?: string;
+      downloadPath?: string;
+      videoIndex?: number;
+      settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean };
+    }) => {
       try {
         const result = await veo3VideoDownloadService.downloadVideo(
           (req as any).videoUrl,
           (req as any).filename,
           (req as any).downloadPath,
-          (req as any).videoIndex
+          (req as any).videoIndex,
+          (req as any).settings
         );
 
         if (!result.success) {
@@ -43,6 +50,7 @@ export const downloadRegistrations: IpcRegistration[] = [
       req: {
         videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>;
         downloadPath?: string;
+        settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean };
       },
       event?: Electron.IpcMainInvokeEvent
     ) => {
@@ -57,7 +65,8 @@ export const downloadRegistrations: IpcRegistration[] = [
               win.webContents.send("veo3:downloadProgress", result);
             }
           },
-          req.downloadPath
+          req.downloadPath,
+          req.settings
         );
 
         return {

@@ -11,10 +11,15 @@ export const videoDownloadRegistrations: IpcRegistration[] = [
       filename?: string;
       downloadPath?: string;
       videoIndex?: number;
+      settings?: {
+        autoCreateDateFolder?: boolean;
+        autoIndexFilename?: boolean;
+        addEpochTimeToFilename?: boolean;
+      };
     }): Promise<ApiResponse<DownloadResult>> => {
-      const { videoUrl, filename, downloadPath, videoIndex } = req;
+      const { videoUrl, filename, downloadPath, videoIndex, settings } = req;
       try {
-        const result = await videoDownloadService.downloadVideo(videoUrl, filename, downloadPath, videoIndex);
+        const result = await videoDownloadService.downloadVideo(videoUrl, filename, downloadPath, videoIndex, settings);
         return {
           success: true,
           data: result as DownloadResult,
@@ -33,10 +38,15 @@ export const videoDownloadRegistrations: IpcRegistration[] = [
     handler: async (req: {
       videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>;
       downloadPath?: string;
+      settings?: {
+        autoCreateDateFolder?: boolean;
+        autoIndexFilename?: boolean;
+        addEpochTimeToFilename?: boolean;
+      };
     }): Promise<ApiResponse<DownloadResult[]>> => {
-      const { videos, downloadPath } = req;
+      const { videos, downloadPath, settings } = req;
       try {
-        const results = await videoDownloadService.downloadMultipleVideos(videos, undefined, downloadPath);
+        const results = await videoDownloadService.downloadMultipleVideos(videos, undefined, downloadPath, settings);
         return {
           success: true,
           data: results,

@@ -1,5 +1,4 @@
 import * as path from "path";
-import * as fs from "fs";
 import { Worker } from "worker_threads";
 import { app } from "electron";
 import type { DownloadJob, DownloadResult, PendingDownload, DownloadStatus } from "../types/download.types";
@@ -77,9 +76,14 @@ export class VideoDownloadService {
     videoUrl: string,
     filename?: string,
     downloadPath?: string,
-    videoIndex?: number
+    videoIndex?: number,
+    settings?: {
+      autoCreateDateFolder?: boolean;
+      autoIndexFilename?: boolean;
+      addEpochTimeToFilename?: boolean;
+    }
   ): Promise<{ success: boolean; filePath?: string; message?: string; error?: string }> {
-    const finalFilename = this.sanitizeFilename(filename, videoIndex);
+    const finalFilename = this.sanitizeFilename(filename, videoIndex, settings);
     const id = this.generateId();
 
     return new Promise((resolve, reject) => {
@@ -92,6 +96,8 @@ export class VideoDownloadService {
         // Pass paths from main process to worker
         userDataPath: app.getPath("userData"),
         homeDir: app.getPath("home"),
+        // Pass settings to worker
+        settings,
       };
 
       const pendingDownload: PendingDownload = {
@@ -112,7 +118,12 @@ export class VideoDownloadService {
   async downloadMultipleVideos(
     videos: Array<{ videoUrl: string; filename?: string; videoIndex?: number }>,
     onProgress?: (result: DownloadResult) => void,
-    downloadPath?: string
+    downloadPath?: string,
+    settings?: {
+      autoCreateDateFolder?: boolean;
+      autoIndexFilename?: boolean;
+      addEpochTimeToFilename?: boolean;
+    }
   ): Promise<DownloadResult[]> {
     console.log(`[VideoDownloadService] Starting batch download of ${videos.length} videos`);
 
@@ -121,7 +132,8 @@ export class VideoDownloadService {
         video.videoUrl,
         video.filename,
         downloadPath,
-        video.videoIndex !== undefined ? video.videoIndex : index
+        video.videoIndex !== undefined ? video.videoIndex : index,
+        settings
       ).then((result) => {
         if (onProgress) {
           onProgress(result as DownloadResult);
@@ -173,7 +185,15 @@ export class VideoDownloadService {
    * Sanitize filename and apply naming conventions (indexing, epoch)
    * Also ensure .mp4 extension
    */
-  private sanitizeFilename(filename?: string, videoIndex?: number): string {
+  private sanitizeFilename(
+    filename?: string,
+    videoIndex?: number,
+    settings?: {
+      autoCreateDateFolder?: boolean;
+      autoIndexFilename?: boolean;
+      addEpochTimeToFilename?: boolean;
+    }
+  ): string {
     let baseName = filename || `video-${Date.now()}`;
 
     // Remove .mp4 extension if present (we'll add it back at the end)
@@ -181,35 +201,16 @@ export class VideoDownloadService {
       baseName = baseName.slice(0, -4);
     }
 
-    // Apply auto-indexing if videoIndex is provided
-    // Read from store settings (we'll import the store data via app.getPath userData)
-    const settingsPath = this.getSettingsPath();
-    const settings = this.loadSettings(settingsPath) as Record<string, unknown> | null;
-
-    if (
-      settings &&
-      typeof settings === "object" &&
-      "options" in settings &&
-      settings.options &&
-      typeof settings.options === "object" &&
-      "autoIndexFilename" in settings.options &&
-      (settings.options as Record<string, unknown>).autoIndexFilename &&
-      videoIndex !== undefined
-    ) {
-      const paddedIndex = String(videoIndex).padStart(3, "0");
+    // Apply auto-indexing if enabled and videoIndex is provided
+    if (settings?.autoIndexFilename && videoIndex !== undefined && videoIndex >= 0) {
+      // Ensure 1-based indexing for user-friendly display (e.g., 001, 002, 003)
+      const displayIndex = videoIndex > 0 ? videoIndex : videoIndex + 1;
+      const paddedIndex = String(displayIndex).padStart(3, "0");
       baseName = `${paddedIndex}_${baseName}`;
     }
 
     // Apply epoch timestamp if enabled
-    if (
-      settings &&
-      typeof settings === "object" &&
-      "options" in settings &&
-      settings.options &&
-      typeof settings.options === "object" &&
-      "addEpochTimeToFilename" in settings.options &&
-      (settings.options as Record<string, unknown>).addEpochTimeToFilename
-    ) {
+    if (settings?.addEpochTimeToFilename) {
       const epoch = Date.now();
       baseName = `${baseName}_${epoch}`;
     }
@@ -219,30 +220,6 @@ export class VideoDownloadService {
 
     // Add .mp4 extension
     return `${baseName}.mp4`;
-  }
-
-  /**
-   * Get settings path from app userData
-   */
-  private getSettingsPath(): string {
-    const userDataPath = app.getPath("userData");
-    return path.join(userDataPath, "file-paths-storage.json");
-  }
-
-  /**
-   * Load settings from localStorage file (persisted by zustand)
-   */
-  private loadSettings(settingsPath: string): unknown {
-    try {
-      if (fs.existsSync(settingsPath)) {
-        const data = fs.readFileSync(settingsPath, "utf-8");
-        const parsed = JSON.parse(data) as Record<string, unknown>;
-        return parsed.state || parsed;
-      }
-    } catch (error) {
-      console.error("[VideoDownloadService] Failed to load settings:", error);
-    }
-    return null;
   }
 
   /**

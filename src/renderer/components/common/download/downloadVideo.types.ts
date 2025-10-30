@@ -24,6 +24,13 @@ export interface DownloadVideoProps {
   /** Index of the video for auto-indexing (e.g., 1 -> 001) */
   videoIndex?: number;
 
+  /** File path settings for naming and folder creation */
+  settings?: {
+    autoCreateDateFolder?: boolean;
+    autoIndexFilename?: boolean;
+    addEpochTimeToFilename?: boolean;
+  };
+
   /** Called when download starts */
   onStart?: () => void;
 
