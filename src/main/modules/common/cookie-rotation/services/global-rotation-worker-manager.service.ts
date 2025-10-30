@@ -140,6 +140,18 @@ export class GlobalRotationWorkerManager {
     // Skip if already running
     if (this.workers.has(key)) {
       logger.debug(`[rotation-manager] Worker already running for ${key}`);
+
+      // Ensure monitor status reflects running state (fix for UI refresh bug)
+      const existingWorker = this.workers.get(key);
+      if (existingWorker) {
+        try {
+          await this.monitorRepository.updateWorkerStatus(existingWorker.monitorId, "running");
+          logger.debug(`[rotation-manager] Updated monitor status to 'running' for ${key}`);
+        } catch (error) {
+          logger.error(`[rotation-manager] Failed to update monitor status for ${key}:`, error);
+        }
+      }
+
       return;
     }
 
@@ -712,6 +724,18 @@ export class GlobalRotationWorkerManager {
     const workerKey = `${profileId}-${cookieId}`;
     if (this.workers.has(workerKey)) {
       logger.warn(`[rotation-manager] Worker already running for ${workerKey}`);
+
+      // Ensure monitor status reflects running state (fix for UI refresh bug)
+      const existingWorker = this.workers.get(workerKey);
+      if (existingWorker) {
+        try {
+          await this.monitorRepository.updateWorkerStatus(existingWorker.monitorId, "running");
+          logger.debug(`[rotation-manager] Updated monitor status to 'running' for ${workerKey}`);
+        } catch (error) {
+          logger.error(`[rotation-manager] Failed to update monitor status for ${workerKey}:`, error);
+        }
+      }
+
       return;
     }
 

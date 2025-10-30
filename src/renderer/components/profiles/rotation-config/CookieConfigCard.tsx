@@ -1,6 +1,6 @@
 import { Settings, RefreshCw, Cpu, Clock, ChevronUp, ChevronDown, Play, Square, Zap, Info, X, Edit } from "lucide-react";
 import type { CookieRotationConfig, RotationMethod } from "../../common/drawers/cookie-rotation/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CookieDetailModal from "../cookie/CookieDetailModal";
 import { CookieAddModal } from "./CookieAddModal";
 import ToggleSwitch from "../../common/ToggleSwitch";
@@ -40,7 +40,35 @@ export default function CookieConfigCard({
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newRequiredCookie, setNewRequiredCookie] = useState("");
+  const [currentWorkerStatus, setCurrentWorkerStatus] = useState(workerStatus);
   const confirm = useConfirm();
+
+  // Poll for real worker status from database
+  useEffect(() => {
+    // Update immediately when prop changes
+    setCurrentWorkerStatus(workerStatus);
+
+    // Poll every 2 seconds to get fresh status from DB
+    const pollInterval = setInterval(async () => {
+      try {
+        const result = await window.electronAPI.cookieRotation.getProfiles();
+        if (result.success && result.data) {
+          // Find this specific cookie in the response
+          for (const profile of result.data) {
+            const foundCookie = profile.cookies.find((c: any) => c.cookieId === cookie.cookieId);
+            if (foundCookie) {
+              setCurrentWorkerStatus(foundCookie.workerStatus);
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[CookieConfigCard] Failed to poll worker status:", error);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [workerStatus, cookie.cookieId]);
 
   // Provide default config if missing
   const config: CookieRotationConfig = cookie.config || {
@@ -135,8 +163,15 @@ export default function CookieConfigCard({
     }
   };
 
-  const isActive = config.launchWorkerOnStartup || workerStatus === "running";
-  const isWorkerRunning = workerStatus === "running";
+  // helper to interpret a variety of worker status strings as "running"
+  const statusIndicatesRunning = (s?: string) => {
+    if (!s) return false;
+    const norm = s.toLowerCase();
+    return /run|start|active|online/.test(norm);
+  };
+
+  const isWorkerRunning = statusIndicatesRunning(currentWorkerStatus);
+  const isActive = config.launchWorkerOnStartup || isWorkerRunning;
 
   const getActiveStatusColor = () => {
     return isActive
@@ -241,9 +276,9 @@ export default function CookieConfigCard({
               <>
                 {isWorkerRunning ? (
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      onStopWorker?.(cookie.cookieId);
+                      await onStopWorker?.(cookie.cookieId);
                     }}
                     className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Stop worker"
@@ -252,9 +287,9 @@ export default function CookieConfigCard({
                   </button>
                 ) : (
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      onStartWorker?.(cookie.cookieId);
+                      await onStartWorker?.(cookie.cookieId);
                     }}
                     className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
                     title="Start worker"

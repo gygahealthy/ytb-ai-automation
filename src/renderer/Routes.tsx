@@ -4,11 +4,11 @@ import MasterPromptPage from "@pages/master-prompt/MasterPromptPage";
 import PromptTypesPage from "@pages/master-prompt/PromptTypesPage";
 import AIPromptConfigPage from "@components/master-prompt/ai-prompt-config";
 import PromptPlaygroundPage from "@pages/master-prompt/PromptPlaygroundPage";
-import AutomationPage from "@pages/AutomationPage";
+import AutomationPage from "@/renderer/pages/AutomationPage";
 import ProfilesPage from "@pages/profiles/ProfilesPage";
 import CookieRotationConfigPage from "@pages/profiles/CookieRotationConfigPage";
-import ChatAutomation from "@pages/automation/ChatAutomation";
-import InstanceDashboard from "@pages/automation/InstanceDashboard";
+import ChatAutomation from "@/renderer/pages/profiles/browser-launch/ChatAutomation";
+import BrowserLaunchPage from "@/renderer/pages/profiles/browser-launch/BrowserLaunchPage";
 import AllChannelsOverviewPage from "@pages/channel-management/AllChannelsOverviewPage";
 import SingleVideoCreationPage from "@pages/video-creation/SingleVideoCreationPage";
 import VideoHistoryPage from "@pages/video-creation/VideoHistoryPage";
@@ -30,8 +30,8 @@ export default function AppRoutes() {
         <Route path="/profiles" element={<ProfilesPage />} />
         <Route path="/profiles/cookie-rotation" element={<CookieRotationConfigPage />} />
         <Route path="/automation" element={<AutomationPage />} />
-        <Route path="/profiles/instance" element={<InstanceDashboard />} />
-        <Route path="/profiles/instance/:profileId" element={<InstanceDashboard />} />
+        <Route path="/profiles/browser-launch" element={<BrowserLaunchPage />} />
+        <Route path="/profiles/browser-launch/:profileId" element={<BrowserLaunchPage />} />
         <Route path="/automation/:instanceId/chat" element={<ChatAutomation />} />
         <Route path="/master-prompt/dashboard" element={<MasterPromptPage />} />
         <Route path="/master-prompt/master-prompts" element={<MasterPromptPage />} />

@@ -21,10 +21,12 @@ export default function AutomationPage() {
     try {
       const res = await electronApi.automation.start(id);
       if (!res || res.success === false) {
-        console.warn('automation.start failed', res);
+        console.warn("automation.start failed", res);
         return;
       }
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'running', progress: t.progress > 0 ? t.progress : 1 } : t)));
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: "running", progress: t.progress > 0 ? t.progress : 1 } : t))
+      );
     } catch (e) {
       console.error(e);
     }
@@ -34,10 +36,10 @@ export default function AutomationPage() {
     try {
       const res = await electronApi.automation.stop(id);
       if (!res || res.success === false) {
-        console.warn('automation.stop failed', res);
+        console.warn("automation.stop failed", res);
         return;
       }
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'stopped' } : t)));
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "stopped" } : t)));
     } catch (e) {
       console.error(e);
     }
@@ -86,11 +88,17 @@ export default function AutomationPage() {
                 </div>
                 <div className="flex gap-2">
                   {task.status === "running" ? (
-                    <button onClick={() => handleStop(task.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleStop(task.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    >
                       <StopCircle className="w-5 h-5" />
                     </button>
                   ) : (
-                    <button onClick={() => handleStart(task.id)} className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleStart(task.id)}
+                      className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                    >
                       <Play className="w-5 h-5" />
                     </button>
                   )}
@@ -119,4 +127,3 @@ export default function AutomationPage() {
     </div>
   );
 }
-

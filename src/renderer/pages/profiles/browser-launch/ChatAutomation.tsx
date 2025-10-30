@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Eye, EyeOff, Clipboard, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ChatUI, { Message } from "../../components/automation/ChatUI";
-import IPCLog from "../../components/automation/IPCLog";
-import { InstanceState } from "../../../shared/types";
+import ChatUI, { Message } from "../../../components/automation/ChatUI";
+import IPCLog from "../../../components/automation/IPCLog";
+import { InstanceState } from "../../../../shared/types";
 
 export default function ChatAutomation() {
   // Route parameters - if instanceId is present, we're in multi-instance mode
@@ -43,7 +43,7 @@ export default function ChatAutomation() {
       if (data.instanceId === instanceId) {
         setLogLines((s) => [...s, `Instance status: ${data.status}`]);
         setIsBrowserReady(data.status === "running");
-        if (data.status === 'stopped' || data.status === 'stopping') {
+        if (data.status === "stopped" || data.status === "stopping") {
           // clear UI messages when instance is stopping or stopped
           setMessages([]);
         }
@@ -58,9 +58,9 @@ export default function ChatAutomation() {
           // Merge optimistic local user messages that may not yet be reflected in incoming history.
           // Use a text-based key (from + trimmed text) to deduplicate, avoiding clock-skew problems.
           setMessages((current) => {
-            const makeKey = (m: any) => `${m.from}|${(m.text || '').trim().slice(0, 200)}`;
+            const makeKey = (m: any) => `${m.from}|${(m.text || "").trim().slice(0, 200)}`;
             const incomingKeys = new Set(incoming.map(makeKey));
-            const optimistic = current.filter(m => m.from === 'user' && !incomingKeys.has(makeKey(m)));
+            const optimistic = current.filter((m) => m.from === "user" && !incomingKeys.has(makeKey(m)));
             return [...incoming, ...optimistic];
           });
         }
@@ -75,9 +75,15 @@ export default function ChatAutomation() {
     });
 
     return () => {
-      try { unsubStatus(); } catch {}
-      try { unsubUpdated(); } catch {}
-      try { unsubUnregistered(); } catch {}
+      try {
+        unsubStatus();
+      } catch {}
+      try {
+        unsubUpdated();
+      } catch {}
+      try {
+        unsubUnregistered();
+      } catch {}
     };
   }, [instanceId]);
 
@@ -85,7 +91,7 @@ export default function ChatAutomation() {
     if (!text.trim() || !instanceId) return;
     // Optimistically show the user's message locally to provide immediate feedback.
     const now = new Date().toISOString();
-    setMessages((m) => [...m, { id: Date.now(), from: 'user', text, ts: now }]);
+    setMessages((m) => [...m, { id: Date.now(), from: "user", text, ts: now }]);
     setLogLines((s) => [...s, `Sending message to instance ${instanceId}...`]);
     setIsTyping(true);
 
@@ -107,12 +113,12 @@ export default function ChatAutomation() {
   // no-op: single-instance mode removed; component operates in multi-instance mode only
 
   return (
-  <div className="p-8 h-full flex flex-col overflow-hidden">
+    <div className="p-8 h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           {instanceId && (
             <button
-              onClick={() => navigate('/automation/instance')}
+              onClick={() => navigate("/automation/instance")}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Back to dashboard"
             >
@@ -121,10 +127,10 @@ export default function ChatAutomation() {
           )}
           <div>
             <h1 className="text-3xl font-bold mb-1">
-              {instanceId ? `Chat Instance: ${instanceState?.profileId || instanceId}` : 'Chat Automation'}
+              {instanceId ? `Chat Instance: ${instanceState?.profileId || instanceId}` : "Chat Automation"}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              {instanceId ? 'Connected to running automation instance' : 'Test and run chat-based automations'}
+              {instanceId ? "Connected to running automation instance" : "Test and run chat-based automations"}
             </p>
           </div>
         </div>
@@ -144,7 +150,11 @@ export default function ChatAutomation() {
                 <Clipboard className="w-4 h-4 text-gray-500" />
                 <h3 className="font-semibold">IPC Log</h3>
               </div>
-              <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setShowLog(false)} aria-label="Hide IPC log">
+              <button
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => setShowLog(false)}
+                aria-label="Hide IPC log"
+              >
                 <EyeOff className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -153,7 +163,11 @@ export default function ChatAutomation() {
         )}
         {!showLog && (
           <div className="w-12 flex items-start">
-            <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setShowLog(true)} aria-label="Show IPC log">
+            <button
+              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setShowLog(true)}
+              aria-label="Show IPC log"
+            >
               <Eye className="w-5 h-5 text-gray-500" />
             </button>
           </div>

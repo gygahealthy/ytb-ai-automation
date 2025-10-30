@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { Play, Settings } from 'lucide-react';
-import { useAlert } from '../../hooks/useAlert';
-import { useConfirm } from '../../hooks/useConfirm';
-import InstanceCard from '../../components/automation/InstanceCard';
-import InstanceToolbar from '../../components/automation/InstanceToolbar';
-import { InstanceState, LaunchInstanceRequest } from '../../../shared/types';
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Play, Settings } from "lucide-react";
+import { useAlert } from "../../../hooks/useAlert";
+import { useConfirm } from "../../../hooks/useConfirm";
+import InstanceCard from "../../../components/automation/InstanceCard";
+import InstanceToolbar from "../../../components/automation/InstanceToolbar";
+import { InstanceState, LaunchInstanceRequest } from "../../../../shared/types";
 
-export default function InstanceDashboard() {
+export default function BrowserLaunchPage() {
   const alertApi = useAlert();
   const confirm = useConfirm();
   const navigate = useNavigate();
@@ -16,8 +16,8 @@ export default function InstanceDashboard() {
   const { profileId: routeProfileIdParam } = useParams<{ profileId?: string }>();
   const [instances, setInstances] = useState<InstanceState[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
-  const [provider, setProvider] = useState<'chatgpt' | 'gemini'>('gemini');
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [provider, setProvider] = useState<"chatgpt" | "gemini">("gemini");
   const [isLaunching, setIsLaunching] = useState(false);
   const [config, setConfig] = useState<any>(null);
   // preview handled in toolbar component
@@ -34,8 +34,8 @@ export default function InstanceDashboard() {
       const list = res.data.map((p: any) => ({ id: p.id, name: p.name }));
       setProfiles(list);
 
-  // If a profileId was passed in the route params, prefer that as the selected profile
-  if (routeProfileIdParam) {
+      // If a profileId was passed in the route params, prefer that as the selected profile
+      if (routeProfileIdParam) {
         // ensure the passed id exists in the list
         const exists = list.find((p: any) => p.id === routeProfileIdParam);
         if (exists) setSelectedProfileId(routeProfileIdParam);
@@ -45,8 +45,6 @@ export default function InstanceDashboard() {
       }
     }
   };
-
-  
 
   const loadInstances = async () => {
     // use multi-instance specific API
@@ -77,20 +75,20 @@ export default function InstanceDashboard() {
       const isFirstInstance = instances.length === 0;
       if (isFirstInstance) {
         try {
-          await applyPresetAndRefresh('1x1');
+          await applyPresetAndRefresh("1x1");
         } catch (err) {
-          console.warn('Failed to apply default 1x2-vertical preset before first launch', err);
+          console.warn("Failed to apply default 1x2-vertical preset before first launch", err);
         }
       }
       const request: LaunchInstanceRequest = {
         profileId: selectedProfileId,
-        automationType: 'chat',
+        automationType: "chat",
         provider,
       };
 
       const res = await window.electronAPI.automation.launch(request);
       if (!res.success) {
-  alertApi.show({ message: res.error || 'Failed to launch instance', title: 'Launch Error' });
+        alertApi.show({ message: res.error || "Failed to launch instance", title: "Launch Error" });
       } else {
         // If launch returned instance info (new or existing), refresh instances list.
         const returnedId = res.data?.instanceId;
@@ -111,12 +109,12 @@ export default function InstanceDashboard() {
           const conf = await window.electronAPI.automation.getConfig();
           if (conf?.success) setConfig(conf.data);
         } catch (err) {
-          console.warn('Failed to reposition windows after first launch', err);
+          console.warn("Failed to reposition windows after first launch", err);
         }
       }
     } catch (error) {
-      console.error('Launch error:', error);
-  alertApi.show({ message: 'Failed to launch instance', title: 'Launch Error' });
+      console.error("Launch error:", error);
+      alertApi.show({ message: "Failed to launch instance", title: "Launch Error" });
     } finally {
       setIsLaunching(false);
     }
@@ -131,12 +129,12 @@ export default function InstanceDashboard() {
       const conf = await window.electronAPI.automation.getConfig();
       if (conf?.success) setConfig(conf.data);
     } catch (err) {
-      console.error('Failed to stop instance', err);
+      console.error("Failed to stop instance", err);
     }
   };
 
   const handleStopAll = async () => {
-  if (await confirm({ message: `Stop all ${instances.length} running instances?` })) {
+    if (await confirm({ message: `Stop all ${instances.length} running instances?` })) {
       try {
         await window.electronAPI.automation.stopAll();
         // refresh instances list and config
@@ -145,18 +143,17 @@ export default function InstanceDashboard() {
         const conf = await window.electronAPI.automation.getConfig();
         if (conf?.success) setConfig(conf.data);
       } catch (err) {
-        console.error('Failed to stop all instances', err);
+        console.error("Failed to stop all instances", err);
       }
     }
   };
 
-  const handleNavigateToDetail = (instanceId: string, page: 'chat' | 'video') => {
+  const handleNavigateToDetail = (instanceId: string, page: "chat" | "video") => {
     navigate(`/automation/${instanceId}/${page}`);
   };
 
-
   const getProfileName = (profileId: string) => {
-    return profiles.find(p => p.id === profileId)?.name || profileId;
+    return profiles.find((p) => p.id === profileId)?.name || profileId;
   };
 
   // ...existing code...
@@ -167,17 +164,17 @@ export default function InstanceDashboard() {
 
   // build a slot map for rendering the slot grid
   const slotMap: Record<number, InstanceState | null> = {};
-  for (let i = 0; i < (gridColumns * gridRows); i++) slotMap[i] = null;
-  instances.forEach(inst => {
-    if (typeof inst.screenSlot === 'number' && inst.screenSlot >= 0 && inst.screenSlot < gridColumns * gridRows) {
+  for (let i = 0; i < gridColumns * gridRows; i++) slotMap[i] = null;
+  instances.forEach((inst) => {
+    if (typeof inst.screenSlot === "number" && inst.screenSlot >= 0 && inst.screenSlot < gridColumns * gridRows) {
       slotMap[inst.screenSlot] = inst;
     }
   });
 
   const applyPresetAndRefresh = async (preset: string) => {
     // Guard: reject undefined/empty preset values
-    if (!preset || typeof preset !== 'string' || preset.trim() === '') {
-      console.error('applyPresetAndRefresh called with invalid preset:', preset);
+    if (!preset || typeof preset !== "string" || preset.trim() === "") {
+      console.error("applyPresetAndRefresh called with invalid preset:", preset);
       return;
     }
     try {
@@ -185,7 +182,7 @@ export default function InstanceDashboard() {
       const res = await window.electronAPI.automation.getConfig();
       if (res?.success) setConfig(res.data);
     } catch (err) {
-      console.error('Failed to apply preset', err);
+      console.error("Failed to apply preset", err);
     }
   };
 
@@ -195,13 +192,11 @@ export default function InstanceDashboard() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold mb-1">Instance Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage multiple automation instances
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">Manage multiple automation instances</p>
         </div>
 
         <button
-          onClick={() => navigate('/automation/settings')}
+          onClick={() => navigate("/automation/settings")}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           aria-label="Settings"
         >
@@ -244,25 +239,26 @@ export default function InstanceDashboard() {
           </div>
         ) : (
           // Render slot-based grid showing actual screen positions; support drag/drop
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}
-          >
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}>
             {Array.from({ length: gridColumns * gridRows }).map((_, slotIndex) => {
               const inst = slotMap[slotIndex];
               return (
                 <div
                   key={`slot-${slotIndex}`}
-                  className={`p-4 rounded-xl min-h-[120px] flex flex-col justify-between transition-all duration-200 ${inst ? 'bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 ring-1 ring-transparent hover:ring-primary-200/30' : 'bg-transparent border border-dashed border-gray-300 dark:border-gray-600'}`}
+                  className={`p-4 rounded-xl min-h-[120px] flex flex-col justify-between transition-all duration-200 ${
+                    inst
+                      ? "bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 ring-1 ring-transparent hover:ring-primary-200/30"
+                      : "bg-transparent border border-dashed border-gray-300 dark:border-gray-600"
+                  }`}
                   draggable={!!inst}
                   onDragStart={(e) => {
                     if (!inst) return;
-                    e.dataTransfer?.setData('text/instance-id', inst.instanceId);
+                    e.dataTransfer?.setData("text/instance-id", inst.instanceId);
                   }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={async (e) => {
                     e.preventDefault();
-                    const draggedId = e.dataTransfer?.getData('text/instance-id');
+                    const draggedId = e.dataTransfer?.getData("text/instance-id");
                     if (!draggedId) return;
                     // call main to move/swap
                     await (window.electronAPI.automation as any).moveInstanceToSlot(draggedId, slotIndex);
@@ -277,7 +273,7 @@ export default function InstanceDashboard() {
                     <InstanceCard
                       inst={inst}
                       profileName={getProfileName(inst.profileId)}
-                      onOpenChat={() => handleNavigateToDetail(inst.instanceId, 'chat')}
+                      onOpenChat={() => handleNavigateToDetail(inst.instanceId, "chat")}
                       onStop={() => handleStopInstance(inst.instanceId)}
                     />
                   ) : (
