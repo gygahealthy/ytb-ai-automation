@@ -193,7 +193,7 @@ export class CookieService {
         enabledRotationMethods:
           typeof rotationConfig.enabled_rotation_methods === "string"
             ? rotationConfig.enabled_rotation_methods
-            : JSON.stringify(rotationConfig.enabled_rotation_methods ?? ["refreshCreds", "rotateCookie"]),
+            : JSON.stringify(rotationConfig.enabled_rotation_methods ?? []),
         rotationMethodOrder:
           typeof rotationConfig.rotation_method_order === "string"
             ? rotationConfig.rotation_method_order

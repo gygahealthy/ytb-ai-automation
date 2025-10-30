@@ -20,43 +20,66 @@ interface CookieEditModalProps {
   mode: "manual" | "extract";
   onClose: () => void;
   onSuccess: () => void;
+  editMode?: boolean;
+  initialData?: {
+    cookieId: string;
+    domain: string;
+    service: string;
+    url: string;
+    rawCookieString: string;
+    rotationConfig: RotationConfig;
+  };
+  onUpdate?: (cookieId: string, data: any) => Promise<any>;
 }
 
-export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: CookieEditModalProps) {
-  const [domain, setDomain] = useState("");
-  const [rawCookieString, setRawCookieString] = useState("");
-  const [service, setService] = useState("gemini");
-  const [url, setUrl] = useState("");
+export function CookieAddModal({
+  isOpen,
+  profileId,
+  mode,
+  onClose,
+  onSuccess,
+  editMode = false,
+  initialData,
+  onUpdate,
+}: CookieEditModalProps) {
+  const [domain, setDomain] = useState(initialData?.domain || "");
+  const [rawCookieString, setRawCookieString] = useState(initialData?.rawCookieString || "");
+  const [service, setService] = useState(initialData?.service || "gemini");
+  const [url, setUrl] = useState(initialData?.url || "");
   const [loading, setLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string>("");
 
   // Rotation configuration state
-  const [rotationConfig, setRotationConfig] = useState<RotationConfig>({
-    rotationUrl: "https://www.youtube.com",
-    requiredCookies: ["__Secure-3PSIDCC"],
-    rotationIntervalMinutes: 60,
-    enabledRotationMethods: ["headless", "refreshCreds"],
-    rotationMethodOrder: ["refreshCreds", "rotateCookie", "headless"],
-    launchWorkerOnStartup: false,
-  });
+  const [rotationConfig, setRotationConfig] = useState<RotationConfig>(
+    initialData?.rotationConfig || {
+      rotationUrl: "https://www.youtube.com",
+      requiredCookies: ["__Secure-3PSIDCC"],
+      rotationIntervalMinutes: 60,
+      enabledRotationMethods: [],
+      rotationMethodOrder: ["refreshCreds", "rotateCookie", "headless"],
+      launchWorkerOnStartup: false,
+    }
+  );
   const [newRequiredCookie, setNewRequiredCookie] = useState("");
 
   const handleClose = () => {
     // Reset form
-    setDomain("");
-    setRawCookieString("");
-    setService("gemini");
-    setUrl("");
+    setDomain(initialData?.domain || "");
+    setRawCookieString(initialData?.rawCookieString || "");
+    setService(initialData?.service || "gemini");
+    setUrl(initialData?.url || "");
     setError("");
-    setRotationConfig({
-      rotationUrl: "https://www.youtube.com",
-      requiredCookies: ["__Secure-3PSIDCC"],
-      rotationIntervalMinutes: 60,
-      enabledRotationMethods: ["headless", "refreshCreds"],
-      rotationMethodOrder: ["refreshCreds", "rotateCookie", "headless"],
-      launchWorkerOnStartup: false,
-    });
+    setRotationConfig(
+      initialData?.rotationConfig || {
+        rotationUrl: "https://www.youtube.com",
+        requiredCookies: ["__Secure-3PSIDCC"],
+        rotationIntervalMinutes: 60,
+        enabledRotationMethods: [],
+        rotationMethodOrder: ["refreshCreds", "rotateCookie", "headless"],
+        launchWorkerOnStartup: false,
+      }
+    );
     onClose();
   };
 
@@ -106,28 +129,49 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
       // Convert domain to full URL if not already a URL
       const fullUrl = domain.startsWith("http://") || domain.startsWith("https://") ? domain : `https://${domain}`;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response: ApiResponse<Cookie> = await (window.electronAPI as any).cookies.createCookie(profileId, fullUrl, {
-        rawCookieString,
-        service,
-        rotationConfig: {
-          rotation_url: rotationConfig.rotationUrl,
-          required_cookies: JSON.stringify(rotationConfig.requiredCookies),
-          rotation_interval_minutes: rotationConfig.rotationIntervalMinutes,
-          enabled_rotation_methods: JSON.stringify(rotationConfig.enabledRotationMethods),
-          rotation_method_order: JSON.stringify(rotationConfig.rotationMethodOrder),
-          launch_worker_on_startup: rotationConfig.launchWorkerOnStartup ? 1 : 0,
-        },
-      });
-      if (response.success) {
-        handleClose();
-        onSuccess();
+      if (editMode && initialData && onUpdate) {
+        // Edit mode: update existing cookie
+        const response = await onUpdate(initialData.cookieId, {
+          rotationConfig: {
+            rotation_url: rotationConfig.rotationUrl,
+            required_cookies: JSON.stringify(rotationConfig.requiredCookies),
+            rotation_interval_minutes: rotationConfig.rotationIntervalMinutes,
+            enabled_rotation_methods: JSON.stringify(rotationConfig.enabledRotationMethods),
+            rotation_method_order: JSON.stringify(rotationConfig.rotationMethodOrder),
+            launch_worker_on_startup: rotationConfig.launchWorkerOnStartup ? 1 : 0,
+          },
+        });
+        if (response.success) {
+          handleClose();
+          onSuccess();
+        } else {
+          setError(response.error || "Failed to update cookie");
+        }
       } else {
-        setError(response.error || "Failed to create cookie");
+        // Create mode: create new cookie
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response: ApiResponse<Cookie> = await (window.electronAPI as any).cookies.createCookie(profileId, fullUrl, {
+          rawCookieString,
+          service,
+          rotationConfig: {
+            rotation_url: rotationConfig.rotationUrl,
+            required_cookies: JSON.stringify(rotationConfig.requiredCookies),
+            rotation_interval_minutes: rotationConfig.rotationIntervalMinutes,
+            enabled_rotation_methods: JSON.stringify(rotationConfig.enabledRotationMethods),
+            rotation_method_order: JSON.stringify(rotationConfig.rotationMethodOrder),
+            launch_worker_on_startup: rotationConfig.launchWorkerOnStartup ? 1 : 0,
+          },
+        });
+        if (response.success) {
+          handleClose();
+          onSuccess();
+        } else {
+          setError(response.error || "Failed to create cookie");
+        }
       }
     } catch (err) {
-      console.error("Failed to create cookie:", err);
-      setError("Failed to create cookie");
+      console.error("Failed to create/update cookie:", err);
+      setError("Failed to create/update cookie");
     } finally {
       setLoading(false);
     }
@@ -341,7 +385,7 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
               disabled={loading}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
-              {loading ? "Creating..." : "Create"}
+              {loading ? (editMode ? "Updating..." : "Creating...") : editMode ? "Update" : "Create"}
             </button>
           </div>
         </form>
@@ -526,7 +570,14 @@ export function CookieAddModal({ isOpen, profileId, mode, onClose, onSuccess }: 
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={"Cookie"} size="md" closeOnEscape={true} closeOnOverlay={true}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={editMode ? "Edit Cookie" : "Cookie"}
+      size="md"
+      closeOnEscape={true}
+      closeOnOverlay={true}
+    >
       {modalContent}
     </Modal>
   );

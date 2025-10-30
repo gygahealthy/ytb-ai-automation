@@ -9,6 +9,7 @@ import { useConfirm } from "../../../hooks/useConfirm";
 interface CookieConfigCardProps {
   cookie: {
     cookieId: string;
+    profileId?: string;
     service: string;
     url: string;
     status: string;
@@ -615,8 +616,25 @@ export default function CookieConfigCard({
 
       <CookieAddModal
         isOpen={showEditModal}
-        profileId={""}
+        profileId={cookie.profileId || ""}
         mode={"manual"}
+        editMode={true}
+        initialData={{
+          cookieId: cookie.cookieId,
+          domain: new URL(cookie.url).hostname,
+          service: cookie.service,
+          url: cookie.url,
+          rawCookieString: cookie.rawCookieString || "",
+          rotationConfig: {
+            rotationUrl: cookie.url,
+            requiredCookies: config.requiredCookies || ["__Secure-3PSIDCC"],
+            rotationIntervalMinutes: config.rotationIntervalMinutes || 60,
+            enabledRotationMethods: config.enabledRotationMethods || [],
+            rotationMethodOrder: config.rotationMethodOrder || ["refreshCreds", "rotateCookie", "headless"],
+            launchWorkerOnStartup: config.launchWorkerOnStartup || false,
+          },
+        }}
+        onUpdate={onUpdateConfig}
         onClose={() => setShowEditModal(false)}
         onSuccess={() => setShowEditModal(false)}
       />

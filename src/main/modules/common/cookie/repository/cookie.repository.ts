@@ -28,7 +28,7 @@ export class CookieRepository extends BaseRepository<Cookie> {
       status: cookieRow.status,
       rotationProfileId: cookieRow.rotation_profile_id,
       launchWorkerOnStartup: cookieRow.launch_worker_on_startup ?? 0,
-      enabledRotationMethods: cookieRow.enabled_rotation_methods ?? '["refreshCreds","rotateCookie"]',
+      enabledRotationMethods: cookieRow.enabled_rotation_methods ?? "[]",
       rotationMethodOrder: cookieRow.rotation_method_order ?? '["refreshCreds","rotateCookie","headless"]',
       requiredCookies: this.parseRequiredCookies(cookieRow.required_cookies),
       createdAt: cookieRow.created_at,
