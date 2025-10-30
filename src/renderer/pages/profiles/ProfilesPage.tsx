@@ -20,7 +20,6 @@ interface Profile {
   creditRemaining: number;
   tags?: string[];
   cookieExpires?: string;
-  isLoggedIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,7 +40,6 @@ interface ColumnVisibility extends Record<string, boolean> {
   tags: boolean;
   createdAt: boolean;
   cookie: boolean;
-  loginStatus: boolean;
 }
 
 export default function ProfilesPage() {
@@ -69,7 +67,6 @@ export default function ProfilesPage() {
     tags: true,
     createdAt: true,
     cookie: true,
-    loginStatus: true,
   });
 
   useEffect(() => {
@@ -142,7 +139,6 @@ export default function ProfilesPage() {
           userAgent: formData.userAgent || undefined,
           creditRemaining: formData.creditRemaining,
           tags: formData.tags,
-          cookies: formData.cookies || undefined,
         })) as ApiResponse<Profile>;
 
         if (response.success) {
@@ -163,7 +159,6 @@ export default function ProfilesPage() {
           userAgent: formData.userAgent || undefined,
           creditRemaining: formData.creditRemaining,
           tags: formData.tags,
-          cookies: formData.cookies || undefined,
         })) as ApiResponse<Profile>;
 
         if (response.success) {

@@ -1,4 +1,4 @@
-import { Cookie, DollarSign, Folder, Globe, Plus, RefreshCw, Tag, X } from "lucide-react";
+import { DollarSign, Folder, Globe, Plus, RefreshCw, Tag, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSettingsStore, BrowserPath } from "@store/settings.store";
 
@@ -23,7 +23,6 @@ export interface ProfileFormData {
   userAgent: string;
   creditRemaining: number;
   tags: string[];
-  cookies?: string;
 }
 
 interface ProfileFormProps {
@@ -58,7 +57,6 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
     userAgent: "",
     creditRemaining: 0,
     tags: [],
-    cookies: "",
   });
   const [tagInput, setTagInput] = useState("");
 
@@ -88,7 +86,6 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
         userAgent: editingProfile.userAgent || "",
         creditRemaining: editingProfile.creditRemaining,
         tags: editingProfile.tags || [],
-        cookies: editingProfile.cookies || "",
       });
     } else {
       // Generate random user agent and set default Chrome path for new profiles
@@ -105,7 +102,6 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
             userAgent: ua,
             creditRemaining: 0,
             tags: [],
-            cookies: "",
           });
         } catch (error) {
           console.error("Failed to generate initial data:", error);
@@ -116,7 +112,6 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
             userAgent: "",
             creditRemaining: 0,
             tags: [],
-            cookies: "",
           });
         }
       };
@@ -330,24 +325,6 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
           placeholder="0.00"
         />
         <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Set the initial credit balance for this profile</p>
-      </div>
-
-      {/* Cookies Field */}
-      <div>
-        <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-300">
-          <Cookie className="w-4 h-4 text-orange-500" />
-          Cookies (Optional)
-        </label>
-        <textarea
-          rows={3}
-          value={formData.cookies}
-          onChange={(e) => setFormData({ ...formData, cookies: e.target.value })}
-          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none font-mono text-xs"
-          placeholder="name1=value1; name2=value2; name3=value3"
-        />
-        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-          Cookie string in standard format. Usually auto-filled when logging in.
-        </p>
       </div>
 
       {/* Tags Field */}

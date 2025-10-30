@@ -13,7 +13,6 @@ import { useSingleGenerationPolling } from "../../../contexts/VideoGenerationPol
 interface Profile {
   id: string;
   name: string;
-  isLoggedIn?: boolean;
 }
 
 interface Project {

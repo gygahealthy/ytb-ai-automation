@@ -1,4 +1,7 @@
-import { Calendar, Cookie, DollarSign, Edit, Tag, Trash2, User, MessageSquare } from "lucide-react";
+import { Calendar, Cookie, DollarSign, Edit, Tag, Trash2, User, MessageSquare, Sparkles, Zap, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import ToggleSwitch from "@components/common/ToggleSwitch";
+import { useDefaultProfileStore } from "@store/default-profile.store";
 
 interface Profile {
   id: string;
@@ -9,7 +12,6 @@ interface Profile {
   creditRemaining: number;
   tags?: string[];
   cookieExpires?: string;
-  isLoggedIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +34,11 @@ export default function ProfilesGrid({
   onOpenCookieModal,
   onOpenChatModal,
 }: ProfilesGridProps) {
+  const geminiProfileId = useDefaultProfileStore((s) => s.geminiProfileId);
+  const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
+  const setGeminiProfile = useDefaultProfileStore((s) => s.setGeminiProfile);
+  const setFlowProfile = useDefaultProfileStore((s) => s.setFlowProfile);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -46,6 +53,35 @@ export default function ProfilesGrid({
   const isCookieExpired = (expiryDate?: string) => {
     if (!expiryDate) return true;
     return new Date(expiryDate) < new Date();
+  };
+
+  // Small component to render and copy profile id
+  const ProfileId: React.FC<{ id: string }> = ({ id }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1400);
+      } catch (err) {
+        console.error("Failed to copy id", err);
+      }
+    };
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded flex-1">
+          {id}
+        </span>
+        <button
+          onClick={handleCopy}
+          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          title={copied ? "Copied" : "Copy ID"}
+          aria-label={copied ? "Copied" : "Copy ID"}
+        >
+          {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-600 dark:text-gray-300" />}
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -67,30 +103,22 @@ export default function ProfilesGrid({
             className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 group"
           >
             {/* Card Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                <User className="w-7 h-7 text-white" />
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <User className="w-6 h-6 text-white" />
               </div>
               <div className="flex gap-1">
                 <button
                   onClick={() => onEditProfile(profile)}
-                  className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                   title="Edit"
                 >
                   <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </button>
-                {/* Login button removed */}
-                <button
-                  onClick={() => onDeleteProfile(profile.id)}
-                  className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                </button>
                 {onOpenCookieModal && (
                   <button
                     onClick={() => onOpenCookieModal(profile.id)}
-                    className="p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
                     title="Manage Cookies"
                   >
                     <Cookie className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -99,24 +127,29 @@ export default function ProfilesGrid({
                 {onOpenChatModal && (
                   <button
                     onClick={() => onOpenChatModal(profile.id)}
-                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                     title="Test Chat"
                   >
                     <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   </button>
                 )}
+                <button
+                  onClick={() => onDeleteProfile(profile.id)}
+                  className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                </button>
               </div>
             </div>
 
             {/* Profile Name */}
-            <h3 className="text-lg font-bold mb-2 truncate" title={profile.name}>
+            <h3 className="text-base font-bold mb-2 truncate text-gray-900 dark:text-white" title={profile.name}>
               {profile.name}
             </h3>
 
             {/* Profile ID */}
-            <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-4 truncate bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-              {profile.id}
-            </p>
+            <ProfileId id={profile.id} />
 
             {/* Credit */}
             <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold">
@@ -140,32 +173,47 @@ export default function ProfilesGrid({
             )}
 
             {/* Cookie Status */}
-            <div className="mb-3 flex items-center gap-2">
-              <Cookie className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`} />
+            <div className="mb-4 flex items-center gap-2">
+              <Cookie className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-gray-400" : "text-green-500"}`} />
               <span
                 className={`text-xs ${
-                  isCookieExpired(profile.cookieExpires) ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
+                  isCookieExpired(profile.cookieExpires)
+                    ? "text-gray-500 dark:text-gray-400"
+                    : "text-green-600 dark:text-green-400"
                 }`}
               >
-                {profile.cookieExpires
-                  ? isCookieExpired(profile.cookieExpires)
-                    ? "Cookie Expired"
-                    : "Cookie Valid"
-                  : "No Cookie"}
+                {profile.cookieExpires ? (isCookieExpired(profile.cookieExpires) ? "Expired" : "Active") : "None"}
               </span>
             </div>
 
-            {/* Login Status */}
-            <div className="mb-3">
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-                  profile.isLoggedIn
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                }`}
-              >
-                {profile.isLoggedIn ? "✓ Logged In" : "✗ Not Logged In"}
-              </span>
+            {/* Default Profile Toggles */}
+            <div className="mb-4 p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/30 dark:to-gray-700/50 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Gemini</span>
+                </div>
+                <ToggleSwitch
+                  checked={geminiProfileId === profile.id}
+                  onChange={(checked) => setGeminiProfile(checked ? profile.id : null)}
+                  size="sm"
+                  color="purple"
+                  ariaLabel="Set as default Gemini profile"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Flow</span>
+                </div>
+                <ToggleSwitch
+                  checked={flowProfileId === profile.id}
+                  onChange={(checked) => setFlowProfile(checked ? profile.id : null)}
+                  size="sm"
+                  color="blue"
+                  ariaLabel="Set as default Flow profile"
+                />
+              </div>
             </div>
 
             {/* Created Date */}

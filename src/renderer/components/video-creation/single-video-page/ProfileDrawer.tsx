@@ -13,7 +13,6 @@ import AuthErrorDialog from "./profile-drawer/AuthErrorDialog";
 interface Profile {
   id: string;
   name: string;
-  isLoggedIn?: boolean;
 }
 
 interface Project {

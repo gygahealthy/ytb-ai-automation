@@ -1,5 +1,7 @@
 import { Calendar, Cookie, DollarSign, Folder, Globe, Tag, User } from "lucide-react";
 import ProfileActionButtons from "./ProfileActionButtons";
+import ToggleSwitch from "@components/common/ToggleSwitch";
+import { useDefaultProfileStore } from "@store/default-profile.store";
 
 interface Profile {
   id: string;
@@ -10,7 +12,6 @@ interface Profile {
   creditRemaining: number;
   tags?: string[];
   cookieExpires?: string;
-  isLoggedIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,7 +26,6 @@ interface ColumnVisibility {
   tags: boolean;
   createdAt: boolean;
   cookie: boolean;
-  loginStatus: boolean;
 }
 
 interface ProfilesTableProps {
@@ -45,6 +45,11 @@ export default function ProfilesTable({
   onDeleteProfile,
   onOpenChatModal,
 }: ProfilesTableProps) {
+  const geminiProfileId = useDefaultProfileStore((s) => s.geminiProfileId);
+  const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
+  const setGeminiProfile = useDefaultProfileStore((s) => s.setGeminiProfile);
+  const setFlowProfile = useDefaultProfileStore((s) => s.setFlowProfile);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -59,6 +64,17 @@ export default function ProfilesTable({
   const isCookieExpired = (expiryDate?: string) => {
     if (!expiryDate) return true;
     return new Date(expiryDate) < new Date();
+  };
+
+  const getBrowserName = (browserPath?: string) => {
+    if (!browserPath) return "Chrome";
+    const fileName = browserPath.toLowerCase();
+    if (fileName.includes("chrome")) return "Chrome";
+    if (fileName.includes("edge")) return "Edge";
+    if (fileName.includes("brave")) return "Brave";
+    if (fileName.includes("opera")) return "Opera";
+    if (fileName.includes("vivaldi")) return "Vivaldi";
+    return "Other Chromium";
   };
 
   return (
@@ -115,11 +131,12 @@ export default function ProfilesTable({
                   Cookie
                 </th>
               )}
-              {columnVisibility.loginStatus && (
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-32">
-                  Status
-                </th>
-              )}
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-32">
+                Default Gemini
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider w-32">
+                Default Flow
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -177,14 +194,7 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 whitespace-nowrap w-32">
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <span
-                          className="text-xs text-gray-600 dark:text-gray-400 truncate"
-                          title={profile.browserPath || "Chrome"}
-                        >
-                          {profile.browserPath
-                            ? profile.browserPath.split("\\").pop()?.replace(".exe", "") || "Chrome"
-                            : "Chrome"}
-                        </span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{getBrowserName(profile.browserPath)}</span>
                       </div>
                     </td>
                   )}
@@ -250,38 +260,44 @@ export default function ProfilesTable({
                     <td className="px-4 py-3.5 whitespace-nowrap w-40">
                       <div className="flex items-center gap-2">
                         <Cookie
-                          className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-red-500" : "text-green-500"}`}
+                          className={`w-4 h-4 ${isCookieExpired(profile.cookieExpires) ? "text-gray-400" : "text-green-500"}`}
                         />
                         {profile.cookieExpires ? (
                           <span
                             className={`text-xs font-medium ${
                               isCookieExpired(profile.cookieExpires)
-                                ? "text-red-600 dark:text-red-400"
+                                ? "text-gray-500 dark:text-gray-400"
                                 : "text-green-600 dark:text-green-400"
                             }`}
                           >
-                            {isCookieExpired(profile.cookieExpires) ? "Expired" : "Valid"}
+                            {isCookieExpired(profile.cookieExpires) ? "Expired" : "Active"}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">None</span>
+                          <span className="text-xs text-gray-400">None</span>
                         )}
                       </div>
                     </td>
                   )}
-                  {columnVisibility.loginStatus && (
-                    <td className="px-4 py-3.5 whitespace-nowrap w-32">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                          profile.isLoggedIn
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
-                        <div className={`w-2 h-2 rounded-full ${profile.isLoggedIn ? "bg-green-600" : "bg-gray-500"}`} />
-                        {profile.isLoggedIn ? "Logged In" : "Logged Out"}
-                      </span>
-                    </td>
-                  )}
+                  {/* Default Gemini Toggle */}
+                  <td className="px-4 py-3.5 whitespace-nowrap w-32">
+                    <ToggleSwitch
+                      checked={geminiProfileId === profile.id}
+                      onChange={(checked) => setGeminiProfile(checked ? profile.id : null)}
+                      size="sm"
+                      color="purple"
+                      ariaLabel="Set as default Gemini profile"
+                    />
+                  </td>
+                  {/* Default Flow Toggle */}
+                  <td className="px-4 py-3.5 whitespace-nowrap w-32">
+                    <ToggleSwitch
+                      checked={flowProfileId === profile.id}
+                      onChange={(checked) => setFlowProfile(checked ? profile.id : null)}
+                      size="sm"
+                      color="blue"
+                      ariaLabel="Set as default Flow profile"
+                    />
+                  </td>
                 </tr>,
               ])
             )}

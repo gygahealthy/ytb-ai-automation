@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { Play, Settings } from "lucide-react";
+import { Play, Settings, Info, X } from "lucide-react";
 import { useAlert } from "../../../hooks/useAlert";
 import { useConfirm } from "../../../hooks/useConfirm";
 import InstanceCard from "../../../components/automation/InstanceCard";
@@ -20,6 +20,15 @@ export default function BrowserLaunchPage() {
   const [provider, setProvider] = useState<"chatgpt" | "gemini">("gemini");
   const [isLaunching, setIsLaunching] = useState(false);
   const [config, setConfig] = useState<any>(null);
+  // Hint visibility (persisted)
+  const HINT_KEY = "veo3-browser-launch-hint-hidden";
+  const [showHint, setShowHint] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(HINT_KEY) !== "1";
+    } catch (e) {
+      return true;
+    }
+  });
   // preview handled in toolbar component
 
   // Load initial data
@@ -195,14 +204,73 @@ export default function BrowserLaunchPage() {
           <p className="text-gray-600 dark:text-gray-400">Manage multiple automation instances</p>
         </div>
 
-        <button
-          onClick={() => navigate("/automation/settings")}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          aria-label="Settings"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              try {
+                if (showHint) {
+                  localStorage.setItem(HINT_KEY, "1");
+                } else {
+                  localStorage.removeItem(HINT_KEY);
+                }
+              } catch (e) {}
+              setShowHint((s) => {
+                const next = !s;
+                // Persist the inverse (we store hidden flag)
+                try {
+                  if (!next) localStorage.setItem(HINT_KEY, "1");
+                  else localStorage.removeItem(HINT_KEY);
+                } catch (e) {}
+                return next;
+              });
+            }}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label={showHint ? "Hide hint" : "Show hint"}
+            title={showHint ? "Hide hint" : "Show hint"}
+          >
+            <Info className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => navigate("/automation/settings")}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
       </div>
+
+      {/* Hint: allow launching Chrome with selected profile for manual setup (cookies, login, etc.) */}
+      {showHint && (
+        <div className="mb-6">
+          <div className="relative flex items-start gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+            <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+            <div>
+              <div className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                Launch profile in Chrome for manual setup
+              </div>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                You can launch the selected profile as a regular Chrome window to perform manual steps (for example, logging in or
+                adding cookies) before starting automation. This is useful when certain configuration or authentication must be
+                completed in the browser first.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                try {
+                  localStorage.setItem(HINT_KEY, "1");
+                } catch (e) {}
+                setShowHint(false);
+              }}
+              className="absolute right-2 top-2 p-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-800/30"
+              aria-label="Dismiss hint"
+            >
+              <X className="w-4 h-4 text-yellow-700 dark:text-yellow-200" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <InstanceToolbar
