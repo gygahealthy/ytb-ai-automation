@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, FileText } from "lucide-react";
 import CookieRotationPanel from "./CookieRotationPanel";
+import CookieRotationLogsPanel from "./CookieRotationLogsPanel";
 import type { RotationStatus, ProfileWithCookies } from "./types";
 import type { ApiResponse, Cookie } from "@/shared/types";
 import { useAlert } from "@/renderer/hooks/useAlert";
@@ -8,6 +10,7 @@ export default function CookieRotationDrawerContent() {
   const [status, setStatus] = useState<RotationStatus | null>(null);
   const [profiles, setProfiles] = useState<ProfileWithCookies[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "logs">("dashboard");
   const panelRef = useRef<HTMLDivElement | null>(null);
   const { show } = useAlert();
 
@@ -177,6 +180,7 @@ export default function CookieRotationDrawerContent() {
         onStopWorker={handleStopWorker}
         onForceHeadlessRefresh={handleForceHeadlessRefresh}
         onForceVisibleRefresh={handleForceVisibleRefresh}
+        onViewLogs={() => setActiveTab("logs")}
         ref={panelRef}
       />
     );
@@ -185,5 +189,44 @@ export default function CookieRotationDrawerContent() {
   if (loading) return <div className="p-4 text-sm">Loading...</div>;
   if (!status) return <div className="p-4 text-sm">No status</div>;
 
-  return panelNode;
+  return (
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Compact Tab Navigation */}
+      <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex h-10">
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-all flex items-center justify-center gap-1 ${
+            activeTab === "dashboard"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900"
+              : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300"
+          }`}
+          title="Dashboard"
+        >
+          <Activity className="w-4 h-4" />
+          <span className="hidden sm:inline">Dashboard</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("logs")}
+          className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-all flex items-center justify-center gap-1 ${
+            activeTab === "logs"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900"
+              : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300"
+          }`}
+          title="Logs"
+        >
+          <FileText className="w-4 h-4" />
+          <span className="hidden sm:inline">Logs</span>
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === "dashboard" ? (
+          panelNode
+        ) : (
+          <CookieRotationLogsPanel profiles={profiles} onBack={() => setActiveTab("dashboard")} ref={panelRef} />
+        )}
+      </div>
+    </div>
+  );
 }

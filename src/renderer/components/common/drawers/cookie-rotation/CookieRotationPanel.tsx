@@ -25,6 +25,7 @@ interface Props {
     url: string,
     profileName?: string
   ) => Promise<void> | void;
+  onViewLogs?: () => void;
   ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -37,6 +38,7 @@ export function CookieRotationPanel({
   onStopWorker,
   onForceHeadlessRefresh,
   onForceVisibleRefresh,
+  onViewLogs,
   ref,
 }: Props) {
   // default to expanded for all profiles
@@ -323,6 +325,16 @@ export function CookieRotationPanel({
         >
           Refresh
         </button>
+
+        {onViewLogs && (
+          <button
+            onClick={onViewLogs}
+            className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
+            title="View all worker logs with quick navigation"
+          >
+            View Logs
+          </button>
+        )}
       </div>
     </div>
   );
