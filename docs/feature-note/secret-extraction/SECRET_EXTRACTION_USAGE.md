@@ -11,7 +11,7 @@ The Secret Extraction System automatically extracts API keys and tokens from Nex
 ✅ **Per-Profile Storage**: Each profile has its own set of secrets  
 ✅ **Database Persistence**: Secrets stored in `profile_secrets` table  
 ✅ **Runtime Caching**: Zustand store for fast access in renderer  
-✅ **Auto-Refresh**: Can invalidate and re-extract when cookies rotate  
+✅ **Auto-Refresh**: Can invalidate and re-extract when cookies rotate
 
 ## Architecture
 
@@ -37,10 +37,10 @@ src/renderer/store/secretStore.ts          # Zustand store for UI
 ### 1. Extract Secrets for a Profile (Main Process)
 
 ```typescript
-import { secretExtractionService } from '@main/modules/common/secret-extraction';
+import { flowSecretExtractionService } from "@main/modules/common/secret-extraction";
 
 // Extract all secrets from Google Labs Flow
-const result = await secretExtractionService.extractSecrets(profileId);
+const result = await flowSecretExtractionService.extractSecrets(profileId);
 
 if (result.success) {
   console.log(`Extracted ${result.secrets.length} secrets`);
@@ -50,10 +50,10 @@ if (result.success) {
 ### 2. Get a Secret (Main Process)
 
 ```typescript
-import { secretExtractionService } from '@main/modules/common/secret-extraction';
+import { flowSecretExtractionService } from "@main/modules/common/secret-extraction";
 
 // Get FLOW_NEXT_KEY for API calls
-const apiKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+const apiKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
 
 if (apiKey) {
   // Use in API request
@@ -64,7 +64,7 @@ if (apiKey) {
 ### 3. Use in Renderer (React Component)
 
 ```tsx
-import { useSecretStore, useFlowNextKey } from '@renderer/store/secretStore';
+import { useSecretStore, useFlowNextKey } from "@renderer/store/secretStore";
 
 function MyComponent({ profileId }: { profileId: string }) {
   const flowNextKey = useFlowNextKey(profileId);
@@ -74,7 +74,7 @@ function MyComponent({ profileId }: { profileId: string }) {
   const handleExtract = async () => {
     const success = await extractSecrets(profileId);
     if (success) {
-      alert('Secrets extracted successfully!');
+      alert("Secrets extracted successfully!");
     }
   };
 
@@ -98,18 +98,18 @@ function MyComponent({ profileId }: { profileId: string }) {
 // In your service that needs the API key
 async function fetchImage(profileId: string, imageName: string) {
   // Try to get existing secret
-  let apiKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+  let apiKey = await flowSecretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
 
   // If not found, extract automatically
   if (!apiKey) {
     console.log('No API key found, extracting...');
-    const extractResult = await secretExtractionService.extractSecrets(profileId);
-    
+    const extractResult = await flowSecretExtractionService.extractSecrets(profileId);
+
     if (!extractResult.success) {
       throw new Error('Failed to extract API key');
     }
 
-    apiKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+    apiKey = await flowSecretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
   }
 
   // Use the API key
@@ -122,28 +122,28 @@ async function fetchImage(profileId: string, imageName: string) {
 
 ### Main → Renderer Communication
 
-| Channel | Parameters | Returns | Description |
-|---------|-----------|---------|-------------|
-| `secret-extraction:extract` | `{ profileId, config? }` | `{ success, data }` | Extract secrets from target URL |
-| `secret-extraction:get` | `{ profileId, secretType? }` | `{ success, secretValue, found }` | Get a valid secret |
-| `secret-extraction:get-all` | `{ profileId? }` | `{ success, secrets[] }` | Get all secrets (or for one profile) |
-| `secret-extraction:refresh` | `{ profileId, config? }` | `{ success, data }` | Invalidate old & extract new |
-| `secret-extraction:invalidate` | `{ profileId }` | `{ success }` | Mark all secrets as invalid |
-| `secret-extraction:browser-status` | `{}` | `{ success, isActive }` | Check if browser is running |
-| `secret-extraction:cleanup` | `{}` | `{ success }` | Close browser resources |
+| Channel                            | Parameters                   | Returns                           | Description                          |
+| ---------------------------------- | ---------------------------- | --------------------------------- | ------------------------------------ |
+| `secret-extraction:extract`        | `{ profileId, config? }`     | `{ success, data }`               | Extract secrets from target URL      |
+| `secret-extraction:get`            | `{ profileId, secretType? }` | `{ success, secretValue, found }` | Get a valid secret                   |
+| `secret-extraction:get-all`        | `{ profileId? }`             | `{ success, secrets[] }`          | Get all secrets (or for one profile) |
+| `secret-extraction:refresh`        | `{ profileId, config? }`     | `{ success, data }`               | Invalidate old & extract new         |
+| `secret-extraction:invalidate`     | `{ profileId }`              | `{ success }`                     | Mark all secrets as invalid          |
+| `secret-extraction:browser-status` | `{}`                         | `{ success, isActive }`           | Check if browser is running          |
+| `secret-extraction:cleanup`        | `{}`                         | `{ success }`                     | Close browser resources              |
 
 ### Example IPC Call from Renderer
 
 ```typescript
 // Extract secrets
-const result = await (window as any).electronAPI.invoke('secret-extraction:extract', {
-  profileId: 'profile-123'
+const result = await(window as any).electronAPI.invoke("secret-extraction:extract", {
+  profileId: "profile-123",
 });
 
 // Get API key
-const { secretValue } = await (window as any).electronAPI.invoke('secret-extraction:get', {
-  profileId: 'profile-123',
-  secretType: 'FLOW_NEXT_KEY'
+const { secretValue } = await(window as any).electronAPI.invoke("secret-extraction:get", {
+  profileId: "profile-123",
+  secretType: "FLOW_NEXT_KEY",
 });
 ```
 
@@ -165,7 +165,7 @@ CREATE TABLE profile_secrets (
 );
 
 -- Indexes for fast lookups
-CREATE UNIQUE INDEX idx_profile_secrets_profile_type 
+CREATE UNIQUE INDEX idx_profile_secrets_profile_type
   ON profile_secrets(profile_id, secret_type);
 ```
 
@@ -185,21 +185,21 @@ The service automatically attempts extraction if no key is found:
 
 ```typescript
 // In imageVeo3Service.uploadImage()
-const apiKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+const apiKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
 if (!apiKey) {
   // Auto-extract
-  await secretExtractionService.extractSecrets(profileId);
+  await flowSecretExtractionService.extractSecrets(profileId);
 }
 ```
 
 ## Secret Types
 
-| Type | Pattern | Example | Usage |
-|------|---------|---------|-------|
+| Type            | Pattern                   | Example           | Usage                             |
+| --------------- | ------------------------- | ----------------- | --------------------------------- |
 | `FLOW_NEXT_KEY` | `AIzaSy[A-Za-z0-9_-]{33}` | `AIzaSyAbC123...` | Google API key for Flow endpoints |
-| `BEARER_TOKEN` | JWT format | `eyJhbG...` | Authorization headers |
-| `API_KEY` | Generic | Various | Other API keys |
-| `AUTH_TOKEN` | Generic | Various | Authentication tokens |
+| `BEARER_TOKEN`  | JWT format                | `eyJhbG...`       | Authorization headers             |
+| `API_KEY`       | Generic                   | Various           | Other API keys                    |
+| `AUTH_TOKEN`    | Generic                   | Various           | Authentication tokens             |
 
 ## Troubleshooting
 
@@ -210,7 +210,7 @@ if (!apiKey) {
 ```typescript
 // Check cookies first
 const cookies = await cookieService.getCookiesByProfile(profileId);
-const flowCookie = cookies.find(c => c.service === 'flow' && c.status === 'active');
+const flowCookie = cookies.find((c) => c.service === "flow" && c.status === "active");
 
 if (!flowCookie) {
   // Need to login first
@@ -218,7 +218,7 @@ if (!flowCookie) {
 }
 
 // Then extract
-await secretExtractionService.extractSecrets(profileId);
+await flowSecretExtractionService.extractSecrets(profileId);
 ```
 
 ### "Browser initialization failed"
@@ -227,11 +227,7 @@ await secretExtractionService.extractSecrets(profileId);
 
 ```typescript
 // Provide explicit path if needed
-const service = new SecretExtractionService(
-  repository,
-  logger,
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-);
+const service = new FlowSecretExtractionService(repository, logger, "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
 ```
 
 ### "No matching script files found"
@@ -266,6 +262,7 @@ const DEFAULT_FLOW_EXTRACTION_CONFIG = {
 ---
 
 **For more details**, see:
+
 - `docs/feature-note/secret-extraction/` (not yet created)
 - `src/main/modules/common/secret-extraction/`
 - `src/renderer/store/secretStore.ts`

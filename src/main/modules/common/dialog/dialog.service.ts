@@ -91,14 +91,18 @@ export async function selectBrowserExecutable() {
     return { canceled: false, filePaths: [] } as Electron.OpenDialogReturnValue;
   }
 
+  const platform = process.platform;
   const filters =
-    process.platform === "win32"
+    platform === "win32"
       ? [
           { name: "Executable Files", extensions: ["exe"] },
           { name: "All Files", extensions: ["*"] },
         ]
-      : process.platform === "darwin"
-      ? [{ name: "Applications", extensions: ["app"] }]
+      : platform === "darwin"
+      ? [
+          { name: "Applications", extensions: ["app"] },
+          { name: "All Files", extensions: ["*"] },
+        ]
       : [{ name: "All Files", extensions: ["*"] }];
 
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -106,6 +110,31 @@ export async function selectBrowserExecutable() {
     title: "Select Browser Executable",
     filters,
   });
+
+  // On macOS, if user selected a .app bundle, convert to the actual executable path
+  if (platform === "darwin" && !result.canceled && result.filePaths.length > 0) {
+    const selectedPath = result.filePaths[0];
+
+    // If it's a .app bundle, resolve to the executable inside
+    if (selectedPath.endsWith(".app")) {
+      const appName = path.basename(selectedPath, ".app");
+      const executablePath = path.join(selectedPath, "Contents", "MacOS", appName);
+
+      // Verify the executable exists
+      if (fs.existsSync(executablePath)) {
+        return { ...result, filePaths: [executablePath] };
+      }
+
+      // If standard path doesn't exist, try common browser names
+      const commonNames = ["Google Chrome", "Brave Browser", "Microsoft Edge", "Chromium"];
+      for (const name of commonNames) {
+        const altPath = path.join(selectedPath, "Contents", "MacOS", name);
+        if (fs.existsSync(altPath)) {
+          return { ...result, filePaths: [altPath] };
+        }
+      }
+    }
+  }
 
   return result;
 }
@@ -133,9 +162,35 @@ export async function validateBrowserPath(browserPath: string): Promise<{
       return { valid: false, error: "File does not exist" };
     }
 
-    // Check if it's a file (not a directory)
+    // Check if it's a file (not a directory) - except on macOS where .app bundles are directories
     const stats = fs.statSync(browserPath);
-    if (!stats.isFile()) {
+    const platform = process.platform;
+
+    if (platform === "darwin" && browserPath.endsWith(".app")) {
+      // On macOS, .app bundles are directories - convert to executable
+      const appName = path.basename(browserPath, ".app");
+      let executablePath = path.join(browserPath, "Contents", "MacOS", appName);
+
+      // If standard path doesn't exist, try common browser names
+      if (!fs.existsSync(executablePath)) {
+        const commonNames = ["Google Chrome", "Brave Browser", "Microsoft Edge", "Chromium"];
+        let found = false;
+        for (const name of commonNames) {
+          const altPath = path.join(browserPath, "Contents", "MacOS", name);
+          if (fs.existsSync(altPath)) {
+            executablePath = altPath;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          return { valid: false, error: "Invalid .app bundle structure" };
+        }
+      }
+
+      // Update browserPath to the actual executable for validation
+      browserPath = executablePath;
+    } else if (!stats.isFile()) {
       return { valid: false, error: "Path is not a file" };
     }
 

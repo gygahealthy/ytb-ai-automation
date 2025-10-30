@@ -1,20 +1,14 @@
-import { Logger } from '../../../../../shared/utils/logger';
-import { BrowserAutomationHelper } from '../helpers/browser-automation.helper';
-import { ScriptParserHelper, SECRET_PATTERNS } from '../helpers/script-parser.helper';
-import { ProfileSecretRepository } from '../repository/profile-secret.repository';
-import {
-  ProfileSecret,
-  SecretType,
-  SecretExtractionResult,
-  SecretExtractionConfig,
-  UpsertProfileSecretInput,
-} from '../types';
+import { Logger } from "../../../../../shared/utils/logger";
+import { BrowserAutomationHelper } from "../helpers/browser-automation.helper";
+import { ScriptParserHelper, SECRET_PATTERNS } from "../helpers/script-parser.helper";
+import { ProfileSecretRepository } from "../repository/profile-secret.repository";
+import { ProfileSecret, SecretType, SecretExtractionResult, SecretExtractionConfig, UpsertProfileSecretInput } from "../types";
 
 /**
  * Default configuration for Google Labs Flow secret extraction
  */
 const DEFAULT_FLOW_EXTRACTION_CONFIG: SecretExtractionConfig = {
-  targetUrl: 'https://labs.google/fx',
+  targetUrl: "https://labs.google/fx",
   scriptPattern: /_next\/static\/chunks\/pages\/_app-[a-f0-9]+\.js/,
   secretPatterns: [SECRET_PATTERNS.FLOW_NEXT_KEY],
   timeout: 30000,
@@ -25,17 +19,13 @@ const DEFAULT_FLOW_EXTRACTION_CONFIG: SecretExtractionConfig = {
 /**
  * Service for extracting and managing API secrets from Next.js applications
  */
-export class SecretExtractionService {
+export class FlowSecretExtractionService {
   private browserHelper: BrowserAutomationHelper;
   private parserHelper: ScriptParserHelper;
   private logger: Logger;
 
-  constructor(
-    private repository: ProfileSecretRepository,
-    logger?: Logger,
-    private executablePath?: string
-  ) {
-    this.logger = logger || new Logger('SecretExtractionService');
+  constructor(private repository: ProfileSecretRepository, logger?: Logger, private executablePath?: string) {
+    this.logger = logger || new Logger("FlowSecretExtractionService");
     this.browserHelper = new BrowserAutomationHelper(this.logger);
     this.parserHelper = new ScriptParserHelper();
   }
@@ -43,10 +33,7 @@ export class SecretExtractionService {
   /**
    * Extract secrets from a target URL for a specific profile
    */
-  async extractSecrets(
-    profileId: string,
-    config: Partial<SecretExtractionConfig> = {}
-  ): Promise<SecretExtractionResult> {
+  async extractSecrets(profileId: string, config: Partial<SecretExtractionConfig> = {}): Promise<SecretExtractionResult> {
     const startTime = Date.now();
     const mergedConfig: SecretExtractionConfig = {
       ...DEFAULT_FLOW_EXTRACTION_CONFIG,
@@ -73,7 +60,7 @@ export class SecretExtractionService {
       this.logger.info(`Extracted ${scripts.length} script file(s), parsing secrets...`);
 
       // Parse secrets from all extracted scripts
-      const allExtractedSecrets: SecretExtractionResult['secrets'] = [];
+      const allExtractedSecrets: SecretExtractionResult["secrets"] = [];
 
       for (const script of scripts) {
         const extracted = this.parserHelper.extractSecrets(script.content, mergedConfig.secretPatterns);
@@ -91,7 +78,7 @@ export class SecretExtractionService {
         return {
           success: false,
           secrets: [],
-          error: 'No secrets found in extracted scripts',
+          error: "No secrets found in extracted scripts",
           metadata: {
             duration: Date.now() - startTime,
             scriptsAnalyzed: scripts.length,
@@ -116,7 +103,7 @@ export class SecretExtractionService {
             metadata: {
               sourceUrl: mergedConfig.targetUrl,
               scriptFile: mostLikely.source,
-              extractionMethod: 'browser_automation',
+              extractionMethod: "browser_automation",
               totalMatches: mostLikely.matches,
               confidence: mostLikely.confidence,
             },
@@ -156,10 +143,10 @@ export class SecretExtractionService {
   /**
    * Get a valid secret for a profile by type
    */
-  async getValidSecret(profileId: string, secretType: SecretType = 'FLOW_NEXT_KEY'): Promise<string | null> {
+  async getValidSecret(profileId: string, secretType: SecretType = "FLOW_NEXT_KEY"): Promise<string | null> {
     try {
       const secret = await this.repository.findValidSecret(profileId, secretType);
-      
+
       if (!secret) {
         this.logger.warn(`No valid ${secretType} secret found for profile ${profileId}`);
         return null;
@@ -190,10 +177,10 @@ export class SecretExtractionService {
    */
   async refreshSecrets(profileId: string, config?: Partial<SecretExtractionConfig>): Promise<SecretExtractionResult> {
     this.logger.info(`Refreshing secrets for profile ${profileId}`);
-    
+
     // Invalidate all existing secrets
     await this.repository.invalidateAll(profileId);
-    
+
     // Extract new secrets
     return await this.extractSecrets(profileId, config);
   }
@@ -217,9 +204,9 @@ export class SecretExtractionService {
   async cleanup(): Promise<void> {
     try {
       await this.browserHelper.close();
-      this.logger.info('Secret extraction service cleaned up');
+      this.logger.info("Secret extraction service cleaned up");
     } catch (error) {
-      this.logger.error('Failed to cleanup service:', error);
+      this.logger.error("Failed to cleanup service:", error);
     }
   }
 
@@ -237,25 +224,25 @@ export class SecretExtractionService {
     try {
       return await this.repository.getAllValid();
     } catch (error) {
-      this.logger.error('Failed to get all valid secrets:', error);
+      this.logger.error("Failed to get all valid secrets:", error);
       return [];
     }
   }
 }
 
 // Export singleton instance
-let _serviceInstance: SecretExtractionService | null = null;
+let _serviceInstance: FlowSecretExtractionService | null = null;
 
-function getSecretExtractionService(): SecretExtractionService {
+function getSecretExtractionService(): FlowSecretExtractionService {
   if (!_serviceInstance) {
     const repository = new ProfileSecretRepository();
-    _serviceInstance = new SecretExtractionService(repository);
+    _serviceInstance = new FlowSecretExtractionService(repository);
   }
   return _serviceInstance;
 }
 
-export const secretExtractionService = new Proxy({} as SecretExtractionService, {
+export const flowSecretExtractionService = new Proxy({} as FlowSecretExtractionService, {
   get(_target, prop) {
-    return getSecretExtractionService()[prop as keyof SecretExtractionService];
+    return getSecretExtractionService()[prop as keyof FlowSecretExtractionService];
   },
 });

@@ -44,7 +44,7 @@ export default function VideoCreationModeTabs({ currentMode, onModeChange }: Vid
         }`}
       >
         <Film className="w-4 h-4" />
-        <span className="text-sm">Video Studio</span>
+        <span className="text-sm">Scene Builder</span>
       </button>
     </div>
   );

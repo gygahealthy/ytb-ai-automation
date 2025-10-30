@@ -34,11 +34,13 @@ This allows us to extract the `workflowId` and `mediaKey` directly from the API 
 **File**: `src/main/modules/ai-video-creation/image-veo3-apis/services/image-veo3.service.ts`
 
 #### Before:
+
 - Uploaded image to Flow
 - Attempted to fetch metadata
 - Downloaded from `fifeUrl` if available (may be expired)
 
 #### After:
+
 - Uploads image to Flow
 - **Extracts `FLOW_NEXT_KEY` if not already available**
 - Calls `fetchImage()` with bearer token + `FLOW_NEXT_KEY` to get base64 image data
@@ -47,10 +49,10 @@ This allows us to extract the `workflowId` and `mediaKey` directly from the API 
 
 ```typescript
 // Get FLOW_NEXT_KEY for image fetch
-const flowNextKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+const flowNextKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
 if (!flowNextKey) {
   // Auto-extract if missing
-  await secretExtractionService.extractSecrets(profileId);
+  await flowSecretExtractionService.extractSecrets(profileId);
 }
 
 // Fetch image with API key
@@ -71,11 +73,13 @@ if (fetchResult.data?.userUploadedImage?.image) {
 **File**: Same as above
 
 #### Before:
+
 - Fetched user images list
 - Downloaded from `fifeUrl` if available (may be expired)
 - Parsed `workflowId` and `mediaKey` from encoded name (approximate/unreliable)
 
 #### After:
+
 - **Extracts `FLOW_NEXT_KEY` once at the start of sync**
 - Fetches user images list
 - **Extracts `workflowId` and `mediaKey` directly from `mediaGenerationId` in response**
@@ -85,9 +89,9 @@ if (fetchResult.data?.userUploadedImage?.image) {
 
 ```typescript
 // Extract FLOW_NEXT_KEY once at start
-const apiKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+const apiKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
 if (!apiKey) {
-  await secretExtractionService.extractSecrets(profileId);
+  await flowSecretExtractionService.extractSecrets(profileId);
   // Retry...
 }
 
@@ -96,11 +100,7 @@ const mediaGenerationId = workflow.media.mediaGenerationId;
 const fetchResult = await imageVEO3ApiClient.fetchImage(tokenResult.token, name, apiKey);
 
 if (fetchResult.data?.userUploadedImage?.image) {
-  await this.saveBase64Image(
-    fetchResult.data.userUploadedImage.image,
-    localStoragePath,
-    mediaGenerationId.mediaKey
-  );
+  await this.saveBase64Image(fetchResult.data.userUploadedImage.image, localStoragePath, mediaGenerationId.mediaKey);
 }
 ```
 
@@ -179,6 +179,7 @@ Headers:
 ```
 
 **Response**:
+
 ```json
 {
   "name": "CAMa...",
@@ -203,7 +204,7 @@ Headers:
 ✅ **Secure**: Requires extracted `FLOW_NEXT_KEY` for access  
 ✅ **Accurate**: Extracts IDs directly from response instead of parsing encoded strings  
 ✅ **Consistent**: Same method for both upload and sync flows  
-✅ **Persistent**: Base64 data saved immediately, no network dependency after fetch  
+✅ **Persistent**: Base64 data saved immediately, no network dependency after fetch
 
 ## Testing Checklist
 

@@ -1,28 +1,61 @@
-import puppeteer, { Browser, Page } from 'puppeteer-core';
-import { Logger } from '../../../../../shared/utils/logger';
-import { ExtractedScriptContent } from '../types';
-import * as fs from 'fs';
-import * as path from 'path';
+import puppeteer, { Browser, Page } from "puppeteer-core";
+import { Logger } from "../../../../../shared/utils/logger";
+import { ExtractedScriptContent } from "../types";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
- * Detect Chrome executable path on Windows
+ * Detect Chrome executable path across platforms
  */
 function findChromeExecutable(): string | undefined {
-  const possiblePaths = [
-    // Chrome stable
-    path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
-    path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google\\Chrome\\Application\\chrome.exe'),
-    // Chrome beta/dev/canary
-    path.join(process.env.LOCALAPPDATA || '', 'Google\\Chrome\\Application\\chrome.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'Google\\Chrome SxS\\Application\\chrome.exe'),
-    // Edge Chromium
-    path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Microsoft\\Edge\\Application\\msedge.exe'),
-    path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Microsoft\\Edge\\Application\\msedge.exe'),
-  ];
+  const platform = process.platform;
 
-  for (const chromePath of possiblePaths) {
-    if (chromePath && fs.existsSync(chromePath)) {
-      return chromePath;
+  if (platform === "win32") {
+    const possiblePaths = [
+      // Chrome stable
+      path.join(process.env.PROGRAMFILES || "C:\\Program Files", "Google\\Chrome\\Application\\chrome.exe"),
+      path.join(process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)", "Google\\Chrome\\Application\\chrome.exe"),
+      // Chrome beta/dev/canary
+      path.join(process.env.LOCALAPPDATA || "", "Google\\Chrome\\Application\\chrome.exe"),
+      path.join(process.env.LOCALAPPDATA || "", "Google\\Chrome SxS\\Application\\chrome.exe"),
+      // Edge Chromium
+      path.join(process.env.PROGRAMFILES || "C:\\Program Files", "Microsoft\\Edge\\Application\\msedge.exe"),
+      path.join(process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)", "Microsoft\\Edge\\Application\\msedge.exe"),
+    ];
+
+    for (const chromePath of possiblePaths) {
+      if (chromePath && fs.existsSync(chromePath)) {
+        return chromePath;
+      }
+    }
+  } else if (platform === "darwin") {
+    const possiblePaths = [
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      path.join(process.env.HOME || "", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ];
+
+    for (const chromePath of possiblePaths) {
+      if (chromePath && fs.existsSync(chromePath)) {
+        return chromePath;
+      }
+    }
+  } else {
+    // Linux
+    const possiblePaths = [
+      "/usr/bin/google-chrome",
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/chromium-browser",
+      "/usr/bin/chromium",
+      "/snap/bin/chromium",
+    ];
+
+    for (const chromePath of possiblePaths) {
+      if (chromePath && fs.existsSync(chromePath)) {
+        return chromePath;
+      }
     }
   }
 
@@ -38,7 +71,7 @@ export class BrowserAutomationHelper {
   private logger: Logger;
 
   constructor(logger?: Logger) {
-    this.logger = logger || new Logger('BrowserAutomationHelper');
+    this.logger = logger || new Logger("BrowserAutomationHelper");
   }
 
   /**
@@ -50,27 +83,34 @@ export class BrowserAutomationHelper {
     }
 
     try {
-      this.logger.info('Initializing headless browser...');
-      
+      this.logger.info("Initializing headless browser...");
+
       const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
         headless: true,
         args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--disable-gpu",
         ],
       };
 
       // Auto-detect Chrome if not provided
       const chromePath = executablePath || findChromeExecutable();
       if (!chromePath) {
+        const platform = process.platform;
+        const locations =
+          platform === "win32"
+            ? "Program Files, Program Files (x86), LocalAppData"
+            : platform === "darwin"
+            ? "/Applications, ~/Applications"
+            : "/usr/bin, /snap/bin";
+
         throw new Error(
-          'Chrome executable not found. Please install Chrome or provide executablePath. ' +
-          'Checked locations: Program Files, Program Files (x86), LocalAppData'
+          `Chrome executable not found. Please install Chrome or provide executablePath. Checked locations: ${locations}`
         );
       }
 
@@ -78,9 +118,9 @@ export class BrowserAutomationHelper {
       this.logger.info(`Using Chrome at: ${chromePath}`);
 
       this.browser = await puppeteer.launch(launchOptions);
-      this.logger.info('Browser initialized successfully');
+      this.logger.info("Browser initialized successfully");
     } catch (error) {
-      this.logger.error('Failed to initialize browser:', error);
+      this.logger.error("Failed to initialize browser:", error);
       throw new Error(`Browser initialization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -96,32 +136,32 @@ export class BrowserAutomationHelper {
     await this.initialize();
 
     if (!this.browser) {
-      throw new Error('Browser not initialized');
+      throw new Error("Browser not initialized");
     }
 
     const page: Page = await this.browser.newPage();
 
     try {
       this.logger.info(`Navigating to ${targetUrl}...`);
-      
+
       await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       );
 
       await page.goto(targetUrl, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: "domcontentloaded",
         timeout,
       });
 
-      this.logger.info('Page loaded, extracting script URLs...');
+      this.logger.info("Page loaded, extracting script URLs...");
 
       // Extract all script src attributes that match the pattern
       const scriptUrls = await page.evaluate((patternSource: string) => {
-        const scripts = Array.from(document.querySelectorAll('script[src]'));
+        const scripts = Array.from(document.querySelectorAll("script[src]"));
         const pattern = new RegExp(patternSource);
-        
+
         return scripts
-          .map((s) => s.getAttribute('src'))
+          .map((s) => s.getAttribute("src"))
           .filter((src): src is string => src !== null && pattern.test(src))
           .map((src) => {
             // Resolve relative URLs to absolute
@@ -133,18 +173,18 @@ export class BrowserAutomationHelper {
           });
       }, scriptPattern.source);
 
-      this.logger.info(`Found ${scriptUrls.length} matching script(s): ${scriptUrls.join(', ')}`);
+      this.logger.info(`Found ${scriptUrls.length} matching script(s): ${scriptUrls.join(", ")}`);
 
       // Fetch each script's content
       const results: ExtractedScriptContent[] = [];
-      
+
       for (const url of scriptUrls) {
         try {
           this.logger.info(`Fetching script content from ${url}...`);
-          
-          const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+          const response = await page.goto(url, { waitUntil: "domcontentloaded" });
           const content = await response?.text();
-          
+
           if (content) {
             results.push({
               scriptUrl: url,
@@ -161,7 +201,7 @@ export class BrowserAutomationHelper {
 
       return results;
     } catch (error) {
-      this.logger.error('Script extraction failed:', error);
+      this.logger.error("Script extraction failed:", error);
       throw error;
     } finally {
       await page.close();
@@ -173,10 +213,10 @@ export class BrowserAutomationHelper {
    */
   async close(): Promise<void> {
     if (this.browser) {
-      this.logger.info('Closing browser...');
+      this.logger.info("Closing browser...");
       await this.browser.close();
       this.browser = undefined;
-      this.logger.info('Browser closed');
+      this.logger.info("Browser closed");
     }
   }
 

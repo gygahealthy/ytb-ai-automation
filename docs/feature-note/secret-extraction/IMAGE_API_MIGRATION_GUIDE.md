@@ -17,15 +17,12 @@ The `image-veo3:sync-from-flow` IPC channel has been refactored into a two-phase
 
 ```typescript
 // Single call that does everything (slower)
-const result = await window.electronAPI.imageVeo3.syncFromFlow(
-  profileId,
-  localStoragePath,
-  maxPages
-);
+const result = await window.electronAPI.imageVeo3.syncFromFlow(profileId, localStoragePath, maxPages);
 // Returns: { success: boolean, data: { synced: number, skipped: number } }
 ```
 
-**Behavior**: 
+**Behavior**:
+
 - Fetches metadata
 - Automatically downloads ALL images
 - Slower (30-60s for 18 images)
@@ -37,21 +34,22 @@ const result = await window.electronAPI.imageVeo3.syncFromFlow(
 ```typescript
 const result = await window.electronAPI.imageVeo3.syncMetadata(
   profileId,
-  maxPages,      // Optional: limit pages
-  startCursor    // Optional: resume from cursor
+  maxPages, // Optional: limit pages
+  startCursor // Optional: resume from cursor
 );
-// Returns: { 
-//   success: boolean, 
-//   data: { 
-//     synced: number, 
-//     skipped: number, 
+// Returns: {
+//   success: boolean,
+//   data: {
+//     synced: number,
+//     skipped: number,
 //     lastCursor?: string,
-//     hasMore: boolean 
-//   } 
+//     hasMore: boolean
+//   }
 // }
 ```
 
 **Behavior**:
+
 - Only fetches metadata (< 1s per 18 images)
 - Stores: name, workflowId, mediaKey, aspectRatio, fifeUrl
 - Does NOT download images
@@ -59,29 +57,31 @@ const result = await window.electronAPI.imageVeo3.syncMetadata(
 #### Phase 2: Download Images (On-Demand)
 
 **Single Image**:
+
 ```typescript
 const result = await window.electronAPI.imageVeo3.downloadSingle(
   profileId,
-  imageName,        // CAMa... (from metadata)
+  imageName, // CAMa... (from metadata)
   localStoragePath
 );
 // Returns: { success: boolean, data: { localPath: string } }
 ```
 
 **Batch Download**:
+
 ```typescript
 const result = await window.electronAPI.imageVeo3.downloadBatch(
   profileId,
-  imageNames,       // Array of CAMa... names
+  imageNames, // Array of CAMa... names
   localStoragePath
 );
-// Returns: { 
-//   success: boolean, 
-//   data: { 
-//     downloaded: number, 
-//     failed: number, 
-//     failedNames: string[] 
-//   } 
+// Returns: {
+//   success: boolean,
+//   data: {
+//     downloaded: number,
+//     failed: number,
+//     failedNames: string[]
+//   }
 // }
 ```
 
@@ -90,36 +90,29 @@ const result = await window.electronAPI.imageVeo3.downloadBatch(
 ### Example 1: Basic Migration (Simplest)
 
 **Before**:
+
 ```typescript
-const result = await window.electronAPI.imageVeo3.syncFromFlow(
-  profileId,
-  'C:\\images',
-  5
-);
+const result = await window.electronAPI.imageVeo3.syncFromFlow(profileId, "C:\\images", 5);
 ```
 
 **After** (Keep using old API - backward compatible):
+
 ```typescript
 // Still works! Automatically syncs metadata + downloads all images
-const result = await window.electronAPI.imageVeo3.syncFromFlow(
-  profileId,
-  'C:\\images',
-  5
-);
+const result = await window.electronAPI.imageVeo3.syncFromFlow(profileId, "C:\\images", 5);
 ```
 
 ### Example 2: Optimized Two-Phase Approach
 
 **Before**:
+
 ```typescript
 // One call, downloads everything
-const result = await window.electronAPI.imageVeo3.syncFromFlow(
-  profileId,
-  'C:\\images'
-);
+const result = await window.electronAPI.imageVeo3.syncFromFlow(profileId, "C:\\images");
 ```
 
 **After**:
+
 ```typescript
 // Phase 1: Fast metadata sync
 const metadataResult = await window.electronAPI.imageVeo3.syncMetadata(profileId);
@@ -127,14 +120,12 @@ console.log(`Synced ${metadataResult.data.synced} images metadata in < 1 second`
 
 // Phase 2: Download only what you need
 const images = await window.electronAPI.imageVeo3.getLocalImages(profileId);
-const pendingImages = images.data
-  .filter(img => !img.localPath)
-  .slice(0, 10); // Download first 10
+const pendingImages = images.data.filter((img) => !img.localPath).slice(0, 10); // Download first 10
 
 const downloadResult = await window.electronAPI.imageVeo3.downloadBatch(
   profileId,
-  pendingImages.map(img => img.name),
-  'C:\\images'
+  pendingImages.map((img) => img.name),
+  "C:\\images"
 );
 console.log(`Downloaded ${downloadResult.data.downloaded} images`);
 ```
@@ -147,7 +138,7 @@ console.log(`Downloaded ${downloadResult.data.downloaded} images`);
 // First page
 const page1 = await window.electronAPI.imageVeo3.syncMetadata(
   profileId,
-  1  // maxPages: 1
+  1 // maxPages: 1
 );
 
 // Store cursor in state/localStorage
@@ -157,12 +148,12 @@ const cursor = page1.data.lastCursor;
 const page2 = await window.electronAPI.imageVeo3.syncMetadata(
   profileId,
   1,
-  cursor  // startCursor
+  cursor // startCursor
 );
 
 // Continue until no more pages
 if (!page2.data.hasMore) {
-  console.log('All metadata synced!');
+  console.log("All metadata synced!");
 }
 ```
 
@@ -179,23 +170,23 @@ const images = await window.electronAPI.imageVeo3.getLocalImages(profileId);
 
 // Filter by criteria (e.g., only landscape images)
 const landscapeImages = images.data
-  .filter(img => img.aspectRatio === 'IMAGE_ASPECT_RATIO_LANDSCAPE')
-  .filter(img => !img.localPath);
+  .filter((img) => img.aspectRatio === "IMAGE_ASPECT_RATIO_LANDSCAPE")
+  .filter((img) => !img.localPath);
 
 // Download only landscape images
 await window.electronAPI.imageVeo3.downloadBatch(
   profileId,
-  landscapeImages.map(img => img.name),
-  'C:\\images\\landscape'
+  landscapeImages.map((img) => img.name),
+  "C:\\images\\landscape"
 );
 ```
 
 ## Performance Comparison
 
-| Operation | Old API | New API (Metadata) | New API (Download) |
-|-----------|---------|--------------------|--------------------|
-| 18 images | 30-60s  | < 1s               | 20-40s (on-demand) |
-| 100 images| 3-5 min | 5-10s              | 2-4 min (selective)|
+| Operation  | Old API | New API (Metadata) | New API (Download)  |
+| ---------- | ------- | ------------------ | ------------------- |
+| 18 images  | 30-60s  | < 1s               | 20-40s (on-demand)  |
+| 100 images | 3-5 min | 5-10s              | 2-4 min (selective) |
 
 ## TypeScript Types
 
@@ -209,12 +200,12 @@ interface Window {
       syncMetadata: (profileId: string, maxPages?: number, startCursor?: string | null) => Promise<any>;
       downloadSingle: (profileId: string, imageName: string, localStoragePath: string) => Promise<any>;
       downloadBatch: (profileId: string, imageNames: string[], localStoragePath: string) => Promise<any>;
-      
+
       // Existing methods (unchanged)
       upload: (profileId: string, imagePath: string, localStoragePath: string, aspectRatio?: string) => Promise<any>;
       fetchUserImages: (profileId: string, pageSize?: number, cursor?: string | null) => Promise<any>;
       getLocalImages: (profileId: string) => Promise<any>;
-      
+
       // Deprecated (still works)
       /** @deprecated Use syncMetadata + downloadBatch for better control */
       syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
@@ -228,6 +219,7 @@ interface Window {
 ✅ **No breaking changes!**
 
 The old `syncFromFlow` method is implemented as a wrapper that:
+
 1. Calls `syncMetadata` to fetch metadata
 2. Gets all images without `localPath`
 3. Automatically calls `downloadBatch` to download them
@@ -253,11 +245,11 @@ interface ImageSyncState {
   // Pagination
   lastCursor: Map<string, string | undefined>;
   hasMore: Map<string, boolean>;
-  
+
   // Sync state
   isSyncingMetadata: Map<string, boolean>;
   isDownloadingImages: Map<string, boolean>;
-  
+
   // Actions
   syncMetadata: (profileId: string, maxPages?: number) => Promise<void>;
   downloadImages: (profileId: string, imageNames: string[]) => Promise<void>;
@@ -272,7 +264,8 @@ interface ImageSyncState {
 ## Need Help?
 
 If you encounter issues:
-1. Check logs for `[ImageVeo3Service]` and `[SecretExtractionService]`
+
+1. Check logs for `[ImageVeo3Service]` and `[FlowSecretExtractionService]`
 2. Verify Chrome is installed (auto-detected on Windows)
 3. Ensure profile has active Flow cookies
 4. Check that `FLOW_NEXT_KEY` was extracted successfully

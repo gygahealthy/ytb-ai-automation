@@ -1,17 +1,14 @@
-import { secretExtractionService } from '../services/secret-extraction.service';
-import { SecretType, SecretExtractionConfig } from '../types';
+import { flowSecretExtractionService } from "../services/secret-extraction.service";
+import { SecretType, SecretExtractionConfig } from "../types";
 
 /**
  * Handler: Extract secrets for a profile
  * Channel: secret-extraction:extract
  */
-export async function handleExtractSecrets(req: {
-  profileId: string;
-  config?: Partial<SecretExtractionConfig>;
-}) {
+export async function handleExtractFlowSecrets(req: { profileId: string; config?: Partial<SecretExtractionConfig> }) {
   try {
     const { profileId, config } = req;
-    const result = await secretExtractionService.extractSecrets(profileId, config);
+    const result = await flowSecretExtractionService.extractSecrets(profileId, config);
     return { success: true, data: result };
   } catch (error) {
     return {
@@ -25,13 +22,10 @@ export async function handleExtractSecrets(req: {
  * Handler: Get a valid secret for a profile
  * Channel: secret-extraction:get
  */
-export async function handleGetValidSecret(req: {
-  profileId: string;
-  secretType?: SecretType;
-}) {
+export async function handleGetValidFlowSecret(req: { profileId: string; secretType?: SecretType }) {
   try {
-    const { profileId, secretType = 'FLOW_NEXT_KEY' } = req;
-    const secretValue = await secretExtractionService.getValidSecret(profileId, secretType);
+    const { profileId, secretType = "FLOW_NEXT_KEY" } = req;
+    const secretValue = await flowSecretExtractionService.getValidSecret(profileId, secretType);
     return {
       success: true,
       secretValue,
@@ -53,11 +47,11 @@ export async function handleGetAllSecrets(req: { profileId?: string }) {
   try {
     const { profileId } = req;
     if (profileId) {
-      const secrets = await secretExtractionService.getAllSecrets(profileId);
+      const secrets = await flowSecretExtractionService.getAllSecrets(profileId);
       return { success: true, secrets };
     } else {
       // Get all valid secrets across all profiles
-      const secrets = await secretExtractionService.getAllValidSecrets();
+      const secrets = await flowSecretExtractionService.getAllValidSecrets();
       return { success: true, secrets };
     }
   } catch (error) {
@@ -72,13 +66,10 @@ export async function handleGetAllSecrets(req: { profileId?: string }) {
  * Handler: Refresh secrets for a profile
  * Channel: secret-extraction:refresh
  */
-export async function handleRefreshSecrets(req: {
-  profileId: string;
-  config?: Partial<SecretExtractionConfig>;
-}) {
+export async function handleRefreshSecrets(req: { profileId: string; config?: Partial<SecretExtractionConfig> }) {
   try {
     const { profileId, config } = req;
-    const result = await secretExtractionService.refreshSecrets(profileId, config);
+    const result = await flowSecretExtractionService.refreshSecrets(profileId, config);
     return { success: true, data: result };
   } catch (error) {
     return {
@@ -95,7 +86,7 @@ export async function handleRefreshSecrets(req: {
 export async function handleInvalidateSecrets(req: { profileId: string }) {
   try {
     const { profileId } = req;
-    await secretExtractionService.invalidateSecrets(profileId);
+    await flowSecretExtractionService.invalidateSecrets(profileId);
     return { success: true };
   } catch (error) {
     return {
@@ -111,7 +102,7 @@ export async function handleInvalidateSecrets(req: { profileId: string }) {
  */
 export async function handleGetBrowserStatus(_req: Record<string, never>) {
   try {
-    const isActive = secretExtractionService.isBrowserActive();
+    const isActive = flowSecretExtractionService.isBrowserActive();
     return { success: true, isActive };
   } catch (error) {
     return {
@@ -127,7 +118,7 @@ export async function handleGetBrowserStatus(_req: Record<string, never>) {
  */
 export async function handleCleanup(_req: Record<string, never>) {
   try {
-    await secretExtractionService.cleanup();
+    await flowSecretExtractionService.cleanup();
     return { success: true };
   } catch (error) {
     return {

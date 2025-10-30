@@ -124,6 +124,19 @@ class ElectronApp {
   private initializeApp(): void {
     // Register app lifecycle handlers first
     app.on("ready", async () => {
+      // Install Redux DevTools in development
+      if (process.env.NODE_ENV === "development") {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { default: installExtension, REDUX_DEVTOOLS } = require("electron-devtools-installer");
+
+          await installExtension(REDUX_DEVTOOLS);
+          console.log("✅ Redux DevTools installed successfully");
+        } catch (err) {
+          console.warn("[Electron] Failed to install Redux DevTools:", err);
+        }
+      }
+
       // macOS: set Dock icon from project assets if available
       try {
         if (process.platform === "darwin") {

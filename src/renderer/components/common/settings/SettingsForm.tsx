@@ -36,13 +36,28 @@ export default function SettingsForm() {
   const handleAddBrowser = async () => {
     try {
       setValidationError(null);
+
+      // Detect platform for appropriate filters
+      const platform = navigator.platform.toLowerCase();
+      const isMac = platform.includes("mac");
+      const isWin = platform.includes("win");
+
+      const filters = isMac
+        ? [
+            { name: "Applications", extensions: ["app"] },
+            { name: "All Files", extensions: ["*"] },
+          ]
+        : isWin
+        ? [
+            { name: "Executable", extensions: ["exe"] },
+            { name: "All Files", extensions: ["*"] },
+          ]
+        : [{ name: "All Files", extensions: ["*"] }];
+
       const result = await window.electronAPI.dialog.showOpenDialog({
         title: "Select Browser Executable",
         properties: ["openFile"],
-        filters: [
-          { name: "Executable", extensions: ["exe"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
+        filters,
       });
 
       const dialogResult = (result as any).success ? (result as any).data : result;

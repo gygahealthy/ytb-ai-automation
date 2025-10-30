@@ -8,7 +8,7 @@ import { COOKIE_SERVICES } from "../../../gemini-apis/shared/types";
 import { extractBearerToken } from "../../flow-veo3-apis/helpers/veo3-headers.helper";
 import { imageVEO3ApiClient } from "../apis/image-veo3-api.client";
 import { veo3ImageRepository } from "../repository/image.repository";
-import { secretExtractionService } from "../../../common/secret-extraction/services/secret-extraction.service";
+import { flowSecretExtractionService } from "../../../common/secret-extraction/services/secret-extraction.service";
 import type { Veo3ImageGeneration, FlowUserWorkflow } from "../types/image.types";
 
 const logger = new Logger("ImageVeo3Service");
@@ -219,7 +219,7 @@ export class ImageVeo3Service {
         pagesProcessed++;
       }
 
-      logger.info(`Image metadata sync completed: ${synced} synced, ${skipped} skipped, lastCursor: ${cursor || 'none'}`);
+      logger.info(`Image metadata sync completed: ${synced} synced, ${skipped} skipped, lastCursor: ${cursor || "none"}`);
 
       return { success: true, data: { synced, skipped, lastCursor: cursor || undefined, hasMore: !!cursor } };
     } catch (error) {
@@ -260,14 +260,14 @@ export class ImageVeo3Service {
       }
 
       // Get FLOW_NEXT_KEY
-      let flowNextKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+      let flowNextKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
       if (!flowNextKey) {
         logger.warn("No FLOW_NEXT_KEY found. Attempting to extract...");
-        const extractResult = await secretExtractionService.extractSecrets(profileId);
+        const extractResult = await flowSecretExtractionService.extractSecrets(profileId);
         if (!extractResult.success) {
           return { success: false, error: "Failed to extract FLOW_NEXT_KEY. Please ensure profile cookies are valid." };
         }
-        flowNextKey = await secretExtractionService.getValidSecret(profileId, 'FLOW_NEXT_KEY');
+        flowNextKey = await flowSecretExtractionService.getValidSecret(profileId, "FLOW_NEXT_KEY");
         if (!flowNextKey) {
           return { success: false, error: "Failed to obtain FLOW_NEXT_KEY after extraction." };
         }
@@ -360,12 +360,12 @@ export class ImageVeo3Service {
   ): Promise<{ success: boolean; path?: string; error?: string }> {
     try {
       // Create yyyy-mm-dd folder structure
-      const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+      const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
       const dateFolder = path.join(storageDir, today);
       await fs.mkdir(dateFolder, { recursive: true });
 
       // Convert base64 to buffer
-      const buffer = Buffer.from(base64Data, 'base64');
+      const buffer = Buffer.from(base64Data, "base64");
 
       // Save to file
       const filename = `${mediaKey}.jpg`;
