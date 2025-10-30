@@ -1,0 +1,6 @@
+{
+  "name": "image-veo3-apis",
+  "version": "1.0.0",
+  "description": "VEO3 Image API integration - upload, fetch, and manage user images from Google Labs Flow",
+  "disabled": false
+}

@@ -72,6 +72,7 @@ interface Window {
       fetchProjectsFromAPI: (profileId: string) => Promise<any>;
       createProjectViaAPI: (profileId: string, projectTitle: string) => Promise<any>;
       updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) => Promise<any>;
+      syncModels: (profileId: string) => Promise<any>;
     };
     video: {
       download: {
@@ -82,6 +83,12 @@ interface Window {
         ) => Promise<any>;
         status: () => Promise<any>;
       };
+    };
+    imageVeo3: {
+      upload: (profileId: string, imagePath: string, localStoragePath: string, aspectRatio?: string) => Promise<any>;
+      fetchUserImages: (profileId: string, pageSize?: number, cursor?: string | null) => Promise<any>;
+      syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
+      getLocalImages: (profileId: string) => Promise<any>;
     };
     youtube: {
       getAllChannels: () => Promise<any>;

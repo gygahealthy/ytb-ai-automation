@@ -4,6 +4,7 @@ import { videoBatchGenerationRegistrations } from "./video-batch-generation";
 import { downloadRegistrations } from "./download";
 import { videoUpscaleRegistrations } from "./video-upscale";
 import { videoBatchUpscaleRegistrations } from "./video-batch-upscale";
+import { modelsRegistrations } from "./models";
 
 // Merge all handler registrations
 export const flowVeo3ApiRegistrations: IpcRegistration[] = [
@@ -12,4 +13,5 @@ export const flowVeo3ApiRegistrations: IpcRegistration[] = [
   ...downloadRegistrations,
   ...videoUpscaleRegistrations,
   ...videoBatchUpscaleRegistrations,
+  ...modelsRegistrations,
 ];

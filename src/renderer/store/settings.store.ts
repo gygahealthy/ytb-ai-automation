@@ -179,6 +179,7 @@ const defaultVisible = {
   browsers: true,
   keyboard: true,
   filePaths: true,
+  flowVeo3: true,
   "filePaths.defaultLocations": true,
   "filePaths.fileNaming": true,
   "filePaths.folderNaming": true,

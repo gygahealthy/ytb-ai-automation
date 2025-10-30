@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { History, User } from "lucide-react";
+import { History, User, Image as ImageIcon } from "lucide-react";
 import veo3IPC from "../../ipc/veo3";
 import { useNavigate } from "react-router-dom";
 import { useDrawer } from "@hooks/useDrawer";
@@ -14,12 +14,17 @@ import JobDetailsModal from "@/renderer/components/video-creation/single-video-p
 import JsonToolbar from "@/renderer/components/video-creation/single-video-page/JsonToolbar";
 import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
 import VideoPromptRow from "@/renderer/components/video-creation/single-video-page/VideoPromptRow";
+import VideoCreationModeTabs, {
+  VideoCreationMode,
+} from "@/renderer/components/video-creation/single-video-page/VideoCreationModeTabs";
+import ImageGalleryDrawerContent from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawerContent";
 
 export default function SingleVideoCreationPage() {
   const [showAddJsonModal, setShowAddJsonModal] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [creationMode, setCreationMode] = useState<VideoCreationMode>("text-to-video");
   const [alertState, setAlertState] = useState<{
     open: boolean;
     message: string;
@@ -755,18 +760,46 @@ export default function SingleVideoCreationPage() {
     });
   };
 
+  const handleOpenImageGallery = () => {
+    openDrawer({
+      title: "Image Gallery",
+      icon: <ImageIcon className="w-5 h-5 text-purple-500" />,
+      children: <ImageGalleryDrawerContent />,
+      side: "right",
+      width: "w-96",
+      enablePin: true,
+    });
+  };
+
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative animate-fadeIn">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Single Video Creation</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Create videos using single or multiple prompts</p>
           </div>
+
+          {/* Mode tabs - centered */}
+          <div className="flex-1 flex justify-center">
+            <VideoCreationModeTabs currentMode={creationMode} onModeChange={setCreationMode} />
+          </div>
+
           <div className="flex items-center gap-3">
+            {/* Image Gallery button - only show in ingredients mode */}
+            {creationMode === "ingredients" && (
+              <button
+                onClick={handleOpenImageGallery}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30"
+                title="Open Image Gallery (Ctrl+M)"
+              >
+                <ImageIcon className="w-5 h-5" />
+              </button>
+            )}
+
             <button
               onClick={handleOpenProfileDrawer}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${

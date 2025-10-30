@@ -33,6 +33,7 @@ import * as m029 from "./modules/029_ensure_veo3_video_generation_columns";
 import * as m030 from "./modules/030_fix_upscale_foreign_key_constraints";
 import * as m031 from "./modules/031_remove_is_logged_in_column";
 import * as m032 from "./modules/032_remove_video_id_from_veo3_generations";
+import * as m033 from "./modules/033_add_veo3_image_generations";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -69,6 +70,7 @@ const modules: Migration[] = [
   m030,
   m031,
   m032,
+  m033,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

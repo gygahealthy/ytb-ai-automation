@@ -12,9 +12,22 @@ import { shellRegistrations } from "../modules/common/shell";
 export function registerIPCHandlers(): void {
   // Collect registrations from modules
   const allRegistrations = collectModuleRegistrations();
+  console.log(`[Handler Registry] Collected ${allRegistrations.length} registrations from modules`);
 
   // Add core shell utility handlers
   allRegistrations.push(...shellRegistrations);
+  console.log(`[Handler Registry] Total registrations (including shell): ${allRegistrations.length}`);
+
+  // Log image-veo3 handlers specifically for debugging
+  const imageVeo3Handlers = allRegistrations.filter((r) => r.channel.includes("image-veo3"));
+  if (imageVeo3Handlers.length > 0) {
+    console.log(
+      `[Handler Registry] Found ${imageVeo3Handlers.length} image-veo3 handlers:`,
+      imageVeo3Handlers.map((r) => r.channel)
+    );
+  } else {
+    console.warn(`[Handler Registry] ⚠️ NO image-veo3 handlers found!`);
+  }
 
   // Deduplicate registrations by channel to avoid "second handler" errors
   const uniqueMap = new Map<string, IpcRegistration>();
@@ -27,6 +40,18 @@ export function registerIPCHandlers(): void {
   }
 
   const uniqueRegistrations = Array.from(uniqueMap.values());
+  console.log(`[Handler Registry] After deduplication: ${uniqueRegistrations.length} unique registrations`);
+
+  // Verify image-veo3 still present after dedup
+  const uniqueImageVeo3 = uniqueRegistrations.filter((r) => r.channel.includes("image-veo3"));
+  if (uniqueImageVeo3.length > 0) {
+    console.log(
+      `[Handler Registry] Image-veo3 handlers after dedup:`,
+      uniqueImageVeo3.map((r) => r.channel)
+    );
+  } else {
+    console.warn(`[Handler Registry] ⚠️ image-veo3 handlers REMOVED during deduplication!`);
+  }
 
   // Register core ipc handlers via centralized registry
   registerAll(uniqueRegistrations, logger);

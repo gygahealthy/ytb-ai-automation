@@ -27,6 +27,7 @@ type FilePathsState = {
   channelProjectsPath: string;
   singleVideoPath: string;
   tempVideoPath: string;
+  veo3ImagesPath: string; // VEO3 image gallery storage path
 
   // Naming conventions for files
   fileNaming: NamingConvention;
@@ -41,6 +42,7 @@ type FilePathsState = {
   setChannelProjectsPath: (path: string) => void;
   setSingleVideoPath: (path: string) => void;
   setTempVideoPath: (path: string) => void;
+  setVeo3ImagesPath: (path: string) => void;
   setFileNamingConvention: (type: keyof NamingConvention, pattern: string) => void;
   setFolderNamingConvention: (type: keyof FolderNamingConvention, pattern: string) => void;
   setFilePathsOption: (key: keyof FilePathsOptions, value: boolean) => void;
@@ -51,6 +53,7 @@ const defaultState = {
   channelProjectsPath: "",
   singleVideoPath: "",
   tempVideoPath: "",
+  veo3ImagesPath: "",
   fileNaming: {
     video: "{name}_{timestamp}.mp4",
     audio: "{name}_{timestamp}.mp3",
@@ -86,6 +89,10 @@ export const useFilePathsStore = create<FilePathsState>()(
 
       setTempVideoPath: (path) => {
         set({ tempVideoPath: path });
+      },
+
+      setVeo3ImagesPath: (path) => {
+        set({ veo3ImagesPath: path });
       },
 
       setFileNamingConvention: (type, pattern) => {

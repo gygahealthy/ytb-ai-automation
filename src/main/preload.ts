@@ -121,6 +121,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("veo3:createProjectViaAPI", { profileId, projectTitle }),
     updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) =>
       ipcRenderer.invoke("veo3:updateProjectTitleViaAPI", { profileId, projectId, projectTitle }),
+    // Models API methods
+    syncModels: (profileId: string) => ipcRenderer.invoke("veo3:syncModels", { profileId }),
   },
 
   // YouTube APIs
@@ -322,6 +324,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath, settings }),
       status: () => ipcRenderer.invoke("video:download:status"),
     },
+  },
+
+  // Image VEO3 APIs (image gallery)
+  imageVeo3: {
+    upload: (profileId: string, imagePath: string, localStoragePath: string, aspectRatio?: string) =>
+      ipcRenderer.invoke("image-veo3:upload", { profileId, imagePath, localStoragePath, aspectRatio }),
+    fetchUserImages: (profileId: string, pageSize?: number, cursor?: string | null) =>
+      ipcRenderer.invoke("image-veo3:fetch-user-images", { profileId, pageSize, cursor }),
+    syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) =>
+      ipcRenderer.invoke("image-veo3:sync-from-flow", { profileId, localStoragePath, maxPages }),
+    getLocalImages: (profileId: string) => ipcRenderer.invoke("image-veo3:get-local-images", { profileId }),
   },
 
   // Generic invoke for other channels

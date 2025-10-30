@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter } from "react-router-dom";
 import LogDrawer from "./components/common/drawers/log/LogDrawer";
 import Sidebar from "./components/common/Sidebar";
@@ -44,7 +44,7 @@ function AppContent() {
   // Initialize keyboard shortcuts listener
   useKeyboardShortcuts();
 
-  const handleSettingsClick = () => {
+  const handleSettingsClick = useCallback(() => {
     modal.openModal({
       title: "Settings",
       icon: <Settings className="w-6 h-6 text-indigo-500" />,
@@ -65,7 +65,25 @@ function AppContent() {
       // allow Settings to render a sidebar layout inside the modal
       contentClassName: "",
     });
-  };
+  }, [modal]);
+
+  // Listen for keyboard shortcut to open/close settings
+  useEffect(() => {
+    const handleToggleSettingsEvent = () => {
+      console.log("[App] toggle-settings-modal event received");
+      // Toggle: if modal is open, close it; otherwise open it
+      if (modal.isOpen) {
+        modal.closeModal();
+      } else {
+        handleSettingsClick();
+      }
+    };
+
+    window.addEventListener("open-settings-modal", handleToggleSettingsEvent);
+    return () => {
+      window.removeEventListener("open-settings-modal", handleToggleSettingsEvent);
+    };
+  }, [handleSettingsClick, modal.isOpen]);
 
   // Calculate total right margin based on pinned drawers
   const anyDrawerPinned = logDrawerPinned || genericDrawerPinned;

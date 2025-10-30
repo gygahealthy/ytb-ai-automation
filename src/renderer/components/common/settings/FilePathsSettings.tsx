@@ -8,11 +8,13 @@ export default function FilePathsSettings() {
   const {
     channelProjectsPath,
     singleVideoPath,
+    veo3ImagesPath,
     fileNaming,
     folderNaming,
     options,
     setChannelProjectsPath,
     setSingleVideoPath,
+    setVeo3ImagesPath,
     setFileNamingConvention,
     setFolderNamingConvention,
     setFilePathsOption,
@@ -21,7 +23,7 @@ export default function FilePathsSettings() {
   const { tempVideoPath, setTempVideoPath } = useFilePathsStore();
   const { visibleSections = {}, setVisibleSection } = useSettingsStore();
 
-  const handleBrowseFolder = async (type: "channelProjects" | "singleVideo" | "tempVideo") => {
+  const handleBrowseFolder = async (type: "channelProjects" | "singleVideo" | "tempVideo" | "veo3Images") => {
     try {
       // Request folder selection from main process; prefer directory picker options
       const result = await electronApi.invoke("dialog:showOpenDialog", {
@@ -41,6 +43,7 @@ export default function FilePathsSettings() {
         if (selectedPath) {
           if (type === "channelProjects") setChannelProjectsPath(selectedPath);
           else if (type === "singleVideo") setSingleVideoPath(selectedPath);
+          else if (type === "veo3Images") setVeo3ImagesPath(selectedPath);
           else setTempVideoPath(selectedPath);
         }
       }
@@ -229,6 +232,38 @@ export default function FilePathsSettings() {
                     className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors flex-shrink-0"
                     title="Clear"
                     aria-label="Clear temp video path"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* VEO3 Images Storage Path */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 items-center gap-3">
+                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">VEO3 Image Gallery Storage</div>
+                <div className="col-span-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={veo3ImagesPath}
+                    onChange={(e) => setVeo3ImagesPath(e.target.value)}
+                    placeholder="e.g., C:\Projects\VEO3Images"
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                  />
+                  <button
+                    onClick={() => handleBrowseFolder("veo3Images")}
+                    className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
+                    title="Browse folder"
+                    aria-label="Browse VEO3 images folder"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setVeo3ImagesPath("")}
+                    className="w-9 h-9 rounded-md bg-transparent hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors flex-shrink-0"
+                    title="Clear"
+                    aria-label="Clear VEO3 images path"
                   >
                     <X className="w-4 h-4" />
                   </button>

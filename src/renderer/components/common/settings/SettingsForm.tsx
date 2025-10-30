@@ -1,19 +1,21 @@
 import clsx from "clsx";
-import { Palette, Globe, Keyboard, FolderOpen } from "lucide-react";
+import { Palette, Globe, Keyboard, FolderOpen, Video } from "lucide-react";
 import { useState } from "react";
 import GeneralSettings from "./GeneralSettings";
 import BrowsersSettings from "./BrowsersSettings";
 import KeyboardShortcutsSettings from "./KeyboardShortcutsSettings";
 import FilePathsSettings from "./FilePathsSettings";
+import FlowVeo3Settings from "./FlowVeo3Settings";
 import { useSettingsStore } from "../../../store/settings.store";
 
-type SettingsSection = "general" | "browsers" | "keyboard" | "filePaths";
+type SettingsSection = "general" | "browsers" | "keyboard" | "filePaths" | "flowVeo3";
 
 const menuItems: { id: SettingsSection; label: string; icon: any }[] = [
   { id: "general", label: "General", icon: Palette },
   { id: "browsers", label: "Browsers", icon: Globe },
   { id: "keyboard", label: "Keyboard Shortcuts", icon: Keyboard },
   { id: "filePaths", label: "File Paths & Naming", icon: FolderOpen },
+  { id: "flowVeo3", label: "Flow VEO3", icon: Video },
 ];
 
 export default function SettingsForm() {
@@ -24,6 +26,7 @@ export default function SettingsForm() {
       browsers: true,
       keyboard: true,
       filePaths: true,
+      flowVeo3: true,
     },
   } = useSettingsStore();
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -136,6 +139,15 @@ export default function SettingsForm() {
           {activeSection === "filePaths" &&
             (visibleSections.filePaths ? (
               <FilePathsSettings />
+            ) : (
+              <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                This section is hidden. Click the icon in the sidebar to show it.
+              </div>
+            ))}
+
+          {activeSection === "flowVeo3" &&
+            (visibleSections.flowVeo3 ? (
+              <FlowVeo3Settings />
             ) : (
               <div className="p-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
                 This section is hidden. Click the icon in the sidebar to show it.

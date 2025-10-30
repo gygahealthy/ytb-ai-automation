@@ -91,7 +91,6 @@ export default function Drawer({
   if (!isOpen && !isPinned) return null;
 
   const sideClass = side === "left" ? "left-0" : "right-0";
-  const drawerWidth = isPinned ? "w-1/4" : width;
 
   const handleClose = () => {
     if (!isPinned) {
@@ -109,7 +108,7 @@ export default function Drawer({
         className={clsx(
           "fixed top-0 bottom-0 bg-white dark:bg-gray-800 shadow-2xl transform transition-all duration-300 flex flex-col",
           sideClass,
-          drawerWidth,
+          width,
           isPinned ? "z-30" : "z-50"
         )}
       >

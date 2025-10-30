@@ -9,7 +9,9 @@ export type ShortcutAction =
   | "toggle-profile-select"
   | "toggle-logs"
   | "pin-drawer"
-  | "open-cookie-rotation";
+  | "open-cookie-rotation"
+  | "open-settings"
+  | "open-image-gallery";
 
 // Added navigation shortcuts
 export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
@@ -104,6 +106,20 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     description: "Go forward in the page history",
     keys: ["Alt", "ArrowRight"],
     icon: "ArrowRight",
+  },
+  {
+    id: "open-settings",
+    label: "Open Settings",
+    description: "Open the Settings modal",
+    keys: ["Ctrl", "S"],
+    icon: "Settings",
+  },
+  {
+    id: "open-image-gallery",
+    label: "Open Image Gallery",
+    description: "Open the Image Gallery drawer for ingredients",
+    keys: ["Ctrl", "M"],
+    icon: "Images",
   },
 ];
 

@@ -4,7 +4,8 @@ import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
 import React from "react";
 import CookieRotationDrawerContent from "@/renderer/components/common/drawers/cookie-rotation/CookieRotationDrawerContent";
-import { RefreshCw } from "lucide-react";
+import ImageGalleryDrawerContent from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawerContent";
+import { RefreshCw, Image } from "lucide-react";
 
 type ShortcutHandler = () => void;
 
@@ -139,6 +140,45 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
       }
     } catch (err) {
       console.error("[Keyboard] Error navigating forward:", err);
+    }
+  },
+  "open-settings": () => {
+    console.log("[Keyboard] Open Settings triggered");
+    try {
+      window.dispatchEvent(new CustomEvent("open-settings-modal"));
+    } catch (err) {
+      console.error("[Keyboard] Error opening settings modal:", err);
+    }
+  },
+  "open-image-gallery": () => {
+    console.log("[Keyboard] Open Image Gallery drawer triggered");
+    try {
+      const api = (window as any).__veo3_drawer_api;
+      if (api) {
+        const props = {
+          title: "Image Gallery",
+          icon: React.createElement(
+            "div",
+            { className: "p-1 rounded bg-purple-500 shadow-sm flex items-center justify-center" },
+            React.createElement(Image, { className: "w-4 h-4 text-white" })
+          ),
+          children: React.createElement(ImageGalleryDrawerContent, null),
+          side: "right",
+          width: "w-96",
+          enablePin: true,
+          drawerId: "image-gallery",
+        } as any;
+
+        if (typeof api.toggle === "function") {
+          api.toggle(props);
+        } else if (api.open) {
+          api.open(props);
+        }
+      } else {
+        console.warn("[Keyboard] Drawer API not available yet");
+      }
+    } catch (err) {
+      console.error("[Keyboard] Error opening image gallery drawer:", err);
     }
   },
 };
