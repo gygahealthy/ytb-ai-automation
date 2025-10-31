@@ -1,6 +1,48 @@
+import { useEffect, useState } from "react";
+
 export default function PreviewPanel({ job, pollingProgress }: { job: any; pollingProgress: number }) {
-  if (job?.videoUrl) {
-    return <video src={job.videoUrl} className="w-full h-full object-contain" controls />;
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load local video file if videoPath exists
+  useEffect(() => {
+    async function loadLocalVideo() {
+      if (job?.videoPath) {
+        try {
+          setLoading(true);
+          const result = await (window as any).electronAPI.veo3.readVideoFile(job.videoPath);
+          if (result.success && result.data?.dataUrl) {
+            setVideoSrc(result.data.dataUrl);
+          } else {
+            // Fallback to remote URL if local file can't be loaded
+            setVideoSrc(job.videoUrl || null);
+          }
+        } catch (error) {
+          console.error("Failed to load local video:", error);
+          setVideoSrc(job.videoUrl || null);
+        } finally {
+          setLoading(false);
+        }
+      } else if (job?.videoUrl) {
+        setVideoSrc(job.videoUrl);
+      } else {
+        setVideoSrc(null);
+      }
+    }
+
+    loadLocalVideo();
+  }, [job?.videoPath, job?.videoUrl]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-t-primary-500 border-gray-200 animate-spin" />
+      </div>
+    );
+  }
+
+  if (videoSrc) {
+    return <video src={videoSrc} className="w-full h-full object-contain" controls />;
   }
 
   if (job?.status === "processing" && job?.generationId) {
@@ -13,7 +55,10 @@ export default function PreviewPanel({ job, pollingProgress }: { job: any; polli
             <span className="text-xs text-gray-400 mt-1 block">{pollingProgress}%</span>
           </div>
           <div className="w-36 mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div className="bg-gradient-to-r from-primary-400 to-primary-600 h-2 rounded-full transition-all" style={{ width: `${Math.min(Math.max(pollingProgress, 0), 100)}%` }} />
+            <div
+              className="bg-gradient-to-r from-primary-400 to-primary-600 h-2 rounded-full transition-all"
+              style={{ width: `${Math.min(Math.max(pollingProgress, 0), 100)}%` }}
+            />
           </div>
         </div>
       </div>

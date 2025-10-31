@@ -146,6 +146,46 @@ export class VideoGenerationRepository {
   }
 
   /**
+   * Get video generation by media generation ID
+   */
+  async getByMediaGenerationId(mediaGenerationId: string): Promise<VideoGeneration | null> {
+    logger.debug(`Fetching video generation by media generation ID: ${mediaGenerationId}`);
+
+    const row = await this.db.get<any>(
+      `SELECT 
+        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
+        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
+        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
+        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
+        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
+        updated_at as updatedAt, completed_at as completedAt
+       FROM veo3_video_generations 
+       WHERE media_generation_id = ?`,
+      [mediaGenerationId]
+    );
+
+    return row || null;
+  }
+
+  /**
+   * Update video_path for a video generation
+   */
+  async updateVideoPath(id: string, videoPath: string): Promise<void> {
+    logger.info(`Updating video_path for generation ${id}: ${videoPath}`);
+
+    const now = new Date().toISOString();
+
+    await this.db.run(
+      `UPDATE veo3_video_generations 
+       SET video_path = ?, updated_at = ?
+       WHERE id = ?`,
+      [videoPath, now, id]
+    );
+
+    logger.info(`Video path updated for generation ${id}`);
+  }
+
+  /**
    * Get video generations by profile ID
    */
   async getByProfile(profileId: string, limit: number = 50, offset: number = 0): Promise<VideoGeneration[]> {

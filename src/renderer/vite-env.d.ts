@@ -83,6 +83,25 @@ interface Window {
         ) => Promise<any>;
         status: () => Promise<any>;
       };
+      downloadByName: {
+        single: (
+          profileId: string,
+          videoName: string,
+          mediaKey: string,
+          bearerToken: string,
+          flowNextKey: string,
+          downloadPath: string,
+          fifeUrl?: string
+        ) => Promise<any>;
+        batch: (
+          videos: Array<{ profileId: string; videoName: string; mediaKey: string; fifeUrl?: string }>,
+          bearerToken: string,
+          flowNextKey: string,
+          downloadPath: string
+        ) => Promise<any>;
+        status: () => Promise<any>;
+        auto: (profileId: string, videoName: string, mediaKey: string, downloadPath: string, fifeUrl?: string) => Promise<any>;
+      };
     };
     imageVeo3: {
       upload: (profileId: string, imagePath: string, localStoragePath: string, aspectRatio?: string) => Promise<any>;

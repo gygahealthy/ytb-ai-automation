@@ -176,9 +176,11 @@ export class VEO3VideoHistoryService {
 
   /**
    * Enrich generations by extracting videoUrl from rawResponse if missing
+   * videoPath is passed separately for local file access
    */
   private enrichGenerations(generations: VideoGeneration[]): VideoGeneration[] {
     return generations.map((g) => {
+      // Extract videoUrl from rawResponse if missing
       if (g.status === "completed" && !g.videoUrl && g.rawResponse) {
         try {
           const parsed = JSON.parse(g.rawResponse);
@@ -190,6 +192,10 @@ export class VEO3VideoHistoryService {
           // Ignore parse errors
         }
       }
+
+      // videoPath is already in the generation object, no need to modify videoUrl
+      // The frontend will check videoPath first and load via IPC
+
       return g;
     });
   }

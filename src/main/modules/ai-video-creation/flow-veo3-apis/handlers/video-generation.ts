@@ -1,5 +1,6 @@
 import { IpcRegistration } from "../../../../../core/ipc/types";
 import { flowVeo3ApiService } from "../services/flow-veo3-api.service";
+import * as fs from "fs/promises";
 
 export const videoGenerationRegistrations: IpcRegistration[] = [
   // Video generation handlers
@@ -81,6 +82,22 @@ export const videoGenerationRegistrations: IpcRegistration[] = [
       const ids = (req as any).generationIds || [];
       const results = await Promise.all(ids.map((id: string) => flowVeo3ApiService.getGenerationById(id)));
       return { success: true, data: results.map((r: any) => r.data).filter(Boolean) };
+    },
+  },
+  {
+    channel: "veo3:read-video-file",
+    description: "Read video file from disk and return as base64 data URL",
+    handler: async (req: { filePath: string }) => {
+      try {
+        // Security: validate that the path exists and is readable
+        const fileBuffer = await fs.readFile(req.filePath);
+        const base64 = fileBuffer.toString("base64");
+        // Video files are typically mp4
+        const dataUrl = `data:video/mp4;base64,${base64}`;
+        return { success: true, data: { dataUrl } };
+      } catch (error) {
+        return { success: false, error: `Failed to read video file: ${String(error)}` };
+      }
     },
   },
 ];

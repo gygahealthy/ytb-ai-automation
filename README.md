@@ -97,6 +97,22 @@ veo3-automation/
    npm run dev
    ```
 
+   Or use the convenience scripts:
+
+   **macOS/Linux:**
+
+   ```bash
+   ./build-and-dev.sh
+   ```
+
+   **Windows PowerShell:**
+
+   ```powershell
+   .\build-and-dev.ps1
+   ```
+
+   These scripts will build the Electron main process and then start the dev server automatically.
+
 3. **Build for production:**
    ```bash
    npm run build
@@ -112,6 +128,8 @@ veo3-automation/
 - `npm run build:electron` - Build Electron main process
 - `npm run package` - Package the app for distribution
 - `npm run lint` - Run ESLint
+- `./build-and-dev.sh` - (macOS/Linux) Build and run dev server
+- `.\build-and-dev.ps1` - (Windows) Build and run dev server
 
 ## Features in Detail
 

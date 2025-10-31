@@ -123,6 +123,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("veo3:updateProjectTitleViaAPI", { profileId, projectId, projectTitle }),
     // Models API methods
     syncModels: (profileId: string) => ipcRenderer.invoke("veo3:syncModels", { profileId }),
+    // Video file reading
+    readVideoFile: (filePath: string) => ipcRenderer.invoke("veo3:read-video-file", { filePath }),
   },
 
   // YouTube APIs
@@ -323,6 +325,48 @@ contextBridge.exposeInMainWorld("electronAPI", {
         settings?: { autoCreateDateFolder?: boolean; autoIndexFilename?: boolean; addEpochTimeToFilename?: boolean }
       ) => ipcRenderer.invoke("video:download:batch", { videos, downloadPath, settings }),
       status: () => ipcRenderer.invoke("video:download:status"),
+    },
+    downloadByName: {
+      single: (
+        profileId: string,
+        videoName: string,
+        mediaKey: string,
+        bearerToken: string,
+        flowNextKey: string,
+        downloadPath: string,
+        fifeUrl?: string
+      ) =>
+        ipcRenderer.invoke("video:download:by-name:single", {
+          profileId,
+          videoName,
+          mediaKey,
+          bearerToken,
+          flowNextKey,
+          downloadPath,
+          fifeUrl,
+        }),
+      batch: (
+        videos: Array<{ profileId: string; videoName: string; mediaKey: string; fifeUrl?: string }>,
+        bearerToken: string,
+        flowNextKey: string,
+        downloadPath: string
+      ) =>
+        ipcRenderer.invoke("video:download:by-name:batch", {
+          videos,
+          bearerToken,
+          flowNextKey,
+          downloadPath,
+        }),
+      status: () => ipcRenderer.invoke("video:download:by-name:status"),
+      // Convenience method with automatic token extraction
+      auto: (profileId: string, videoName: string, mediaKey: string, downloadPath: string, fifeUrl?: string) =>
+        ipcRenderer.invoke("video:download:by-name:auto", {
+          profileId,
+          videoName,
+          mediaKey,
+          downloadPath,
+          fifeUrl,
+        }),
     },
   },
 
