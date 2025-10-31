@@ -129,9 +129,8 @@ export default function SingleVideoCreationPage() {
       return;
     }
 
-    const skippedMessage = result.skippedCount && result.skippedCount > 0
-      ? ` (${result.skippedCount} completed will be skipped)`
-      : "";
+    const skippedMessage =
+      result.skippedCount && result.skippedCount > 0 ? ` (${result.skippedCount} completed will be skipped)` : "";
 
     if (!opts?.skipConfirm) {
       alert.show({
@@ -142,9 +141,8 @@ export default function SingleVideoCreationPage() {
       });
     }
 
-    const finalMessage = result.skippedCount && result.skippedCount > 0
-      ? `\n\n${result.skippedCount} completed prompt(s) were skipped.`
-      : "";
+    const finalMessage =
+      result.skippedCount && result.skippedCount > 0 ? `\n\n${result.skippedCount} completed prompt(s) were skipped.` : "";
 
     setAlertState({
       open: true,

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { User, Image as ImageIcon } from "lucide-react";
 import { useDrawer } from "@hooks/useDrawer";
 import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
-import ImageGalleryDrawerContent from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawerContent";
+import ImageGalleryDrawer from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawer";
 
 /**
  * Hook to manage UI state for drawers, modals, and profile/project selection
@@ -43,7 +43,7 @@ export function useVideoCreationUI() {
     openDrawer({
       title: "Image Gallery",
       icon: <ImageIcon className="w-5 h-5 text-purple-500" />,
-      children: <ImageGalleryDrawerContent />,
+      children: <ImageGalleryDrawer />,
       side: "right",
       width: "w-96",
       enablePin: true,

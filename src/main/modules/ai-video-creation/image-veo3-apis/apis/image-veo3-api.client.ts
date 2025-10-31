@@ -112,19 +112,26 @@ export class ImageVEO3ApiClient {
     cursor: string | null = null
   ): Promise<{ success: boolean; data?: FlowFetchImagesResponse; error?: string }> {
     try {
-      const inputParam = {
+      // CRITICAL: TRPC API pagination behavior:
+      // - First page (cursor=null): Include meta.values.cursor: ["undefined"]
+      // - Subsequent pages (cursor provided): REMOVE meta object entirely, only use json.cursor
+      const inputParam: any = {
         json: {
           type: "ASSET_MANAGER",
           pageSize,
           responseScope: "RESPONSE_SCOPE_UNSPECIFIED",
           cursor,
         },
-        meta: {
+      };
+
+      // Only include meta for first page
+      if (!cursor) {
+        inputParam.meta = {
           values: {
             cursor: ["undefined"],
           },
-        },
-      };
+        };
+      }
 
       const encodedInput = encodeURIComponent(JSON.stringify(inputParam));
       const url = `${this.baseUrl}/media.fetchUserHistoryDirectly?input=${encodedInput}`;
@@ -198,9 +205,17 @@ export class ImageVEO3ApiClient {
     apiKey: string
   ): Promise<{ success: boolean; data?: FlowFetchImageResponse; error?: string }> {
     try {
-      const url = `${this.mediaBaseUrl}/media/${imageName}?key=${apiKey}&clientContext.tool=PINHOLE`;
+      // Remove ALL whitespace including Unicode whitespace (U+0020, U+00A0, etc.) and newlines
+      // The API returns names with various whitespace chars but expects none in download
+      const cleanImageName = imageName.replace(/[\s\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF\r\n]/g, "");
+      // DO NOT URL-encode the name - the API expects the raw base64-like string with special chars like $
+      // Only encode the API key parameter
+      const url = `${this.mediaBaseUrl}/media/${cleanImageName}?key=${apiKey}&clientContext.tool=PINHOLE`;
 
-      logger.info(`Fetching image: ${imageName}`);
+      logger.info(`Fetching image: ${imageName} (len: ${imageName.length})`);
+      logger.info(`Cleaned name: ${cleanImageName} (len: ${cleanImageName.length})`);
+      logger.info(`Removed ${imageName.length - cleanImageName.length} characters`);
+      logger.info(`Request URL: ${url}`);
 
       const response = await fetch(url, {
         method: "GET",
@@ -208,6 +223,7 @@ export class ImageVEO3ApiClient {
           accept: "*/*",
           "accept-language": "en-US,en;q=0.9",
           authorization: `Bearer ${bearerToken}`,
+          origin: "https://labs.google",
           referer: "https://labs.google/",
           "sec-ch-ua": '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
           "sec-ch-ua-mobile": "?0",
@@ -217,6 +233,9 @@ export class ImageVEO3ApiClient {
           "sec-fetch-site": "cross-site",
           "user-agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+          "x-browser-channel": "stable",
+          "x-browser-copyright": "Copyright 2025 Google LLC. All rights reserved.",
+          "x-browser-year": "2025",
         },
       });
 

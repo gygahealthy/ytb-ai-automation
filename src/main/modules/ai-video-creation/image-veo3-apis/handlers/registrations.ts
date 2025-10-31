@@ -34,9 +34,9 @@ export const imageVeo3Registrations: IpcRegistration[] = [
   },
   {
     channel: "image-veo3:sync-metadata",
-    description: "Sync image metadata from Flow server (without downloading images)",
-    handler: async (req: { profileId: string; maxPages?: number; startCursor?: string | null }) => {
-      return await imageVeo3Service.syncImageMetadata(req.profileId, req.maxPages, req.startCursor);
+    description: "Sync image metadata from Flow server (deletes existing and fetches all images)",
+    handler: async (req: { profileId: string }) => {
+      return await imageVeo3Service.syncImageMetadata(req.profileId);
     },
   },
   {
@@ -61,6 +61,13 @@ export const imageVeo3Registrations: IpcRegistration[] = [
     },
   },
   {
+    channel: "image-veo3:force-refresh",
+    description: "Delete all image records for a profile (preserves downloaded files)",
+    handler: async (req: { profileId: string }) => {
+      return await imageVeo3Service.forceRefreshImages(req.profileId);
+    },
+  },
+  {
     channel: "image-veo3:read-image-file",
     description: "Read image file from disk and return as base64 data URL",
     handler: async (req: { filePath: string }) => {
@@ -78,5 +85,16 @@ export const imageVeo3Registrations: IpcRegistration[] = [
       }
     },
   },
+  {
+    channel: "image-veo3:get-file-size",
+    description: "Get file size in bytes for an image file",
+    handler: async (req: { filePath: string }) => {
+      try {
+        const stats = await fs.stat(req.filePath);
+        return { success: true, data: { size: stats.size } };
+      } catch (error) {
+        return { success: false, error: `Failed to get file size: ${String(error)}` };
+      }
+    },
+  },
 ];
-

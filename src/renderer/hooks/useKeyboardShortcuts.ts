@@ -4,7 +4,7 @@ import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
 import React from "react";
 import CookieRotationDrawerContent from "@/renderer/components/common/drawers/cookie-rotation/CookieRotationDrawerContent";
-import ImageGalleryDrawerContent from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawerContent";
+import ImageGalleryDrawer from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawer";
 import { RefreshCw, Image } from "lucide-react";
 
 type ShortcutHandler = () => void;
@@ -162,7 +162,7 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
             { className: "p-1 rounded bg-purple-500 shadow-sm flex items-center justify-center" },
             React.createElement(Image, { className: "w-4 h-4 text-white" })
           ),
-          children: React.createElement(ImageGalleryDrawerContent, null),
+          children: React.createElement(ImageGalleryDrawer, null),
           side: "right",
           width: "w-96",
           enablePin: true,
