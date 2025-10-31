@@ -1,5 +1,6 @@
 import { IpcRegistration } from "../../../../../core/ipc/types";
 import { videoGenerationRegistrations } from "./video-generation";
+import { videoImageGenerationRegistrations } from "./video-image-generation";
 import { videoBatchGenerationRegistrations } from "./video-batch-generation";
 import { downloadRegistrations } from "./download";
 import { videoUpscaleRegistrations } from "./video-upscale";
@@ -15,6 +16,7 @@ console.log("[flow-veo3-apis/registrations] Video download event listener initia
 // Merge all handler registrations
 export const flowVeo3ApiRegistrations: IpcRegistration[] = [
   ...videoGenerationRegistrations,
+  ...videoImageGenerationRegistrations,
   ...videoBatchGenerationRegistrations,
   ...downloadRegistrations,
   ...videoUpscaleRegistrations,

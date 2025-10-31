@@ -118,7 +118,7 @@ export default function SingleVideoCreationPage() {
   };
 
   const handleCreateMultipleWrapper = async (opts?: { skipConfirm?: boolean }) => {
-    const result = await handleCreateMultiple(selectedProfileId, selectedProjectId, opts);
+    const result = await handleCreateMultiple(selectedProfileId, selectedProjectId, creationMode, opts);
 
     if (!result.success) {
       setAlertState({
@@ -132,10 +132,13 @@ export default function SingleVideoCreationPage() {
     const skippedMessage =
       result.skippedCount && result.skippedCount > 0 ? ` (${result.skippedCount} completed will be skipped)` : "";
 
+    const isIngredientsMode = creationMode === "ingredients";
+    const ingredientsNote = isIngredientsMode ? " with selected images" : "";
+
     if (!opts?.skipConfirm) {
       alert.show({
         title: "Starting Video Generation",
-        message: `Generating videos for ${result.generatedCount} prompt(s)${skippedMessage}...`,
+        message: `Generating videos for ${result.generatedCount} prompt(s)${skippedMessage}${ingredientsNote}...`,
         severity: "success",
         duration: 2000,
       });
@@ -146,7 +149,7 @@ export default function SingleVideoCreationPage() {
 
     setAlertState({
       open: true,
-      message: `Batch generation started!${finalMessage}\n\n${result.generatedCount} video(s) will be generated with delays between each request.\n\nEach video will update independently as processing starts.`,
+      message: `Batch generation started!${finalMessage}\n\n${result.generatedCount} video(s) will be generated${ingredientsNote} with delays between each request.\n\nEach video will update independently as processing starts.`,
       severity: "success",
     });
   };
@@ -319,7 +322,7 @@ export default function SingleVideoCreationPage() {
                   onToggleSelect={togglePromptSelection}
                   onTogglePreview={togglePromptPreview}
                   onCreate={(promptId, promptText) =>
-                    handleCreateVideo(promptId, promptText, selectedProfileId, selectedProjectId)
+                    handleCreateVideo(promptId, promptText, selectedProfileId, selectedProjectId, creationMode)
                   }
                   onShowInfo={handleShowInfo}
                   onToggleProfileSelect={togglePromptProfileSelect}

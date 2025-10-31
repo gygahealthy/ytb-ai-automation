@@ -2,6 +2,7 @@ import { ApiResponse } from "../../../../../shared/types";
 import { BatchProgressCallback, veo3BatchGenerationService } from "./veo3-apis/veo3-batch-generation.service";
 import { veo3StatusCheckerService } from "./veo3-apis/veo3-status-checker.service";
 import { veo3VideoCreationService } from "./veo3-apis/veo3-video-creation.service";
+import { veo3ImageToVideoService, ImageReference } from "./veo3-apis/veo3-image-to-video.service";
 
 /**
  * VEO3 Service - Main Facade
@@ -21,7 +22,7 @@ export class FlowVeo3ApiService {
   // ========================================
 
   /**
-   * Start video generation process (single video)
+   * Start video generation process (single video from text prompt)
    */
   async startVideoGeneration(
     profileId: string,
@@ -33,6 +34,23 @@ export class FlowVeo3ApiService {
       | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
   ): Promise<ApiResponse<{ generationId: string; sceneId: string; operationName: string }>> {
     return veo3VideoCreationService.startVideoGeneration(profileId, projectId, prompt, aspectRatio);
+  }
+
+  /**
+   * Generate video from reference images (1-3 images)
+   */
+  async generateVideoFromImages(
+    profileId: string,
+    projectId: string,
+    prompt: string,
+    imageReferences: ImageReference[],
+    aspectRatio:
+      | "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_PORTRAIT"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    model: string = "veo_3_0_r2v_fast_ultra"
+  ): Promise<ApiResponse<{ generationId: string; sceneId: string; operationName: string }>> {
+    return veo3ImageToVideoService.generateVideoFromImages(profileId, projectId, prompt, imageReferences, aspectRatio, model);
   }
 
   // ========================================

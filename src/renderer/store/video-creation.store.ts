@@ -220,7 +220,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
             const { prompts, history } = get();
             const newPrompts: Prompt[] = parsed.map((item, idx) => ({
               id: generateId(),
-              text: typeof item === "string" ? item : item.text || "",
+              text: typeof item === "string" ? item : JSON.stringify(item),
               order: idx,
               selected: false,
             }));

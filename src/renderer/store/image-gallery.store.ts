@@ -16,6 +16,7 @@ export type ProfileImageCursor = {
 export type SelectedImageInfo = {
   id: string;
   name: string;
+  mediaKey?: string; // Media ID for VEO3 API
   localPath?: string;
   fifeUrl?: string;
   aspectRatio?: string;

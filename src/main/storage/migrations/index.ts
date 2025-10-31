@@ -35,6 +35,7 @@ import * as m031 from "./modules/031_remove_is_logged_in_column";
 import * as m032 from "./modules/032_remove_video_id_from_veo3_generations";
 import * as m033 from "./modules/033_add_veo3_image_generations";
 import * as m034 from "./modules/029_create_profile_secrets_table";
+import * as m035 from "./modules/035_add_generation_type_and_image_references";
 
 const logger = new Logger("DatabaseMigrationsOrchestrator");
 
@@ -73,6 +74,7 @@ const modules: Migration[] = [
   m032,
   m033,
   m034,
+  m035,
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

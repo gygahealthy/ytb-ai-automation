@@ -73,6 +73,15 @@ interface Window {
       createProjectViaAPI: (profileId: string, projectTitle: string) => Promise<any>;
       updateProjectTitleViaAPI: (profileId: string, projectId: string, projectTitle: string) => Promise<any>;
       syncModels: (profileId: string) => Promise<any>;
+      readVideoFile: (filePath: string) => Promise<any>;
+      generateVideoFromImages: (
+        profileId: string,
+        projectId: string,
+        prompt: string,
+        imageReferences: Array<{ mediaId: string; imageId: string }>,
+        aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE",
+        model?: string
+      ) => Promise<any>;
     };
     video: {
       download: {

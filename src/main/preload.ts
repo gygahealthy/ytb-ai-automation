@@ -125,6 +125,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
     syncModels: (profileId: string) => ipcRenderer.invoke("veo3:syncModels", { profileId }),
     // Video file reading
     readVideoFile: (filePath: string) => ipcRenderer.invoke("veo3:read-video-file", { filePath }),
+    // Image-to-video generation
+    generateVideoFromImages: (
+      profileId: string,
+      projectId: string,
+      prompt: string,
+      imageReferences: Array<{ mediaId: string; imageId: string }>,
+      aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE",
+      model?: string
+    ) =>
+      ipcRenderer.invoke("veo3:generateVideoFromImages", {
+        profileId,
+        projectId,
+        prompt,
+        imageReferences,
+        aspectRatio,
+        model,
+      }),
   },
 
   // YouTube APIs

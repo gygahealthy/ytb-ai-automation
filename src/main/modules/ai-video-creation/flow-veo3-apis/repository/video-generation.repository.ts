@@ -5,6 +5,17 @@ import type { VideoGeneration } from "../../../../../shared/types/video-creation
 
 const logger = new Logger("VideoGenerationRepository");
 
+// Reusable SELECT clause for all queries
+const SELECT_VIDEO_GENERATION = `
+  id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
+  operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
+  status, generation_type as generationType, image_references as imageReferences,
+  media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
+  serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
+  error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
+  updated_at as updatedAt, completed_at as completedAt
+`;
+
 export class VideoGenerationRepository {
   constructor(private db: SQLiteDatabase) {}
 
@@ -24,9 +35,10 @@ export class VideoGenerationRepository {
     await this.db.run(
       `INSERT INTO veo3_video_generations (
         id, profile_id, project_id, scene_id, operation_name, prompt, seed, aspect_ratio,
-        status, media_generation_id, fife_url, serving_base_uri, video_url, video_path, 
-        error_message, raw_response, created_at, updated_at, completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        status, generation_type, image_references, media_generation_id, fife_url, 
+        serving_base_uri, video_url, video_path, error_message, raw_response, 
+        created_at, updated_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         record.id,
         record.profileId,
@@ -37,6 +49,8 @@ export class VideoGenerationRepository {
         record.seed,
         record.aspectRatio,
         record.status,
+        record.generationType || "text-to-video",
+        record.imageReferences || null,
         record.mediaGenerationId || null,
         record.fifeUrl || null,
         record.servingBaseUri || null,
@@ -107,18 +121,7 @@ export class VideoGenerationRepository {
     // Reduced from logger.info to logger.debug to avoid log spam during polling
     logger.debug(`Fetching video generation by ID: ${id}`);
 
-    const row = await this.db.get<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       WHERE id = ?`,
-      [id]
-    );
+    const row = await this.db.get<any>(`SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations WHERE id = ?`, [id]);
 
     return row || null;
   }
@@ -129,18 +132,9 @@ export class VideoGenerationRepository {
   async getBySceneId(sceneId: string): Promise<VideoGeneration | null> {
     logger.info(`Fetching video generation by scene ID: ${sceneId}`);
 
-    const row = await this.db.get<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       WHERE scene_id = ?`,
-      [sceneId]
-    );
+    const row = await this.db.get<any>(`SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations WHERE scene_id = ?`, [
+      sceneId,
+    ]);
 
     return row || null;
   }
@@ -152,15 +146,7 @@ export class VideoGenerationRepository {
     logger.debug(`Fetching video generation by media generation ID: ${mediaGenerationId}`);
 
     const row = await this.db.get<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       WHERE media_generation_id = ?`,
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations WHERE media_generation_id = ?`,
       [mediaGenerationId]
     );
 
@@ -192,17 +178,8 @@ export class VideoGenerationRepository {
     logger.info(`Fetching video generations for profile: ${profileId}`);
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       WHERE profile_id = ?
-       ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
+       WHERE profile_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [profileId, limit, offset]
     );
 
@@ -216,17 +193,8 @@ export class VideoGenerationRepository {
     logger.info(`Fetching video generations with status: ${status}`);
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       WHERE status = ?
-       ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
+       WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [status, limit, offset]
     );
 
@@ -240,16 +208,8 @@ export class VideoGenerationRepository {
     logger.info(`Fetching all video generations (limit: ${limit}, offset: ${offset})`);
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
-       ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
+       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [limit, offset]
     );
 
@@ -301,14 +261,7 @@ export class VideoGenerationRepository {
     params.push(limit, offset);
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
        WHERE ${whereClauses.join(" AND ")}
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
@@ -346,14 +299,7 @@ export class VideoGenerationRepository {
     params.push(limit, offset);
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
        WHERE ${whereClauses.join(" AND ")}
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
@@ -392,14 +338,7 @@ export class VideoGenerationRepository {
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     const rows = await this.db.all<any>(
-      `SELECT 
-        id, profile_id as profileId, project_id as projectId, scene_id as sceneId,
-        operation_name as operationName, prompt, seed, aspect_ratio as aspectRatio,
-        status, media_generation_id as mediaGenerationId, fife_url as fifeUrl, 
-        serving_base_uri as servingBaseUri, video_url as videoUrl, video_path as videoPath, 
-        error_message as errorMessage, raw_response as rawResponse, created_at as createdAt, 
-        updated_at as updatedAt, completed_at as completedAt
-       FROM veo3_video_generations 
+      `SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations 
        ${whereClause}
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,

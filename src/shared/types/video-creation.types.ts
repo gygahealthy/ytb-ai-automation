@@ -59,6 +59,8 @@ export interface VideoGeneration {
   seed: number;
   aspectRatio: string;
   status: "pending" | "processing" | "completed" | "failed";
+  generationType?: "text-to-video" | "image-reference" | "image-start-end" | "scene-builder";
+  imageReferences?: string; // JSON array of image generation IDs
   mediaGenerationId?: string;
   fifeUrl?: string;
   servingBaseUri?: string;

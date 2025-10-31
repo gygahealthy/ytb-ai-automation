@@ -33,6 +33,7 @@ export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumn
     toggleImageSelection({
       id: image.id,
       name: image.name,
+      mediaKey: image.mediaKey,
       localPath: image.localPath,
       fifeUrl: image.fifeUrl,
       aspectRatio: image.aspectRatio,
