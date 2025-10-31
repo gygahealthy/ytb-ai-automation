@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
 import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
+import { useImageGalleryStore } from "../../../../store/image-gallery.store";
 import ImageGalleryHeader from "./ImageGalleryHeader";
-import UploadSection from "./UploadSection";
+import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
 import ActionButtons from "./ActionButtons";
 import StatusMessages from "./StatusMessages";
 import ImageGrid from "./ImageGrid";
@@ -36,7 +37,6 @@ interface LocalImage {
 export default function ImageGalleryDrawer() {
   const [images, setImages] = useState<LocalImage[]>([]);
   const [imageSrcCache, setImageSrcCache] = useState<Record<string, string>>({});
-  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -51,6 +51,7 @@ export default function ImageGalleryDrawer() {
   const { flowProfileId } = useDefaultProfileStore();
   const flowNextKey = useFlowNextKey(flowProfileId || "");
   const extractSecrets = useSecretStore((state) => state.extractSecrets);
+  const { selectedImages } = useImageGalleryStore();
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
@@ -355,17 +356,7 @@ export default function ImageGalleryDrawer() {
   /**
    * Toggle image selection
    */
-  const toggleImageSelection = (imageId: string) => {
-    setSelectedImages((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(imageId)) {
-        newSet.delete(imageId);
-      } else {
-        newSet.add(imageId);
-      }
-      return newSet;
-    });
-  };
+  // Removed - now handled by ImageGrid component using store
 
   // Load images on mount
   useEffect(() => {
@@ -374,24 +365,17 @@ export default function ImageGalleryDrawer() {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-      {/* Action Buttons - Compact Modern Design */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 space-y-3 max-h-[40vh] overflow-y-auto">
+      {/* Header Section - Compact Modern Design */}
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
         {/* Grid Column Selector */}
         <ImageGalleryHeader gridColumns={gridColumns} onGridColumnsChange={setGridColumns} />
 
-        {/* Upload Area */}
-        <UploadSection
-          onUpload={handleUploadImage}
-          isLoading={isLoading}
-          isSyncing={isSyncing}
-          isDownloading={isDownloading}
-          isExtractingSecret={isExtractingSecret}
-          hasStoragePath={!!veo3ImagesPath}
-          hasProfileId={!!currentProfileId}
-        />
+        {/* Selected Image Placeholders (3 slots) */}
+        <SelectedImagePlaceholders />
 
-        {/* Action Buttons Row */}
+        {/* Action Buttons Row (4 buttons: Upload, Sync, Download, Clear) */}
         <ActionButtons
+          onUpload={handleUploadImage}
           onSync={handleSyncFromFlow}
           onDownload={handleDownloadImages}
           onForceRefresh={handleForceRefresh}
@@ -415,21 +399,14 @@ export default function ImageGalleryDrawer() {
         />
       </div>
 
-      {/* Image Grid - Scrollable Area with Fixed Height */}
-      <div className="flex-shrink-0 h-[calc(100vh-300px)] overflow-y-auto p-4">
-        <ImageGrid
-          images={images}
-          imageSrcCache={imageSrcCache}
-          selectedImages={selectedImages}
-          onToggleSelection={toggleImageSelection}
-          isLoading={isLoading}
-          gridColumns={gridColumns}
-        />
+      {/* Image Grid - Scrollable Area */}
+      <div className="flex-1 overflow-y-auto p-4 max-h-[calc(100vh-280px)]">
+        <ImageGrid images={images} imageSrcCache={imageSrcCache} isLoading={isLoading} gridColumns={gridColumns} />
       </div>
 
       {/* Footer - Stats - Fixed to Bottom */}
       <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-        <GalleryFooter imageCount={images.length} selectedCount={selectedImages.size} totalDiskSize={totalDiskSize} />
+        <GalleryFooter imageCount={images.length} selectedCount={selectedImages.length} totalDiskSize={totalDiskSize} />
       </div>
     </div>
   );

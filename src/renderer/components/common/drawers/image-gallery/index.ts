@@ -1,6 +1,6 @@
 export { default as ImageGalleryDrawer } from "./ImageGalleryDrawer";
 export { default as ImageGalleryHeader } from "./ImageGalleryHeader";
-export { default as UploadSection } from "./UploadSection";
+export { default as SelectedImagePlaceholders } from "./SelectedImagePlaceholders";
 export { default as ActionButtons } from "./ActionButtons";
 export { default as StatusMessages } from "./StatusMessages";
 export { default as ImageGrid } from "./ImageGrid";
