@@ -181,6 +181,11 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
       console.error("[Keyboard] Error opening image gallery drawer:", err);
     }
   },
+  "toggle-video-properties": () => {
+    console.log("[Keyboard] Toggle Video Properties triggered");
+    // Dispatch custom event that VideoStudioPage will listen to
+    window.dispatchEvent(new CustomEvent("toggle-video-properties"));
+  },
 };
 
 /**

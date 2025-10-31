@@ -11,7 +11,8 @@ export type ShortcutAction =
   | "pin-drawer"
   | "open-cookie-rotation"
   | "open-settings"
-  | "open-image-gallery";
+  | "open-image-gallery"
+  | "toggle-video-properties";
 
 // Added navigation shortcuts
 export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
@@ -120,6 +121,13 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     description: "Open the Image Gallery drawer for ingredients",
     keys: ["Ctrl", "M"],
     icon: "Images",
+  },
+  {
+    id: "toggle-video-properties",
+    label: "Toggle Video Properties",
+    description: "Open/close the video properties panel in Video Studio",
+    keys: ["Ctrl", "P"],
+    icon: "Settings2",
   },
 ];
 

@@ -14,6 +14,7 @@ import SingleVideoCreationPage from "@pages/video-creation/SingleVideoCreationPa
 import VideoHistoryPage from "@pages/video-creation/VideoHistoryPage";
 import StoryCreatePage from "@pages/video-creation/ScriptCreatePage";
 import ScriptEditorPage from "@pages/video-creation/ScriptEditorPage";
+import VideoStudioPage from "@pages/video-studio/VideoStudioPage";
 import ChannelDeepDivePage from "@pages/channel-management/ChannelDeepDivePage";
 import ChannelMonitoringPage from "@pages/channel-management/ChannelMonitoringPage";
 import CompetitorMonitoringPage from "@pages/channel-management/CompetitorMonitoringPage";
@@ -43,6 +44,8 @@ export default function AppRoutes() {
         <Route path="/video-creation/channels/:channelId/monitoring" element={<ChannelMonitoringPage />} />
         <Route path="/video-creation/channels/:channelId/competitors" element={<CompetitorMonitoringPage />} />
         <Route path="/video-creation/single" element={<SingleVideoCreationPage />} />
+        <Route path="/video-creation/studio" element={<VideoStudioPage />} />
+        <Route path="/video-creation/studio/:projectId" element={<VideoStudioPage />} />
         <Route
           path="/video-creation/script-create"
           element={
