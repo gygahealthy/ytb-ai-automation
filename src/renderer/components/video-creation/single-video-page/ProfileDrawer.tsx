@@ -1,4 +1,3 @@
-import { User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAlert } from "../../../hooks/useAlert";
 import profileIPC from "../../../ipc/profile";
@@ -261,70 +260,57 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
     }
   };
 
-  const handleApply = () => {
-    onApply(localProfileId ?? null, localProjectId ?? null);
-    onClose?.();
-  };
-
   const selectedProfile = profiles.find((p) => p.id === localProfileId);
   const selectedProject = projects.find((p) => p.id === localProjectId);
 
   return (
     <>
-      <div className="space-y-4 p-4">
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            <User className="w-4 h-4" />
-            <span>Select Profile</span>
-          </label>
+      <div className="flex flex-col h-full">
+        {/* Scrollable profiles/projects list */}
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-0">
+          {profiles.map((profile) => (
+            <div key={profile.id}>
+              <ProfileCard
+                profile={profile}
+                isExpanded={expandedProfileId === profile.id}
+                isSelected={localProfileId === profile.id}
+                onToggleExpand={() => setExpandedProfileId(expandedProfileId === profile.id ? null : profile.id)}
+                disabled={loading}
+              />
 
-          <div className="space-y-2">
-            {profiles.map((profile) => (
-              <div key={profile.id}>
-                <ProfileCard
-                  profile={profile}
-                  isExpanded={expandedProfileId === profile.id}
-                  isSelected={localProfileId === profile.id}
-                  onToggleExpand={() => setExpandedProfileId(expandedProfileId === profile.id ? null : profile.id)}
-                  disabled={loading}
+              {expandedProfileId === profile.id && (
+                <ProjectsList
+                  projects={projects}
+                  selectedProjectId={localProjectId}
+                  loading={loading}
+                  onProjectSelect={(projectId) => {
+                    setLocalProfileId(profile.id);
+                    setLocalProjectId(projectId);
+                    // Auto-apply when project is selected
+                    setTimeout(() => {
+                      onApply(profile.id, projectId);
+                      onClose?.();
+                    }, 100);
+                  }}
+                  onProjectEdit={handleOpenEditDialog}
+                  onCreateNew={() => setShowCreateProjectDialog(true)}
+                  onRefresh={() => fetchProjects(profile.id, true)}
                 />
-
-                {expandedProfileId === profile.id && (
-                  <ProjectsList
-                    projects={projects}
-                    selectedProjectId={localProjectId}
-                    loading={loading}
-                    onProjectSelect={(projectId) => {
-                      setLocalProfileId(profile.id);
-                      setLocalProjectId(projectId);
-                    }}
-                    onProjectEdit={handleOpenEditDialog}
-                    onCreateNew={() => setShowCreateProjectDialog(true)}
-                    onRefresh={() => fetchProjects(profile.id, true)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          ))}
         </div>
 
+        {/* Selected profile info - always visible at bottom */}
         {selectedProfile && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <div className="mt-2 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex-shrink-0">
+            <p className="text-xs text-blue-900 dark:text-blue-100">
               <strong>Selected Profile:</strong> {selectedProfile.name}
-              {selectedProject && <strong className="block mt-1">Selected Project:</strong>}
+              {selectedProject && <strong className="block mt-0.5">Selected Project:</strong>}
               {selectedProject && <span className="block text-blue-800 dark:text-blue-200">{selectedProject.name}</span>}
             </p>
           </div>
         )}
-
-        <button
-          onClick={handleApply}
-          className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
-          disabled={!localProfileId}
-        >
-          Apply Selection
-        </button>
       </div>
 
       <CreateProjectDialog

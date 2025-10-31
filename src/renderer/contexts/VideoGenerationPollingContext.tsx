@@ -80,17 +80,20 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
    * Poll all active generations with staggered delays
    */
   const pollAllGenerations = useCallback(async () => {
-    const generationIds = Array.from(activeGenerations.keys());
+    // Filter out finished generations (completed/failed with __pollingFinished flag)
+    const activeIds = Array.from(activeGenerations.entries())
+      .filter(([_, gen]) => !(gen as any).__pollingFinished)
+      .map(([id]) => id);
 
-    if (generationIds.length === 0) {
+    if (activeIds.length === 0) {
       return;
     }
 
-    logger.debug(`Polling ${generationIds.length} generation(s) with ${staggerDelay}ms stagger`);
+    logger.debug(`Polling ${activeIds.length} generation(s) with ${staggerDelay}ms stagger`);
 
     // Poll each generation with staggered delays
-    for (let i = 0; i < generationIds.length; i++) {
-      const generationId = generationIds[i];
+    for (let i = 0; i < activeIds.length; i++) {
+      const generationId = activeIds[i];
       const delayMs = i * staggerDelay; // 0s, 1s, 2s, etc.
 
       // Apply stagger delay
@@ -119,9 +122,9 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
               next.set(generationId, generation);
 
               // Stop polling when generation is completed or failed
-              // Remove from active polling immediately
+              // Keep data available for 30s so components can access it after remounting
               if (generation.status === "completed" || generation.status === "failed") {
-                logger.info(`Generation ${generationId} finished with status: ${generation.status}. Stopping polling.`);
+                logger.info(`Generation ${generationId} finished with status: ${generation.status}. Keeping data for 30s.`);
 
                 // Keep the final result visible for 30s, then remove
                 setTimeout(() => {
@@ -133,9 +136,8 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
                   });
                 }, 30000); // Keep for 30s after completion
 
-                // Immediately remove from polling by not returning it in the map
-                // This will cause activeGenerations.size to decrease and polling to stop
-                next.delete(generationId);
+                // Mark generation as finished (add metadata flag to prevent continued polling)
+                next.set(generationId, { ...generation, __pollingFinished: true } as any);
               }
 
               return next;
@@ -154,7 +156,10 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
    * Start polling loop
    */
   useEffect(() => {
-    if (activeGenerations.size === 0) {
+    // Count only active (non-finished) generations
+    const activeCount = Array.from(activeGenerations.values()).filter((gen) => !(gen as any).__pollingFinished).length;
+
+    if (activeCount === 0) {
       // No active generations - clear intervals
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -181,7 +186,7 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
         pollingIntervalRef.current = null;
       }
     };
-  }, [activeGenerations.size, pollInterval, pollAllGenerations]);
+  }, [activeGenerations, pollInterval, pollAllGenerations]);
 
   /**
    * Progress animation loop - increment 1% per second for processing videos
@@ -200,8 +205,13 @@ export const VideoGenerationPollingProvider: React.FC<VideoGenerationPollingProv
         const next = new Map(prev);
         let updated = false;
 
-        // Increment progress for all processing generations
+        // Increment progress for all processing generations (skip finished ones)
         for (const [generationId, generation] of activeGenerations.entries()) {
+          // Skip if generation has finished polling
+          if ((generation as any).__pollingFinished) {
+            continue;
+          }
+
           if (generation.status === "processing") {
             const currentProgress = next.get(generationId) || 0;
 

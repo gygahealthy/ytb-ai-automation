@@ -61,18 +61,20 @@ export default function VideoPromptRow({
   const [loading, setLoading] = useState(false);
   const veo3Store = useVeo3Store();
 
-  // Use centralized polling context - automatically registers/unregisters this generation
-  const { generation: polledGeneration, progress: contextProgress } = useSingleGenerationPolling(job?.generationId);
+  // Use centralized polling context - same pattern as VideoHistoryCard
+  // Only poll if we have a generation ID and job is still processing
+  const shouldPoll = job && job.generationId && job.status === "processing";
+  const { generation: polledGeneration, progress: contextProgress } = useSingleGenerationPolling(
+    shouldPoll ? job.generationId : null
+  );
 
-  // Sync polled data back to job store ONLY for persistence (completed/failed status)
-  // Do NOT use store for display - display uses polledGeneration directly (same as VideoHistoryCard)
+  // Sync polled data back to job store for persistence (completed/failed status)
   useEffect(() => {
     if (!polledGeneration || !job) return;
 
-    // Only sync terminal states (completed/failed) to store for persistence
-    // Display will use polledGeneration directly
+    // Sync status changes to store for persistence
     if (polledGeneration.status === "completed" && job.status !== "completed") {
-      console.log(`[VideoPromptRow] � Persisting completed status to store for job ${job.id}`);
+      console.log(`[VideoPromptRow] 💾 Persisting completed status to store for job ${job.id}`);
       const { updateJobStatus: update } = useVideoCreationStore.getState();
       update(job.id, "completed", {
         videoUrl: polledGeneration.videoUrl,
@@ -85,6 +87,11 @@ export default function VideoPromptRow({
         error: polledGeneration.errorMessage,
         completedAt: new Date().toISOString(),
       });
+    } else if (polledGeneration.status === "processing" && job.status === "idle") {
+      // Update from idle to processing when polling detects it
+      console.log(`[VideoPromptRow] 💾 Updating status from idle to processing for job ${job.id}`);
+      const { updateJobStatus: update } = useVideoCreationStore.getState();
+      update(job.id, "processing", {});
     }
   }, [polledGeneration?.status, polledGeneration?.videoUrl, polledGeneration?.errorMessage, job?.id, job?.status]);
 
@@ -176,14 +183,27 @@ export default function VideoPromptRow({
     }
   };
 
-  // CRITICAL: Use polled generation status as source of truth (database is always fresher than store cache)
-  // Only use job.status as fallback if no polling data exists yet
-  const displayStatus = job?.generationId && polledGeneration?.status ? polledGeneration.status : job?.status || "new";
+  // CRITICAL: Use polled generation data when available (database is fresher than store cache)
+  // Same pattern as VideoHistoryCard - polled data takes precedence
+  const displayStatus = polledGeneration?.status || job?.status || "new";
+  const displayVideoUrl = polledGeneration?.videoUrl || job?.videoUrl;
+  const displayError = polledGeneration?.errorMessage || job?.error;
+
+  // Create merged job object for PreviewPanel (combines job store + polled data)
+  const displayJob = job
+    ? {
+        ...job,
+        status: displayStatus,
+        videoUrl: displayVideoUrl,
+        error: displayError,
+        videoPath: polledGeneration?.videoPath || job?.videoUrl, // Use polled videoPath if available
+      }
+    : undefined;
+
   const effectiveStatus = displayStatus;
   const rawStatus = effectiveStatus;
-  const status = rawStatus === "idle" ? "new" : rawStatus;
+  const status = rawStatus === "idle" ? "new" : rawStatus === "pending" ? "processing" : rawStatus;
   const isArchived = (prompt as any)?.archived === true;
-
   const statusColor: Record<string, string> = {
     new: "bg-gray-300 dark:bg-gray-600",
     processing: "bg-blue-400 dark:bg-blue-700",
@@ -193,12 +213,13 @@ export default function VideoPromptRow({
   };
 
   const getStatusBadge = () => {
-    if (!job) return null;
+    if (!displayJob) return null;
     const statusConfig: Record<string, { label: string; color: string }> = {
       completed: { label: "Done", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
       processing: { label: "Processing", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
       failed: { label: "Failed", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
       idle: { label: "Idle", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
+      pending: { label: "Pending", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
     };
     // Use display status (polled data takes absolute precedence for accuracy)
     const config = statusConfig[displayStatus] || statusConfig.idle;
@@ -260,14 +281,14 @@ export default function VideoPromptRow({
 
       {showPreview && (
         <div className="flex-shrink-0 w-64 h-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-          <PreviewPanel job={job} pollingProgress={contextProgress} />
+          <PreviewPanel job={displayJob} pollingProgress={contextProgress} />
         </div>
       )}
 
       <ActionControls
         showPreview={showPreview}
         onTogglePreview={onTogglePreview}
-        job={job}
+        job={displayJob}
         onShowInfo={onShowInfo}
         onCreate={onCreate}
         onDelete={onDelete}
@@ -278,9 +299,9 @@ export default function VideoPromptRow({
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {job && <div className="flex-shrink-0 mb-2">{getStatusBadge()}</div>}
+        {displayJob && <div className="flex-shrink-0 mb-2">{getStatusBadge()}</div>}
 
-        {job && displayStatus === "processing" && job.generationId && !showPreview && (
+        {displayJob && displayStatus === "processing" && displayJob.generationId && !showPreview && (
           <div className="flex-shrink-0 mb-2 animate-pulse">
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden shadow-inner">
               <div

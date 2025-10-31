@@ -34,12 +34,12 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
       {/* Main Profile Button */}
       <button
         onClick={onToggleExpand}
-        className="w-full px-4 py-3 text-left font-medium flex items-center justify-between transition-all"
+        className="w-full px-3 py-2 text-left font-medium flex items-center justify-between transition-all"
         disabled={disabled}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div
-            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
               isExpanded
                 ? "bg-primary-500 text-white shadow-lg"
                 : isSelected
@@ -47,11 +47,11 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
                 : "bg-gradient-to-br from-indigo-400 to-indigo-600 text-white"
             }`}
           >
-            <User className="w-5 h-5" />
+            <User className="w-4 h-4" />
           </div>
           <div>
             <span
-              className={`text-sm font-semibold block ${
+              className={`text-xs font-semibold block ${
                 isExpanded
                   ? "text-primary-700 dark:text-primary-300"
                   : isSelected
@@ -62,20 +62,20 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
               {profile.name}
             </span>
             {(geminiProfileId === profile.id || flowProfileId === profile.id) && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-0.5 mt-0.5">
                 {geminiProfileId === profile.id && flowProfileId === profile.id ? (
                   <>
-                    <Sparkles className="w-3 h-3" />
+                    <Sparkles className="w-2.5 h-2.5" />
                     Default for both
                   </>
                 ) : geminiProfileId === profile.id ? (
                   <>
-                    <Sparkles className="w-3 h-3" />
+                    <Sparkles className="w-2.5 h-2.5" />
                     Default Gemini
                   </>
                 ) : (
                   <>
-                    <Zap className="w-3 h-3" />
+                    <Zap className="w-2.5 h-2.5" />
                     Default Flow
                   </>
                 )}
@@ -84,20 +84,20 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
           </div>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+          <ChevronUp className="w-4 h-4 flex-shrink-0 text-primary-600 dark:text-primary-400" />
         ) : (
-          <ChevronDown className="w-5 h-5 flex-shrink-0 text-gray-400" />
+          <ChevronDown className="w-4 h-4 flex-shrink-0 text-gray-400" />
         )}
       </button>
 
       {/* Expanded Controls */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-primary-200 dark:border-primary-800/50 space-y-3">
+        <div className="px-3 pb-2 pt-1.5 border-t border-primary-200 dark:border-primary-800/50 space-y-2">
           {/* Default Gemini Toggle */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Default Gemini</span>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Default Gemini</span>
             </div>
             <ToggleSwitch
               checked={geminiProfileId === profile.id}
@@ -110,9 +110,9 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
 
           {/* Default Flow Toggle */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Default Flow</span>
+            <div className="flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Default Flow</span>
             </div>
             <ToggleSwitch
               checked={flowProfileId === profile.id}
