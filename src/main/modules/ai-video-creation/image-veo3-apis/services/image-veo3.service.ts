@@ -10,6 +10,7 @@ import { imageVEO3ApiClient } from "../apis/image-veo3-api.client";
 import { veo3ImageRepository } from "../repository/image.repository";
 import { flowSecretExtractionService } from "../../../common/secret-extraction/services/secret-extraction.service";
 import { imageDownloadService } from "./image-download.service";
+import { getImageFilename } from "../helpers/image-type-detector";
 import type { Veo3ImageGeneration, FlowUserWorkflow } from "../types/image.types";
 
 const logger = new Logger("ImageVeo3Service");
@@ -658,9 +659,11 @@ export class ImageVeo3Service {
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, "base64");
 
-      // Save to file
-      const filename = `${mediaKey}.jpg`;
+      // Detect image type and generate filename with correct extension
+      const filename = getImageFilename(buffer, mediaKey);
       const filepath = path.join(dateFolder, filename);
+
+      // Save to file
       await fs.writeFile(filepath, buffer);
 
       logger.info(`Saved image to: ${filepath}`);
@@ -696,9 +699,11 @@ export class ImageVeo3Service {
       const dateFolder = path.join(storageDir, today);
       await fs.mkdir(dateFolder, { recursive: true });
 
-      // Save to file
-      const filename = `${mediaKey}.jpg`;
+      // Detect image type and generate filename with correct extension
+      const filename = getImageFilename(buffer, mediaKey);
       const filepath = path.join(dateFolder, filename);
+
+      // Save to file
       await fs.writeFile(filepath, buffer);
 
       logger.info(`Downloaded from fifeUrl to: ${filepath}`);

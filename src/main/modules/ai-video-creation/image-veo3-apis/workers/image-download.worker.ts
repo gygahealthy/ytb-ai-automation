@@ -12,6 +12,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { parentPort } from "worker_threads";
 import type { ImageDownloadJob, ImageDownloadResult } from "../types/download.types";
+import { getImageFilename } from "../helpers/image-type-detector";
 
 /**
  * Download a single image using either API fetch or fifeUrl fallback
@@ -33,15 +34,12 @@ async function downloadImage(job: ImageDownloadJob): Promise<ImageDownloadResult
       fs.mkdirSync(dateFolder, { recursive: true });
     }
 
-    const filename = `${mediaKey}.jpg`;
-    const filePath = path.join(dateFolder, filename);
-
     console.log(`[Image Download Worker] Starting download ${id}: ${imageName}`);
-    console.log(`[Image Download Worker] Target path: ${filePath}`);
 
     // Try API fetch first
     let downloadSuccess = false;
     let errorMessage = "";
+    let filePath = ""; // Will be set when we detect the image type
 
     try {
       const apiUrl = buildApiUrl(imageName, flowNextKey);
@@ -73,8 +71,16 @@ async function downloadImage(job: ImageDownloadJob): Promise<ImageDownloadResult
         const base64Image = data?.userUploadedImage?.image;
 
         if (base64Image) {
-          // Convert base64 to buffer and save
+          // Convert base64 to buffer
           const buffer = Buffer.from(base64Image, "base64");
+
+          // Detect image type and generate filename with correct extension
+          const filename = getImageFilename(buffer, mediaKey);
+          filePath = path.join(dateFolder, filename);
+
+          console.log(`[Image Download Worker] Detected image type, saving as: ${filename}`);
+
+          // Save with correct extension
           fs.writeFileSync(filePath, buffer);
           downloadSuccess = true;
           console.log(`[Image Download Worker] Downloaded from API to ${filePath}`);
@@ -99,6 +105,14 @@ async function downloadImage(job: ImageDownloadJob): Promise<ImageDownloadResult
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
+
+          // Detect image type and generate filename with correct extension
+          const filename = getImageFilename(buffer, mediaKey);
+          filePath = path.join(dateFolder, filename);
+
+          console.log(`[Image Download Worker] Detected image type from fifeUrl, saving as: ${filename}`);
+
+          // Save with correct extension
           fs.writeFileSync(filePath, buffer);
           downloadSuccess = true;
           console.log(`[Image Download Worker] Downloaded from fifeUrl to ${filePath}`);
@@ -141,7 +155,6 @@ async function downloadImage(job: ImageDownloadJob): Promise<ImageDownloadResult
     };
   }
 }
-
 /**
  * Build API URL for fetching image (without encoding special characters)
  */
