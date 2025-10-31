@@ -1,9 +1,10 @@
 import clsx from "clsx";
 import { Settings, Terminal } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Page } from "../../App";
 import { useLogStore } from "../../store/log.store";
+import { useSidebarStore } from "../../store/sidebar.store";
 import Logo from "./sidebar/Logo";
 import MenuGroup from "./sidebar/MenuGroup";
 import { routeConfig } from "./sidebar/routes.config";
@@ -16,7 +17,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggleCollapsed } = useSidebarStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleDrawer, closeAndUnpin } = useLogStore();
@@ -42,7 +43,7 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-      <Logo isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+      <Logo isCollapsed={isCollapsed} onToggleCollapse={toggleCollapsed} />
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
@@ -65,7 +66,7 @@ export default function Sidebar({ currentPage, onPageChange, onSettingsClick }: 
         {!isCollapsed && <CookieRotationIndicatorInner />}
 
         {/* Icon-only buttons row for System Logs and Settings */}
-        <div className="flex gap-2 w-full">
+        <div className={clsx("flex w-full", isCollapsed ? "flex-col gap-1" : "flex-row gap-2")}>
           <button
             onClick={() => {
               // If drawer is pinned, ensure we unpin+close when clicking sidebar button

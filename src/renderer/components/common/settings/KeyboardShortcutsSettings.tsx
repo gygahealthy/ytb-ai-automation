@@ -8,6 +8,7 @@ import {
   User,
   ArrowLeft,
   ArrowRight,
+  Menu,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useKeyboardShortcutsStore } from "../../../store/keyboard-shortcuts.store";
@@ -32,6 +33,7 @@ export default function KeyboardShortcutsSettings() {
     Pin,
     ArrowLeft,
     ArrowRight,
+    Menu,
   };
 
   // Handle key recording when editing a shortcut

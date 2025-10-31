@@ -12,7 +12,8 @@ export type ShortcutAction =
   | "open-cookie-rotation"
   | "open-settings"
   | "open-image-gallery"
-  | "toggle-video-properties";
+  | "toggle-video-properties"
+  | "toggle-sidebar";
 
 // Added navigation shortcuts
 export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
@@ -30,11 +31,15 @@ export type KeyboardShortcut = {
 
 type KeyboardShortcutsState = {
   shortcuts: KeyboardShortcut[];
+  version: number; // Used to track schema changes
   setShortcut: (id: ShortcutAction, keys: string[]) => void;
   resetShortcut: (id: ShortcutAction) => void;
   resetAll: () => void;
   getShortcutById: (id: ShortcutAction) => KeyboardShortcut | undefined;
 };
+
+// Current version - increment when adding new shortcuts
+const CURRENT_VERSION = 2;
 
 export const defaultShortcuts: KeyboardShortcut[] = [
   {
@@ -129,12 +134,20 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     keys: ["Ctrl", "P"],
     icon: "Settings2",
   },
+  {
+    id: "toggle-sidebar",
+    label: "Toggle Sidebar",
+    description: "Show/hide the navigation sidebar",
+    keys: ["Ctrl", "B"],
+    icon: "Menu",
+  },
 ];
 
 export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
   persist(
     (set, get) => ({
       shortcuts: defaultShortcuts,
+      version: CURRENT_VERSION,
 
       setShortcut: (id, keys) => {
         set((state) => ({
@@ -152,7 +165,7 @@ export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
       },
 
       resetAll: () => {
-        set({ shortcuts: defaultShortcuts });
+        set({ shortcuts: defaultShortcuts, version: CURRENT_VERSION });
       },
 
       getShortcutById: (id) => {
@@ -161,6 +174,62 @@ export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
     }),
     {
       name: "keyboard-shortcuts-storage",
+      version: CURRENT_VERSION,
+      migrate: (persistedState: any, version: number) => {
+        // If version is outdated or missing, merge new shortcuts with existing customizations
+        if (!persistedState || version < CURRENT_VERSION) {
+          const oldShortcuts = persistedState?.shortcuts || [];
+          const mergedShortcuts = defaultShortcuts.map((defaultShortcut) => {
+            // Find if user has customized this shortcut
+            const customized = oldShortcuts.find((s: KeyboardShortcut) => s.id === defaultShortcut.id);
+            return customized || defaultShortcut;
+          });
+
+          return {
+            shortcuts: mergedShortcuts,
+            version: CURRENT_VERSION,
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );
+
+// Auto-merge new shortcuts on store initialization
+// This ensures new shortcuts are added even if migration doesn't work as expected
+const mergeNewShortcuts = () => {
+  const state = useKeyboardShortcutsStore.getState();
+  
+  // Check if we need to add new shortcuts
+  const existingIds = new Set(state.shortcuts.map(s => s.id));
+  const missingShortcuts = defaultShortcuts.filter(s => !existingIds.has(s.id));
+  
+  if (missingShortcuts.length > 0 || state.version < CURRENT_VERSION) {
+    console.log(`[Keyboard Shortcuts] Merging ${missingShortcuts.length} new shortcuts`);
+    
+    // Merge: keep existing (possibly customized) shortcuts and add new ones
+    const mergedShortcuts = [
+      ...state.shortcuts.map(existing => {
+        // Update with latest metadata (label, description, icon) but keep custom keys
+        const latest = defaultShortcuts.find(d => d.id === existing.id);
+        if (latest && (latest.label !== existing.label || latest.description !== existing.description)) {
+          return { ...latest, keys: existing.keys }; // Keep user's custom keys
+        }
+        return existing;
+      }),
+      ...missingShortcuts
+    ];
+    
+    useKeyboardShortcutsStore.setState({ 
+      shortcuts: mergedShortcuts,
+      version: CURRENT_VERSION 
+    });
+  }
+};
+
+// Run merge on module load
+if (typeof window !== 'undefined') {
+  // Use setTimeout to ensure store is fully initialized
+  setTimeout(mergeNewShortcuts, 0);
+}

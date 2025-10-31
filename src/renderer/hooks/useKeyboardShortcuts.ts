@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import electronApi from "../ipc";
 import { useKeyboardShortcutsStore } from "../store/keyboard-shortcuts.store";
 import { useLogStore } from "../store/log.store";
+import { useSidebarStore } from "../store/sidebar.store";
 import React from "react";
 import CookieRotationDrawerContent from "@/renderer/components/common/drawers/cookie-rotation/CookieRotationDrawerContent";
 import ImageGalleryDrawer from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawer";
@@ -185,6 +186,15 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
     console.log("[Keyboard] Toggle Video Properties triggered");
     // Dispatch custom event that VideoStudioPage will listen to
     window.dispatchEvent(new CustomEvent("toggle-video-properties"));
+  },
+  "toggle-sidebar": () => {
+    console.log("[Keyboard] Toggle Sidebar triggered");
+    try {
+      const sidebarStore = useSidebarStore.getState();
+      sidebarStore.toggleCollapsed();
+    } catch (err) {
+      console.error("[Keyboard] Error toggling sidebar:", err);
+    }
   },
 };
 
