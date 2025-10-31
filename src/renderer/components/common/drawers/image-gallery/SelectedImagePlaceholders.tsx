@@ -243,7 +243,7 @@ export default function SelectedImagePlaceholders({
                     <RotateCcw className="w-4 h-4 text-red-500" />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-red-600 dark:text-red-400">Force Refresh</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Clear all records</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Clear all records and files</div>
                     </div>
                   </button>
                 )}

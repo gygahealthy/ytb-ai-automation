@@ -3,6 +3,7 @@ import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
 import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
 import { useImageGalleryStore } from "../../../../store/image-gallery.store";
+import { useAlert } from "../../../../hooks/useAlert";
 import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
 import ImageGalleryToolbar from "./ImageGalleryToolbar";
 import StatusMessages from "./StatusMessages";
@@ -52,6 +53,7 @@ export default function ImageGalleryDrawer() {
   const flowNextKey = useFlowNextKey(flowProfileId || "");
   const extractSecrets = useSecretStore((state) => state.extractSecrets);
   const { selectedImages } = useImageGalleryStore();
+  const alert = useAlert();
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
@@ -263,15 +265,6 @@ export default function ImageGalleryDrawer() {
       return;
     }
 
-    const confirmed = window.confirm(
-      "⚠️ Force Refresh will DELETE ALL image records for this profile from database.\n\n" +
-        "Downloaded image files on disk will be preserved, but you'll need to sync again to see them.\n\n" +
-        "Continue?"
-    );
-    if (!confirmed) {
-      return;
-    }
-
     setIsSyncing(true);
     setError(null);
 
@@ -279,11 +272,22 @@ export default function ImageGalleryDrawer() {
       const result = await (window as any).electronAPI.imageVeo3.forceRefresh(currentProfileId);
 
       if (result.success && result.data) {
-        alert(`Deleted ${result.data.deleted} image records. Please sync to restore metadata.`);
         // Clear local state
         setImages([]);
+        setImageSrcCache({});
+        setTotalDiskSize(0);
         setSyncStatus(null);
         setDownloadStatus(null);
+
+        // Show success alert
+        alert.show({
+          title: "Force Refresh Complete",
+          message: `Deleted ${result.data.deleted} image records and ${
+            result.data.filesDeleted || 0
+          } local files.\n\nPlease sync to restore metadata and re-download images.`,
+          severity: "success",
+          duration: 5000,
+        });
       } else {
         setError(result.error || "Failed to force refresh");
       }
@@ -318,12 +322,12 @@ export default function ImageGalleryDrawer() {
     // Get images that need downloading
     const imagesToDownload = images.filter((img) => !img.localPath);
     if (imagesToDownload.length === 0) {
-      setError("All images are already downloaded");
-      return;
-    }
-
-    const confirmed = window.confirm(`Download ${imagesToDownload.length} images? This may take several minutes.`);
-    if (!confirmed) {
+      alert.show({
+        title: "No Images to Download",
+        message: "All images are already downloaded.",
+        severity: "info",
+        duration: 3000,
+      });
       return;
     }
 
@@ -342,6 +346,26 @@ export default function ImageGalleryDrawer() {
         });
         // Reload images to show the downloaded ones
         await loadLocalImages();
+
+        // Show success alert
+        const failedCount = result.data.failed || 0;
+        if (failedCount === 0) {
+          alert.show({
+            title: "Download Complete",
+            message: `Successfully downloaded ${result.data.downloaded} image${result.data.downloaded !== 1 ? "s" : ""}.`,
+            severity: "success",
+            duration: 4000,
+          });
+        } else {
+          alert.show({
+            title: "Download Completed with Errors",
+            message: `Downloaded ${result.data.downloaded} image${
+              result.data.downloaded !== 1 ? "s" : ""
+            }, but ${failedCount} failed.`,
+            severity: "warning",
+            duration: 5000,
+          });
+        }
       } else {
         setError(result.error || "Failed to download images");
       }
@@ -421,7 +445,7 @@ export default function ImageGalleryDrawer() {
       </div>
 
       {/* Footer - Stats - Fixed to Bottom */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="absolute bottom-0 left-0 right-0 flex-shrink-0 p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <GalleryFooter imageCount={images.length} selectedCount={selectedImages.length} totalDiskSize={totalDiskSize} />
       </div>
     </div>

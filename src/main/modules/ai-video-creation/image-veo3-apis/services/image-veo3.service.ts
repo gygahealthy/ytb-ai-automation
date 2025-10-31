@@ -626,16 +626,36 @@ export class ImageVeo3Service {
   }
 
   /**
-   * Force refresh: Delete all image records for a profile
-   * This does NOT delete downloaded files, only database metadata
+   * Force refresh: Delete all image records for a profile AND their local files
    * @param profileId - Profile ID
    */
-  async forceRefreshImages(profileId: string): Promise<ApiResponse<{ deleted: number }>> {
+  async forceRefreshImages(profileId: string): Promise<ApiResponse<{ deleted: number; filesDeleted: number }>> {
     try {
-      logger.info(`Force refresh: Deleting all image records for profile ${profileId}`);
+      logger.info(`Force refresh: Deleting all image records and files for profile ${profileId}`);
+
+      // First, get all images to delete their local files
+      const images = await veo3ImageRepository.findByProfileId(profileId);
+      let filesDeleted = 0;
+
+      // Delete local files
+      for (const image of images) {
+        if (image.localPath) {
+          try {
+            await fs.unlink(image.localPath);
+            filesDeleted++;
+            logger.info(`Deleted local file: ${image.localPath}`);
+          } catch (error) {
+            logger.warn(`Failed to delete local file ${image.localPath}:`, error);
+            // Continue even if file deletion fails (file might not exist)
+          }
+        }
+      }
+
+      // Delete database records
       const deleteCount = await veo3ImageRepository.deleteByProfileId(profileId);
-      logger.info(`Deleted ${deleteCount} image records (files preserved on disk)`);
-      return { success: true, data: { deleted: deleteCount } };
+      logger.info(`Deleted ${deleteCount} image records and ${filesDeleted} local files`);
+
+      return { success: true, data: { deleted: deleteCount, filesDeleted } };
     } catch (error) {
       logger.error("Error force refreshing images", error);
       return { success: false, error: String(error) };

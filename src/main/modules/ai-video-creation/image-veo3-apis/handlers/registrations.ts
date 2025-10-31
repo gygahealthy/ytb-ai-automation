@@ -69,7 +69,7 @@ export const imageVeo3Registrations: IpcRegistration[] = [
   },
   {
     channel: "image-veo3:force-refresh",
-    description: "Delete all image records for a profile (preserves downloaded files)",
+    description: "Delete all image records and local files for a profile",
     handler: async (req: { profileId: string }) => {
       return await imageVeo3Service.forceRefreshImages(req.profileId);
     },
