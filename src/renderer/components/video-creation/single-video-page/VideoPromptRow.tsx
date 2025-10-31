@@ -1,25 +1,14 @@
-import { CheckCircle2, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import profileIPC from "../../../ipc/profile";
-import veo3IPC from "../../../ipc/veo3";
-import useVeo3Store from "../../../store/veo3.store";
+import { CheckCircle2, Image as ImageIcon, Trash2 } from "lucide-react";
+import { useEffect } from "react";
 import { useVideoCreationStore } from "../../../store/video-creation.store";
 import { Prompt, VideoCreationJob } from "../../../types/video-creation.types";
 import PreviewPanel from "../../common/PreviewPanel";
 import ActionControls from "../video-prompt-row/ActionControls";
-import ProfilePanel from "../video-prompt-row/ProfilePanel";
 import { useSingleGenerationPolling } from "../../../contexts/VideoGenerationPollingContext";
-
-interface Profile {
-  id: string;
-  name: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-}
+import { useModal } from "../../../hooks/useModal";
+import { ImageSelectionModal } from "../../common/modals/ImageSelectionModal";
+import { useImageCache } from "../../../contexts/ImageCacheContext";
+import type { VideoCreationMode } from "./VideoCreationModeTabs";
 
 interface VideoPromptRowProps {
   prompt: Prompt;
@@ -28,6 +17,7 @@ interface VideoPromptRowProps {
   globalPreviewMode: boolean;
   globalProfileId?: string;
   job?: VideoCreationJob;
+  creationMode?: VideoCreationMode;
   onUpdate: (id: string, text: string) => void;
   onDelete: (id: string) => void;
   onToggleSelect: (id: string) => void;
@@ -44,22 +34,24 @@ export default function VideoPromptRow({
   index,
   canDelete,
   globalPreviewMode,
-  globalProfileId,
+  // globalProfileId, // Not used in this component
   job,
+  creationMode = "text-to-video",
   onUpdate,
   onDelete,
   onToggleSelect,
   onTogglePreview,
   onCreate,
   onShowInfo,
-  onToggleProfileSelect,
-  onProfileChange,
-  onProjectChange,
 }: VideoPromptRowProps) {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(false);
-  const veo3Store = useVeo3Store();
+  const { openModal } = useModal();
+  const { togglePromptImageSelection } = useVideoCreationStore();
+
+  // Use shared image cache for thumbnails
+  const { imageSrcCache } = useImageCache();
+
+  // Only show image selection in ingredients mode
+  const isIngredientsMode = creationMode === "ingredients";
 
   // Use centralized polling context - same pattern as VideoHistoryCard
   // Only poll if we have a generation ID and job is still processing
@@ -101,23 +93,6 @@ export default function VideoPromptRow({
   // Individual prompt.showPreview can override this behavior
   const showPreview = globalPreviewMode ? false : prompt.showPreview ?? true;
 
-  const effectiveProfileId = prompt.profileId || globalProfileId;
-  const hasCustomProfile = !!prompt.profileId;
-
-  useEffect(() => {
-    if (prompt.showProfileSelect) {
-      fetchProfiles();
-    }
-  }, [prompt.showProfileSelect]);
-
-  useEffect(() => {
-    if (prompt.showProfileSelect && effectiveProfileId) {
-      fetchProjects(effectiveProfileId);
-    } else {
-      setProjects([]);
-    }
-  }, [prompt.showProfileSelect, effectiveProfileId]);
-
   useEffect(() => {
     console.log(
       `[VideoPromptRow] 🔄 Effect triggered - job:`,
@@ -133,55 +108,6 @@ export default function VideoPromptRow({
     // Progress is now handled by centralized VideoGenerationPollingContext
     // which automatically increments 1% per second during processing
   }, [job?.id, job?.generationId, job?.status, contextProgress]);
-
-  const fetchProfiles = async () => {
-    setLoading(true);
-    try {
-      const response = await profileIPC.getAll();
-      if (response.success && response.data) {
-        setProfiles(response.data);
-      } else {
-        setProfiles([]);
-      }
-    } catch (error) {
-      setProfiles([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchProjects = async (profileId: string) => {
-    setLoading(true);
-    try {
-      const cached = veo3Store.getProjectsForProfile(profileId);
-      if (cached) {
-        const transformedProjects = cached.map((p: any) => ({
-          id: p.projectId || p.id,
-          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
-          description: p.description || "",
-        }));
-        setProjects(transformedProjects);
-        setLoading(false);
-        return;
-      }
-
-      const response = await veo3IPC.fetchProjectsFromAPI(profileId);
-      if (response && response.success) {
-        const projectsArr = Array.isArray(response.data) ? response.data : response.data?.projects || [];
-        veo3Store.setProjectsForProfile(profileId, projectsArr);
-        const transformedProjects = projectsArr.map((p: any) => ({
-          id: p.projectId || p.id,
-          name: p.projectInfo?.projectTitle || p.title || p.projectTitle || p.name,
-          description: p.description || "",
-        }));
-        setProjects(transformedProjects);
-      }
-    } catch (error) {
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // CRITICAL: Use polled generation data when available (database is fresher than store cache)
   // Same pattern as VideoHistoryCard - polled data takes precedence
@@ -242,20 +168,70 @@ export default function VideoPromptRow({
       />
 
       <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-        <button
-          onClick={() => onToggleProfileSelect(prompt.id)}
-          className={`p-1.5 rounded-md transition-all shadow-sm ${
-            prompt.showProfileSelect || hasCustomProfile
-              ? "bg-primary-500 text-white hover:bg-primary-600"
-              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
-          }`}
-          title={hasCustomProfile ? "Custom profile set" : "Select profile for this video"}
-        >
-          <User className="w-4 h-4" />
-        </button>
+        {/* Image Selection Button - Only show in ingredients mode */}
+        {isIngredientsMode && (
+          <button
+            onClick={() =>
+              openModal({
+                title: "Select Images for This Prompt (Max 3)",
+                content: <ImageSelectionModal promptId={prompt.id} />,
+                size: "xl",
+              })
+            }
+            className={`p-1.5 rounded-md transition-all shadow-sm ${
+              prompt.selectedImages && prompt.selectedImages.length > 0
+                ? "bg-purple-500 text-white hover:bg-purple-600"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
+            }`}
+            title={`Select images for this prompt (${prompt.selectedImages?.length || 0}/3 selected)`}
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
+        )}
 
         {job && <CheckCircle2 className="w-5 h-5 text-green-500" />}
       </div>
+
+      {/* Selected Images Display - Bottom Right Corner - Only show in ingredients mode */}
+      {isIngredientsMode && prompt.selectedImages && prompt.selectedImages.length > 0 && (
+        <div className="absolute bottom-2 right-2 z-10 flex gap-1">
+          {prompt.selectedImages.slice(0, 3).map((img) => (
+            <div key={img.id} className="relative group">
+              <div
+                className="w-12 h-12 rounded border-2 border-purple-500 bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-lg"
+                title={img.name}
+              >
+                {imageSrcCache[img.id] ? (
+                  <img
+                    src={imageSrcCache[img.id]}
+                    alt={img.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              {/* Trash Icon - Half inside, half outside - Only visible on hover */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePromptImageSelection(prompt.id, img);
+                }}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 z-10"
+                title="Remove from selection"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex-shrink-0 flex items-start pt-2">
         <input
@@ -330,18 +306,7 @@ export default function VideoPromptRow({
         </div>
       </div>
 
-      <ProfilePanel
-        prompt={prompt}
-        effectiveProfileId={effectiveProfileId}
-        loading={loading}
-        setLoading={setLoading}
-        profiles={profiles}
-        setProfiles={setProfiles}
-        projects={projects}
-        setProjects={setProjects}
-        onProfileChange={onProfileChange}
-        onProjectChange={onProjectChange}
-      />
+      {/* Image Selection Modal */}
     </div>
   );
 }

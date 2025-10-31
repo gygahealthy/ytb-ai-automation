@@ -7,6 +7,20 @@ export interface Prompt {
   profileId?: string; // Override global profile for this specific prompt
   projectId?: string; // Optional per-prompt project selection
   showProfileSelect?: boolean; // Toggle visibility of profile selector in row
+  selectedImages?: SelectedImageInfo[]; // Per-prompt selected images (max 3)
+}
+
+/**
+ * Selected image for video generation (per-prompt or global)
+ */
+export interface SelectedImageInfo {
+  id: string;
+  name: string;
+  mediaKey?: string; // Media ID for VEO3 API
+  localPath?: string;
+  fifeUrl?: string;
+  aspectRatio?: string;
+  profileId: string;
 }
 
 export interface VideoResource {

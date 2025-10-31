@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useVideoCreationStore } from "../store/video-creation.store";
 import { useDefaultProfileStore } from "../store/default-profile.store";
 import { useFilePathsStore } from "../store/file-paths.store";
+import { useImageGalleryStore } from "../store/image-gallery.store";
 import { useToast } from "../hooks/useToast";
 import { useAlert } from "../hooks/useAlert";
 import veo3IPC from "../ipc/veo3";
@@ -224,6 +225,21 @@ export function SingleVideoCreationProvider({ children }: SingleVideoCreationPro
           severity: "warning",
         });
         return;
+      }
+
+      // Get selected images: prioritize per-prompt images, fallback to global
+      const globalSelectedImages = useImageGalleryStore.getState().selectedImages;
+      const effectiveImages =
+        prompt.selectedImages && prompt.selectedImages.length > 0 ? prompt.selectedImages : globalSelectedImages;
+
+      if (effectiveImages.length > 0) {
+        console.log(`[SingleVideoCreation] Selected images for prompt ${promptId}:`, {
+          perPrompt: prompt.selectedImages?.length || 0,
+          global: globalSelectedImages.length,
+          using: effectiveImages.length,
+          images: effectiveImages,
+        });
+        // TODO: Pass effectiveImages to video generation API when backend supports ingredient-based generation
       }
 
       const jobId = createJob(promptId, promptText);

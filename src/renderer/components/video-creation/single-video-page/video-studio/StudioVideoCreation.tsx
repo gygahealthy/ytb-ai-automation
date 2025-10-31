@@ -19,11 +19,7 @@ export default function StudioVideoCreation() {
   // Custom hooks for video generation
   const { handleCreateVideo } = useVideoGeneration();
   const { filteredPrompts } = useVideoFilters();
-  const {
-    selectedProfileId,
-    selectedProjectId,
-    handleOpenProfileDrawer,
-  } = useVideoCreationUI();
+  const { selectedProfileId, selectedProjectId, handleOpenProfileDrawer } = useVideoCreationUI();
 
   // Subscribe to store values
   const prompts = useVideoCreationStore((state) => state.prompts);
@@ -105,9 +101,7 @@ export default function StudioVideoCreation() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Videos for Studio</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Generate videos to populate your studio timeline
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Generate videos to populate your studio timeline</p>
           </div>
 
           <button
@@ -195,6 +189,7 @@ export default function StudioVideoCreation() {
                   globalPreviewMode={globalPreviewMode}
                   globalProfileId={selectedProfileId}
                   job={job}
+                  creationMode="text-to-video"
                   onUpdate={updatePrompt}
                   onDelete={removePrompt}
                   onToggleSelect={togglePromptSelection}

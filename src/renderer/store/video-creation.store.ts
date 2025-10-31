@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, devtools } from "zustand/middleware";
-import { JsonDraft, Prompt, VideoCreationJob } from "../types/video-creation.types";
+import { JsonDraft, Prompt, VideoCreationJob, SelectedImageInfo } from "../types/video-creation.types";
 
 interface VideoCreationStore {
   // State
@@ -30,6 +30,12 @@ interface VideoCreationStore {
   removeSelectedPrompts: () => void;
   clearAllPrompts: () => void;
   setPrompts: (prompts: Prompt[]) => void;
+
+  // Per-Prompt Image Actions
+  addImageToPrompt: (promptId: string, image: SelectedImageInfo) => void;
+  removeImageFromPrompt: (promptId: string, imageId: string) => void;
+  clearPromptImages: (promptId: string) => void;
+  togglePromptImageSelection: (promptId: string, image: SelectedImageInfo) => void;
 
   // JSON Actions
   loadFromJson: (jsonString: string, mode: "replace" | "add") => boolean;
@@ -207,6 +213,78 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
             prompts,
             history: saveToHistory(get().prompts, history),
           });
+        },
+
+        // Per-Prompt Image Actions
+        addImageToPrompt: (promptId: string, image: SelectedImageInfo) => {
+          set((state) => ({
+            prompts: state.prompts.map((p) => {
+              if (p.id === promptId) {
+                const currentImages = p.selectedImages || [];
+                const isAlreadySelected = currentImages.some((img) => img.id === image.id);
+
+                if (isAlreadySelected) {
+                  return p; // Already selected, no change
+                }
+
+                // Add with FIFO behavior (max 3)
+                const newImages = [...currentImages, image];
+                if (newImages.length > 3) {
+                  newImages.shift(); // Remove oldest
+                }
+
+                return { ...p, selectedImages: newImages };
+              }
+              return p;
+            }),
+          }));
+        },
+
+        removeImageFromPrompt: (promptId: string, imageId: string) => {
+          set((state) => ({
+            prompts: state.prompts.map((p) => {
+              if (p.id === promptId && p.selectedImages) {
+                return {
+                  ...p,
+                  selectedImages: p.selectedImages.filter((img) => img.id !== imageId),
+                };
+              }
+              return p;
+            }),
+          }));
+        },
+
+        clearPromptImages: (promptId: string) => {
+          set((state) => ({
+            prompts: state.prompts.map((p) => (p.id === promptId ? { ...p, selectedImages: [] } : p)),
+          }));
+        },
+
+        togglePromptImageSelection: (promptId: string, image: SelectedImageInfo) => {
+          set((state) => ({
+            prompts: state.prompts.map((p) => {
+              if (p.id === promptId) {
+                const currentImages = p.selectedImages || [];
+                const isSelected = currentImages.some((img) => img.id === image.id);
+
+                if (isSelected) {
+                  // Remove from selection
+                  return {
+                    ...p,
+                    selectedImages: currentImages.filter((img) => img.id !== image.id),
+                  };
+                } else {
+                  // Add to selection with FIFO behavior
+                  const newImages = [...currentImages, image];
+                  if (newImages.length > 3) {
+                    newImages.shift(); // Remove oldest
+                  }
+                  return { ...p, selectedImages: newImages };
+                }
+              }
+              return p;
+            }),
+          }));
         },
 
         // JSON Actions

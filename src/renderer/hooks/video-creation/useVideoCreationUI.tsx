@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { User, Image as ImageIcon } from "lucide-react";
 import { useDrawer } from "@hooks/useDrawer";
+import { useDefaultProfileStore } from "@store/default-profile.store";
 import ProfileDrawer from "@/renderer/components/video-creation/single-video-page/ProfileDrawer";
 import ImageGalleryDrawer from "@/renderer/components/common/drawers/image-gallery/ImageGalleryDrawer";
 
@@ -10,8 +11,15 @@ import ImageGalleryDrawer from "@/renderer/components/common/drawers/image-galle
 export function useVideoCreationUI() {
   const [showAddJsonModal, setShowAddJsonModal] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+  // Get Flow profile/project from default profile store
+  const flowProfileId = useDefaultProfileStore((state) => state.flowProfileId);
+  const flowProjectId = useDefaultProfileStore((state) => state.flowProjectId);
+  const setFlowProfile = useDefaultProfileStore((state) => state.setFlowProfile);
+
+  // Use Flow profile/project from store, fallback to empty string for compatibility
+  const selectedProfileId = flowProfileId || "";
+  const selectedProjectId = flowProjectId || "";
 
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -27,14 +35,14 @@ export function useVideoCreationUI() {
           initialProfileId={selectedProfileId || null}
           initialProjectId={selectedProjectId || null}
           onApply={(p, pr) => {
-            setSelectedProfileId(p || "");
-            setSelectedProjectId(pr || "");
+            // Save to default profile store
+            setFlowProfile(p ?? null, pr ?? null);
           }}
           onClose={closeDrawer}
         />
       ),
     });
-  }, [selectedProfileId, selectedProjectId, openDrawer, closeDrawer]);
+  }, [selectedProfileId, selectedProjectId, openDrawer, closeDrawer, setFlowProfile]);
 
   /**
    * Open the image gallery drawer
@@ -68,8 +76,8 @@ export function useVideoCreationUI() {
                   initialProfileId={selectedProfileId || null}
                   initialProjectId={selectedProjectId || null}
                   onApply={(p, pr) => {
-                    setSelectedProfileId(p || "");
-                    setSelectedProjectId(pr || "");
+                    // Save to default profile store
+                    setFlowProfile(p ?? null, pr ?? null);
                   }}
                 />
               ),
@@ -93,7 +101,7 @@ export function useVideoCreationUI() {
         /* ignore */
       }
     };
-  }, [selectedProfileId, selectedProjectId]);
+  }, [selectedProfileId, selectedProjectId, setFlowProfile]);
 
   /**
    * Listen for custom event to toggle profile drawer
@@ -114,11 +122,9 @@ export function useVideoCreationUI() {
     selectedJobId,
     setSelectedJobId,
 
-    // Profile/Project state
+    // Profile/Project state (read from default profile store)
     selectedProfileId,
-    setSelectedProfileId,
     selectedProjectId,
-    setSelectedProjectId,
 
     // Drawer handlers
     handleOpenProfileDrawer,

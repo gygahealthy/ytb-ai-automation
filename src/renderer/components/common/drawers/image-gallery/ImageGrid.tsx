@@ -1,6 +1,7 @@
 import { Image, Loader2, CheckCircle2, Trash2 } from "lucide-react";
 import { useImageGalleryStore } from "@/renderer/store/image-gallery.store";
 import { useAlert } from "@/renderer/hooks/useAlert";
+import type { SelectedImageInfo } from "@/shared/types/video-creation.types";
 
 interface LocalImage {
   id: string;
@@ -20,25 +21,45 @@ interface ImageGridProps {
   isLoading: boolean;
   gridColumns: 2 | 3 | 4 | 5;
   onImageDeleted?: () => void;
+  // Optional custom selection override (for per-prompt selection)
+  customSelectedImages?: SelectedImageInfo[];
+  onCustomImageToggle?: (image: LocalImage) => void;
 }
 
 /**
  * Image Grid - Display image thumbnails with selection (max 3, FIFO)
+ * Supports both global selection (default) and custom per-prompt selection
  */
-export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumns, onImageDeleted }: ImageGridProps) {
-  const { selectedImages, toggleImageSelection } = useImageGalleryStore();
+export default function ImageGrid({
+  images,
+  imageSrcCache,
+  isLoading,
+  gridColumns,
+  onImageDeleted,
+  customSelectedImages,
+  onCustomImageToggle,
+}: ImageGridProps) {
+  const { selectedImages: globalSelectedImages, toggleImageSelection } = useImageGalleryStore();
   const { show: showAlert } = useAlert();
 
+  // Use custom selection if provided, otherwise use global
+  const selectedImages = customSelectedImages !== undefined ? customSelectedImages : globalSelectedImages;
+  const useCustomSelection = customSelectedImages !== undefined && onCustomImageToggle !== undefined;
+
   const handleToggleSelection = (image: LocalImage) => {
-    toggleImageSelection({
-      id: image.id,
-      name: image.name,
-      mediaKey: image.mediaKey,
-      localPath: image.localPath,
-      fifeUrl: image.fifeUrl,
-      aspectRatio: image.aspectRatio,
-      profileId: image.profileId,
-    });
+    if (useCustomSelection && onCustomImageToggle) {
+      onCustomImageToggle(image);
+    } else {
+      toggleImageSelection({
+        id: image.id,
+        name: image.name,
+        mediaKey: image.mediaKey,
+        localPath: image.localPath,
+        fifeUrl: image.fifeUrl,
+        aspectRatio: image.aspectRatio,
+        profileId: image.profileId,
+      });
+    }
   };
 
   const handleDeleteImage = async (e: React.MouseEvent, image: LocalImage) => {

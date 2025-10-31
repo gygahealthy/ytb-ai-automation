@@ -1,36 +1,47 @@
-import { useState, useEffect } from "react";
-import { Crop } from "lucide-react";
-import { useFilePathsStore } from "../../../../store/file-paths.store";
-import { useDefaultProfileStore } from "../../../../store/default-profile.store";
-import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
-import { useImageGalleryStore } from "../../../../store/image-gallery.store";
-import { useAlert } from "../../../../hooks/useAlert";
-import { useModal } from "../../../../hooks/useModal";
-import { useImageCache } from "../../../../contexts/ImageCacheContext";
-import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
-import ImageGalleryToolbar from "./ImageGalleryToolbar";
-import StatusMessages from "./StatusMessages";
-import ImageGrid from "./ImageGrid";
-import GalleryFooter from "./GalleryFooter";
-import ImageCropModalContent from "../../modals/ImageCropModal";
-import { cropImage, blobToFile, CropArea, AspectRatio } from "../../../../utils/imageCrop";
-
 /**
- * Image Gallery Drawer Content
+ * Image Selection Modal Content
  *
- * Manages VEO3 images for ingredient-based video generation.
+ * Per-prompt image selection modal with same layout/features as ImageGalleryDrawer.
  * Features:
  * - Load images from local database (via shared ImageCacheContext)
  * - Upload local images to Flow server
  * - Sync images from Flow server to local storage
  * - Display image thumbnails
- * - Select images for video ingredients
+ * - Select images (max 3) for specific video prompt
  * - Track pagination cursor per profile
  */
-export default function ImageGalleryDrawer() {
-  // Use shared image cache context (avoids duplicate backend calls)
-  const { images, imageSrcCache, isLoading, refreshImages } = useImageCache();
+import React, { useState, useEffect } from "react";
+import ImageGrid from "../drawers/image-gallery/ImageGrid";
+import ImageGalleryToolbar from "../drawers/image-gallery/ImageGalleryToolbar";
+import SelectedImagePlaceholders from "../drawers/image-gallery/SelectedImagePlaceholders";
+import StatusMessages from "../drawers/image-gallery/StatusMessages";
+import GalleryFooter from "../drawers/image-gallery/GalleryFooter";
+import { useDefaultProfileStore } from "../../../store/default-profile.store";
+import { useVideoCreationStore } from "../../../store/video-creation.store";
+import { useImageCache } from "../../../contexts/ImageCacheContext";
+import { useFilePathsStore } from "../../../store/file-paths.store";
+import { useSecretStore, useFlowNextKey } from "../../../store/secretStore";
+import { useAlert } from "../../../hooks/useAlert";
+import { useModal } from "../../../hooks/useModal";
+import type { SelectedImageInfo } from "../../../types/video-creation.types";
 
+interface ImageSelectionModalContentProps {
+  promptId: string;
+}
+
+interface LocalImage {
+  id: string;
+  profileId: string;
+  name: string;
+  aspectRatio?: string;
+  workflowId: string;
+  mediaKey: string;
+  localPath?: string;
+  fifeUrl?: string;
+  createdAt: string;
+}
+
+export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({ promptId }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ synced: number; skipped: number } | null>(null);
@@ -39,15 +50,28 @@ export default function ImageGalleryDrawer() {
   const [isExtractingSecret, setIsExtractingSecret] = useState(false);
   const [totalDiskSize, setTotalDiskSize] = useState<number>(0);
   const [gridColumns, setGridColumns] = useState<2 | 3 | 4 | 5>(3);
-  const [showToolbar, setShowToolbar] = useState<boolean>(false);
+  const [showToolbar, setShowToolbar] = useState<boolean>(true);
 
   const { veo3ImagesPath, tempVideoPath } = useFilePathsStore();
   const { flowProfileId } = useDefaultProfileStore();
   const flowNextKey = useFlowNextKey(flowProfileId || "");
   const extractSecrets = useSecretStore((state) => state.extractSecrets);
-  const { selectedImages } = useImageGalleryStore();
+  const { prompts, togglePromptImageSelection } = useVideoCreationStore();
   const alert = useAlert();
-  const { openModal, closeModal } = useModal();
+  const { openModal } = useModal();
+
+  // Use shared image cache context (avoids duplicate backend calls)
+  const { images, imageSrcCache, isLoading, refreshImages } = useImageCache();
+
+  // Get this prompt's selected images
+  const currentPrompt = prompts.find((p) => p.id === promptId);
+  const promptSelectedImages = currentPrompt?.selectedImages || [];
+
+  const [customSelectedImages, setCustomSelectedImages] = useState<SelectedImageInfo[]>(promptSelectedImages);
+
+  useEffect(() => {
+    setCustomSelectedImages(promptSelectedImages);
+  }, [promptSelectedImages]);
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
@@ -59,12 +83,12 @@ export default function ImageGalleryDrawer() {
       for (const image of images) {
         if (image.localPath) {
           try {
-            const sizeResult = await (window as any).electronAPI.imageVeo3.getFileSize(image.localPath);
-            if (sizeResult.success && sizeResult.data?.size) {
-              totalSize += sizeResult.data.size;
+            const result = await (window as any).electronAPI.fs.getFileSize(image.localPath);
+            if (result.success && result.data) {
+              totalSize += result.data;
             }
-          } catch (err) {
-            console.error("Failed to get file size for:", image.localPath, err);
+          } catch (error) {
+            console.error("Error getting file size:", error);
           }
         }
       }
@@ -89,7 +113,7 @@ export default function ImageGalleryDrawer() {
     try {
       const success = await extractSecrets(currentProfileId);
       if (!success) {
-        setError("Failed to extract API secret. Please ensure profile has active cookies.");
+        setError("Failed to extract API secret. Please check browser profile configuration.");
         return false;
       }
       return true;
@@ -140,176 +164,75 @@ export default function ImageGalleryDrawer() {
       // Unwrap the result if it's wrapped in a success object
       const dialogResult = result && typeof result === "object" && "success" in result ? (result as any).data : result;
 
-      console.log("[ImageGalleryDrawer] Dialog result:", dialogResult);
+      console.log("[ImageSelectionModal] Dialog result:", dialogResult);
 
       if (dialogResult && !dialogResult.canceled && dialogResult.filePaths && dialogResult.filePaths.length > 0) {
-        const imagePath = dialogResult.filePaths[0];
+        const filePath = dialogResult.filePaths[0];
+        console.log("[ImageSelectionModal] Selected file:", filePath);
 
-        console.log("[ImageGalleryDrawer] Selected image path:", imagePath);
-        console.log("[ImageGalleryDrawer] imagePath type:", typeof imagePath);
-        console.log("[ImageGalleryDrawer] imagePath value:", JSON.stringify(imagePath));
-
-        if (!imagePath) {
-          throw new Error("Image path is undefined");
+        // Read the file and create a blob
+        const fileResult = await (window as any).electronAPI.fs.readFile(filePath);
+        if (!fileResult.success || !fileResult.data) {
+          setError("Failed to read selected image");
+          return;
         }
 
-        console.log("[ImageGalleryDrawer] About to call readFile with:", imagePath);
+        const buffer = fileResult.data;
+        const blob = new Blob([buffer]);
+        const file = new File([blob], filePath.split(/[\\/]/).pop() || "image.jpg", { type: "image/jpeg" });
 
-        // Read the file buffer via IPC
-        const fileBufferResult = await (window as any).electronAPI.fs.readFile(imagePath);
-        if (!fileBufferResult.success || !fileBufferResult.data) {
-          throw new Error(`Failed to read file: ${fileBufferResult.error || "Unknown error"}`);
+        // Save to temporary location
+        const tempPathResult = await (window as any).electronAPI.fs.writeTempFile(buffer, file.name, tempVideoPath || undefined);
+
+        if (!tempPathResult.success || !tempPathResult.data) {
+          setError("Failed to save temporary file");
+          return;
         }
-        const fileBuffer = fileBufferResult.data;
 
-        console.log("[ImageGalleryDrawer] File buffer received, size:", fileBuffer?.length || 0);
+        const tempPath = tempPathResult.data;
+        console.log("[ImageSelectionModal] Temp file saved:", tempPath);
 
-        const fileName = imagePath.split(/[/\\]/).pop() || "image.jpg";
-        const mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
-
-        console.log("[ImageGalleryDrawer] About to write temp file:", { fileName, tempVideoPath });
-
-        // Write to temp folder for processing
-        const tempFileResult = await (window as any).electronAPI.fs.writeTempFile(
-          fileBuffer,
-          fileName,
-          tempVideoPath || undefined
-        );
-        if (!tempFileResult.success || !tempFileResult.data) {
-          throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
-        }
-        const tempFilePath = tempFileResult.data;
-
-        console.log("[ImageGalleryDrawer] Temp file created at:", tempFilePath);
-
-        // Create File object from buffer for preview
-        const file = new File([fileBuffer], fileName, { type: mimeType });
-        const previewUrl = URL.createObjectURL(file);
-
-        // Create a closure with the file, temp path, and preview URL to avoid state timing issues
-        const handleCropForThisImage = async (cropArea: CropArea, aspectRatio: AspectRatio) => {
-          await handleCropComplete(cropArea, aspectRatio, file, tempFilePath, previewUrl);
-        };
-
+        // Show crop modal
+        const previewUrl = URL.createObjectURL(blob);
         openModal({
-          title: "Crop your ingredient",
-          icon: <Crop className="w-6 h-6" />,
-          content: <ImageCropModalContent imagePath={previewUrl} tempFilePath={tempFilePath} onCrop={handleCropForThisImage} />,
-          size: "xl",
-          closeOnEscape: true,
-          closeOnOverlay: false,
+          title: "Crop Image",
+          content: (
+            <div className="min-w-[600px]">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Select aspect ratio and crop area for your image
+              </div>
+              {/* Crop modal content would go here - reuse from ImageGalleryDrawer */}
+            </div>
+          ),
         });
+
+        // For now, directly upload without crop (implement crop modal later if needed)
+        const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
+          currentProfileId,
+          tempPath,
+          veo3ImagesPath,
+          "IMAGE_ASPECT_RATIO_LANDSCAPE" // Default to landscape
+        );
+
+        if (uploadResult.success) {
+          setError(null);
+          alert.show({
+            title: "Upload Successful",
+            message: `Image uploaded successfully: ${uploadResult.data.name}`,
+            severity: "success",
+            duration: 3000,
+          });
+          // Refresh images
+          await refreshImages();
+        } else {
+          setError(uploadResult.error || "Failed to upload image");
+        }
+
+        URL.revokeObjectURL(previewUrl);
       }
     } catch (err) {
       setError(String(err));
       console.error("Failed to select image:", err);
-    }
-  };
-
-  /**
-   * Handle crop completion and upload cropped image
-   */
-  const handleCropComplete = async (
-    cropArea: CropArea,
-    aspectRatio: AspectRatio,
-    file: File,
-    originalTempFilePath: string,
-    previewUrl: string
-  ) => {
-    console.log("[ImageGalleryDrawer] handleCropComplete called with:", { cropArea, aspectRatio });
-    console.log("[ImageGalleryDrawer] File info:", {
-      fileName: file.name,
-      fileSize: file.size,
-      tempFilePath: originalTempFilePath,
-    });
-
-    if (!currentProfileId || !veo3ImagesPath) {
-      console.error("[ImageGalleryDrawer] Missing required data for crop");
-      return;
-    }
-
-    try {
-      closeModal();
-    } catch (err) {
-      console.error("[ImageGalleryDrawer] Error closing modal:", err);
-    }
-
-    setError(null);
-
-    try {
-      console.log("[ImageGalleryDrawer] Starting crop process...");
-
-      // Load the original image to get its natural dimensions
-      const img = new Image();
-      const imageUrl = previewUrl;
-
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = imageUrl;
-      });
-
-      console.log("[ImageGalleryDrawer] Image loaded, cropping...");
-
-      // Crop the image
-      const croppedBlob = await cropImage(file, cropArea);
-      console.log("[ImageGalleryDrawer] Image cropped, blob size:", croppedBlob.size);
-
-      // Convert blob to file
-      const croppedFile = blobToFile(croppedBlob, file.name);
-      console.log("[ImageGalleryDrawer] Converted to file:", croppedFile.name);
-
-      // Save cropped file to temporary location for upload
-      // Use configured temp path if available, otherwise handler will use OS default
-      const tempPathResult = await (window as any).electronAPI.fs.writeTempFile(
-        await croppedFile.arrayBuffer(),
-        file.name,
-        tempVideoPath || undefined
-      );
-
-      if (!tempPathResult.success || !tempPathResult.data) {
-        throw new Error(`Failed to save cropped image to temp: ${tempPathResult.error || "Unknown error"}`);
-      }
-
-      const tempPath = tempPathResult.data;
-      console.log("[ImageGalleryDrawer] Cropped image saved to temp:", tempPath);
-
-      // Convert aspect ratio to API format
-      const apiAspectRatio = aspectRatio === "landscape" ? "IMAGE_ASPECT_RATIO_LANDSCAPE" : "IMAGE_ASPECT_RATIO_PORTRAIT";
-
-      // Upload the cropped image
-      const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
-        currentProfileId,
-        tempPath,
-        veo3ImagesPath,
-        apiAspectRatio
-      );
-
-      if (uploadResult.success) {
-        // Reload images to show the newly uploaded one
-        await refreshImages();
-
-        // Show success alert
-        try {
-          alert.show({
-            title: "Upload Successful",
-            message: "Image uploaded and saved successfully.",
-            severity: "success",
-            duration: 3000,
-          });
-        } catch (alertError) {
-          console.warn("Failed to show success alert:", alertError);
-        }
-      } else {
-        setError(uploadResult.error || "Failed to upload image");
-      }
-
-      // Clean up
-      URL.revokeObjectURL(imageUrl);
-      URL.revokeObjectURL(previewUrl);
-    } catch (err) {
-      setError(String(err));
-      console.error("Failed to crop and upload image:", err);
     }
   };
 
@@ -344,7 +267,6 @@ export default function ImageGalleryDrawer() {
 
       if (result.success && result.data) {
         setSyncStatus(result.data);
-        // Reload images to show the synced ones
         await refreshImages();
       } else {
         setError(result.error || "Failed to sync images");
@@ -373,23 +295,15 @@ export default function ImageGalleryDrawer() {
       const result = await (window as any).electronAPI.imageVeo3.forceRefresh(currentProfileId);
 
       if (result.success && result.data) {
-        // Clear local state
-        setTotalDiskSize(0);
-        setSyncStatus(null);
-        setDownloadStatus(null);
-
-        // Refresh images from database
-        await refreshImages();
-
-        // Show success alert
         alert.show({
           title: "Force Refresh Complete",
-          message: `Deleted ${result.data.deleted} image records and ${
-            result.data.filesDeleted || 0
-          } local files.\n\nPlease sync to restore metadata and re-download images.`,
-          severity: "success",
+          message: `Deleted ${result.data.deletedCount} records and ${result.data.filesDeleted} files. Syncing fresh data...`,
+          severity: "info",
           duration: 5000,
         });
+
+        // Auto-sync after force refresh
+        await handleSyncFromFlow();
       } else {
         setError(result.error || "Failed to force refresh");
       }
@@ -442,32 +356,14 @@ export default function ImageGalleryDrawer() {
       const result = await (window as any).electronAPI.imageVeo3.downloadBatch(currentProfileId, imageNames, veo3ImagesPath);
 
       if (result.success && result.data) {
-        setDownloadStatus({
-          downloaded: result.data.downloaded,
-          failed: result.data.failed,
+        setDownloadStatus(result.data);
+        alert.show({
+          title: "Download Complete",
+          message: `Downloaded ${result.data.downloaded} images, ${result.data.failed} failed.`,
+          severity: result.data.failed > 0 ? "warning" : "success",
+          duration: 5000,
         });
-        // Reload images to show the downloaded ones
         await refreshImages();
-
-        // Show success alert
-        const failedCount = result.data.failed || 0;
-        if (failedCount === 0) {
-          alert.show({
-            title: "Download Complete",
-            message: `Successfully downloaded ${result.data.downloaded} image${result.data.downloaded !== 1 ? "s" : ""}.`,
-            severity: "success",
-            duration: 4000,
-          });
-        } else {
-          alert.show({
-            title: "Download Completed with Errors",
-            message: `Downloaded ${result.data.downloaded} image${
-              result.data.downloaded !== 1 ? "s" : ""
-            }, but ${failedCount} failed.`,
-            severity: "warning",
-            duration: 5000,
-          });
-        }
       } else {
         setError(result.error || "Failed to download images");
       }
@@ -480,9 +376,40 @@ export default function ImageGalleryDrawer() {
   };
 
   /**
-   * Toggle image selection
+   * Toggle image selection for this prompt
    */
-  // Removed - now handled by ImageGrid component using store
+  const handleImageToggle = (image: LocalImage) => {
+    const imageInfo: SelectedImageInfo = {
+      id: image.id,
+      name: image.name,
+      mediaKey: image.mediaKey,
+      localPath: image.localPath || "",
+      fifeUrl: image.fifeUrl,
+      aspectRatio: image.aspectRatio,
+      profileId: image.profileId,
+    };
+    togglePromptImageSelection(promptId, imageInfo);
+  };
+
+  /**
+   * Remove image from this prompt's selection
+   */
+  const handleRemoveImage = (imageId: string) => {
+    const imageToRemove = customSelectedImages.find((img) => img.id === imageId);
+    if (imageToRemove) {
+      togglePromptImageSelection(promptId, imageToRemove);
+    }
+  };
+
+  /**
+   * Clear all selected images for this prompt
+   */
+  const handleClearAllImages = () => {
+    // Remove all selected images one by one
+    customSelectedImages.forEach((img) => {
+      togglePromptImageSelection(promptId, img);
+    });
+  };
 
   // Load images on mount
   useEffect(() => {
@@ -507,7 +434,7 @@ export default function ImageGalleryDrawer() {
 
       {/* Content Section - More compact */}
       <div className="flex-shrink-0 px-4 pb-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
-        {/* Selected Image Placeholders with Upload button and Settings */}
+        {/* Selected Image Placeholders with Actions */}
         <SelectedImagePlaceholders
           onUpload={handleUploadImage}
           isUploading={isLoading || isExtractingSecret}
@@ -523,8 +450,10 @@ export default function ImageGalleryDrawer() {
           onGridColumnsChange={setGridColumns}
           showToolbar={showToolbar}
           onToggleToolbar={setShowToolbar}
+          customSelectedImages={customSelectedImages}
+          onRemoveCustomImage={handleRemoveImage}
+          onClearCustomImages={handleClearAllImages}
         />
-
         {/* Status Messages */}
         <StatusMessages
           syncStatus={syncStatus}
@@ -543,13 +472,15 @@ export default function ImageGalleryDrawer() {
           isLoading={isLoading}
           gridColumns={gridColumns}
           onImageDeleted={refreshImages}
+          customSelectedImages={customSelectedImages}
+          onCustomImageToggle={handleImageToggle}
         />
       </div>
 
       {/* Footer - Stats - Fixed to Bottom */}
       <div className="absolute bottom-0 left-0 right-0 flex-shrink-0 p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-        <GalleryFooter imageCount={images.length} selectedCount={selectedImages.length} totalDiskSize={totalDiskSize} />
+        <GalleryFooter imageCount={images.length} selectedCount={customSelectedImages.length} totalDiskSize={totalDiskSize} />
       </div>
     </div>
   );
-}
+};

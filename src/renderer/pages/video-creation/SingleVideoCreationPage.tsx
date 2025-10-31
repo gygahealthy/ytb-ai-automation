@@ -325,6 +325,7 @@ export default function SingleVideoCreationPage() {
                   globalPreviewMode={globalPreviewMode}
                   globalProfileId={selectedProfileId}
                   job={job}
+                  creationMode={creationMode}
                   onUpdate={updatePrompt}
                   onDelete={removePrompt}
                   onToggleSelect={togglePromptSelection}

@@ -5,4 +5,5 @@ export type {
   VideoCreationJob,
   VideoCreationState,
   VideoResource,
+  SelectedImageInfo,
 } from "../../shared/types/video-creation.types";

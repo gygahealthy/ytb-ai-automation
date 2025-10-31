@@ -10,6 +10,7 @@ import { DrawerProvider } from "./contexts/DrawerContext";
 import { GeminiChatProvider } from "./contexts/GeminiChatContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { OverlayPortalProvider } from "./contexts/OverlayPortalContext";
+import { ImageCacheProvider } from "./contexts/ImageCacheContext";
 import { AlertProvider } from "./hooks/useAlert";
 import { ConfirmProvider } from "./hooks/useConfirm";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -109,21 +110,23 @@ function App() {
 
   return (
     <div className={theme}>
-      <ModalProvider>
-        <AlertProvider>
-          <ConfirmProvider>
-            <ToastProvider>
-              <DrawerProvider>
-                <GeminiChatProvider>
-                  <OverlayPortalProvider>
-                    <AppContent />
-                  </OverlayPortalProvider>
-                </GeminiChatProvider>
-              </DrawerProvider>
-            </ToastProvider>
-          </ConfirmProvider>
-        </AlertProvider>
-      </ModalProvider>
+      <ImageCacheProvider>
+        <ModalProvider>
+          <AlertProvider>
+            <ConfirmProvider>
+              <ToastProvider>
+                <DrawerProvider>
+                  <GeminiChatProvider>
+                    <OverlayPortalProvider>
+                      <AppContent />
+                    </OverlayPortalProvider>
+                  </GeminiChatProvider>
+                </DrawerProvider>
+              </ToastProvider>
+            </ConfirmProvider>
+          </AlertProvider>
+        </ModalProvider>
+      </ImageCacheProvider>
     </div>
   );
 }

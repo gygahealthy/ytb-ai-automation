@@ -1,5 +1,4 @@
 import {
-  X,
   Image as ImageIcon,
   XCircle,
   Upload,
@@ -10,9 +9,11 @@ import {
   Grid3x3,
   Eye,
   EyeOff,
+  Trash2,
 } from "lucide-react";
 import { useImageGalleryStore } from "@/renderer/store/image-gallery.store";
 import { useEffect, useState, useRef } from "react";
+import type { SelectedImageInfo } from "@/shared/types/video-creation.types";
 
 interface SelectedImagePlaceholdersProps {
   onUpload?: () => void;
@@ -30,10 +31,15 @@ interface SelectedImagePlaceholdersProps {
   onGridColumnsChange?: (cols: 2 | 3 | 4 | 5) => void;
   showToolbar?: boolean;
   onToggleToolbar?: (show: boolean) => void;
+  // Optional custom selection override (for per-prompt selection)
+  customSelectedImages?: SelectedImageInfo[];
+  onRemoveCustomImage?: (imageId: string) => void;
+  onClearCustomImages?: () => void;
 }
 
 /**
  * Selected Image Placeholders - Display 3 slots for selected images with upload button and clear all
+ * Supports both global selection (default) and custom per-prompt selection
  */
 export default function SelectedImagePlaceholders({
   onUpload,
@@ -50,11 +56,20 @@ export default function SelectedImagePlaceholders({
   onGridColumnsChange,
   showToolbar = true,
   onToggleToolbar,
+  customSelectedImages,
+  onRemoveCustomImage,
+  onClearCustomImages,
 }: SelectedImagePlaceholdersProps) {
-  const { selectedImages, removeSelectedImage, clearSelectedImages, maxSelectedImages } = useImageGalleryStore();
+  const globalStore = useImageGalleryStore();
   const [imageSrcCache, setImageSrcCache] = useState<Record<string, string>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Use custom selection if provided, otherwise use global
+  const selectedImages = customSelectedImages !== undefined ? customSelectedImages : globalStore.selectedImages;
+  const removeSelectedImage = onRemoveCustomImage || globalStore.removeSelectedImage;
+  const clearSelectedImages = onClearCustomImages || globalStore.clearSelectedImages;
+  const maxSelectedImages = globalStore.maxSelectedImages;
 
   // Load image data URLs for selected images
   useEffect(() => {
@@ -299,7 +314,7 @@ export default function SelectedImagePlaceholders({
                 className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
                 title="Remove from selection"
               >
-                <X className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" />
               </button>
             )}
           </div>
