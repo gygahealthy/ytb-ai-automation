@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { History, User, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVideoCreationStore } from "@store/video-creation.store";
+import { useDefaultProfileStore } from "@store/default-profile.store";
 import { useToast } from "@hooks/useToast";
 import { useAlert } from "@hooks/useAlert";
 import AppAlert from "@components/common/AppAlert";
@@ -38,6 +39,13 @@ export default function SingleVideoCreationPage() {
   };
   const toast = useToast();
   const alert = useAlert();
+
+  // Subscribe to default profile store
+  const geminiProfileId = useDefaultProfileStore((s) => s.geminiProfileId);
+  const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
+
+  // Determine if we have a default profile set (prioritize gemini, then flow)
+  const hasDefaultProfile = !!(geminiProfileId || flowProfileId);
 
   // Custom hooks for extracted logic
   const { handleCreateVideo, handleCreateMultiple } = useVideoGeneration();
@@ -222,8 +230,8 @@ export default function SingleVideoCreationPage() {
             <button
               onClick={handleOpenProfileDrawer}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${
-                selectedProfileId
-                  ? "bg-primary-50 text-primary-700 border-primary-200"
+                selectedProfileId || hasDefaultProfile
+                  ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border-primary-200 dark:border-primary-800"
                   : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
               }`}
               title="Select profile & project (Ctrl+F)"

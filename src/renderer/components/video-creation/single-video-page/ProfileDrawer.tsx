@@ -44,6 +44,7 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
   const [updatingProject, setUpdatingProject] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string>("");
+  const [authErrorProfileId, setAuthErrorProfileId] = useState<string>("");
   const { show: showAlert } = useAlert();
 
   // Subscribe to default profile/project changes
@@ -144,6 +145,7 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
         ) {
           console.log(`[ProfileDrawer] Authentication error detected for profile: ${profileId}`);
           setAuthErrorMessage(errorMsg);
+          setAuthErrorProfileId(profileId);
           setShowAuthDialog(true);
         } else {
           showAlert({
@@ -165,6 +167,65 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
       setProjects([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForceVisibleRefresh = async (profileId: string) => {
+    try {
+      showAlert({
+        title: "Opening Browser",
+        message: "Please log in to your account in the browser window that will open.",
+        severity: "info",
+        duration: 3,
+      });
+
+      // Get cookies for the profile
+      const cookiesResult = await window.electronAPI.cookieRotation.getProfilesConfig();
+      if (!cookiesResult.success || !cookiesResult.data) {
+        throw new Error("Failed to get profile cookies");
+      }
+
+      // Find the profile's cookies
+      const profileData = cookiesResult.data.find((p: any) => p.profileId === profileId);
+      if (!profileData || !profileData.cookies || profileData.cookies.length === 0) {
+        throw new Error("No cookies found for this profile");
+      }
+
+      // Find the flow cookie (preferred for VEO3) or fallback to first available cookie
+      const flowCookie = profileData.cookies.find((c: any) => c.service === "flow" && c.status === "active");
+      const cookie = flowCookie || profileData.cookies[0];
+
+      if (!cookie) {
+        throw new Error("No active cookies found for this profile");
+      }
+
+      // Use the cookie's actual service and URL (same pattern as CookieConfigCard)
+      const electronCookies = (window.electronAPI as any).cookies;
+      const result = await electronCookies?.extractAndCreateCookie(profileId, cookie.service, cookie.url, false); // headless = false
+
+      if (result?.success) {
+        showAlert({
+          title: "Success",
+          message: "Browser opened successfully. Please complete the login process.",
+          severity: "success",
+          duration: 3,
+        });
+      } else {
+        showAlert({
+          title: "Error",
+          message: result?.error || "Failed to open browser",
+          severity: "error",
+          duration: null,
+        });
+      }
+    } catch (error) {
+      console.error("[ProfileDrawer] Failed to open visible browser", error);
+      showAlert({
+        title: "Error",
+        message: `Failed to open browser: ${String(error)}`,
+        severity: "error",
+        duration: null,
+      });
     }
   };
 
@@ -365,9 +426,12 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
       <AuthErrorDialog
         isOpen={showAuthDialog}
         errorMessage={authErrorMessage}
+        profileId={authErrorProfileId}
+        onForceVisibleRefresh={handleForceVisibleRefresh}
         onClose={() => {
           setShowAuthDialog(false);
           setAuthErrorMessage("");
+          setAuthErrorProfileId("");
         }}
       />
     </>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVideoCreationStore } from "../store/video-creation.store";
+import { useDefaultProfileStore } from "../store/default-profile.store";
 import { useFilePathsStore } from "../store/file-paths.store";
 import { useToast } from "../hooks/useToast";
 import { useAlert } from "../hooks/useAlert";
@@ -67,6 +68,26 @@ export function SingleVideoCreationProvider({ children }: SingleVideoCreationPro
   const navigate = useNavigate();
   const toast = useToast();
   const alert = useAlert();
+
+  // Subscribe to default profile store
+  const geminiProfileId = useDefaultProfileStore((s) => s.geminiProfileId);
+  const geminiProjectId = useDefaultProfileStore((s) => s.geminiProjectId);
+  const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
+  const flowProjectId = useDefaultProfileStore((s) => s.flowProjectId);
+
+  // Auto-sync with default profile/project when they change
+  useEffect(() => {
+    const defaultProfileId = geminiProfileId || flowProfileId;
+    const defaultProjectId = geminiProfileId ? geminiProjectId : flowProjectId;
+
+    if (defaultProfileId && !selectedProfileId) {
+      setSelectedProfileId(defaultProfileId);
+    }
+
+    if (defaultProjectId && !selectedProjectId) {
+      setSelectedProjectId(defaultProjectId);
+    }
+  }, [geminiProfileId, geminiProjectId, flowProfileId, flowProjectId, selectedProfileId, selectedProjectId]);
 
   // Subscribe to store values
   const prompts = useVideoCreationStore((state) => state.prompts);
