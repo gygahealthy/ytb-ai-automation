@@ -210,7 +210,7 @@ export default function FilePathsSettings() {
             {/* Temp Video Creation Path */}
             <div className="space-y-2">
               <div className="grid grid-cols-3 items-center gap-3">
-                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">Temp Video Creation Folder</div>
+                <div className="col-span-1 text-sm font-medium text-gray-700 dark:text-gray-300">Temp File Folder</div>
                 <div className="col-span-2 flex gap-2 items-center">
                   <input
                     type="text"

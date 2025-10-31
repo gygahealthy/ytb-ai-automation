@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
+import { Crop } from "lucide-react";
 import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
 import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
 import { useImageGalleryStore } from "../../../../store/image-gallery.store";
 import { useAlert } from "../../../../hooks/useAlert";
+import { useModal } from "../../../../hooks/useModal";
 import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
 import ImageGalleryToolbar from "./ImageGalleryToolbar";
 import StatusMessages from "./StatusMessages";
 import ImageGrid from "./ImageGrid";
 import GalleryFooter from "./GalleryFooter";
+import ImageCropModalContent from "../../modals/ImageCropModal";
+import { cropImage, blobToFile, CropArea, AspectRatio } from "../../../../utils/imageCrop";
 
 interface LocalImage {
   id: string;
@@ -48,12 +52,13 @@ export default function ImageGalleryDrawer() {
   const [gridColumns, setGridColumns] = useState<2 | 3 | 4 | 5>(3);
   const [showToolbar, setShowToolbar] = useState<boolean>(false);
 
-  const { veo3ImagesPath } = useFilePathsStore();
+  const { veo3ImagesPath, tempVideoPath } = useFilePathsStore();
   const { flowProfileId } = useDefaultProfileStore();
   const flowNextKey = useFlowNextKey(flowProfileId || "");
   const extractSecrets = useSecretStore((state) => state.extractSecrets);
   const { selectedImages } = useImageGalleryStore();
   const alert = useAlert();
+  const { openModal, closeModal } = useModal();
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
@@ -168,6 +173,17 @@ export default function ImageGalleryDrawer() {
       return;
     }
 
+    if (!tempVideoPath) {
+      setError("Please configure Temp Video Path in Settings > File Paths before uploading images");
+      alert.show({
+        title: "Configuration Required",
+        message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
+        severity: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
     // Ensure secret is extracted before uploading
     const secretReady = await ensureSecretExtracted();
     if (!secretReady) {
@@ -182,31 +198,180 @@ export default function ImageGalleryDrawer() {
         title: "Select Image to Upload",
       });
 
+      // Unwrap the result if it's wrapped in a success object
       const dialogResult = result && typeof result === "object" && "success" in result ? (result as any).data : result;
+
+      console.log("[ImageGalleryDrawer] Dialog result:", dialogResult);
 
       if (dialogResult && !dialogResult.canceled && dialogResult.filePaths && dialogResult.filePaths.length > 0) {
         const imagePath = dialogResult.filePaths[0];
 
-        setIsLoading(true);
-        setError(null);
+        console.log("[ImageGalleryDrawer] Selected image path:", imagePath);
+        console.log("[ImageGalleryDrawer] imagePath type:", typeof imagePath);
+        console.log("[ImageGalleryDrawer] imagePath value:", JSON.stringify(imagePath));
 
-        const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
-          currentProfileId,
-          imagePath,
-          veo3ImagesPath,
-          "IMAGE_ASPECT_RATIO_LANDSCAPE" // TODO: Auto-detect or let user choose
-        );
-
-        if (uploadResult.success) {
-          // Reload images to show the newly uploaded one
-          await loadLocalImages();
-        } else {
-          setError(uploadResult.error || "Failed to upload image");
+        if (!imagePath) {
+          throw new Error("Image path is undefined");
         }
+
+        console.log("[ImageGalleryDrawer] About to call readFile with:", imagePath);
+
+        // Read the file buffer via IPC
+        const fileBufferResult = await (window as any).electronAPI.fs.readFile(imagePath);
+        if (!fileBufferResult.success || !fileBufferResult.data) {
+          throw new Error(`Failed to read file: ${fileBufferResult.error || "Unknown error"}`);
+        }
+        const fileBuffer = fileBufferResult.data;
+
+        console.log("[ImageGalleryDrawer] File buffer received, size:", fileBuffer?.length || 0);
+
+        const fileName = imagePath.split(/[/\\]/).pop() || "image.jpg";
+        const mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+
+        console.log("[ImageGalleryDrawer] About to write temp file:", { fileName, tempVideoPath });
+
+        // Write to temp folder for processing
+        const tempFileResult = await (window as any).electronAPI.fs.writeTempFile(
+          fileBuffer,
+          fileName,
+          tempVideoPath || undefined
+        );
+        if (!tempFileResult.success || !tempFileResult.data) {
+          throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
+        }
+        const tempFilePath = tempFileResult.data;
+
+        console.log("[ImageGalleryDrawer] Temp file created at:", tempFilePath);
+
+        // Create File object from buffer for preview
+        const file = new File([fileBuffer], fileName, { type: mimeType });
+        const previewUrl = URL.createObjectURL(file);
+
+        // Create a closure with the file, temp path, and preview URL to avoid state timing issues
+        const handleCropForThisImage = async (cropArea: CropArea, aspectRatio: AspectRatio) => {
+          await handleCropComplete(cropArea, aspectRatio, file, tempFilePath, previewUrl);
+        };
+
+        openModal({
+          title: "Crop your ingredient",
+          icon: <Crop className="w-6 h-6" />,
+          content: <ImageCropModalContent imagePath={previewUrl} tempFilePath={tempFilePath} onCrop={handleCropForThisImage} />,
+          size: "xl",
+          closeOnEscape: true,
+          closeOnOverlay: false,
+        });
       }
     } catch (err) {
       setError(String(err));
-      console.error("Failed to upload image:", err);
+      console.error("Failed to select image:", err);
+    }
+  };
+
+  /**
+   * Handle crop completion and upload cropped image
+   */
+  const handleCropComplete = async (
+    cropArea: CropArea,
+    aspectRatio: AspectRatio,
+    file: File,
+    originalTempFilePath: string,
+    previewUrl: string
+  ) => {
+    console.log("[ImageGalleryDrawer] handleCropComplete called with:", { cropArea, aspectRatio });
+    console.log("[ImageGalleryDrawer] File info:", {
+      fileName: file.name,
+      fileSize: file.size,
+      tempFilePath: originalTempFilePath,
+    });
+
+    if (!currentProfileId || !veo3ImagesPath) {
+      console.error("[ImageGalleryDrawer] Missing required data for crop");
+      return;
+    }
+
+    try {
+      closeModal();
+    } catch (err) {
+      console.error("[ImageGalleryDrawer] Error closing modal:", err);
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log("[ImageGalleryDrawer] Starting crop process...");
+
+      // Load the original image to get its natural dimensions
+      const img = new Image();
+      const imageUrl = previewUrl;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      console.log("[ImageGalleryDrawer] Image loaded, cropping...");
+
+      // Crop the image
+      const croppedBlob = await cropImage(file, cropArea);
+      console.log("[ImageGalleryDrawer] Image cropped, blob size:", croppedBlob.size);
+
+      // Convert blob to file
+      const croppedFile = blobToFile(croppedBlob, file.name);
+      console.log("[ImageGalleryDrawer] Converted to file:", croppedFile.name);
+
+      // Save cropped file to temporary location for upload
+      // Use configured temp path if available, otherwise handler will use OS default
+      const tempPathResult = await (window as any).electronAPI.fs.writeTempFile(
+        await croppedFile.arrayBuffer(),
+        file.name,
+        tempVideoPath || undefined
+      );
+
+      if (!tempPathResult.success || !tempPathResult.data) {
+        throw new Error(`Failed to save cropped image to temp: ${tempPathResult.error || "Unknown error"}`);
+      }
+
+      const tempPath = tempPathResult.data;
+      console.log("[ImageGalleryDrawer] Cropped image saved to temp:", tempPath);
+
+      // Convert aspect ratio to API format
+      const apiAspectRatio = aspectRatio === "landscape" ? "IMAGE_ASPECT_RATIO_LANDSCAPE" : "IMAGE_ASPECT_RATIO_PORTRAIT";
+
+      // Upload the cropped image
+      const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
+        currentProfileId,
+        tempPath,
+        veo3ImagesPath,
+        apiAspectRatio
+      );
+
+      if (uploadResult.success) {
+        // Reload images to show the newly uploaded one
+        await loadLocalImages();
+
+        // Show success alert
+        try {
+          alert.show({
+            title: "Upload Successful",
+            message: "Image uploaded and saved successfully.",
+            severity: "success",
+            duration: 3000,
+          });
+        } catch (alertError) {
+          console.warn("Failed to show success alert:", alertError);
+        }
+      } else {
+        setError(uploadResult.error || "Failed to upload image");
+      }
+
+      // Clean up
+      URL.revokeObjectURL(imageUrl);
+      URL.revokeObjectURL(previewUrl);
+    } catch (err) {
+      setError(String(err));
+      console.error("Failed to crop and upload image:", err);
     } finally {
       setIsLoading(false);
     }

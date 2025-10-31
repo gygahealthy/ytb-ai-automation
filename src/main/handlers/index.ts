@@ -4,6 +4,7 @@ import { logger } from "../utils/logger-backend";
 import { IpcRegistration } from "../../core/ipc/types";
 import { registerDevToolsHandlers } from "../modules/common/devtools";
 import { shellRegistrations } from "../modules/common/shell";
+import { fileSystemHandlers } from "../modules/common/file-system";
 
 /**
  * Register all IPC handlers
@@ -17,6 +18,10 @@ export function registerIPCHandlers(): void {
   // Add core shell utility handlers
   allRegistrations.push(...shellRegistrations);
   console.log(`[Handler Registry] Total registrations (including shell): ${allRegistrations.length}`);
+
+  // Add file system handlers
+  allRegistrations.push(...fileSystemHandlers);
+  console.log(`[Handler Registry] Total registrations (including file system): ${allRegistrations.length}`);
 
   // Log image-veo3 handlers specifically for debugging
   const imageVeo3Handlers = allRegistrations.filter((r) => r.channel.includes("image-veo3"));

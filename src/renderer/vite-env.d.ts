@@ -144,6 +144,11 @@ interface Window {
       selectBrowserExecutable: () => Promise<any>;
       showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
     };
+    fs: {
+      readFile: (filePath: string) => Promise<Buffer>;
+      writeTempFile: (data: ArrayBuffer, filename: string, customTempPath?: string) => Promise<string>;
+      getFileSize: (filePath: string) => Promise<number>;
+    };
     masterPrompts: {
       getAll: () => Promise<any>;
       getById: (id: number) => Promise<any>;

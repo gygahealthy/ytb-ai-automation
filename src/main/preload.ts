@@ -167,6 +167,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     showOpenDialog: (options: any) => ipcRenderer.invoke("dialog:showOpenDialog", options),
   },
 
+  // File System APIs
+  fs: {
+    readFile: (filePath: string) => ipcRenderer.invoke("fs:readFile", filePath),
+    writeTempFile: (data: ArrayBuffer, filename: string, customTempPath?: string) =>
+      ipcRenderer.invoke("fs:writeTempFile", { data, filename, customTempPath }),
+    getFileSize: (filePath: string) => ipcRenderer.invoke("fs:getFileSize", filePath),
+  },
+
   // DevTools APIs
   devtools: {
     toggle: () => ipcRenderer.send("devtools:toggle"),

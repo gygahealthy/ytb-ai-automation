@@ -22,14 +22,9 @@ export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
 
       // Log response details for debugging specific handlers
       if (reg.channel === "componentDiscovery:getComponentTreeForUI") {
-        logger.info(
-          `[IPC-Middleware] Returning response for ${reg.channel}:`,
-          res
-        );
+        logger.info(`[IPC-Middleware] Returning response for ${reg.channel}:`, res);
         if (res && res.data) {
-          logger.info(
-            `[IPC-Middleware] Response has data array with ${res.data.length} items`
-          );
+          logger.info(`[IPC-Middleware] Response has data array with ${res.data.length} items`);
         }
       }
 
