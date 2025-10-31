@@ -3,6 +3,7 @@ import { useAlert } from "../../../hooks/useAlert";
 import profileIPC from "../../../ipc/profile";
 import veo3IPC from "../../../ipc/veo3";
 import useVeo3Store from "../../../store/veo3.store";
+import { useDefaultProfileStore } from "../../../store/default-profile.store";
 import ProfileCard from "./profile-drawer/ProfileCard";
 import ProjectsList from "./profile-drawer/ProjectsList";
 import CreateProjectDialog from "./profile-drawer/CreateProjectDialog";
@@ -44,6 +45,28 @@ export default function ProfileDrawer({ initialProfileId, initialProjectId, onAp
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string>("");
   const { show: showAlert } = useAlert();
+
+  // Subscribe to default profile/project changes
+  const geminiProfileId = useDefaultProfileStore((s) => s.geminiProfileId);
+  const geminiProjectId = useDefaultProfileStore((s) => s.geminiProjectId);
+  const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
+  const flowProjectId = useDefaultProfileStore((s) => s.flowProjectId);
+
+  // Auto-select default profile and project when they change
+  useEffect(() => {
+    // Priority: geminiProfileId > flowProfileId > current selection
+    const defaultProfileId = geminiProfileId || flowProfileId;
+    const defaultProjectId = geminiProfileId ? geminiProjectId : flowProjectId;
+
+    if (defaultProfileId && !localProfileId) {
+      setLocalProfileId(defaultProfileId);
+      setExpandedProfileId(defaultProfileId);
+    }
+
+    if (defaultProjectId && !localProjectId) {
+      setLocalProjectId(defaultProjectId);
+    }
+  }, [geminiProfileId, geminiProjectId, flowProfileId, flowProjectId, localProfileId, localProjectId]);
 
   useEffect(() => {
     void fetchProfiles();

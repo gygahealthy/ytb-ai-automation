@@ -1,6 +1,8 @@
 import { Calendar, Cookie, DollarSign, Folder, Globe, Tag, User } from "lucide-react";
+import { useState } from "react";
 import ProfileActionButtons from "./ProfileActionButtons";
 import ToggleSwitch from "@components/common/ToggleSwitch";
+import ProjectSelectionModal from "@components/common/ProjectSelectionModal";
 import { useDefaultProfileStore } from "@store/default-profile.store";
 
 interface Profile {
@@ -49,6 +51,43 @@ export default function ProfilesTable({
   const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
   const setGeminiProfile = useDefaultProfileStore((s) => s.setGeminiProfile);
   const setFlowProfile = useDefaultProfileStore((s) => s.setFlowProfile);
+
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [modalProfileId, setModalProfileId] = useState<string>("");
+  const [modalProfileName, setModalProfileName] = useState<string>("");
+  const [modalServiceType, setModalServiceType] = useState<"gemini" | "flow">("gemini");
+
+  const handleGeminiToggle = (profileId: string, profileName: string, checked: boolean) => {
+    if (!checked) {
+      setGeminiProfile(null);
+    } else {
+      // Open modal to select project
+      setModalProfileId(profileId);
+      setModalProfileName(profileName);
+      setModalServiceType("gemini");
+      setShowProjectModal(true);
+    }
+  };
+
+  const handleFlowToggle = (profileId: string, profileName: string, checked: boolean) => {
+    if (!checked) {
+      setFlowProfile(null);
+    } else {
+      // Open modal to select project
+      setModalProfileId(profileId);
+      setModalProfileName(profileName);
+      setModalServiceType("flow");
+      setShowProjectModal(true);
+    }
+  };
+
+  const handleProjectConfirm = (projectId: string | null) => {
+    if (modalServiceType === "gemini") {
+      setGeminiProfile(modalProfileId, projectId);
+    } else {
+      setFlowProfile(modalProfileId, projectId);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -282,7 +321,7 @@ export default function ProfilesTable({
                   <td className="px-4 py-3.5 whitespace-nowrap w-32">
                     <ToggleSwitch
                       checked={geminiProfileId === profile.id}
-                      onChange={(checked) => setGeminiProfile(checked ? profile.id : null)}
+                      onChange={(checked) => handleGeminiToggle(profile.id, profile.name, checked)}
                       size="sm"
                       color="purple"
                       ariaLabel="Set as default Gemini profile"
@@ -292,7 +331,7 @@ export default function ProfilesTable({
                   <td className="px-4 py-3.5 whitespace-nowrap w-32">
                     <ToggleSwitch
                       checked={flowProfileId === profile.id}
-                      onChange={(checked) => setFlowProfile(checked ? profile.id : null)}
+                      onChange={(checked) => handleFlowToggle(profile.id, profile.name, checked)}
                       size="sm"
                       color="blue"
                       ariaLabel="Set as default Flow profile"
@@ -304,6 +343,15 @@ export default function ProfilesTable({
           </tbody>
         </table>
       </div>
+
+      <ProjectSelectionModal
+        isOpen={showProjectModal}
+        profileId={modalProfileId}
+        profileName={modalProfileName}
+        serviceType={modalServiceType}
+        onConfirm={handleProjectConfirm}
+        onClose={() => setShowProjectModal(false)}
+      />
     </div>
   );
 }

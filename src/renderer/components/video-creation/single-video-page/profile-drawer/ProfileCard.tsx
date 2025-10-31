@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronUp, User, Sparkles, Zap } from "lucide-react";
+import { useState } from "react";
 import ToggleSwitch from "@components/common/ToggleSwitch";
+import ProjectSelectionModal from "@components/common/ProjectSelectionModal";
 import { useDefaultProfileStore } from "@store/default-profile.store";
 
 interface Profile {
@@ -20,6 +22,35 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
   const flowProfileId = useDefaultProfileStore((s) => s.flowProfileId);
   const setGeminiProfile = useDefaultProfileStore((s) => s.setGeminiProfile);
   const setFlowProfile = useDefaultProfileStore((s) => s.setFlowProfile);
+
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [modalServiceType, setModalServiceType] = useState<"gemini" | "flow">("gemini");
+
+  const handleGeminiToggle = (checked: boolean) => {
+    if (!checked) {
+      setGeminiProfile(null);
+    } else {
+      setModalServiceType("gemini");
+      setShowProjectModal(true);
+    }
+  };
+
+  const handleFlowToggle = (checked: boolean) => {
+    if (!checked) {
+      setFlowProfile(null);
+    } else {
+      setModalServiceType("flow");
+      setShowProjectModal(true);
+    }
+  };
+
+  const handleProjectConfirm = (projectId: string | null) => {
+    if (modalServiceType === "gemini") {
+      setGeminiProfile(profile.id, projectId);
+    } else {
+      setFlowProfile(profile.id, projectId);
+    }
+  };
 
   return (
     <div
@@ -101,7 +132,7 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
             </div>
             <ToggleSwitch
               checked={geminiProfileId === profile.id}
-              onChange={(checked) => setGeminiProfile(checked ? profile.id : null)}
+              onChange={handleGeminiToggle}
               size="sm"
               color="purple"
               ariaLabel="Set as default Gemini profile"
@@ -116,7 +147,7 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
             </div>
             <ToggleSwitch
               checked={flowProfileId === profile.id}
-              onChange={(checked) => setFlowProfile(checked ? profile.id : null)}
+              onChange={handleFlowToggle}
               size="sm"
               color="blue"
               ariaLabel="Set as default Flow profile"
@@ -124,6 +155,15 @@ export default function ProfileCard({ profile, isExpanded, isSelected, onToggleE
           </div>
         </div>
       )}
+
+      <ProjectSelectionModal
+        isOpen={showProjectModal}
+        profileId={profile.id}
+        profileName={profile.name}
+        serviceType={modalServiceType}
+        onConfirm={handleProjectConfirm}
+        onClose={() => setShowProjectModal(false)}
+      />
     </div>
   );
 }
