@@ -91,7 +91,9 @@ interface Window {
       downloadSingle: (profileId: string, imageName: string, localStoragePath: string) => Promise<any>;
       downloadBatch: (profileId: string, imageNames: string[], localStoragePath: string) => Promise<any>;
       getLocalImages: (profileId: string) => Promise<any>;
+      deleteImage: (imageId: string, profileId: string) => Promise<any>;
       readImageFile: (filePath: string) => Promise<any>;
+      getFileSize: (filePath: string) => Promise<any>;
       /** @deprecated Use syncMetadata + downloadBatch for better control */
       syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
     };

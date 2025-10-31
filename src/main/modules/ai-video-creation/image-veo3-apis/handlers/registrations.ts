@@ -61,6 +61,13 @@ export const imageVeo3Registrations: IpcRegistration[] = [
     },
   },
   {
+    channel: "image-veo3:delete",
+    description: "Delete an image from Flow server and local database",
+    handler: async (req: { imageId: string; profileId: string }) => {
+      return await imageVeo3Service.deleteImage(req.imageId, req.profileId);
+    },
+  },
+  {
     channel: "image-veo3:force-refresh",
     description: "Delete all image records for a profile (preserves downloaded files)",
     handler: async (req: { profileId: string }) => {

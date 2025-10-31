@@ -3,9 +3,8 @@ import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
 import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
 import { useImageGalleryStore } from "../../../../store/image-gallery.store";
-import ImageGalleryHeader from "./ImageGalleryHeader";
 import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
-import ActionButtons from "./ActionButtons";
+import ImageGalleryToolbar from "./ImageGalleryToolbar";
 import StatusMessages from "./StatusMessages";
 import ImageGrid from "./ImageGrid";
 import GalleryFooter from "./GalleryFooter";
@@ -46,6 +45,7 @@ export default function ImageGalleryDrawer() {
   const [isExtractingSecret, setIsExtractingSecret] = useState(false);
   const [totalDiskSize, setTotalDiskSize] = useState<number>(0);
   const [gridColumns, setGridColumns] = useState<2 | 3 | 4 | 5>(3);
+  const [showToolbar, setShowToolbar] = useState<boolean>(false);
 
   const { veo3ImagesPath } = useFilePathsStore();
   const { flowProfileId } = useDefaultProfileStore();
@@ -365,28 +365,38 @@ export default function ImageGalleryDrawer() {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-      {/* Header Section - Compact Modern Design */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
-        {/* Grid Column Selector */}
-        <ImageGalleryHeader gridColumns={gridColumns} onGridColumnsChange={setGridColumns} />
-
-        {/* Selected Image Placeholders (3 slots) */}
-        <SelectedImagePlaceholders />
-
-        {/* Action Buttons Row (4 buttons: Upload, Sync, Download, Clear) */}
-        <ActionButtons
-          onUpload={handleUploadImage}
+      {/* Optional Toolbar */}
+      {showToolbar && (
+        <ImageGalleryToolbar
           onSync={handleSyncFromFlow}
           onDownload={handleDownloadImages}
           onForceRefresh={handleForceRefresh}
-          isLoading={isLoading}
           isSyncing={isSyncing}
           isDownloading={isDownloading}
-          isExtractingSecret={isExtractingSecret}
-          hasStoragePath={!!veo3ImagesPath}
-          hasProfileId={!!currentProfileId}
+          isDisabled={isLoading || isSyncing || isDownloading || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
           imageCount={images.length}
           pendingDownloadCount={images.filter((img) => !img.localPath).length}
+        />
+      )}
+
+      {/* Content Section - More compact */}
+      <div className="flex-shrink-0 px-4 pb-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
+        {/* Selected Image Placeholders with Upload button and Settings */}
+        <SelectedImagePlaceholders
+          onUpload={handleUploadImage}
+          isUploading={isLoading || isExtractingSecret}
+          onSync={handleSyncFromFlow}
+          onDownload={handleDownloadImages}
+          onForceRefresh={handleForceRefresh}
+          isSyncing={isSyncing}
+          isDownloading={isDownloading}
+          isDisabled={isLoading || isSyncing || isDownloading || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
+          imageCount={images.length}
+          pendingDownloadCount={images.filter((img) => !img.localPath).length}
+          gridColumns={gridColumns}
+          onGridColumnsChange={setGridColumns}
+          showToolbar={showToolbar}
+          onToggleToolbar={setShowToolbar}
         />
 
         {/* Status Messages */}
@@ -400,8 +410,14 @@ export default function ImageGalleryDrawer() {
       </div>
 
       {/* Image Grid - Scrollable Area */}
-      <div className="flex-1 overflow-y-auto p-4 max-h-[calc(100vh-280px)]">
-        <ImageGrid images={images} imageSrcCache={imageSrcCache} isLoading={isLoading} gridColumns={gridColumns} />
+      <div className="flex-1 overflow-y-auto p-4 max-h-[calc(100vh-300px)]">
+        <ImageGrid
+          images={images}
+          imageSrcCache={imageSrcCache}
+          isLoading={isLoading}
+          gridColumns={gridColumns}
+          onImageDeleted={loadLocalImages}
+        />
       </div>
 
       {/* Footer - Stats - Fixed to Bottom */}

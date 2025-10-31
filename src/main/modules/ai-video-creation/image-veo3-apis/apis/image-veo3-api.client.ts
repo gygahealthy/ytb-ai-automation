@@ -263,6 +263,56 @@ export class ImageVEO3ApiClient {
       };
     }
   }
+
+  /**
+   * Delete a single image by its name
+   * @param cookie - Authentication cookie string
+   * @param imageName - Image name from Flow API (CAMa...)
+   */
+  async deleteMedia(cookie: string, imageName: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const url = `${this.baseUrl}/media.deleteMedia`;
+
+      const payload = {
+        json: {
+          names: [imageName],
+        },
+      };
+
+      logger.info(`Deleting image: ${imageName}`);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          ...buildVEO3Headers(cookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error(`Failed to delete image: ${response.status} - ${errorText}`);
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      const data = await response.json();
+      logger.info(`Successfully deleted image: ${imageName}`, data);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      logger.error("Error deleting image", error);
+      return {
+        success: false,
+        error: String(error),
+      };
+    }
+  }
 }
 
 // Export singleton instance

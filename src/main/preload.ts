@@ -339,7 +339,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     downloadBatch: (profileId: string, imageNames: string[], localStoragePath: string) =>
       ipcRenderer.invoke("image-veo3:download-batch", { profileId, imageNames, localStoragePath }),
     getLocalImages: (profileId: string) => ipcRenderer.invoke("image-veo3:get-local-images", { profileId }),
+    deleteImage: (imageId: string, profileId: string) => ipcRenderer.invoke("image-veo3:delete", { imageId, profileId }),
     readImageFile: (filePath: string) => ipcRenderer.invoke("image-veo3:read-image-file", { filePath }),
+    getFileSize: (filePath: string) => ipcRenderer.invoke("image-veo3:get-file-size", { filePath }),
     // Deprecated - use syncMetadata + downloadBatch instead
     syncFromFlow: (profileId: string, localStoragePath: string) =>
       ipcRenderer.invoke("image-veo3:sync-metadata", { profileId }).then(async (metadataResult: any) => {

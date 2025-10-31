@@ -1,5 +1,6 @@
-import { Image, Loader2, CheckCircle2 } from "lucide-react";
+import { Image, Loader2, CheckCircle2, Trash2 } from "lucide-react";
 import { useImageGalleryStore } from "@/renderer/store/image-gallery.store";
+import { useAlert } from "@/renderer/hooks/useAlert";
 
 interface LocalImage {
   id: string;
@@ -18,13 +19,15 @@ interface ImageGridProps {
   imageSrcCache: Record<string, string>;
   isLoading: boolean;
   gridColumns: 2 | 3 | 4 | 5;
+  onImageDeleted?: () => void;
 }
 
 /**
  * Image Grid - Display image thumbnails with selection (max 3, FIFO)
  */
-export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumns }: ImageGridProps) {
+export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumns, onImageDeleted }: ImageGridProps) {
   const { selectedImages, toggleImageSelection } = useImageGalleryStore();
+  const { show: showAlert } = useAlert();
 
   const handleToggleSelection = (image: LocalImage) => {
     toggleImageSelection({
@@ -35,6 +38,55 @@ export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumn
       aspectRatio: image.aspectRatio,
       profileId: image.profileId,
     });
+  };
+
+  const handleDeleteImage = async (e: React.MouseEvent, image: LocalImage) => {
+    e.stopPropagation(); // Prevent toggling selection
+
+    // Show confirmation dialog
+    showAlert({
+      title: "Delete Image",
+      message: `Are you sure you want to delete "${image.name}"? This will remove it from both the server and local database.`,
+      severity: "warning",
+      duration: null, // Manual dismiss
+    });
+
+    // Use a custom confirmation approach since useAlert doesn't support callbacks
+    // We'll use a native confirm for now (can be replaced with a proper modal later)
+    const confirmed = window.confirm(
+      `Delete image "${image.name}"?\n\nThis will remove it from both the server and local database.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const result = await (window as any).electronAPI.imageVeo3.deleteImage(image.id, image.profileId);
+
+      if (result.success) {
+        showAlert({
+          title: "Success",
+          message: "Image deleted successfully",
+          severity: "success",
+        });
+
+        // Call callback to refresh the image list
+        if (onImageDeleted) {
+          onImageDeleted();
+        }
+      } else {
+        showAlert({
+          title: "Delete Failed",
+          message: result.error || "Failed to delete image",
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      showAlert({
+        title: "Error",
+        message: `Failed to delete image: ${String(error)}`,
+        severity: "error",
+      });
+    }
   };
 
   const isImageSelected = (imageId: string) => {
@@ -69,13 +121,22 @@ export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumn
       {images.map((image) => (
         <div
           key={image.id}
-          className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+          className={`relative group cursor-pointer rounded-lg border-2 transition-all duration-200 ${
             isImageSelected(image.id)
               ? "border-purple-500 shadow-lg scale-[1.02]"
               : "border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-md hover:scale-[1.02]"
           }`}
           onClick={() => handleToggleSelection(image)}
         >
+          {/* Delete Button - Top Right Corner (half outside, half inside) */}
+          <div
+            className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-10 shadow-lg hover:scale-110 active:scale-95"
+            onClick={(e) => handleDeleteImage(e, image)}
+            title="Delete image"
+          >
+            <Trash2 className="w-4 h-4 text-white" />
+          </div>
+
           {/* Image Thumbnail */}
           <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative overflow-hidden">
             {image.localPath && imageSrcCache[image.id] ? (
@@ -110,9 +171,9 @@ export default function ImageGrid({ images, imageSrcCache, isLoading, gridColumn
               </div>
             )}
 
-            {/* Selection Indicator - Overlay */}
+            {/* Selection Indicator - Bottom Left */}
             {isImageSelected(image.id) && (
-              <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+              <div className="absolute bottom-2 left-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
                 <CheckCircle2 className="w-4 h-4 text-white" />
               </div>
             )}

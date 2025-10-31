@@ -569,6 +569,62 @@ export class ImageVeo3Service {
   }
 
   /**
+   * Delete an image from Flow server and local database
+   * @param imageId - Image ID from local database
+   * @param profileId - Profile ID for authentication
+   */
+  async deleteImage(imageId: string, profileId: string): Promise<ApiResponse<void>> {
+    try {
+      // Get image record from database
+      const image = await veo3ImageRepository.findById(imageId);
+      if (!image) {
+        return { success: false, error: "Image not found in database" };
+      }
+
+      logger.info(`Deleting image: ${image.name} (ID: ${imageId})`);
+
+      // Get flow cookie for API call
+      const cookieResult = await cookieService.getCookiesByProfile(profileId);
+      if (!cookieResult.success || !cookieResult.data || cookieResult.data.length === 0) {
+        return { success: false, error: "Profile has no cookies. Please login first." };
+      }
+
+      const flowCookie = cookieResult.data.find((c) => c.service === COOKIE_SERVICES.FLOW && c.status === "active");
+      if (!flowCookie || !flowCookie.rawCookieString) {
+        return { success: false, error: "Profile has no active 'flow' cookies. Please login first." };
+      }
+
+      // Delete from Flow server
+      const deleteResult = await imageVEO3ApiClient.deleteMedia(flowCookie.rawCookieString, image.name);
+      if (!deleteResult.success) {
+        logger.error(`Failed to delete image from server: ${deleteResult.error}`);
+        return { success: false, error: deleteResult.error || "Failed to delete image from server" };
+      }
+
+      // Delete from local database
+      await veo3ImageRepository.delete(imageId);
+
+      // Optionally delete local file if it exists
+      if (image.localPath) {
+        try {
+          await fs.unlink(image.localPath);
+          logger.info(`Deleted local file: ${image.localPath}`);
+        } catch (error) {
+          logger.warn(`Failed to delete local file: ${image.localPath}`, error);
+          // Don't fail the operation if file deletion fails
+        }
+      }
+
+      logger.info(`Successfully deleted image: ${image.name}`);
+
+      return { success: true };
+    } catch (error) {
+      logger.error("Error deleting image", error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
    * Force refresh: Delete all image records for a profile
    * This does NOT delete downloaded files, only database metadata
    * @param profileId - Profile ID
