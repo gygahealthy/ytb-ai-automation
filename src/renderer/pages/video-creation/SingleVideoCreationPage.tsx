@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { History, User, Image as ImageIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useVideoCreationStore } from "@store/video-creation.store";
 import { useDefaultProfileStore } from "@store/default-profile.store";
 import { useVEO3ModelsStore } from "@store/veo3-models.store";
@@ -11,9 +9,8 @@ import AddJsonModal from "@/renderer/components/video-creation/single-video-page
 import JobDetailsModal from "@/renderer/components/video-creation/single-video-page/JobDetailsModal";
 import JsonToolbar from "@/renderer/components/video-creation/single-video-page/JsonToolbar";
 import VideoPromptRow from "@/renderer/components/video-creation/single-video-page/VideoPromptRow";
-import VideoCreationModeTabs, {
-  VideoCreationMode,
-} from "@/renderer/components/video-creation/single-video-page/VideoCreationModeTabs";
+import type { VideoCreationMode } from "@/renderer/components/video-creation/single-video-page/VideoCreationModeTabs";
+import SingleVideoPageHeader from "@/renderer/components/video-creation/single-video-page/SingleVideoPageHeader";
 import { useVideoGeneration } from "@hooks/video-creation/useVideoGeneration";
 import { useVideoDownload } from "@hooks/video-creation/useVideoDownload";
 import { useVideoFilters } from "@hooks/video-creation/useVideoFilters";
@@ -28,16 +25,6 @@ export default function SingleVideoCreationPage() {
     severity: "info" | "success" | "warning" | "error";
   }>({ open: false, message: "", severity: "info" });
 
-  const navigate = useNavigate();
-
-  // Handle mode change - navigate to studio if video-studio mode is selected
-  const handleModeChange = (mode: VideoCreationMode) => {
-    if (mode === "video-studio") {
-      navigate("/video-creation/studio");
-    } else {
-      setCreationMode(mode);
-    }
-  };
   const toast = useToast();
   const alert = useAlert();
 
@@ -119,14 +106,14 @@ export default function SingleVideoCreationPage() {
       const modes: VideoCreationMode[] = ["text-to-video", "ingredients"];
       const currentIndex = modes.indexOf(creationMode);
       const nextIndex = (currentIndex + 1) % modes.length;
-      handleModeChange(modes[nextIndex]);
+      setCreationMode(modes[nextIndex]);
     };
 
     window.addEventListener("cycle-video-creation-mode", handleCycleMode);
     return () => {
       window.removeEventListener("cycle-video-creation-mode", handleCycleMode);
     };
-  }, [creationMode, navigate]);
+  }, [creationMode]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -222,66 +209,19 @@ export default function SingleVideoCreationPage() {
     });
   };
 
-  const handleOpenHistory = () => {
-    navigate("/video-creation/history");
-  };
-
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative animate-fadeIn">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between gap-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Single Video Creation</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Create videos using single or multiple prompts</p>
-          </div>
-
-          {/* Mode tabs - centered */}
-          <div className="flex-1 flex justify-center">
-            <VideoCreationModeTabs currentMode={creationMode} onModeChange={handleModeChange} />
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Image Gallery button - only show in ingredients mode */}
-            {creationMode === "ingredients" && (
-              <button
-                onClick={handleOpenImageGallery}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30"
-                title="Open Image Gallery (Ctrl+M)"
-              >
-                <ImageIcon className="w-5 h-5" />
-              </button>
-            )}
-
-            <button
-              onClick={handleOpenProfileDrawer}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${
-                selectedProfileId || hasDefaultProfile
-                  ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border-primary-200 dark:border-primary-800"
-                  : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
-              }`}
-              title="Select profile & project (Ctrl+F)"
-            >
-              <User className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={handleOpenHistory}
-              className="relative inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-gradient-to-r from-orange-400 to-rose-400 text-white font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"
-              title="Open History"
-            >
-              <History className="w-4 h-4 opacity-95" />
-              <span className="text-sm">History</span>
-
-              <span className="ml-2 inline-flex items-center justify-center min-w-[28px] h-6 px-2 rounded-full bg-white/90 text-orange-600 font-medium text-xs shadow-sm">
-                {jobs.length}
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <SingleVideoPageHeader
+        creationMode={creationMode}
+        onModeChange={setCreationMode}
+        selectedProfileId={selectedProfileId}
+        hasDefaultProfile={hasDefaultProfile}
+        onOpenProfileDrawer={handleOpenProfileDrawer}
+        onOpenImageGallery={handleOpenImageGallery}
+      />
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
