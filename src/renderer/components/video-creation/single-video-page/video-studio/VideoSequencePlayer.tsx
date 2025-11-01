@@ -31,9 +31,11 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
     if (currentVideoIndex < playlist.videos.length - 1) {
       setCurrentVideoIndex(currentVideoIndex + 1);
       setCurrentTime(0);
+      setDuration(0); // Reset duration for next video
     } else {
       setCurrentVideoIndex(0);
       setCurrentTime(0);
+      setDuration(0); // Reset duration when looping
       setIsPlaying(false);
     }
   };
@@ -42,10 +44,21 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
     const video = videoRef.current;
     if (!video) return;
 
+    // Reset playback state when changing videos
+    setCurrentTime(0);
+    setDuration(0);
+
     video.load();
 
     const handleLoadedData = () => {
-      setDuration(video.duration);
+      const videoDuration = video.duration;
+      setDuration(videoDuration);
+
+      // Immediately report the new video's duration
+      if (onCurrentVideoChange) {
+        onCurrentVideoChange(currentVideoIndex, 0, videoDuration);
+      }
+
       if (isPlaying) {
         video.play().catch(console.error);
       }
@@ -53,7 +66,7 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
 
     video.addEventListener("loadeddata", handleLoadedData);
     return () => video.removeEventListener("loadeddata", handleLoadedData);
-  }, [currentVideoIndex, isPlaying]);
+  }, [currentVideoIndex, isPlaying, onCurrentVideoChange]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -113,9 +126,89 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
 
   if (!currentVideo || playlist.videos.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-lg">
-        <div className="text-center">
-          <p className="text-gray-400 text-sm">No videos to play</p>
+      <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-800 dark:to-black relative">
+          {/* Subtle grid pattern overlay */}
+          <div
+            className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02]"
+            style={{ backgroundImage: "radial-gradient(circle, #000 1px, transparent 1px)", backgroundSize: "24px 24px" }}
+          />
+
+          <div className="relative z-10 text-center px-8 max-w-md">
+            {/* Large play icon with gradient */}
+            <div className="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center shadow-inner">
+              <Play className="w-12 h-12 text-gray-400 dark:text-gray-500 fill-gray-400 dark:fill-gray-500 ml-1" />
+            </div>
+
+            {/* Professional heading */}
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">No Preview Available</h3>
+
+            {/* Descriptive text */}
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+              Add scenes to your timeline to get started. Your video sequence will appear here as you build your project.
+            </p>
+
+            {/* Subtle hint */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800/50">
+              <svg className="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-xs font-medium text-cyan-700 dark:text-cyan-300">Click "Add Scene" to begin</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Disabled controls bar to maintain layout consistency */}
+        <div className="bg-gray-50 dark:bg-gray-800 p-3 border-t border-gray-200 dark:border-gray-700 opacity-50">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                disabled
+                className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" />
+                </svg>
+              </button>
+              <button
+                disabled
+                className="p-3 rounded-md bg-gray-300 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              >
+                <Play className="w-5 h-5" />
+              </button>
+              <button
+                disabled
+                className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                </svg>
+              </button>
+              <button
+                disabled
+                className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                disabled
+                className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              >
+                <VolumeX className="w-5 h-5" />
+              </button>
+              <div className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-400 dark:text-gray-600 text-sm font-medium">
+                <span>0</span>
+                <span> / 0</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -131,7 +224,14 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
           src={currentVideo.url}
           onEnded={handleVideoEnded}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+          onLoadedMetadata={(e) => {
+            const videoDuration = e.currentTarget.duration;
+            setDuration(videoDuration);
+            // Report duration as soon as metadata is loaded
+            if (onCurrentVideoChange) {
+              onCurrentVideoChange(currentVideoIndex, currentTime, videoDuration);
+            }
+          }}
           className="w-full h-full object-cover"
         />
         <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">

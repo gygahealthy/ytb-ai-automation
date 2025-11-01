@@ -77,12 +77,12 @@ export default function SingleVideoPageHeader({
           {/* Video Studio Button - Gradient with animation */}
           <button
             onClick={() => navigate("/video-creation/studio")}
-            className="relative inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-2xl hover:from-cyan-300 hover:via-blue-400 hover:to-purple-500 transform hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200 dark:focus-visible:ring-cyan-600 group"
+            className="relative inline-flex items-center gap-4 px-6 py-4 rounded-3xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-2xl hover:from-cyan-300 hover:via-blue-400 hover:to-purple-500 transform hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200 dark:focus-visible:ring-cyan-600 group"
             title="Open Video Studio"
           >
             <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 blur-lg transition-opacity" />
-            <Film className="w-4 h-4 opacity-95 relative z-10" />
-            <span className="text-sm relative z-10">Video Studio</span>
+            <Film className="w-5 h-5 opacity-95 relative z-10" />
+            <span className="text-base relative z-10">Video Studio</span>
 
             {/* Animated shimmer effect */}
             <div className="absolute inset-0 rounded-2xl overflow-hidden">

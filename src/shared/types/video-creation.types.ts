@@ -76,7 +76,7 @@ export interface VideoGeneration {
   aspectRatio: string;
   model?: string; // VEO3 model used for generation (e.g., "veo_3_0_r2v_fast_ultra")
   status: "pending" | "processing" | "completed" | "failed";
-  generationType?: "text-to-video" | "image-reference" | "image-start-end" | "scene-builder";
+  generationType?: "text-to-video" | "image-reference" | "image-start-end" | "extend";
   imageReferences?: string; // JSON array of image generation IDs
   mediaGenerationId?: string;
   fifeUrl?: string;

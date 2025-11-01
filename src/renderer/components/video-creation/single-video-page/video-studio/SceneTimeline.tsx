@@ -29,20 +29,55 @@ export default function SceneTimeline({
 }: SceneTimelineProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Calculate playhead position based on card width and gaps
-  const cardWidth = 160; // w-40 = 160px
-  const gapWidth = 8; // gap-2 = 8px
+  // Store actual video durations as they are discovered during playback
+  const [actualDurations, setActualDurations] = React.useState<Map<number, number>>(new Map());
 
-  // Calculate pixel position for playhead
-  // Use the actual duration from the video player for current scene progress
-  // CRITICAL: Clamp progress to [0, 1] to prevent overshoot during video transitions
+  // Dynamically measure card dimensions from the DOM
+  const [cardDimensions, setCardDimensions] = React.useState({ width: 160, gap: 8 });
+
+  // Measure actual card dimensions on mount and when scenes change
+  React.useEffect(() => {
+    if (containerRef.current && scenes.length > 0) {
+      const firstCard = containerRef.current.querySelector("button");
+      if (firstCard) {
+        // Use computed style to get the base width (without scale transforms)
+        const computedStyle = window.getComputedStyle(firstCard);
+        const width = parseFloat(computedStyle.width);
+
+        // Get computed gap from flex container
+        const containerStyle = window.getComputedStyle(containerRef.current);
+        const gap = parseFloat(containerStyle.gap) || 8;
+
+        setCardDimensions({
+          width: width,
+          gap: gap,
+        });
+      }
+    }
+  }, [scenes.length]);
+
+  // Update actual duration when player reports it
+  React.useEffect(() => {
+    if (duration > 0 && currentVideoIndex >= 0 && currentVideoIndex < scenes.length) {
+      setActualDurations((prev) => {
+        const next = new Map(prev);
+        next.set(currentVideoIndex, duration);
+        return next;
+      });
+    }
+  }, [currentVideoIndex, duration, scenes.length]);
+
+  // Calculate playhead position based on actual measured card dimensions
   const progressInCurrentScene = duration > 0 ? Math.min(Math.max(currentTime / duration, 0), 1) : 0;
 
-  // Position calculation:
-  // - Start with completed videos: currentVideoIndex * (cardWidth + gap)
-  // - Add progress within current video: progressInCurrentScene * cardWidth
-  // The playhead should be at the LEFT edge of the current card + progress
-  const playheadPosition = currentVideoIndex * (cardWidth + gapWidth) + progressInCurrentScene * cardWidth;
+  // Clamp currentVideoIndex to valid range [0, scenes.length - 1]
+  const clampedIndex = scenes.length > 0 ? Math.min(Math.max(currentVideoIndex, 0), scenes.length - 1) : 0;
+
+  // Use measured card dimensions for accurate positioning
+  const { width: cardWidth, gap: gapWidth } = cardDimensions;
+
+  // Calculate position: each card takes (width + gap), then add progress within current card
+  const playheadPosition = clampedIndex * (cardWidth + gapWidth) + progressInCurrentScene * cardWidth;
 
   // Format time as MM:SS:MS
   const formatTime = (seconds: number) => {
@@ -52,9 +87,19 @@ export default function SceneTimeline({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}:${ms.toString().padStart(2, "0")}`;
   };
 
-  // Calculate elapsed time from completed scenes (using scene.duration) + current scene time
-  const elapsedTime = scenes.slice(0, currentVideoIndex).reduce((sum, scene) => sum + (scene.duration || 6), 0);
-  const totalDuration = scenes.reduce((sum, scene) => sum + (scene.duration || 6), 0);
+  // Calculate elapsed time using ACTUAL durations from playback, not hardcoded values
+  // This ensures timeline stays in sync with player even during transitions/loading
+  const elapsedTime = scenes.slice(0, currentVideoIndex).reduce((sum, _scene, idx) => {
+    // Use actual duration if known, otherwise use scene.duration as fallback
+    const actualDur = actualDurations.get(idx);
+    return sum + (actualDur ?? scenes[idx]?.duration ?? 6);
+  }, 0);
+
+  // Total duration uses actual durations where known, fallback to scene.duration
+  const totalDuration = scenes.reduce((sum, scene, idx) => {
+    const actualDur = actualDurations.get(idx);
+    return sum + (actualDur ?? scene.duration ?? 6);
+  }, 0);
 
   return (
     <div className="px-4 py-3">

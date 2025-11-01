@@ -30,7 +30,7 @@ export default function VideoStudioPage() {
         order: prompt.order,
         videoUrl: job.videoUrl,
         thumbnail: job.videoUrl, // Can be replaced with actual thumbnail
-        duration: 6, // Default duration, can be extracted from video metadata
+        duration: 8, // Default duration - will be updated by player during playback
       };
     })
     .filter((scene) => scene !== null);
