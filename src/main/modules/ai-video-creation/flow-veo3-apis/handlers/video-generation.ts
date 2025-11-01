@@ -1,6 +1,6 @@
 import { IpcRegistration } from "../../../../../core/ipc/types";
 import { flowVeo3ApiService } from "../services/flow-veo3-api.service";
-import * as fs from "fs/promises";
+import { videoFileReaderService } from "../services/video-file-reader.service";
 
 export const videoGenerationRegistrations: IpcRegistration[] = [
   // Video generation handlers
@@ -87,15 +87,24 @@ export const videoGenerationRegistrations: IpcRegistration[] = [
   },
   {
     channel: "veo3:read-video-file",
-    description: "Read video file from disk and return as base64 data URL",
-    handler: async (req: { filePath: string }) => {
+    description: "Read video file from disk and return as data URL or file:// protocol (non-blocking via worker thread)",
+    handler: async (req: { filePath: string; maxSizeBytes?: number }) => {
       try {
-        // Security: validate that the path exists and is readable
-        const fileBuffer = await fs.readFile(req.filePath);
-        const base64 = fileBuffer.toString("base64");
-        // Video files are typically mp4
-        const dataUrl = `data:video/mp4;base64,${base64}`;
-        return { success: true, data: { dataUrl } };
+        // Use worker thread service for non-blocking I/O
+        const result = await videoFileReaderService.readVideoFile(req.filePath, req.maxSizeBytes);
+
+        if (result.success) {
+          return {
+            success: true,
+            data: {
+              dataUrl: result.dataUrl,
+              mimeType: result.mimeType,
+              fileSize: result.fileSize,
+            },
+          };
+        } else {
+          return { success: false, error: result.error };
+        }
       } catch (error) {
         return { success: false, error: `Failed to read video file: ${String(error)}` };
       }

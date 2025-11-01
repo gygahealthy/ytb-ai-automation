@@ -58,8 +58,8 @@ export default function VideoHistoryCard({
       <div className="p-0 flex">
         {/* Left preview column - only render when visible. Wider preview for better visibility */}
         {(globalPreview || showPreview) && (
-          <div className="w-72 p-4 border-r border-gray-100 dark:border-gray-700 flex-shrink-0">
-            <div className="w-full h-40 bg-gray-50 dark:bg-gray-900/20 rounded-md overflow-hidden">
+          <div className="w-96 p-4 border-r border-gray-100 dark:border-gray-700 flex-shrink-0">
+            <div className="w-full h-56 bg-gray-50 dark:bg-gray-900/20 rounded-md overflow-hidden">
               <PreviewPanel job={generation} pollingProgress={progress} />
             </div>
           </div>

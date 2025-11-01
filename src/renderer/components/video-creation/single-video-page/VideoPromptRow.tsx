@@ -116,13 +116,15 @@ export default function VideoPromptRow({
   const displayError = polledGeneration?.errorMessage || job?.error;
 
   // Create merged job object for PreviewPanel (combines job store + polled data)
+  // CRITICAL: Only use polledGeneration.videoPath (local file path), never use job.videoUrl
+  // This ensures cache key consistency between VideoPromptRow and VideoHistoryCard
   const displayJob = job
     ? {
         ...job,
         status: displayStatus,
         videoUrl: displayVideoUrl,
         error: displayError,
-        videoPath: polledGeneration?.videoPath || job?.videoUrl, // Use polled videoPath if available
+        videoPath: polledGeneration?.videoPath, // Only use local videoPath from polled generation
       }
     : undefined;
 
@@ -256,7 +258,7 @@ export default function VideoPromptRow({
       </div>
 
       {showPreview && (
-        <div className="flex-shrink-0 w-64 h-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+        <div className="flex-shrink-0 w-80 h-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
           <PreviewPanel job={displayJob} pollingProgress={contextProgress} />
         </div>
       )}
