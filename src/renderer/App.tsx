@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter } from "react-router-dom";
+import { HashRouter } from "react-router-dom";
 import LogDrawer from "./components/common/drawers/log/LogDrawer";
 import Sidebar from "./components/common/Sidebar";
 import SettingsForm from "./components/common/settings/SettingsForm";
@@ -90,7 +90,7 @@ function AppContent() {
   const anyDrawerPinned = logDrawerPinned || genericDrawerPinned;
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} onSettingsClick={handleSettingsClick} />
 
@@ -101,7 +101,7 @@ function AppContent() {
         {/* Global Log Drawer */}
         <LogDrawer />
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

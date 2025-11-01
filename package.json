@@ -16,6 +16,7 @@
     "build": "tsc && vite build && npm run copy:manifests && npm run copy:assets",
     "build:electron": "tsc -p tsconfig.electron.json",
     "package": "npm run build && npm run build:electron && electron-builder",
+    "package:win": "pwsh -ExecutionPolicy Bypass -File .\\scripts\\build\\build-windows.ps1",
     "package:mac": "npm run build && npm run build:electron && electron-builder --mac",
     "package:mac:universal": "npm run build && npm run build:electron && electron-builder --mac --universal",
     "rebuild": "electron-rebuild -f -w sqlite3",
@@ -106,7 +107,7 @@
     "buildDependenciesFromSource": false,
     "nodeGypRebuild": false,
     "win": {
-      "icon": "src/renderer/assets/icon.png",
+      "icon": "src/renderer/assets/icon-512.png",
       "target": [
         "nsis"
       ]

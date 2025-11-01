@@ -6,6 +6,34 @@ This directory contains scripts for building the VEO3 Automation application.
 
 ## 📁 Files
 
+### Windows Build Scripts
+
+#### `build-windows.ps1`
+
+Main build script for creating Windows installers.
+
+**Usage:**
+
+```powershell
+# Build Windows installer (NSIS)
+.\scripts\build\build-windows.ps1
+
+# Build with portable option (if configured)
+.\scripts\build\build-windows.ps1 --portable
+```
+
+**What it does:**
+
+1. Checks system requirements (Windows)
+2. Installs dependencies if needed
+3. Cleans previous builds
+4. Builds the application
+5. Packages as NSIS installer (.exe)
+
+**Output:** `release\` directory with EXE installer
+
+---
+
 ### macOS Build Scripts
 
 #### `build-macos.sh`
@@ -95,6 +123,21 @@ Runs `npm run dev` with proper environment setup.
 
 ### First Time Build
 
+**Windows:**
+
+```powershell
+# 1. Install dependencies
+npm install
+
+# 2. Build for Windows
+.\scripts\build\build-windows.ps1
+
+# 3. Install
+.\release\VEO3-Automation-Setup-1.0.0.exe
+```
+
+**macOS:**
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -136,15 +179,29 @@ npm run rebuild
 
 ### System Requirements
 
+**Windows:**
+
+- **Windows**: 10 or later (64-bit)
+- **Node.js**: 18.0 or later
+- **PowerShell**: 5.1 or later (pre-installed on Windows 10+)
+- **Build Tools**: Automatically installed via node-gyp if needed
+
+**macOS:**
+
 - **macOS**: 11.0 (Big Sur) or later
 - **Node.js**: 18.0 or later
 - **Xcode Command Line Tools**: Required for native module compilation
 
-### Install Xcode Tools
+### Install Build Tools
+
+**macOS:**
 
 ```bash
 xcode-select --install
 ```
+
+**Windows:**
+Build tools are installed automatically during `npm install` if needed.
 
 ---
 
