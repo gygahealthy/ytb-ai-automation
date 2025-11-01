@@ -154,6 +154,19 @@ export class VideoGenerationRepository {
   }
 
   /**
+   * Get video generation by video URL
+   */
+  async getByVideoUrl(videoUrl: string): Promise<VideoGeneration | null> {
+    logger.debug(`Fetching video generation by video URL: ${videoUrl}`);
+
+    const row = await this.db.get<any>(`SELECT ${SELECT_VIDEO_GENERATION} FROM veo3_video_generations WHERE video_url = ?`, [
+      videoUrl,
+    ]);
+
+    return row || null;
+  }
+
+  /**
    * Update video_path for a video generation
    */
   async updateVideoPath(id: string, videoPath: string): Promise<void> {

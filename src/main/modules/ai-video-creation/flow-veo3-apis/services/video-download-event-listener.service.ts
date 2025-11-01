@@ -1,5 +1,6 @@
 import { videoGenerationRepository } from "../repository/video-generation.repository";
 import { videoDownloadByNameService } from "../../../common/video-download/services/video-download-name.service";
+import { videoDownloadService } from "../../../common/video-download/services/video-download.service";
 
 /**
  * Video Download Event Listener Service
@@ -22,21 +23,28 @@ export class VideoDownloadEventListenerService {
       return;
     }
 
-    // Register callback with the download service
+    // Register callback with the name-based download service (downloads by media generation ID)
     videoDownloadByNameService.setDownloadCompletedCallback(async (mediaGenerationId: string, localFilePath: string) => {
-      await this.handleDownloadCompleted(mediaGenerationId, localFilePath);
+      await this.handleDownloadCompletedByName(mediaGenerationId, localFilePath);
+    });
+
+    // Register callback with the URL-based download service (downloads by video URL)
+    videoDownloadService.setDownloadCompletedCallback(async (videoUrl: string, localFilePath: string) => {
+      await this.handleDownloadCompletedByUrl(videoUrl, localFilePath);
     });
 
     this.initialized = true;
-    console.log("[VideoDownloadEventListenerService] Initialized and registered callback with download service");
+    console.log("[VideoDownloadEventListenerService] Initialized and registered callbacks with both download services");
   }
 
   /**
-   * Handle download completed event
+   * Handle download completed event by media generation ID (from videoDownloadByNameService)
    */
-  private async handleDownloadCompleted(mediaGenerationId: string, localFilePath: string): Promise<void> {
+  private async handleDownloadCompletedByName(mediaGenerationId: string, localFilePath: string): Promise<void> {
     try {
-      console.log(`[VideoDownloadEventListenerService] Received download completed event for ${mediaGenerationId}`);
+      console.log(
+        `[VideoDownloadEventListenerService] Received download completed event for mediaGenerationId: ${mediaGenerationId}`
+      );
 
       // Find the video generation by mediaGenerationId
       const generation = await videoGenerationRepository.getByMediaGenerationId(mediaGenerationId);
@@ -53,7 +61,31 @@ export class VideoDownloadEventListenerService {
 
       console.log(`[VideoDownloadEventListenerService] Updated video_path for generation ${generation.id}: ${localFilePath}`);
     } catch (error) {
-      console.error("[VideoDownloadEventListenerService] Error handling download completed event:", error);
+      console.error("[VideoDownloadEventListenerService] Error handling download completed event by name:", error);
+    }
+  }
+
+  /**
+   * Handle download completed event by video URL (from videoDownloadService)
+   */
+  private async handleDownloadCompletedByUrl(videoUrl: string, localFilePath: string): Promise<void> {
+    try {
+      console.log(`[VideoDownloadEventListenerService] Received download completed event for videoUrl: ${videoUrl}`);
+
+      // Find the video generation by videoUrl
+      const generation = await videoGenerationRepository.getByVideoUrl(videoUrl);
+
+      if (!generation) {
+        console.warn(`[VideoDownloadEventListenerService] Video generation not found for videoUrl: ${videoUrl}`);
+        return;
+      }
+
+      // Update the video_path
+      await videoGenerationRepository.updateVideoPath(generation.id, localFilePath);
+
+      console.log(`[VideoDownloadEventListenerService] Updated video_path for generation ${generation.id}: ${localFilePath}`);
+    } catch (error) {
+      console.error("[VideoDownloadEventListenerService] Error handling download completed event by URL:", error);
     }
   }
 }

@@ -3,6 +3,9 @@ import { Worker } from "worker_threads";
 import { app } from "electron";
 import type { DownloadJob, DownloadResult, PendingDownload, DownloadStatus } from "../types/download.types";
 
+// Callback type for download completion
+type DownloadCompletedCallback = (videoUrl: string, localFilePath: string) => void;
+
 /**
  * Video Download Service
  *
@@ -16,6 +19,7 @@ export class VideoDownloadService {
   private activeDownloads: Map<string, PendingDownload> = new Map();
   private maxWorkers: number = 4; // Number of concurrent downloads
   private workerPath: string;
+  private downloadCompletedCallback: DownloadCompletedCallback | null = null;
 
   constructor() {
     this.workerPath = path.join(__dirname, "..", "workers", "video-download.worker.js");
@@ -173,11 +177,30 @@ export class VideoDownloadService {
    */
   private handleDownloadResult(result: DownloadResult): void {
     console.log(`[VideoDownloadService] Received result for download ${result.id}`);
+    console.log(
+      `[VideoDownloadService] Result success: ${result.success}, has filePath: ${!!result.filePath}, has callback: ${!!this
+        .downloadCompletedCallback}`
+    );
 
     const pendingDownload = this.activeDownloads.get(result.id);
     if (pendingDownload) {
       this.activeDownloads.delete(result.id);
       pendingDownload.resolve(result);
+
+      // Call the callback when download completes successfully
+      if (result.success && result.filePath && this.downloadCompletedCallback && pendingDownload.job.videoUrl) {
+        console.log(
+          `[VideoDownloadService] Calling download completed callback for ${pendingDownload.job.videoUrl} -> ${result.filePath}`
+        );
+        this.downloadCompletedCallback(pendingDownload.job.videoUrl, result.filePath);
+        console.log(`[VideoDownloadService] Called download completed callback for ${pendingDownload.job.videoUrl}`);
+      } else {
+        console.log(
+          `[VideoDownloadService] NOT calling callback - success: ${result.success}, filePath: ${
+            result.filePath
+          }, callback: ${!!this.downloadCompletedCallback}, videoUrl: ${pendingDownload.job.videoUrl}`
+        );
+      }
     }
   }
 
@@ -223,6 +246,14 @@ export class VideoDownloadService {
   }
 
   /**
+   * Set callback to be called when a download completes successfully
+   */
+  setDownloadCompletedCallback(callback: DownloadCompletedCallback): void {
+    this.downloadCompletedCallback = callback;
+    console.log("[VideoDownloadService] Download completed callback registered");
+  }
+
+  /**
    * Generate a unique ID
    */
   private generateId(): string {
@@ -254,18 +285,7 @@ export class VideoDownloadService {
   }
 }
 
-// Use lazy Proxy pattern to avoid eager initialization
-let _videoDownloadServiceInstance: VideoDownloadService | null = null;
-
-function getVideoDownloadService(): VideoDownloadService {
-  if (!_videoDownloadServiceInstance) {
-    _videoDownloadServiceInstance = new VideoDownloadService();
-  }
-  return _videoDownloadServiceInstance;
-}
-
-export const videoDownloadService = new Proxy({} as VideoDownloadService, {
-  get(_target, prop) {
-    return getVideoDownloadService()[prop as keyof VideoDownloadService];
-  },
-});
+// CRITICAL: Use eager singleton initialization (not Proxy pattern)
+// The event listener service needs to register callbacks BEFORE any downloads happen.
+// Proxy pattern would delay instance creation, making callback registration timing unpredictable.
+export const videoDownloadService = new VideoDownloadService();
