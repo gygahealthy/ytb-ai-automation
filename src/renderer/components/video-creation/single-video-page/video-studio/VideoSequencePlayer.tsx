@@ -216,6 +216,13 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
 
   const totalProgress = ((currentVideoIndex + currentTime / (duration || 1)) / playlist.videos.length) * 100;
 
+  // Helper function to format time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-black relative group overflow-hidden">
@@ -265,7 +272,23 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
         <div className="h-full bg-cyan-500 dark:bg-cyan-600 transition-all duration-75" style={{ width: `${totalProgress}%` }} />
       </div>
       <div className="bg-gray-50 dark:bg-gray-800 p-3 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-center gap-4">
+          {/* Left side: current video indicator */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="p-2 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white transition-colors"
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+            <div className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-900 dark:text-white text-sm font-medium">
+              <span className="text-cyan-600 dark:text-cyan-400">{currentVideoIndex + 1}</span>
+              <span className="text-gray-600 dark:text-gray-400"> / {playlist.videos.length}</span>
+            </div>
+          </div>
+
+          {/* Center: main control buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrevious}
@@ -302,18 +325,11 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
               <RotateCcw className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="p-2 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white transition-colors"
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </button>
-            <div className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-900 dark:text-white text-sm font-medium">
-              <span className="text-cyan-600 dark:text-cyan-400">{currentVideoIndex + 1}</span>
-              <span className="text-gray-600 dark:text-gray-400"> / {playlist.videos.length}</span>
-            </div>
+
+          {/* Right side: time display */}
+          <div className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-900 dark:text-white text-sm font-medium tabular-nums">
+            <span className="text-cyan-600 dark:text-cyan-400">{formatTime(currentTime)}</span>
+            <span className="text-gray-600 dark:text-gray-400"> / {formatTime(duration)}</span>
           </div>
         </div>
       </div>

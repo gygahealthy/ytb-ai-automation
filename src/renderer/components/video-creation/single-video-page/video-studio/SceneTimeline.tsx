@@ -1,14 +1,10 @@
-import { Film, Clock, CheckCircle2, Plus } from "lucide-react";
 import React from "react";
+import TimeDisplay from "./scene-timeline/TimeDisplay";
+import TimelineRuler from "./scene-timeline/TimelineRuler";
+import Playhead from "./scene-timeline/Playhead";
+import { SceneCard, AddSceneCard, type Scene } from "./scene-timeline/SceneCard";
 
-export interface Scene {
-  id: string;
-  text: string;
-  order: number;
-  videoUrl: string;
-  thumbnail: string;
-  duration: number;
-}
+export type { Scene };
 
 interface SceneTimelineProps {
   scenes: Scene[];
@@ -76,16 +72,9 @@ export default function SceneTimeline({
   // Use measured card dimensions for accurate positioning
   const { width: cardWidth, gap: gapWidth } = cardDimensions;
 
-  // Calculate position: each card takes (width + gap), then add progress within current card
+  // Calculate position: cards are spaced with gaps (gap-2 = 8px)
+  // Position = (cardWidth + gap) * cardIndex + progressInCard * cardWidth
   const playheadPosition = clampedIndex * (cardWidth + gapWidth) + progressInCurrentScene * cardWidth;
-
-  // Format time as MM:SS:MS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}:${ms.toString().padStart(2, "0")}`;
-  };
 
   // Calculate elapsed time using ACTUAL durations from playback, not hardcoded values
   // This ensures timeline stays in sync with player even during transitions/loading
@@ -101,196 +90,50 @@ export default function SceneTimeline({
     return sum + (actualDur ?? scene.duration ?? 6);
   }, 0);
 
+  // Calculate timeline width for ruler - needs to match the scrollable content width
+  // Account for the padding (pl-2 + pr-2 = 16px total) in the scenes container
+  const timelineWidth = scenes.length > 0 ? (cardWidth + gapWidth) * scenes.length : 800;
+
   return (
-    <div className="px-4 py-3">
-      {/* Timeline with playhead indicator */}
-      <div className="relative">
-        {/* Horizontal scrollable timeline */}
-        <div className="overflow-x-auto overflow-y-visible">
-          <div ref={containerRef} className="flex gap-2 pb-1 pt-4 relative" style={{ minWidth: "max-content" }}>
-            {scenes.length > 0 ? (
-              scenes.map((scene, index) => (
-                <SceneCard
-                  key={scene.id}
-                  scene={scene}
-                  index={index}
-                  isSelected={index === selectedIndex}
-                  onClick={() => onSceneSelect(index)}
-                  isCurrentlyPlaying={index === currentVideoIndex}
-                />
-              ))
-            ) : (
-              <AddSceneCard />
-            )}
+    <div className="px-4 py-4 flex items-start gap-4 min-h-[180px]">
+      {/* Time display on the left */}
+      <TimeDisplay currentTime={elapsedTime + currentTime} totalTime={totalDuration} />
 
-            {/* Playhead indicator - vertical line showing current playback position */}
-            {scenes.length > 0 && (
-              <div
-                className="absolute w-1 bg-gradient-to-b from-cyan-500 via-blue-500 to-cyan-500 dark:from-cyan-400 dark:via-blue-500 dark:to-cyan-400 shadow-lg shadow-cyan-400/60 dark:shadow-cyan-500/50 pointer-events-none transition-all duration-100 rounded-full"
-                style={{
-                  left: `${playheadPosition}px`,
-                  top: "0",
-                  bottom: "0",
-                  zIndex: 50,
-                }}
-              >
-                {/* Playhead marker circle at top */}
-                <div
-                  className="absolute w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 dark:from-cyan-400 dark:to-blue-500 border-2 border-white dark:border-gray-900 shadow-xl shadow-cyan-400/80 dark:shadow-cyan-500/70 animate-pulse"
-                  style={{
-                    top: "-8px",
-                    left: "-10px",
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Timeline container */}
+      <div className="flex-1">
+        {/* Timeline with playhead indicator - this container holds both ruler and scenes */}
+        <div className="relative">
+          {/* Timeline Ruler - show even when no scenes */}
+          <TimelineRuler totalDuration={totalDuration} timelineWidth={timelineWidth} hasScenes={scenes.length > 0} />
 
-        {/* Time display below timeline */}
-        {scenes.length > 0 && (
-          <div className="mt-2 px-2 flex justify-between items-center text-xs text-gray-700 dark:text-gray-400 font-semibold tabular-nums">
-            <span className="px-2 py-1 rounded bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-700/50">
-              {formatTime(elapsedTime + currentTime)}
-            </span>
-            <span className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
-              {formatTime(totalDuration)}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface SceneCardProps {
-  scene: Scene;
-  index: number;
-  isSelected: boolean;
-  isCurrentlyPlaying?: boolean;
-  onClick: () => void;
-}
-
-function AddSceneCard() {
-  return (
-    <button className="relative flex-shrink-0 w-40 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-600 hover:border-cyan-400 dark:hover:border-cyan-500 transition-all overflow-hidden group bg-gray-100 dark:bg-gray-800/50 shadow-sm hover:shadow-md">
-      {/* Thumbnail placeholder */}
-      <div className="relative aspect-video bg-gray-200 dark:bg-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-1.5 text-gray-500 dark:text-gray-500">
-          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors border border-gray-400 dark:border-gray-600 group-hover:border-cyan-400 dark:group-hover:border-cyan-500">
-            <Plus className="w-5 h-5 group-hover:text-cyan-600 dark:group-hover:text-cyan-500 transition-colors" />
-          </div>
-          <span className="text-xs font-semibold">Add Scene</span>
-        </div>
-
-        {/* Duration badge */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded bg-black/40 backdrop-blur-sm text-white text-xs">
-          <Clock className="w-3 h-3" />
-          <span>8s</span>
-        </div>
-      </div>
-
-      {/* Info section */}
-      <div className="p-2 bg-white dark:bg-gray-800 border-t border-gray-300 dark:border-gray-700">
-        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 text-left">Click to add scene</p>
-      </div>
-    </button>
-  );
-}
-
-function SceneCard({ scene, index, isSelected, isCurrentlyPlaying, onClick }: SceneCardProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        relative flex-shrink-0 w-40 rounded-lg border-2 transition-all overflow-hidden group
-        ${
-          isSelected
-            ? "border-cyan-500 dark:border-cyan-500 shadow-xl shadow-cyan-400/50 dark:shadow-cyan-500/40 scale-105 ring-2 ring-cyan-300 dark:ring-cyan-500/50"
-            : isCurrentlyPlaying
-            ? "border-blue-500 dark:border-blue-500 shadow-xl shadow-blue-400/50 dark:shadow-blue-500/40 ring-2 ring-blue-300 dark:ring-blue-500/50"
-            : "border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-lg shadow-sm"
-        }
-      `}
-    >
-      {/* Thumbnail */}
-      <div className="relative aspect-video bg-gray-900 overflow-hidden">
-        <video src={scene.videoUrl} className="w-full h-full object-cover" />
-
-        {/* Overlay gradient */}
-        <div
-          className={`absolute inset-0 ${
-            isCurrentlyPlaying
-              ? "bg-gradient-to-t from-blue-900/40 to-transparent"
-              : "bg-gradient-to-t from-black/60 to-transparent"
-          }`}
-        />
-
-        {/* Scene number badge */}
-        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-white text-xs font-semibold">
-          Scene {index + 1}
-        </div>
-
-        {/* Duration badge */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-white text-xs">
-          <Clock className="w-3 h-3" />
-          <span>{scene.duration}s</span>
-        </div>
-
-        {/* Play overlay on hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <Film className="w-6 h-6 text-white" />
-          </div>
-        </div>
-
-        {/* Playing indicator */}
-        {isCurrentlyPlaying && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full border-2 border-blue-400 animate-pulse">
-              <div className="w-full h-full rounded-full bg-blue-500/20 animate-pulse" />
+          {/* Horizontal scrollable timeline */}
+          <div className="overflow-x-auto overflow-y-visible">
+            <div
+              ref={containerRef}
+              className="flex gap-2 pb-2 pt-6 relative bg-gray-50 dark:bg-gray-900/30 rounded-b pl-2 pr-2"
+              style={{ minWidth: scenes.length > 0 ? "max-content" : "800px" }}
+            >
+              {scenes.length > 0 ? (
+                scenes.map((scene, index) => (
+                  <SceneCard
+                    key={scene.id}
+                    scene={scene}
+                    index={index}
+                    isSelected={index === selectedIndex}
+                    onClick={() => onSceneSelect(index)}
+                    isCurrentlyPlaying={index === currentVideoIndex}
+                  />
+                ))
+              ) : (
+                <AddSceneCard />
+              )}
             </div>
           </div>
-        )}
 
-        {/* Selected indicator */}
-        {isSelected && (
-          <div className="absolute bottom-2 right-2">
-            <CheckCircle2 className="w-5 h-5 text-cyan-400 fill-current" />
-          </div>
-        )}
-      </div>
-
-      {/* Info section */}
-      <div
-        className={`p-2 border-t ${
-          isCurrentlyPlaying
-            ? "bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-300 dark:border-blue-700"
-            : isSelected
-            ? "bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 border-cyan-300 dark:border-cyan-700"
-            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-        }`}
-      >
-        <p
-          className={`text-xs font-semibold line-clamp-2 text-left ${
-            isSelected
-              ? "text-cyan-700 dark:text-cyan-400"
-              : isCurrentlyPlaying
-              ? "text-blue-700 dark:text-blue-400"
-              : "text-gray-800 dark:text-gray-300"
-          }`}
-          title={scene.text}
-        >
-          {scene.text || "Untitled Scene"}
-        </p>
-      </div>
-
-      {/* Selection ring with glow */}
-      {isSelected && (
-        <div className="absolute inset-0 rounded-lg ring-2 ring-cyan-400 dark:ring-cyan-500 ring-offset-2 ring-offset-gray-100 dark:ring-offset-gray-900 pointer-events-none">
-          <div className="absolute inset-0 rounded-lg bg-cyan-400/10 dark:bg-cyan-500/10 animate-pulse" />
+          {/* Playhead indicator - positioned relative to the timeline container (includes ruler) */}
+          <Playhead position={playheadPosition} hasScenes={scenes.length > 0} />
         </div>
-      )}
-    </button>
+      </div>
+    </div>
   );
 }
