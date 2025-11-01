@@ -16,8 +16,10 @@
     "build": "tsc && vite build && npm run copy:manifests && npm run copy:assets",
     "build:electron": "tsc -p tsconfig.electron.json",
     "package": "npm run build && npm run build:electron && electron-builder",
+    "package:mac": "npm run build && npm run build:electron && electron-builder --mac",
+    "package:mac:universal": "npm run build && npm run build:electron && electron-builder --mac --universal",
     "rebuild": "electron-rebuild -f -w sqlite3",
-    "postinstall": "electron-rebuild -f -w sqlite3",
+    "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
     "sync:media-gen-ids": "node ./scripts/sync-db/sync-media-generation-ids.js"
   },
@@ -92,8 +94,17 @@
     },
     "files": [
       "dist/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/**/*"
     ],
+    "asarUnpack": [
+      "node_modules/sqlite3/**/*",
+      "node_modules/puppeteer*/**/*",
+      "node_modules/@puppeteer/**/*"
+    ],
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
+    "nodeGypRebuild": false,
     "win": {
       "icon": "src/renderer/assets/icon.png",
       "target": [
@@ -101,10 +112,56 @@
       ]
     },
     "mac": {
-      "icon": "src/renderer/assets/icon.png"
+      "category": "public.app-category.developer-tools",
+      "icon": "src/renderer/assets/icon-512.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "type": "distribution"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
     },
     "linux": {
-      "icon": "src/renderer/assets/icon.png"
+      "icon": "src/renderer/assets/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
     }
   }
 }
