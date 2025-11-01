@@ -14,6 +14,7 @@ interface VideoCreationStore {
   globalPreviewMode: boolean;
   statusFilter: "all" | "idle" | "processing" | "completed" | "failed";
   sortBy: "index" | "status"; // Sort by array index or by status
+  defaultModel: string | null; // Default VEO3 model for video generation
 
   // Prompt Actions
   addPrompt: () => void;
@@ -24,6 +25,7 @@ interface VideoCreationStore {
   togglePromptProfileSelect: (id: string) => void;
   updatePromptProfile: (id: string, profileId: string) => void;
   updatePromptProject: (id: string, projectId: string) => void;
+  updatePromptModel: (id: string, model: string) => void;
   selectAllPrompts: () => void;
   clearAllSelections: () => void;
   toggleAllSelections: () => void;
@@ -52,7 +54,7 @@ interface VideoCreationStore {
   deleteDraft: (id: string) => void;
 
   // Job Actions
-  createJob: (promptId: string, promptText: string) => string;
+  createJob: (promptId: string, promptText: string, model?: string) => string;
   updateJobStatus: (jobId: string, status: VideoCreationJob["status"], data?: Partial<VideoCreationJob>) => void;
   updateJobProgress: (jobId: string, progress: number) => void;
   removeJob: (jobId: string) => void;
@@ -61,6 +63,7 @@ interface VideoCreationStore {
   toggleGlobalPreview: () => void;
   setStatusFilter: (filter: "all" | "idle" | "processing" | "completed" | "failed") => void;
   setSortBy: (sortBy: "index" | "status") => void;
+  setDefaultModel: (model: string | null) => void;
 
   // DB Sync Actions
   loadJobsFromDB: (generations: any[]) => void;
@@ -94,6 +97,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
         globalPreviewMode: false,
         statusFilter: "all",
         sortBy: "index",
+        defaultModel: null,
 
         // Prompt Actions
         addPrompt: () => {
@@ -159,6 +163,12 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
         updatePromptProject: (id: string, projectId: string) => {
           set({
             prompts: get().prompts.map((p) => (p.id === id ? { ...p, projectId: projectId || undefined } : p)),
+          });
+        },
+
+        updatePromptModel: (id: string, model: string) => {
+          set({
+            prompts: get().prompts.map((p) => (p.id === id ? { ...p, model: model || undefined } : p)),
           });
         },
 
@@ -389,12 +399,13 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
         },
 
         // Job Actions
-        createJob: (promptId: string, promptText: string) => {
+        createJob: (promptId: string, promptText: string, model?: string) => {
           const jobId = generateId();
           const newJob: VideoCreationJob = {
             id: jobId,
             promptId,
             promptText,
+            model: model || undefined,
             status: "processing",
             progress: 0,
             createdAt: new Date().toISOString(),
@@ -441,6 +452,10 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
           set({ sortBy });
         },
 
+        setDefaultModel: (model: string | null) => {
+          set({ defaultModel: model });
+        },
+
         // DB Sync Actions
         loadJobsFromDB: (generations: any[]) => {
           // Convert DB generations to jobs and match them with prompts
@@ -449,6 +464,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
             promptId: gen.id, // Use generation.id as promptId for now
             promptText: gen.prompt || "",
             generationId: gen.id,
+            model: gen.model, // Preserve model from DB
             status: gen.status === "pending" ? "processing" : gen.status,
             progress: gen.status === "completed" ? 100 : gen.status === "processing" ? 50 : 0,
             createdAt: gen.createdAt || new Date().toISOString(),
@@ -477,6 +493,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
               videoUrl: generation.videoUrl,
               error: generation.errorMessage,
               completedAt: generation.completedAt,
+              model: generation.model, // Sync model from DB
             };
             set({ jobs: updatedJobs });
           } else {
@@ -486,6 +503,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
               promptId: generation.id,
               promptText: generation.prompt || "",
               generationId: generation.id,
+              model: generation.model, // Include model from DB
               status: generation.status === "pending" ? "processing" : generation.status,
               progress: generation.status === "completed" ? 100 : generation.status === "processing" ? 50 : 0,
               createdAt: generation.createdAt || new Date().toISOString(),
@@ -509,6 +527,7 @@ export const useVideoCreationStore = create<VideoCreationStore>()(
           globalPreviewMode: state.globalPreviewMode,
           statusFilter: state.statusFilter,
           sortBy: state.sortBy,
+          defaultModel: state.defaultModel,
         }),
       }
     ),

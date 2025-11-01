@@ -37,6 +37,7 @@ export class CookieExtractionService {
       requiredCookies = [],
       maxWaitMs = 10 * 1000, // 10 seconds (shorter interactive wait for visible mode)
       inactivityThresholdMs = 30000, // 30 seconds
+      skipInteractiveWait = false, // Skip wait if cookies already found (for rotation)
     } = options;
 
     let browser: any = null;
@@ -102,8 +103,23 @@ export class CookieExtractionService {
       }
 
       // Non-headless mode: wait for interactive login if needed
-      if (!headless) {
+      // Skip wait if skipInteractiveWait=true and cookies already found (used for rotation)
+      if (!headless && !skipInteractiveWait) {
         allCookies = await this.handleInteractiveExtraction(page, allCookies, maxWaitMs, inactivityThresholdMs);
+      } else if (!headless && skipInteractiveWait) {
+        // In rotation mode with skipInteractiveWait, only skip if we have cookies
+        // Otherwise, still wait briefly for cookies to appear
+        if (allCookies && allCookies.length > 0) {
+          logger.info("[CookieExtractionService] 🚀 Skipping interactive wait for rotation (cookies already found)", {
+            cookieCount: allCookies.length,
+          });
+        } else {
+          // Still wait a bit in case cookies appear quickly
+          logger.info("[CookieExtractionService] No cookies yet, waiting briefly for rotation...", {
+            maxWaitMs: 5000, // Brief 5 second wait
+          });
+          allCookies = await this.handleInteractiveExtraction(page, allCookies, 5000, 3000);
+        }
       }
 
       // Log extraction summary

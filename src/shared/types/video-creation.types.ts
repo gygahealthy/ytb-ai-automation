@@ -6,6 +6,7 @@ export interface Prompt {
   showPreview?: boolean;
   profileId?: string; // Override global profile for this specific prompt
   projectId?: string; // Optional per-prompt project selection
+  model?: string; // Optional per-prompt model override (e.g., "veo_3_0_r2v_fast_ultra")
   showProfileSelect?: boolean; // Toggle visibility of profile selector in row
   selectedImages?: SelectedImageInfo[]; // Per-prompt selected images (max 3)
 }
@@ -36,6 +37,7 @@ export interface VideoCreationJob {
   promptId: string;
   promptText: string;
   generationId?: string; // ID from backend video generation record for polling
+  model?: string; // Model used for generation (e.g., "veo_3_0_r2v_fast_ultra")
   status: "idle" | "processing" | "completed" | "failed";
   progress?: number;
   createdAt: string;
@@ -72,6 +74,7 @@ export interface VideoGeneration {
   prompt: string;
   seed: number;
   aspectRatio: string;
+  model?: string; // VEO3 model used for generation (e.g., "veo_3_0_r2v_fast_ultra")
   status: "pending" | "processing" | "completed" | "failed";
   generationType?: "text-to-video" | "image-reference" | "image-start-end" | "scene-builder";
   imageReferences?: string; // JSON array of image generation IDs

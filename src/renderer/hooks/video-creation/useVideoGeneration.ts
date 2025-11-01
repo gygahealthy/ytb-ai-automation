@@ -129,8 +129,9 @@ export function useVideoGeneration() {
         return;
       }
 
-      // Get the prompt to determine which profile/project to use
+      // Get the prompt to determine which profile/project/model to use
       const prompts = useVideoCreationStore.getState().prompts;
+      const defaultModel = useVideoCreationStore.getState().defaultModel;
       const prompt = prompts.find((p) => p.id === promptId);
       if (!prompt) {
         alert.show({
@@ -140,9 +141,10 @@ export function useVideoGeneration() {
         return;
       }
 
-      // Determine effective profile and project
+      // Determine effective profile, project, and model
       const effectiveProfileId = prompt.profileId || selectedProfileId;
       const effectiveProjectId = prompt.projectId || selectedProjectId;
+      const effectiveModel = prompt.model || defaultModel || undefined;
 
       if (!effectiveProfileId) {
         alert.show({
@@ -221,10 +223,12 @@ export function useVideoGeneration() {
       }
 
       // Create job in store with "processing" status
-      const jobId = createJob(promptId, promptText);
+      const jobId = createJob(promptId, promptText, effectiveModel || undefined);
       console.log(`[useVideoGeneration] Starting video generation for prompt: ${promptId}`);
       console.log(`[useVideoGeneration] Mode: ${isIngredientsMode ? "ingredients" : "text-to-video"}`);
-      console.log(`[useVideoGeneration] Using profile: ${effectiveProfileId}, project: ${effectiveProjectId}`);
+      console.log(
+        `[useVideoGeneration] Using profile: ${effectiveProfileId}, project: ${effectiveProjectId}, model: ${effectiveModel}`
+      );
 
       try {
         let result;
@@ -237,7 +241,8 @@ export function useVideoGeneration() {
             effectiveProjectId,
             promptText,
             imageReferences,
-            "VIDEO_ASPECT_RATIO_LANDSCAPE" // Default aspect ratio
+            "VIDEO_ASPECT_RATIO_LANDSCAPE", // Default aspect ratio
+            effectiveModel || "veo_3_0_r2v_fast_ultra" // Use model or default
           );
         } else {
           // Call text-to-video API
@@ -245,7 +250,8 @@ export function useVideoGeneration() {
             effectiveProfileId,
             effectiveProjectId,
             promptText,
-            "VIDEO_ASPECT_RATIO_LANDSCAPE" // Default aspect ratio
+            "VIDEO_ASPECT_RATIO_LANDSCAPE", // Default aspect ratio
+            effectiveModel // Pass model if available
           );
         }
 
@@ -302,9 +308,10 @@ export function useVideoGeneration() {
       creationMode?: VideoCreationMode,
       _opts?: { skipConfirm?: boolean }
     ): Promise<{ success: boolean; message?: string; skippedCount?: number; generatedCount?: number }> => {
-      // Get selected prompts
+      // Get selected prompts and default model
       const prompts = useVideoCreationStore.getState().prompts;
       const jobs = useVideoCreationStore.getState().jobs;
+      const defaultModel = useVideoCreationStore.getState().defaultModel;
       const selectedPrompts = prompts.filter((p) => p.selected);
 
       if (selectedPrompts.length === 0) {
@@ -410,7 +417,8 @@ export function useVideoGeneration() {
       // Create jobs for all prompts immediately (with "processing" status)
       const jobMap = new Map<string, string>(); // promptId -> jobId
       for (const prompt of promptsToGenerate) {
-        const jobId = createJob(prompt.id, prompt.text);
+        const effectiveModel = prompt.model || defaultModel || undefined;
+        const jobId = createJob(prompt.id, prompt.text, effectiveModel);
         jobMap.set(prompt.id, jobId);
       }
 
@@ -426,9 +434,10 @@ export function useVideoGeneration() {
           for (const prompt of promptsToGenerate) {
             const effectiveProfileId = prompt.profileId || selectedProfileId;
             const effectiveProjectId = prompt.projectId || selectedProjectId;
+            const effectiveModel = prompt.model || defaultModel;
 
             console.log(
-              `[useVideoGeneration] Processing prompt ${prompt.id}: profileId=${effectiveProfileId}, projectId=${effectiveProjectId}`
+              `[useVideoGeneration] Processing prompt ${prompt.id}: profileId=${effectiveProfileId}, projectId=${effectiveProjectId}, model=${effectiveModel}`
             );
 
             if (!effectiveProfileId || !effectiveProjectId) {
@@ -448,7 +457,7 @@ export function useVideoGeneration() {
               const imageRefsClone = [...imageReferences];
 
               console.log(
-                `[useVideoGeneration] Calling generateVideoFromImages for prompt ${prompt.id} with ${imageRefsClone.length} images`
+                `[useVideoGeneration] Calling generateVideoFromImages for prompt ${prompt.id} with ${imageRefsClone.length} images, model: ${effectiveModel}`
               );
 
               const result = await (window as any).electronAPI.veo3.generateVideoFromImages(
@@ -456,7 +465,8 @@ export function useVideoGeneration() {
                 effectiveProjectId,
                 prompt.text,
                 imageRefsClone,
-                "VIDEO_ASPECT_RATIO_LANDSCAPE"
+                "VIDEO_ASPECT_RATIO_LANDSCAPE",
+                effectiveModel || "veo_3_0_r2v_fast_ultra"
               );
 
               console.log(`[useVideoGeneration] Result for prompt ${prompt.id}:`, result);
@@ -514,6 +524,7 @@ export function useVideoGeneration() {
         const requests = promptsToGenerate.map((prompt) => {
           const effectiveProfileId = prompt.profileId || selectedProfileId;
           const effectiveProjectId = prompt.projectId || selectedProjectId;
+          const effectiveModel = prompt.model || defaultModel;
 
           return {
             promptId: prompt.id,
@@ -521,6 +532,7 @@ export function useVideoGeneration() {
             projectId: effectiveProjectId,
             prompt: prompt.text,
             aspectRatio: "VIDEO_ASPECT_RATIO_LANDSCAPE" as const,
+            model: effectiveModel || undefined,
           };
         });
 

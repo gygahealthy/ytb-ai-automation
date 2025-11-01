@@ -73,12 +73,16 @@ export const extractAndCreateHandler = async (req: {
     // Extract requiredCookies from rotationConfig if provided
     const requiredCookies = rotationConfig?.requiredCookies;
 
+    // Skip interactive wait for rotation operations (kill Chrome immediately after cookies found)
+    const skipInteractiveWait = !!rotationConfig;
+
     const extractResult = await cookieService.extractAndStoreCookiesFromBrowser(
       profile,
       url,
       domainFilter,
       headless, // Use the actual headless parameter
-      requiredCookies // Pass requiredCookies for polling validation
+      requiredCookies, // Pass requiredCookies for polling validation
+      skipInteractiveWait // Skip long wait in visible mode for rotation
     );
 
     if (!extractResult.success) {

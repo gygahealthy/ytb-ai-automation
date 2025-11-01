@@ -20,6 +20,9 @@ export interface ExtractOptions {
 
   /** Inactivity threshold - if no cookie changes for this duration, proceed (ms) */
   inactivityThresholdMs?: number;
+
+  /** Skip interactive wait in visible mode - extract immediately if cookies found (used for rotation) */
+  skipInteractiveWait?: boolean;
 }
 
 /**

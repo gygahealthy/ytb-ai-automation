@@ -14,6 +14,7 @@ export const videoBatchGenerationRegistrations: IpcRegistration[] = [
           projectId: string;
           prompt: string;
           aspectRatio?: string;
+          model?: string;
         }>;
         delayMs?: number;
       },

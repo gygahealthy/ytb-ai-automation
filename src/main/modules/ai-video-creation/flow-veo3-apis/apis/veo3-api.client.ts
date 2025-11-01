@@ -83,9 +83,10 @@ export class VEO3ApiClient {
     aspectRatio:
       | "VIDEO_ASPECT_RATIO_LANDSCAPE"
       | "VIDEO_ASPECT_RATIO_PORTRAIT"
-      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    model: string = "veo_3_1_t2v_fast_ultra"
   ): Promise<{ success: boolean; data?: any; sceneId?: string; seed?: number; error?: string }> {
-    return veo3VideoApiClient.generateVideo(bearerToken, projectId, prompt, aspectRatio);
+    return veo3VideoApiClient.generateVideo(bearerToken, projectId, prompt, aspectRatio, model);
   }
 
   /**

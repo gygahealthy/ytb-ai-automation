@@ -31,9 +31,10 @@ export class FlowVeo3ApiService {
     aspectRatio:
       | "VIDEO_ASPECT_RATIO_LANDSCAPE"
       | "VIDEO_ASPECT_RATIO_PORTRAIT"
-      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    model?: string
   ): Promise<ApiResponse<{ generationId: string; sceneId: string; operationName: string }>> {
-    return veo3VideoCreationService.startVideoGeneration(profileId, projectId, prompt, aspectRatio);
+    return veo3VideoCreationService.startVideoGeneration(profileId, projectId, prompt, aspectRatio, model);
   }
 
   /**
@@ -105,6 +106,7 @@ export class FlowVeo3ApiService {
       projectId: string;
       prompt: string;
       aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+      model?: string;
     }>,
     delayMs?: number
   ): Promise<
@@ -132,6 +134,7 @@ export class FlowVeo3ApiService {
       projectId: string;
       prompt: string;
       aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+      model?: string;
     }>,
     delayMs?: number,
     onProgress?: BatchProgressCallback

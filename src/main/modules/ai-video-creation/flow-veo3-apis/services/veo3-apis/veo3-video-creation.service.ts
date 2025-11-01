@@ -60,7 +60,8 @@ export class VEO3VideoCreationService {
     aspectRatio:
       | "VIDEO_ASPECT_RATIO_LANDSCAPE"
       | "VIDEO_ASPECT_RATIO_PORTRAIT"
-      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    model?: string
   ): Promise<
     ApiResponse<{
       generationId: string;
@@ -74,7 +75,9 @@ export class VEO3VideoCreationService {
         return { success: false, error: "Profile not found" };
       }
 
-      logger.info(`Starting video generation for profile: ${profile.name}, project: ${projectId}`);
+      logger.info(
+        `Starting video generation for profile: ${profile.name}, project: ${projectId}${model ? `, model: ${model}` : ""}`
+      );
 
       // Get cookies for the profile
       const cookieResult = await cookieService.getCookiesByProfile(profileId);
@@ -102,7 +105,7 @@ export class VEO3VideoCreationService {
         };
       }
 
-      const generateResult = await veo3ApiClient.generateVideo(tokenResult.token, projectId, prompt, aspectRatio);
+      const generateResult = await veo3ApiClient.generateVideo(tokenResult.token, projectId, prompt, aspectRatio, model);
       if (!generateResult.success) {
         return {
           success: false,
@@ -131,6 +134,7 @@ export class VEO3VideoCreationService {
         prompt,
         seed,
         aspectRatio,
+        model,
         status: "pending",
         rawResponse: JSON.stringify(data),
       });

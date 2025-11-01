@@ -36,12 +36,15 @@ const startVideoGeneration = (
   profileId: string,
   projectId: string,
   prompt: string,
-  aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE"
+  aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE",
+  model?: string
 ) => {
   if (!hasWindow()) return Promise.resolve({ success: false, error: "ipc-not-available" });
   if ((window as any).electronAPI.veo3 && typeof (window as any).electronAPI.veo3.startVideoGeneration === "function")
-    return safeCall(() => (window as any).electronAPI.veo3.startVideoGeneration(profileId, projectId, prompt, aspectRatio));
-  if (hasInvoke()) return invoke("veo3:startVideoGeneration", { profileId, projectId, prompt, aspectRatio });
+    return safeCall(() =>
+      (window as any).electronAPI.veo3.startVideoGeneration(profileId, projectId, prompt, aspectRatio, model)
+    );
+  if (hasInvoke()) return invoke("veo3:startVideoGeneration", { profileId, projectId, prompt, aspectRatio, model });
   return Promise.resolve({ success: false, error: "ipc-not-available" });
 };
 
@@ -92,6 +95,7 @@ const generateMultipleVideosAsync = (
     projectId: string;
     prompt: string;
     aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+    model?: string;
   }>,
   delayMs?: number
 ) => {

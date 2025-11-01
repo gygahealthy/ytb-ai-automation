@@ -38,6 +38,7 @@ export class VEO3VideoApiClient {
    * @param projectId - Flow project ID
    * @param prompt - Text prompt for video generation
    * @param aspectRatio - Video aspect ratio (default: LANDSCAPE)
+   * @param model - Video model to use (default: veo_3_1_t2v_fast_ultra)
    */
   async generateVideo(
     bearerToken: string,
@@ -46,7 +47,8 @@ export class VEO3VideoApiClient {
     aspectRatio:
       | "VIDEO_ASPECT_RATIO_LANDSCAPE"
       | "VIDEO_ASPECT_RATIO_PORTRAIT"
-      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE"
+      | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    model: string = "veo_3_1_t2v_fast" // ultra"
   ): Promise<{ success: boolean; data?: any; sceneId?: string; seed?: number; error?: string }> {
     try {
       const seed = this.generateSeed();
@@ -69,7 +71,7 @@ export class VEO3VideoApiClient {
             textInput: {
               prompt,
             },
-            videoModelKey: "veo_3_1_t2v_fast_ultra",
+            videoModelKey: model,
             metadata: {
               sceneId,
             },
@@ -88,9 +90,33 @@ export class VEO3VideoApiClient {
 
       if (!response.ok) {
         logger.error(`Failed to generate video: ${response.status} - ${rawText}`);
+
+        // Parse error response for better error messages
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+        try {
+          const errorData = JSON.parse(rawText);
+          const apiError = errorData?.error;
+
+          // Check for quota exhaustion
+          if (response.status === 429 && apiError?.status === "RESOURCE_EXHAUSTED") {
+            const reason = apiError?.details?.[0]?.reason;
+            if (reason === "PUBLIC_ERROR_USER_QUOTA_REACHED") {
+              errorMessage = "Quota exhausted. You have reached your daily video generation limit. Please try again tomorrow.";
+            } else {
+              errorMessage = apiError?.message || "API quota exhausted. Please try again later.";
+            }
+          } else if (apiError?.message) {
+            errorMessage = apiError.message;
+          }
+        } catch (parseErr) {
+          // Keep default error message if parsing fails
+          logger.warn("Could not parse error response JSON", parseErr);
+        }
+
         return {
           success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          error: errorMessage,
           sceneId,
           seed,
         };

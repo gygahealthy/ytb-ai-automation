@@ -3,6 +3,7 @@ import { History, User, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVideoCreationStore } from "@store/video-creation.store";
 import { useDefaultProfileStore } from "@store/default-profile.store";
+import { useVEO3ModelsStore } from "@store/veo3-models.store";
 import { useToast } from "@hooks/useToast";
 import { useAlert } from "@hooks/useAlert";
 import AppAlert from "@components/common/AppAlert";
@@ -69,6 +70,9 @@ export default function SingleVideoCreationPage() {
   const statusFilter = useVideoCreationStore((state) => state.statusFilter);
   const sortBy = useVideoCreationStore((state) => state.sortBy);
 
+  // Subscribe to VEO3 models default for text-to-video
+  const defaultModelForTextToVideo = useVEO3ModelsStore((state) => state.defaultModelForTextToVideo);
+
   // Actions
   const addPrompt = useVideoCreationStore((state) => state.addPrompt);
   const removePrompt = useVideoCreationStore((state) => state.removePrompt);
@@ -87,6 +91,7 @@ export default function SingleVideoCreationPage() {
   const toggleGlobalPreview = useVideoCreationStore((state) => state.toggleGlobalPreview);
   const setStatusFilter = useVideoCreationStore((state) => state.setStatusFilter);
   const setSortBy = useVideoCreationStore((state) => state.setSortBy);
+  const setDefaultModel = useVideoCreationStore((state) => state.setDefaultModel);
 
   // Ensure global previews are enabled by default
   useEffect(() => {
@@ -99,6 +104,13 @@ export default function SingleVideoCreationPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync default model from VEO3 models store
+  useEffect(() => {
+    if (defaultModelForTextToVideo) {
+      setDefaultModel(defaultModelForTextToVideo);
+    }
+  }, [defaultModelForTextToVideo, setDefaultModel]);
 
   // Listen for keyboard shortcut to cycle video creation mode
   useEffect(() => {

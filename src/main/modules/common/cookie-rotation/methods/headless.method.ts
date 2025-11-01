@@ -116,7 +116,8 @@ export class HeadlessMethod implements RotationMethodExecutor {
         targetUrl,
         "", // domainFilter not used
         true, // Force headless mode
-        requiredCookies // Pass configured requiredCookies for validation
+        requiredCookies, // Pass configured requiredCookies for validation
+        true // skipInteractiveWait: in rotation, kill Chrome immediately after cookies found
       );
 
       if (!extractResult.success || !extractResult.data) {

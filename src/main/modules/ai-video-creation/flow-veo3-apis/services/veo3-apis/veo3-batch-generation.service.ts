@@ -11,6 +11,7 @@ export interface BatchGenerationRequest {
   projectId: string;
   prompt: string;
   aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+  model?: string;
 }
 
 export interface BatchGenerationProgress {
@@ -99,6 +100,7 @@ export class VEO3BatchGenerationService {
       projectId: string;
       prompt: string;
       aspectRatio?: "VIDEO_ASPECT_RATIO_LANDSCAPE" | "VIDEO_ASPECT_RATIO_PORTRAIT" | "VIDEO_ASPECT_RATIO_SQUARE";
+      model?: string;
     }>,
     delayMs: number = 1500
   ): Promise<
@@ -134,7 +136,8 @@ export class VEO3BatchGenerationService {
             request.profileId,
             request.projectId,
             request.prompt,
-            request.aspectRatio || "VIDEO_ASPECT_RATIO_LANDSCAPE"
+            request.aspectRatio || "VIDEO_ASPECT_RATIO_LANDSCAPE",
+            request.model // Pass the model parameter
           );
 
           if (result.success && result.data) {
@@ -209,7 +212,8 @@ export class VEO3BatchGenerationService {
           request.profileId,
           request.projectId,
           request.prompt,
-          request.aspectRatio || "VIDEO_ASPECT_RATIO_LANDSCAPE"
+          request.aspectRatio || "VIDEO_ASPECT_RATIO_LANDSCAPE",
+          request.model // Pass the model parameter
         );
 
         if (result.success && result.data) {

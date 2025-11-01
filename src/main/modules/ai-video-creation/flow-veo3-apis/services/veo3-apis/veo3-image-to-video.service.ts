@@ -5,13 +5,12 @@ import { profileRepository } from "../../../../profile-management/repository/pro
 import { COOKIE_SERVICES } from "../../../../gemini-apis/shared/types";
 import { cookieService } from "../../../../common/cookie/services/cookie.service";
 import { veo3ApiClient } from "../../apis/veo3-api.client";
+import { veo3ImageToVideoApiClient, type ImageReference } from "../../apis/veo3/veo3-image-to-video-api.client";
 import { videoGenerationRepository } from "../../repository/video-generation.repository";
 import { veo3PollingManager } from "./veo3-polling-manager.service";
 
-export interface ImageReference {
-  mediaId: string; // From veo3_image_generations.media_key
-  imageId: string; // From veo3_image_generations.id (for tracking)
-}
+// Re-export ImageReference for backward compatibility
+export type { ImageReference } from "../../apis/veo3/veo3-image-to-video-api.client";
 
 /**
  * VEO3 Image-to-Video Generation Service
@@ -95,19 +94,13 @@ export class VEO3ImageToVideoService {
 
       const bearerToken = tokenResult.token;
 
-      // Generate scene ID and seed
-      const seed = this.generateSeed();
-      const sceneId = this.generateSceneId();
-
-      // Call VEO3 API endpoint for image-based generation
-      const generateResult = await this.callImageToVideoAPI(
+      // Call image-to-video API client
+      const generateResult = await veo3ImageToVideoApiClient.generateVideoFromImages(
         bearerToken,
         projectId,
         prompt,
         imageReferences,
         aspectRatio,
-        seed,
-        sceneId,
         model
       );
 
@@ -118,7 +111,7 @@ export class VEO3ImageToVideoService {
         };
       }
 
-      const { data } = generateResult;
+      const { sceneId, seed, data } = generateResult;
       const operationName = data?.name || data?.operationName || "";
 
       if (!sceneId || !seed || !operationName) {
@@ -141,6 +134,7 @@ export class VEO3ImageToVideoService {
         prompt,
         seed,
         aspectRatio,
+        model,
         status: "pending",
         generationType: "image-reference",
         imageReferences: JSON.stringify(imageReferences.map((img) => img.imageId)),
@@ -156,139 +150,6 @@ export class VEO3ImageToVideoService {
       logger.error("Failed to start image-to-video generation", error);
       return { success: false, error: String(error) };
     }
-  }
-
-  /**
-   * Call VEO3 API endpoint for image-based video generation
-   * Based on: https://aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoReferenceImages
-   */
-  private async callImageToVideoAPI(
-    bearerToken: string,
-    projectId: string,
-    prompt: string,
-    imageReferences: ImageReference[],
-    aspectRatio: string,
-    seed: number,
-    sceneId: string,
-    model: string
-  ): Promise<{ success: boolean; data?: any; error?: string }> {
-    try {
-      const url = "https://aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoReferenceImages";
-
-      const payload = {
-        clientContext: {
-          projectId,
-          tool: "PINHOLE",
-          userPaygateTier: "PAYGATE_TIER_TWO",
-        },
-        requests: [
-          {
-            aspectRatio,
-            metadata: {
-              sceneId,
-            },
-            referenceImages: imageReferences.map((img) => ({
-              imageUsageType: "IMAGE_USAGE_TYPE_ASSET",
-              mediaId: img.mediaId,
-            })),
-            seed,
-            textInput: {
-              prompt,
-            },
-            videoModelKey: model || "veo_3_0_r2v_fast_ultra", // Default model
-          },
-        ],
-      };
-
-      logger.info(`Calling VEO3 image-to-video API (sceneId: ${sceneId}, seed: ${seed})`);
-      logger.info(`Prompt: ${prompt.substring(0, 100)}...`);
-      logger.info(`Image references: ${imageReferences.length}`);
-      logger.info(`Image references details: ${JSON.stringify(imageReferences)}`);
-      logger.info(`Model: ${model}, Aspect Ratio: ${aspectRatio}`);
-      logger.info(`Full payload: ${JSON.stringify(payload, null, 2)}`);
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          accept: "*/*",
-          "accept-language": "en-US,en;q=0.9",
-          authorization: `Bearer ${bearerToken}`,
-          "content-type": "text/plain;charset=UTF-8",
-          origin: "https://labs.google",
-          referer: "https://labs.google/",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const rawText = await response.text();
-      logger.info(`Image-to-video generation response (${response.status}): ${rawText.substring(0, 500)}`);
-
-      if (!response.ok) {
-        logger.error(`Failed to generate video from images: ${response.status} - ${rawText}`);
-
-        // Try to parse error message from response
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = JSON.parse(rawText);
-          if (errorData?.error?.message) {
-            errorMessage = `${errorMessage} - ${errorData.error.message}`;
-          }
-        } catch (parseErr) {
-          // Ignore parse errors, use default message
-        }
-
-        return {
-          success: false,
-          error: errorMessage,
-        };
-      }
-
-      let data: any = null;
-      try {
-        data = JSON.parse(rawText);
-      } catch (parseErr) {
-        logger.error("Failed to parse image-to-video generation response JSON", parseErr);
-      }
-
-      // Extract operation name (job ID) from response
-      const operationName = data?.operations?.[0]?.operation?.name;
-      logger.info(`Image-to-video generation started. Operation: ${operationName}`);
-
-      return {
-        success: true,
-        data: {
-          name: operationName,
-          operationName,
-          sceneId,
-          seed,
-          raw: data,
-        },
-      };
-    } catch (error) {
-      logger.error("Error calling image-to-video API", error);
-      return {
-        success: false,
-        error: String(error),
-      };
-    }
-  }
-
-  /**
-   * Generate a random seed number for video generation (0 to 2^16)
-   */
-  private generateSeed(): number {
-    return randomBytes(2).readUInt16BE(0);
-  }
-
-  /**
-   * Generate UUID v4 for scene ID
-   */
-  private generateSceneId(): string {
-    const bytes = randomBytes(16);
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = bytes.toString("hex");
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
   }
 }
 

@@ -7,12 +7,13 @@ export const videoGenerationRegistrations: IpcRegistration[] = [
   {
     channel: "veo3:startVideoGeneration",
     description: "Start video generation",
-    handler: async (req: { profileId: string; projectId: string; prompt: string; aspectRatio?: string }) => {
+    handler: async (req: { profileId: string; projectId: string; prompt: string; aspectRatio?: string; model?: string }) => {
       return await flowVeo3ApiService.startVideoGeneration(
         (req as any).profileId,
         (req as any).projectId,
         (req as any).prompt,
-        (req as any).aspectRatio
+        (req as any).aspectRatio,
+        (req as any).model
       );
     },
   },

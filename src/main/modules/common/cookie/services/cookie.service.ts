@@ -32,13 +32,15 @@ export class CookieService {
    * @param _domainFilter - Domain to filter cookies by (DEPRECATED, not used)
    * @param headless - Whether to run in headless (background) mode or visible mode
    * @param providedRequiredCookies - Optional array of required cookie names to validate (overrides DB)
+   * @param skipInteractiveWait - For rotation mode: skip interactive wait if cookies already found (defaults to false)
    */
   async extractAndStoreCookiesFromBrowser(
     profile: any,
     targetUrl: string = "https://gemini.google.com",
     _domainFilter: string = "google.com",
     headless: boolean = false,
-    providedRequiredCookies?: string[]
+    providedRequiredCookies?: string[],
+    skipInteractiveWait: boolean = false
   ): Promise<ApiResponse<{ cookieString: string; cookies: any[] }>> {
     logger.info("[cookie.service] Delegating extraction to CookieExtractionService", {
       profileId: profile?.id,
@@ -76,6 +78,7 @@ export class CookieService {
         targetUrl,
         headless,
         requiredCookies,
+        skipInteractiveWait, // Pass rotation flag to skip long waits
       });
 
       if (!result.success || !result.data) {
