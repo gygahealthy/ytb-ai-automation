@@ -44,32 +44,10 @@ export default function CookieConfigCard({
   const [currentWorkerStatus, setCurrentWorkerStatus] = useState(workerStatus);
   const confirm = useConfirm();
 
-  // Poll for real worker status from database
+  // Update worker status when prop changes (no polling needed - parent handles updates)
   useEffect(() => {
-    // Update immediately when prop changes
     setCurrentWorkerStatus(workerStatus);
-
-    // Poll every 2 seconds to get fresh status from DB
-    const pollInterval = setInterval(async () => {
-      try {
-        const result = await window.electronAPI.cookieRotation.getProfiles();
-        if (result.success && result.data) {
-          // Find this specific cookie in the response
-          for (const profile of result.data) {
-            const foundCookie = profile.cookies.find((c: any) => c.cookieId === cookie.cookieId);
-            if (foundCookie) {
-              setCurrentWorkerStatus(foundCookie.workerStatus);
-              break;
-            }
-          }
-        }
-      } catch (error) {
-        console.error("[CookieConfigCard] Failed to poll worker status:", error);
-      }
-    }, 2000);
-
-    return () => clearInterval(pollInterval);
-  }, [workerStatus, cookie.cookieId]);
+  }, [workerStatus]);
 
   // Provide default config if missing
   const config: CookieRotationConfig = cookie.config || {

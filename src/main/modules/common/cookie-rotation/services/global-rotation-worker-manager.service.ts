@@ -40,6 +40,13 @@ export class GlobalRotationWorkerManager {
   private running = false;
   private monitorInterval: NodeJS.Timeout | null = null;
 
+  // Cache for get-profiles calls to reduce DB load
+  private profilesCache: {
+    data: any[] | null;
+    timestamp: number;
+  } = { data: null, timestamp: 0 };
+  private readonly CACHE_TTL_MS = 5000; // 5 second cache
+
   constructor(private cookieRepository: CookieRepository, private monitorRepository: CookieRotationMonitorRepository) {}
 
   /**
@@ -219,6 +226,9 @@ export class GlobalRotationWorkerManager {
       await this.monitorRepository.updateWorkerStatus(monitor.id, "running");
       await this.monitorRepository.updateSessionHealth(monitor.id, "healthy");
 
+      // Invalidate cache after state change
+      this.invalidateProfilesCache();
+
       logger.info(`[rotation-manager] ✅ Started worker for ${key}`);
     } catch (error) {
       logger.error(`[rotation-manager] ❌ Failed to start worker for ${key}`, error);
@@ -257,6 +267,9 @@ export class GlobalRotationWorkerManager {
 
       // Update monitor
       await this.monitorRepository.updateWorkerStatus(worker.monitorId, "stopped");
+
+      // Invalidate cache after state change
+      this.invalidateProfilesCache();
 
       logger.info(`[rotation-manager] 🛑 Stopped worker for ${key}`);
     } catch (error) {
@@ -384,6 +397,9 @@ export class GlobalRotationWorkerManager {
         // Restart worker with fresh cookies
         await this.stopWorkerForCookie(cookie.profileId, cookie.id);
         await this.startWorkerForCookie(cookie);
+
+        // Invalidate cache after refresh completes
+        this.invalidateProfilesCache();
       } else {
         logger.error(`[rotation-manager] ❌ Headless refresh failed: ${result.error}`);
         await this.monitorRepository.recordHeadlessRefresh(monitorId, false);
@@ -653,10 +669,23 @@ export class GlobalRotationWorkerManager {
     if (cookie) {
       await this.startWorkerForCookie(cookie);
     }
+
+    // Invalidate cache after restart
+    this.invalidateProfilesCache();
   }
 
   /**
-   * Get list of profiles with active cookies for rotation selection
+   * Clear profiles cache
+   * Called when worker state changes to ensure fresh data
+   */
+  private invalidateProfilesCache(): void {
+    this.profilesCache.data = null;
+    this.profilesCache.timestamp = 0;
+    logger.debug("[rotation-manager] Profiles cache invalidated");
+  }
+
+  /**
+   * Get list of profiles with active cookies for rotation selection (with caching)
    */
   async getProfilesWithCookies(): Promise<
     Array<{
@@ -673,6 +702,15 @@ export class GlobalRotationWorkerManager {
       }>;
     }>
   > {
+    // Check cache
+    const now = Date.now();
+    if (this.profilesCache.data && now - this.profilesCache.timestamp < this.CACHE_TTL_MS) {
+      logger.debug("[rotation-manager] Returning cached profiles data");
+      return this.profilesCache.data;
+    }
+
+    // Cache miss - fetch from DB
+    logger.debug("[rotation-manager] Cache miss - fetching profiles from DB");
     const activeCookies = await this.cookieRepository.findByStatus("active");
 
     // Group cookies by profile
@@ -703,7 +741,13 @@ export class GlobalRotationWorkerManager {
       });
     }
 
-    return Array.from(profileMap.values());
+    const result = Array.from(profileMap.values());
+
+    // Update cache
+    this.profilesCache.data = result;
+    this.profilesCache.timestamp = now;
+
+    return result;
   }
 
   /**
@@ -877,6 +921,9 @@ export class GlobalRotationWorkerManager {
         workerProcess,
         workerType: "phase1-forked",
       });
+
+      // Invalidate cache after state change
+      this.invalidateProfilesCache();
 
       logger.info(`[rotation-manager] ✅ Phase 1 worker (forked process) started for ${workerKey}`);
     } else {

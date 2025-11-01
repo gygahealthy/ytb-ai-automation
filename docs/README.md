@@ -1,9 +1,39 @@
-# VEO3 Automation Documentation
+# VEO3 Automation
 
-**Last Updated**: October 20, 2025  
-**Status**: ✅ Production Ready
+> An Electron-based desktop application for automating VEO3 profile creation and management using Puppeteer.
 
-Repository: `veo3-automation` (local workspace name)
+[![Electron](https://img.shields.io/badge/Electron-28.0-blue.svg)](https://www.electronjs.org/)
+[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![macOS](https://img.shields.io/badge/macOS-11.0+-success.svg)](https://www.apple.com/macos/)
+
+**Last Updated**: November 1, 2025  
+**Status**: ✅ Production Ready  
+Repository: `ytb-ai-automation` (GitHub: gygahealthy/ytb-ai-automation)
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+```
+
+## 📦 Build for macOS
+
+```bash
+# Build for your current architecture (Intel or Apple Silicon)
+./scripts/build/build-macos.sh
+
+# Build universal binary (both architectures)
+./scripts/build/build-macos.sh --universal
+```
+
+📖 **See full build documentation**: [build/](build/)
 
 ---
 
@@ -235,13 +265,10 @@ veo3:batch:started              - Batch start notifications
 ```typescript
 // In React component
 useEffect(() => {
-  const unsubscribe = (window as any).electronAPI.on(
-    "veo3:generation:status",
-    (data) => {
-      console.log("Status update:", data);
-      // Handle update
-    }
-  );
+  const unsubscribe = (window as any).electronAPI.on("veo3:generation:status", (data) => {
+    console.log("Status update:", data);
+    // Handle update
+  });
   return () => unsubscribe?.();
 }, []);
 ```
@@ -417,3 +444,231 @@ Notes:
 
 - The `dev` script runs Vite and waits for the renderer to be available at http://localhost:5173 before launching Electron.
 - The project uses native SQLite bindings; if you see native module errors after install, run `npm run rebuild` or let `postinstall` run `electron-rebuild`.
+
+---
+
+## ✨ Features
+
+- 🚀 **Automation Engine**: Powerful browser automation using Puppeteer
+- 🎨 **Modern UI**: Beautiful admin interface with dark mode and customizable color schemes
+- 📦 **Domain-Driven Design**: Clean architecture with separated concerns
+- 🔧 **TypeScript**: Full type safety across the entire codebase
+- 🎯 **Profile Management**: Create and manage multiple browser profiles
+- 📊 **Dashboard**: Real-time monitoring of automation tasks
+- ⚙️ **Settings**: Customizable theme and color schemes
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+- **React 18** with TypeScript
+- **Tailwind CSS** for styling
+- **Zustand** for state management
+- **Lucide React** for icons
+- **Vite** for fast development
+
+### Backend
+
+- **Electron** for desktop app framework
+- **Puppeteer** for browser automation
+- **TypeScript** for type safety
+- **SQLite** for local database
+- **Domain-Driven Design** architecture
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- macOS 11.0+ (for macOS builds)
+- Xcode Command Line Tools (for native modules)
+
+### Setup
+
+1. **Clone and install:**
+
+   ```bash
+   git clone https://github.com/gygahealthy/ytb-ai-automation.git
+   cd ytb-ai-automation
+   npm install
+   ```
+
+2. **Development mode:**
+
+   ```bash
+   npm run dev
+   ```
+
+   Or use the convenience scripts:
+
+   **macOS/Linux:**
+
+   ```bash
+   ./build-and-dev.sh    # Build and run dev server
+   ./run-dev.sh          # Just run dev server
+   ```
+
+   **Windows PowerShell:**
+
+   ```powershell
+   .\build-and-dev.ps1   # Build and run dev server
+   .\run-dev.ps1         # Just run dev server
+   ```
+
+3. **Build for production:**
+
+   ```bash
+   # macOS
+   npm run package:mac
+
+   # Or use the build script
+   ./scripts/build/build-macos.sh
+   ```
+
+📖 **Detailed build guides**:
+
+- [macOS Build Guide](build/BUILD_MACOS.md)
+- [Quick Build Reference](build/QUICK_BUILD.md)
+- [Build Summary](build/BUILD_SUMMARY.md)
+- [SQLite3 Info](build/SQLITE3_BUILD_INFO.md)
+
+---
+
+## 🎮 Development Scripts
+
+### Core Scripts
+
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build entire application for production
+- `npm run package` - Package app for distribution
+- `npm run lint` - Run ESLint
+
+### Development Only
+
+- `npm run dev:vite` - Start Vite dev server only
+- `npm run dev:electron:watch` - Watch compile Electron main process
+- `npm run dev:electron:run` - Run Electron process
+- `npm run build:electron` - Build Electron main process
+
+### macOS Packaging
+
+- `npm run package:mac` - Build for current architecture
+- `npm run package:mac:universal` - Build universal binary (Intel + Apple Silicon)
+
+### Helper Scripts
+
+- `./build-and-dev.sh` / `.ps1` - Build and run dev ← **In root for easy access**
+- `./run-dev.sh` / `.ps1` - Quick dev start ← **In root for easy access**
+- `./scripts/build/build-macos.sh` - Automated macOS build
+- `./scripts/build/verify-build.sh` - Verify build artifacts
+
+### Utilities
+
+- `npm run copy:sql` - Copy SQL schema to dist
+- `npm run copy:assets` - Copy assets to dist
+- `npm run copy:manifests` - Copy module manifests to dist
+- `npm run rebuild` - Rebuild native modules (sqlite3)
+
+---
+
+## 🎯 Features in Detail
+
+### Automation Engine
+
+- Execute complex browser automation workflows
+- Support for multiple actions: click, type, navigate, wait, screenshot
+- Real-time progress monitoring
+- Error handling and logging
+
+### Profile Management
+
+- Create and manage browser profiles
+- Configure proxies per profile
+- Manage browser extensions
+- Store profile-specific settings
+
+### Settings
+
+- **Theme**: Light/Dark mode
+- **Color Schemes**: Blue, Purple, Green, Orange
+- Persistent settings using localStorage
+
+### Domain Services
+
+#### Browser Service
+
+- Launch headless/headful browsers
+- Execute automation actions
+- Manage browser lifecycle
+- Take screenshots
+
+#### File Service
+
+- Read/write files
+- JSON file operations
+- Directory management
+- File stats and operations
+
+#### String Service
+
+- String formatting utilities
+- Case conversions (camelCase, snake_case, kebab-case)
+- Slugify, truncate, sanitize
+- Template string formatting
+
+---
+
+## 📡 API Reference
+
+### Automation API
+
+```typescript
+// Start automation
+window.electronAPI.automation.start(config);
+
+// Stop automation
+window.electronAPI.automation.stop(taskId);
+
+// Get task status
+window.electronAPI.automation.status(taskId);
+
+// List all tasks
+window.electronAPI.automation.list();
+```
+
+### Settings API
+
+```typescript
+// Get settings
+window.electronAPI.settings.get();
+
+// Save settings
+window.electronAPI.settings.save(settings);
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 👥 Author
+
+VEO3 Team
+
+---
+
+**Note**: This is an automation tool for VEO3. Please ensure you comply with the terms of service of any websites you automate.

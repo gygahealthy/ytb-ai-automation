@@ -146,10 +146,11 @@ export default function CookieRotationDrawerContent() {
       setLoading(false);
     });
 
+    // Reduced polling interval (60s instead of 30s) - rely more on event updates
     const interval = setInterval(() => {
       fetchStatus();
       fetchProfiles();
-    }, 30000);
+    }, 60000);
 
     return () => {
       unsubscribe();

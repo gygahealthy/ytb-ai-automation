@@ -7,6 +7,11 @@ interface VEO3ModelsState {
   isSyncing: boolean;
   maxEnabledModels: number; // Max models that can be enabled for usage
 
+  // Default models for each generation type
+  defaultModelForTextToVideo: string | null;
+  defaultModelForImageReference: string | null;
+  defaultModelForImageStartEnd: string | null;
+
   // Actions
   setModels: (models: VEO3Model[]) => void;
   updateModelSettings: (
@@ -17,6 +22,9 @@ interface VEO3ModelsState {
   toggleUsage: (key: string) => void;
   setSyncing: (syncing: boolean) => void;
   setMaxEnabledModels: (max: number) => void;
+  setDefaultModelForTextToVideo: (key: string | null) => void;
+  setDefaultModelForImageReference: (key: string | null) => void;
+  setDefaultModelForImageStartEnd: (key: string | null) => void;
 
   // Selectors
   getFilteredModels: (paygateTier?: PaygateTier, excludeDeprecated?: boolean) => VEO3ModelWithSettings[];
@@ -31,6 +39,9 @@ export const useVEO3ModelsStore = create<VEO3ModelsState>((set, get) => ({
   lastSyncedAt: null,
   isSyncing: false,
   maxEnabledModels: 3, // Max 3 models can be enabled for usage (FIFO)
+  defaultModelForTextToVideo: null,
+  defaultModelForImageReference: null,
+  defaultModelForImageStartEnd: null,
 
   setModels: (apiModels: VEO3Model[]) => {
     const existingSettings = get().models.reduce((acc, model) => {
@@ -200,6 +211,21 @@ export const useVEO3ModelsStore = create<VEO3ModelsState>((set, get) => ({
   getUsageModels: () => {
     return get().models.filter((model) => model.enabledForUsage);
   },
+
+  setDefaultModelForTextToVideo: (key: string | null) => {
+    set({ defaultModelForTextToVideo: key });
+    localStorage.setItem(`${STORAGE_KEY}-default-text-to-video`, key || "");
+  },
+
+  setDefaultModelForImageReference: (key: string | null) => {
+    set({ defaultModelForImageReference: key });
+    localStorage.setItem(`${STORAGE_KEY}-default-image-reference`, key || "");
+  },
+
+  setDefaultModelForImageStartEnd: (key: string | null) => {
+    set({ defaultModelForImageStartEnd: key });
+    localStorage.setItem(`${STORAGE_KEY}-default-image-start-end`, key || "");
+  },
 }));
 
 // Initialize from localStorage
@@ -227,4 +253,19 @@ if (savedMax) {
   } catch (e) {
     console.error("Failed to parse saved max enabled models", e);
   }
+}
+
+// Initialize default models from localStorage
+const savedDefaultTextToVideo = localStorage.getItem(`${STORAGE_KEY}-default-text-to-video`);
+const savedDefaultImageReference = localStorage.getItem(`${STORAGE_KEY}-default-image-reference`);
+const savedDefaultImageStartEnd = localStorage.getItem(`${STORAGE_KEY}-default-image-start-end`);
+
+if (savedDefaultTextToVideo) {
+  useVEO3ModelsStore.setState({ defaultModelForTextToVideo: savedDefaultTextToVideo });
+}
+if (savedDefaultImageReference) {
+  useVEO3ModelsStore.setState({ defaultModelForImageReference: savedDefaultImageReference });
+}
+if (savedDefaultImageStartEnd) {
+  useVEO3ModelsStore.setState({ defaultModelForImageStartEnd: savedDefaultImageStartEnd });
 }

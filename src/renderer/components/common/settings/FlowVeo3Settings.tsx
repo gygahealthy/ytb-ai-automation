@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, Check, AlertCircle, Filter, Copy, ChevronDown, ChevronUp, Image, Download } from "lucide-react";
+import { RefreshCw, Check, AlertCircle, Filter, Copy, ChevronDown, ChevronUp, Image, Download, Video } from "lucide-react";
 import { useDefaultProfileStore } from "../../../store/default-profile.store";
 import { useVEO3ModelsStore } from "../../../store/veo3-models.store";
 import { useImageGalleryStore } from "../../../store/image-gallery.store";
@@ -18,6 +18,12 @@ export default function FlowVeo3Settings() {
     getFilteredModels,
     maxEnabledModels,
     setMaxEnabledModels,
+    defaultModelForTextToVideo,
+    defaultModelForImageReference,
+    defaultModelForImageStartEnd,
+    setDefaultModelForTextToVideo,
+    setDefaultModelForImageReference,
+    setDefaultModelForImageStartEnd,
   } = useVEO3ModelsStore();
 
   // Image gallery store for max selected images config
@@ -35,6 +41,7 @@ export default function FlowVeo3Settings() {
   const [showImageConfig, setShowImageConfig] = useState(true);
   const [showVideoModelConfig, setShowVideoModelConfig] = useState(true);
   const [showVideoDownloadConfig, setShowVideoDownloadConfig] = useState(true);
+  const [showDefaultModelConfig, setShowDefaultModelConfig] = useState(true);
 
   // Local state for number inputs to allow typing
   const [maxImagesInput, setMaxImagesInput] = useState<string>(maxSelectedImages.toString());
@@ -319,6 +326,100 @@ export default function FlowVeo3Settings() {
         )}
       </div>
 
+      {/* Default Model Selection by Generation Type Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Collapsible Header */}
+        <button
+          onClick={() => setShowDefaultModelConfig(!showDefaultModelConfig)}
+          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Video className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Default Models by Generation Type</h3>
+          </div>
+          {showDefaultModelConfig ? (
+            <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          )}
+        </button>
+
+        {/* Collapsible Content */}
+        {showDefaultModelConfig && (
+          <div className="border-t border-gray-200 dark:border-gray-700 p-3 space-y-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+              Configure which model to use by default for each video generation type.
+            </p>
+
+            {/* Text-to-Video Default Model */}
+            <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Text-to-Video</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Default model for text-only video generation</p>
+              </div>
+              <select
+                value={defaultModelForTextToVideo || ""}
+                onChange={(e) => setDefaultModelForTextToVideo(e.target.value || null)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-w-[280px] font-mono"
+              >
+                <option value="">-- Select Model --</option>
+                {models
+                  .filter((m) => m.enabledForUsage && m.modelStatus !== "MODEL_STATUS_DEPRECATED" && m.key.startsWith("veo_3_"))
+                  .map((model) => (
+                    <option key={model.key} value={model.key}>
+                      {model.key}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Image Reference Default Model */}
+            <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Image Reference</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Default model for image-to-video generation</p>
+              </div>
+              <select
+                value={defaultModelForImageReference || ""}
+                onChange={(e) => setDefaultModelForImageReference(e.target.value || null)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-w-[280px] font-mono"
+              >
+                <option value="">-- Select Model --</option>
+                {models
+                  .filter((m) => m.enabledForUsage && m.modelStatus !== "MODEL_STATUS_DEPRECATED" && m.key.startsWith("veo_3_"))
+                  .map((model) => (
+                    <option key={model.key} value={model.key}>
+                      {model.key}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Image Start-End Default Model */}
+            <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Image Start-End</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Default model for start/end image video generation</p>
+              </div>
+              <select
+                value={defaultModelForImageStartEnd || ""}
+                onChange={(e) => setDefaultModelForImageStartEnd(e.target.value || null)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-w-[280px] font-mono"
+              >
+                <option value="">-- Select Model --</option>
+                {models
+                  .filter((m) => m.enabledForUsage && m.modelStatus !== "MODEL_STATUS_DEPRECATED" && m.key.startsWith("veo_3_"))
+                  .map((model) => (
+                    <option key={model.key} value={model.key}>
+                      {model.key}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Video Model Configuration Section - Wrapped with Collapsible */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         {/* Collapsible Header */}
@@ -571,15 +672,15 @@ export default function FlowVeo3Settings() {
                             </span>
                           </td>
                           <td className="px-2 py-1 font-medium text-gray-900 dark:text-gray-100">
-                            <div className="flex items-center justify-between gap-1 group">
+                            <div className="flex items-center gap-1 group max-w-[240px]">
                               <div className="flex-1 min-w-0">
-                                <div className="truncate text-sm">{model.displayName}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{model.key}</div>
+                                <div className="truncate text-xs">{model.displayName}</div>
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">{model.key}</div>
                               </div>
                               <button
                                 onClick={() => handleCopyKey(model.key)}
                                 title="Copy model key"
-                                className={`flex-shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-all ${
+                                className={`flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-all ${
                                   copiedKey === model.key
                                     ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400"
