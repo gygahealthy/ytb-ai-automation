@@ -1,15 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Play, Settings2, Download, Share2 } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useDrawer } from "@hooks/useDrawer";
-import VideoPropertiesDrawer from "@/renderer/components/video-creation/single-video-page/video-studio/VideoPropertiesDrawer";
-import SceneTimeline from "@/renderer/components/video-creation/single-video-page/video-studio/SceneTimeline";
-import VideoSequencePlayer from "@/renderer/components/video-creation/single-video-page/video-studio/VideoSequencePlayer";
+import VideoPropertiesDrawer from "@/renderer/components/video-studio/VideoPropertiesDrawer";
+import SceneTimeline from "@/renderer/components/video-studio/SceneTimeline";
+import VideoSequencePlayer from "@/renderer/components/video-studio/VideoSequencePlayer";
 import { useVideoCreationStore } from "@store/video-creation.store";
 
 export default function VideoStudioPage() {
-  const { projectId: _projectId } = useParams<{ projectId?: string }>();
-  const navigate = useNavigate();
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
@@ -85,19 +82,11 @@ export default function VideoStudioPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-600 hover:text-cyan-600 dark:text-gray-400 dark:hover:text-cyan-400 transition-colors font-medium"
-            >
-              ← Back
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Video Studio</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {completedScenes.length} scene{completedScenes.length !== 1 ? "s" : ""}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Video Studio</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {completedScenes.length} scene{completedScenes.length !== 1 ? "s" : ""}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">

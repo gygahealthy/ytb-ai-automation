@@ -73,6 +73,13 @@ export const routeConfig: RouteConfig[] = [
         page: "video-creation.single",
       },
       {
+        id: "video-creation.studio",
+        label: "Video Studio",
+        icon: Clapperboard,
+        path: "/video-creation/studio",
+        page: "video-creation.studio",
+      },
+      {
         id: "video-creation.history",
         label: "Video Creation History",
         icon: History,
