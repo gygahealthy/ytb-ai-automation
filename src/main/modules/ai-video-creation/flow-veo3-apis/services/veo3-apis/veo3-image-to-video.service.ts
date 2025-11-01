@@ -28,7 +28,7 @@ export class VEO3ImageToVideoService {
    * @param prompt - Text prompt for video generation
    * @param imageReferences - Array of image references (1-3 images)
    * @param aspectRatio - Video aspect ratio
-   * @param model - VEO3 model key (default: veo_3_0_r2v_fast_ultra)
+   * @param model - VEO3 model key (default: veo_3_1_i2v_s_fast_ultra)
    * @returns Generation ID, scene ID, and operation name
    */
   async generateVideoFromImages(
@@ -40,7 +40,7 @@ export class VEO3ImageToVideoService {
       | "VIDEO_ASPECT_RATIO_LANDSCAPE"
       | "VIDEO_ASPECT_RATIO_PORTRAIT"
       | "VIDEO_ASPECT_RATIO_SQUARE" = "VIDEO_ASPECT_RATIO_LANDSCAPE",
-    model: string = "veo_3_0_r2v_fast_ultra"
+    model: string = "veo_3_1_i2v_s_fast_ultra"
   ): Promise<
     ApiResponse<{
       generationId: string;
@@ -195,7 +195,7 @@ export class VEO3ImageToVideoService {
             textInput: {
               prompt,
             },
-            videoModelKey: model,
+            videoModelKey: model || "veo_3_0_r2v_fast_ultra", // Default model
           },
         ],
       };

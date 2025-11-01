@@ -175,7 +175,7 @@ export default function VideoPromptRow({
               openModal({
                 title: "Select Images for This Prompt (Max 3)",
                 content: <ImageSelectionModal promptId={prompt.id} />,
-                size: "xl",
+                size: "lg",
               })
             }
             className={`p-1.5 rounded-md transition-all shadow-sm ${

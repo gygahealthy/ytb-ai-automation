@@ -407,24 +407,26 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
   // No need to load images on mount - ImageCacheContext handles it
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-      {/* Optional Toolbar */}
+    <div className="relative h-full flex flex-col bg-white dark:bg-gray-800">
+      {/* Optional Toolbar - Sticky at top */}
       {showToolbar && (
-        <ImageGalleryToolbar
-          onSync={handleSyncFromFlow}
-          onDownload={handleDownloadImages}
-          onForceRefresh={handleForceRefresh}
-          isSyncing={isSyncing}
-          isDownloading={isDownloading}
-          isDisabled={isLoading || isSyncing || isDownloading || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
-          imageCount={images.length}
-          pendingDownloadCount={images.filter((img) => !img.localPath).length}
-        />
+        <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <ImageGalleryToolbar
+            onSync={handleSyncFromFlow}
+            onDownload={handleDownloadImages}
+            onForceRefresh={handleForceRefresh}
+            isSyncing={isSyncing}
+            isDownloading={isDownloading}
+            isDisabled={isLoading || isSyncing || isDownloading || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
+            imageCount={images.length}
+            pendingDownloadCount={images.filter((img) => !img.localPath).length}
+          />
+        </div>
       )}
 
-      {/* Content Section - More compact */}
-      <div className="flex-shrink-0 px-4 pb-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
-        {/* Selected Image Placeholders with Actions */}
+      {/* Content Section - Sticky below toolbar - More compact */}
+      <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 space-y-1.5 shadow-sm">
+        {/* Selected Image Placeholders with Actions - Compact version */}
         <SelectedImagePlaceholders
           onUpload={handleUploadImage}
           isUploading={isLoading || isExtractingSecret}
@@ -443,6 +445,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
           customSelectedImages={customSelectedImages}
           onRemoveCustomImage={handleRemoveImage}
           onClearCustomImages={handleClearAllImages}
+          compact={true}
         />
         {/* Status Messages */}
         <StatusMessages
@@ -454,8 +457,8 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
         />
       </div>
 
-      {/* Image Grid - Scrollable Area */}
-      <div className="flex-1 overflow-y-auto p-4 max-h-[calc(100vh-300px)]">
+      {/* Image Grid - Scrollable Area - Takes all remaining space */}
+      <div className="flex-1 overflow-y-auto p-2">
         <ImageGrid
           images={images}
           imageSrcCache={imageSrcCache}
@@ -467,8 +470,8 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
         />
       </div>
 
-      {/* Footer - Stats - Fixed to Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 flex-shrink-0 p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      {/* Footer - Stats - Sticky at bottom */}
+      <div className="sticky bottom-0 z-10 px-2 py-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <GalleryFooter imageCount={images.length} selectedCount={customSelectedImages.length} totalDiskSize={totalDiskSize} />
       </div>
     </div>

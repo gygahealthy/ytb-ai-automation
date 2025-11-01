@@ -19,7 +19,7 @@ export interface ModalProps {
 const sizeClasses: Record<ModalSize, string> = {
   md: "max-w-md",
   lg: "max-w-2xl",
-  xl: "max-w-7xl",
+  xl: "max-w-[95vw]", // Wider modal for image gallery
 };
 
 export default function Modal({
@@ -54,8 +54,7 @@ export default function Modal({
   useEffect(() => {
     if (!isOpen || !modalRef.current) return;
     const el = modalRef.current;
-    const focusable =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusable = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const nodes = Array.from(el.querySelectorAll(focusable)) as HTMLElement[];
     if (nodes.length === 0) return;
     const first = nodes[0];
@@ -100,9 +99,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   // Only close when clicking the overlay (not when clicking inside the modal)
-  const handleOverlayMouseDown: React.MouseEventHandler<HTMLDivElement> = (
-    e
-  ) => {
+  const handleOverlayMouseDown: React.MouseEventHandler<HTMLDivElement> = (e) => {
     if (!closeOnOverlay) return;
     // If the target is the overlay (the element with data-overlay attribute), close.
     const target = e.target as HTMLElement | null;
@@ -114,42 +111,34 @@ export default function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       {/* overlay - listen for mouseDown to avoid stealing focus from modal */}
-      <div
-        className="absolute inset-0"
-        data-overlay="true"
-        onMouseDown={handleOverlayMouseDown}
-      />
+      <div className="absolute inset-0" data-overlay="true" onMouseDown={handleOverlayMouseDown} />
 
       <div
         ref={modalRef}
         className={`relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${
           sizeClasses[size]
-        } flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] ${
-          contentClassName ?? ""
-        }`}
+        } flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[95vh] ${contentClassName ?? ""}`}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800 flex-shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800 flex-shrink-0">
+            <div className="flex items-center gap-2">
               {icon && <div className="flex-shrink-0">{icon}</div>}
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                {title}
-              </h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
             </div>
             <button
               aria-label="Close"
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
+              className="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* Body - Fixed height with scrollable content */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className={`p-6 ${contentClassName ?? ""}`}>{children}</div>
+          <div className={`p-3 ${contentClassName ?? ""}`}>{children}</div>
         </div>
 
         {/* Footer */}

@@ -35,6 +35,8 @@ interface SelectedImagePlaceholdersProps {
   customSelectedImages?: SelectedImageInfo[];
   onRemoveCustomImage?: (imageId: string) => void;
   onClearCustomImages?: () => void;
+  // Compact mode for modal usage
+  compact?: boolean;
 }
 
 /**
@@ -59,6 +61,7 @@ export default function SelectedImagePlaceholders({
   customSelectedImages,
   onRemoveCustomImage,
   onClearCustomImages,
+  compact = false,
 }: SelectedImagePlaceholdersProps) {
   const globalStore = useImageGalleryStore();
   const [imageSrcCache, setImageSrcCache] = useState<Record<string, string>>({});
@@ -121,9 +124,9 @@ export default function SelectedImagePlaceholders({
   return (
     <div>
       {/* Header with Clear All and Settings buttons */}
-      <div className="flex items-center justify-between mb-2">
+      <div className={`flex items-center justify-between ${compact ? "mb-1" : "mb-2"}`}>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className={`${compact ? "text-xs" : "text-sm"} font-medium text-gray-700 dark:text-gray-300`}>
             Selected Images ({selectedImages.length}/{maxSelectedImages})
           </span>
         </div>
@@ -131,10 +134,12 @@ export default function SelectedImagePlaceholders({
           {hasSelectedImages && (
             <button
               onClick={clearSelectedImages}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors"
+              className={`flex items-center gap-1.5 ${
+                compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-xs"
+              } text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors`}
               title="Clear all selections"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className={compact ? "w-3 h-3" : "w-4 h-4"} />
               <span>Clear All</span>
             </button>
           )}
@@ -142,11 +147,15 @@ export default function SelectedImagePlaceholders({
           <div className="relative" ref={settingsRef}>
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className="flex items-center justify-center w-16 h-16 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-all duration-200 hover:scale-110 active:scale-95"
+              className={`flex items-center justify-center ${
+                compact ? "w-10 h-10" : "w-16 h-16"
+              } text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-all duration-200 hover:scale-110 active:scale-95`}
               title="Settings"
             >
               <Settings
-                className={`w-8 h-8 transition-transform duration-300 ${isSettingsOpen ? "rotate-90" : "hover:rotate-45"}`}
+                className={`${compact ? "w-5 h-5" : "w-8 h-8"} transition-transform duration-300 ${
+                  isSettingsOpen ? "rotate-90" : "hover:rotate-45"
+                }`}
               />
             </button>
 
@@ -268,8 +277,8 @@ export default function SelectedImagePlaceholders({
         </div>
       </div>
 
-      {/* 3 Image Slots - Larger */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      {/* 3 Image Slots - Responsive sizing */}
+      <div className={`grid grid-cols-3 ${compact ? "gap-2 mb-2" : "gap-4 mb-4"}`}>
         {slots.map((image, index) => (
           <div key={index} className="relative">
             {/* Inner container with border and rounded corners */}
@@ -288,21 +297,25 @@ export default function SelectedImagePlaceholders({
                       <img src={imageSrcCache[image.id]} alt={image.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="w-10 h-10 text-gray-400" />
+                        <ImageIcon className={compact ? "w-6 h-6 text-gray-400" : "w-10 h-10 text-gray-400"} />
                       </div>
                     )}
                   </div>
 
                   {/* Slot Number Badge */}
-                  <div className="absolute bottom-2 left-2 px-2.5 py-1 bg-purple-500 text-white text-sm font-semibold rounded">
+                  <div
+                    className={`absolute ${
+                      compact ? "bottom-1 left-1 px-1.5 py-0.5 text-xs" : "bottom-2 left-2 px-2.5 py-1 text-sm"
+                    } bg-purple-500 text-white font-semibold rounded`}
+                  >
                     {index + 1}
                   </div>
                 </>
               ) : (
                 // Empty slot
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-400">
-                  <ImageIcon className="w-8 h-8" />
-                  <span className="text-sm">Slot {index + 1}</span>
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
+                  <ImageIcon className={compact ? "w-5 h-5" : "w-8 h-8"} />
+                  <span className={compact ? "text-xs" : "text-sm"}>Slot {index + 1}</span>
                 </div>
               )}
             </div>
@@ -311,10 +324,12 @@ export default function SelectedImagePlaceholders({
             {image && (
               <button
                 onClick={() => removeSelectedImage(image.id)}
-                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
+                className={`absolute -top-1 -right-1 ${
+                  compact ? "w-5 h-5" : "w-7 h-7"
+                } bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10`}
                 title="Remove from selection"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className={compact ? "w-3 h-3" : "w-4 h-4"} />
               </button>
             )}
           </div>
@@ -326,11 +341,17 @@ export default function SelectedImagePlaceholders({
         <button
           onClick={onUpload}
           disabled={isUploading}
-          className="w-full py-1 border-2 border-dashed border-purple-400 dark:border-purple-500 hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all flex flex-col items-center justify-center gap-1.5"
+          className={`w-full ${
+            compact ? "py-1.5" : "py-1"
+          } border-2 border-dashed border-purple-400 dark:border-purple-500 hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all flex flex-col items-center justify-center ${
+            compact ? "gap-1" : "gap-1.5"
+          }`}
           title="Upload new image"
         >
-          <Upload className="w-6 h-6 text-purple-500 dark:text-purple-400" />
-          <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+          <Upload
+            className={compact ? "w-4 h-4 text-purple-500 dark:text-purple-400" : "w-6 h-6 text-purple-500 dark:text-purple-400"}
+          />
+          <span className={`${compact ? "text-xs" : "text-xs"} font-medium text-purple-600 dark:text-purple-400`}>
             {isUploading ? "Uploading..." : "Upload Image"}
           </span>
         </button>

@@ -168,7 +168,8 @@ export function useVideoGeneration() {
       // If ingredients mode, check for selected images
       let imageReferences: Array<{ mediaId: string; imageId: string }> | undefined;
       if (isIngredientsMode) {
-        const selectedImages = useImageGalleryStore.getState().selectedImages;
+        // Use per-prompt selected images (not global gallery selection)
+        const selectedImages = prompt.selectedImages || [];
 
         if (!selectedImages || selectedImages.length === 0) {
           alert.show({

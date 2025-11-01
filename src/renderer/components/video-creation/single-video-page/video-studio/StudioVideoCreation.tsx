@@ -195,7 +195,7 @@ export default function StudioVideoCreation() {
                   onToggleSelect={togglePromptSelection}
                   onTogglePreview={togglePromptPreview}
                   onCreate={(promptId, promptText) =>
-                    handleCreateVideo(promptId, promptText, selectedProfileId, selectedProjectId)
+                    handleCreateVideo(promptId, promptText, selectedProfileId, selectedProjectId, "text-to-video")
                   }
                   onShowInfo={handleShowInfo}
                   onToggleProfileSelect={togglePromptProfileSelect}

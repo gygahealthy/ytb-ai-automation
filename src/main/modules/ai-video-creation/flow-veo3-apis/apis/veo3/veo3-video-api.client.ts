@@ -69,7 +69,7 @@ export class VEO3VideoApiClient {
             textInput: {
               prompt,
             },
-            videoModelKey: "veo_3_0_t2v_fast",
+            videoModelKey: "veo_3_1_t2v_fast_ultra",
             metadata: {
               sceneId,
             },
