@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Crop } from "lucide-react";
 import { useFilePathsStore } from "../../../../store/file-paths.store";
 import { useDefaultProfileStore } from "../../../../store/default-profile.store";
@@ -28,8 +28,20 @@ import { cropImage, blobToFile, CropArea, AspectRatio } from "../../../../utils/
  * - Track pagination cursor per profile
  */
 export default function ImageGalleryDrawer() {
+  console.log("[ImageGalleryDrawer] Component rendering at", Date.now());
+
   // Use shared image cache context (avoids duplicate backend calls)
-  const { images, imageSrcCache, isLoading, refreshImages } = useImageCache();
+  const { images, imageSrcCache, isLoading, totalDiskSize, refreshImages } = useImageCache();
+
+  // Track if we've already loaded for this profile to prevent re-fetching
+  const hasLoadedRef = useRef(false);
+  const loadedProfileIdRef = useRef<string | null>(null);
+  const imagesLengthRef = useRef(0);
+
+  // Update image length ref without causing re-renders
+  useEffect(() => {
+    imagesLengthRef.current = images.length;
+  }, [images.length]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -37,7 +49,6 @@ export default function ImageGalleryDrawer() {
   const [downloadStatus, setDownloadStatus] = useState<{ downloaded: number; failed: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isExtractingSecret, setIsExtractingSecret] = useState(false);
-  const [totalDiskSize, setTotalDiskSize] = useState<number>(0);
   const [gridColumns, setGridColumns] = useState<2 | 3 | 4 | 5>(3);
   const [showToolbar, setShowToolbar] = useState<boolean>(false);
 
@@ -51,27 +62,6 @@ export default function ImageGalleryDrawer() {
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
-
-  // Calculate total disk size when images change
-  useEffect(() => {
-    const calculateTotalSize = async () => {
-      let totalSize = 0;
-      for (const image of images) {
-        if (image.localPath) {
-          try {
-            const sizeResult = await (window as any).electronAPI.imageVeo3.getFileSize(image.localPath);
-            if (sizeResult.success && sizeResult.data?.size) {
-              totalSize += sizeResult.data.size;
-            }
-          } catch (err) {
-            console.error("Failed to get file size for:", image.localPath, err);
-          }
-        }
-      }
-      setTotalDiskSize(totalSize);
-    };
-    calculateTotalSize();
-  }, [images]);
 
   /**
    * Ensure FLOW_NEXT_KEY secret is available (extract if needed)
@@ -100,37 +90,11 @@ export default function ImageGalleryDrawer() {
 
   /**
    * Upload local image to Flow server (API call + save to DB)
+   * Opens file dialog instantly, validates afterward
    */
   const handleUploadImage = async () => {
-    if (!currentProfileId) {
-      setError("Please configure a Flow profile in Settings > Flow VEO3 before uploading images");
-      return;
-    }
-
-    if (!veo3ImagesPath) {
-      setError("Please configure VEO3 Images storage path in Settings > File Paths");
-      return;
-    }
-
-    if (!tempVideoPath) {
-      setError("Please configure Temp Video Path in Settings > File Paths before uploading images");
-      alert.show({
-        title: "Configuration Required",
-        message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
-        severity: "warning",
-        duration: 5000,
-      });
-      return;
-    }
-
-    // Ensure secret is extracted before uploading
-    const secretReady = await ensureSecretExtracted();
-    if (!secretReady) {
-      return;
-    }
-
     try {
-      // Open file dialog to select image
+      // Open file dialog FIRST (instant UX)
       const result = await (window as any).electronAPI.dialog.showOpenDialog({
         properties: ["openFile"],
         filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png"] }],
@@ -142,64 +106,138 @@ export default function ImageGalleryDrawer() {
 
       console.log("[ImageGalleryDrawer] Dialog result:", dialogResult);
 
-      if (dialogResult && !dialogResult.canceled && dialogResult.filePaths && dialogResult.filePaths.length > 0) {
-        const imagePath = dialogResult.filePaths[0];
-
-        console.log("[ImageGalleryDrawer] Selected image path:", imagePath);
-        console.log("[ImageGalleryDrawer] imagePath type:", typeof imagePath);
-        console.log("[ImageGalleryDrawer] imagePath value:", JSON.stringify(imagePath));
-
-        if (!imagePath) {
-          throw new Error("Image path is undefined");
-        }
-
-        console.log("[ImageGalleryDrawer] About to call readFile with:", imagePath);
-
-        // Read the file buffer via IPC
-        const fileBufferResult = await (window as any).electronAPI.fs.readFile(imagePath);
-        if (!fileBufferResult.success || !fileBufferResult.data) {
-          throw new Error(`Failed to read file: ${fileBufferResult.error || "Unknown error"}`);
-        }
-        const fileBuffer = fileBufferResult.data;
-
-        console.log("[ImageGalleryDrawer] File buffer received, size:", fileBuffer?.length || 0);
-
-        const fileName = imagePath.split(/[/\\]/).pop() || "image.jpg";
-        const mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
-
-        console.log("[ImageGalleryDrawer] About to write temp file:", { fileName, tempVideoPath });
-
-        // Write to temp folder for processing
-        const tempFileResult = await (window as any).electronAPI.fs.writeTempFile(
-          fileBuffer,
-          fileName,
-          tempVideoPath || undefined
-        );
-        if (!tempFileResult.success || !tempFileResult.data) {
-          throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
-        }
-        const tempFilePath = tempFileResult.data;
-
-        console.log("[ImageGalleryDrawer] Temp file created at:", tempFilePath);
-
-        // Create File object from buffer for preview
-        const file = new File([fileBuffer], fileName, { type: mimeType });
-        const previewUrl = URL.createObjectURL(file);
-
-        // Create a closure with the file, temp path, and preview URL to avoid state timing issues
-        const handleCropForThisImage = async (cropArea: CropArea, aspectRatio: AspectRatio) => {
-          await handleCropComplete(cropArea, aspectRatio, file, tempFilePath, previewUrl);
-        };
-
-        openModal({
-          title: "Crop your ingredient",
-          icon: <Crop className="w-6 h-6" />,
-          content: <ImageCropModalContent imagePath={previewUrl} tempFilePath={tempFilePath} onCrop={handleCropForThisImage} />,
-          size: "xl",
-          closeOnEscape: true,
-          closeOnOverlay: false,
-        });
+      // User cancelled - no validation needed
+      if (!dialogResult || dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
+        return;
       }
+
+      // NOW validate configuration (after user selected file)
+      if (!currentProfileId) {
+        setError("Please configure a Flow profile in Settings > Flow VEO3 before uploading images");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please configure a Flow profile in Settings > Flow VEO3",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      if (!veo3ImagesPath) {
+        setError("Please configure VEO3 Images storage path in Settings > File Paths");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please configure VEO3 Images storage path in Settings > File Paths",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      if (!tempVideoPath) {
+        setError("Please configure Temp Video Path in Settings > File Paths before uploading images");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Ensure secret is extracted before uploading
+      const secretReady = await ensureSecretExtracted();
+      if (!secretReady) {
+        return;
+      }
+
+      // Process the selected file
+      const imagePath = dialogResult.filePaths[0];
+
+      console.log("[ImageGalleryDrawer] Selected image path:", imagePath);
+      console.log("[ImageGalleryDrawer] imagePath type:", typeof imagePath);
+      console.log("[ImageGalleryDrawer] imagePath value:", JSON.stringify(imagePath));
+
+      if (!imagePath) {
+        throw new Error("Image path is undefined");
+      }
+
+      // OPEN MODAL IMMEDIATELY with loading state
+      openModal({
+        title: "Crop your ingredient",
+        icon: <Crop className="w-6 h-6" />,
+        content: (
+          <ImageCropModalContent
+            imagePath="" // Empty initially - will show loading state
+            tempFilePath=""
+            onCrop={async () => {
+              /* Will be replaced when image loads */
+            }}
+          />
+        ),
+        size: "xl",
+        closeOnEscape: true,
+        closeOnOverlay: false,
+      });
+
+      console.log("[ImageGalleryDrawer] About to call readFile with:", imagePath);
+
+      // Read the file buffer via IPC (async - DON'T block the modal opening)
+      // This runs in background while modal shows loading spinner
+      (async () => {
+        try {
+          const fileBufferResult = await (window as any).electronAPI.fs.readFile(imagePath);
+          if (!fileBufferResult.success || !fileBufferResult.data) {
+            closeModal();
+            throw new Error(`Failed to read file: ${fileBufferResult.error || "Unknown error"}`);
+          }
+          const fileBuffer = fileBufferResult.data;
+
+          console.log("[ImageGalleryDrawer] File buffer received, size:", fileBuffer?.length || 0);
+
+          const fileName = imagePath.split(/[/\\]/).pop() || "image.jpg";
+          const mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+
+          console.log("[ImageGalleryDrawer] About to write temp file:", { fileName, tempVideoPath });
+
+          // Write to temp folder for processing
+          const tempFileResult = await (window as any).electronAPI.fs.writeTempFile(
+            fileBuffer,
+            fileName,
+            tempVideoPath || undefined
+          );
+          if (!tempFileResult.success || !tempFileResult.data) {
+            closeModal();
+            throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
+          }
+          const tempFilePath = tempFileResult.data;
+
+          console.log("[ImageGalleryDrawer] Temp file created at:", tempFilePath);
+
+          // Create File object from buffer for preview
+          const file = new File([fileBuffer], fileName, { type: mimeType });
+          const previewUrl = URL.createObjectURL(file);
+
+          // Create a closure with the file, temp path, and preview URL to avoid state timing issues
+          const handleCropForThisImage = async (cropArea: CropArea, aspectRatio: AspectRatio) => {
+            await handleCropComplete(cropArea, aspectRatio, file, tempFilePath, previewUrl);
+          };
+
+          // UPDATE MODAL with loaded image
+          openModal({
+            title: "Crop your ingredient",
+            icon: <Crop className="w-6 h-6" />,
+            content: <ImageCropModalContent imagePath={previewUrl} tempFilePath={tempFilePath} onCrop={handleCropForThisImage} />,
+            size: "xl",
+            closeOnEscape: true,
+            closeOnOverlay: false,
+          });
+        } catch (err) {
+          closeModal();
+          setError(String(err));
+          console.error("Failed to load image:", err);
+        }
+      })();
     } catch (err) {
       setError(String(err));
       console.error("Failed to select image:", err);
@@ -374,11 +412,10 @@ export default function ImageGalleryDrawer() {
 
       if (result.success && result.data) {
         // Clear local state
-        setTotalDiskSize(0);
         setSyncStatus(null);
         setDownloadStatus(null);
 
-        // Refresh images from database
+        // Refresh images from database (also recalculates disk size in context)
         await refreshImages();
 
         // Show success alert
@@ -484,10 +521,52 @@ export default function ImageGalleryDrawer() {
    */
   // Removed - now handled by ImageGrid component using store
 
-  // Load images on mount
+  /**
+   * Load images when drawer first opens (lazy loading)
+   * Only refresh if cache is empty or profile changed
+   * CRITICAL: Avoid unnecessary refreshes on remount when cache already has data
+   * Uses refs to prevent re-triggering when images load
+   */
   useEffect(() => {
-    refreshImages();
-  }, [currentProfileId]);
+    const currentImagesLength = imagesLengthRef.current;
+    console.log(
+      "[ImageGalleryDrawer] useEffect triggered, currentProfileId:",
+      currentProfileId,
+      "images.length:",
+      currentImagesLength,
+      "hasLoaded:",
+      hasLoadedRef.current,
+      "loadedProfileId:",
+      loadedProfileIdRef.current
+    );
+
+    // No profile configured - clear state and skip
+    if (!currentProfileId) {
+      hasLoadedRef.current = false;
+      loadedProfileIdRef.current = null;
+      return;
+    }
+
+    // Check if profile changed - reset load state
+    if (loadedProfileIdRef.current !== currentProfileId) {
+      console.log("[ImageGalleryDrawer] Profile changed, resetting load state");
+      hasLoadedRef.current = false;
+      loadedProfileIdRef.current = currentProfileId;
+    }
+
+    // If we already have images cached AND we've loaded for this profile, skip
+    // This prevents the 2nd+ open from re-fetching unnecessarily
+    if (currentImagesLength > 0 && hasLoadedRef.current) {
+      console.log("[ImageGalleryDrawer] Using cached images, skipping refresh");
+      return;
+    }
+
+    // Only refresh if cache is empty or haven't loaded yet
+    console.log("[ImageGalleryDrawer] No cached images or first load, fetching...");
+    hasLoadedRef.current = true;
+    refreshImages(false); // false = silent refresh, no loading state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProfileId]); // ONLY depend on profileId, not images or refreshImages
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">

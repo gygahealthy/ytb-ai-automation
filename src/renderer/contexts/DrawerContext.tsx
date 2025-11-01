@@ -17,6 +17,8 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   const [isPinned, setIsPinned] = useState(false);
 
   const openDrawer = (props: Omit<DrawerProps, "isOpen" | "onClose">) => {
+    console.log("[DrawerContext] openDrawer called at", Date.now(), "title:", props.title);
+
     // Close LogDrawer if it's open and not pinned
     const logStore = useLogStore.getState();
     if (logStore.isDrawerOpen && !logStore.isPinned) {
@@ -25,12 +27,15 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
 
     // If a drawer is already open and not pinned, close it first
     if (drawerProps && !isPinned) {
+      console.log("[DrawerContext] Closing existing drawer first");
       setDrawerProps(null);
       // Small delay to allow close animation before opening new drawer
       setTimeout(() => {
+        console.log("[DrawerContext] Opening new drawer after delay at", Date.now());
         setDrawerProps(props);
       }, 50);
     } else {
+      console.log("[DrawerContext] Opening drawer immediately at", Date.now());
       setDrawerProps(props);
     }
   };

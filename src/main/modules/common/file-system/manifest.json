@@ -1,0 +1,6 @@
+{
+  "name": "file-system",
+  "description": "File system operations including read, write, and disk size calculations",
+  "version": "1.0.0",
+  "disabled": false
+}

@@ -12,6 +12,7 @@ interface UploadSectionProps {
 
 /**
  * Upload Section - Upload area button
+ * Opens dialog instantly, validates configuration afterward
  */
 export default function UploadSection({
   onUpload,
@@ -22,11 +23,12 @@ export default function UploadSection({
   hasStoragePath,
   hasProfileId,
 }: UploadSectionProps) {
-  const isDisabled = isLoading || isSyncing || isDownloading || isExtractingSecret || !hasStoragePath || !hasProfileId;
+  // Only disable during active operations, not for missing config
+  const isDisabled = isLoading || isSyncing || isDownloading || isExtractingSecret;
 
   const getTitle = (): string => {
-    if (!hasProfileId) return "Configure Flow profile in Settings first";
-    if (!hasStoragePath) return "Configure storage path in Settings first";
+    if (!hasProfileId) return "Will prompt to configure Flow profile after selecting image";
+    if (!hasStoragePath) return "Will prompt to configure storage path after selecting image";
     if (isExtractingSecret) return "Extracting API secret...";
     return "Upload local image to Flow server";
   };

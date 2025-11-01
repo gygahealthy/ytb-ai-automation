@@ -77,7 +77,7 @@ export default function SelectedImagePlaceholders({
       for (const img of selectedImages) {
         if (img.localPath && !imageSrcCache[img.id]) {
           try {
-            const result = await (window as any).electronAPI.imageVeo3.readImageFile(img.localPath);
+            const result = await (window as any).electronAPI.fs.readImageFile(img.localPath);
             if (result.success && result.data?.dataUrl) {
               setImageSrcCache((prev) => ({ ...prev, [img.id]: result.data.dataUrl }));
             }

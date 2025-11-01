@@ -28,6 +28,8 @@ export default function Drawer({
   drawerId,
   onPinChange,
 }: DrawerProps) {
+  console.log("[Drawer] Component rendering, isOpen:", isOpen, "title:", title, "at", Date.now());
+
   const drawerPinStore = useDrawerPinStore();
 
   // Use persistent pin state if drawerId is provided, otherwise use local state

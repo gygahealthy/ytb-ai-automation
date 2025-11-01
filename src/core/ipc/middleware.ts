@@ -4,7 +4,13 @@ import { Logger } from "../logging/types";
 export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
   return async (_event: any, ...args: any[]): Promise<any> => {
     const start = Date.now();
-    logger.info(`IPC ${reg.channel} called`);
+
+    // Skip logging for high-frequency file system operations
+    const skipLogging = reg.channel.startsWith("fs:");
+
+    if (!skipLogging) {
+      logger.info(`IPC ${reg.channel} called`);
+    }
 
     // If multiple args were passed via ipcRenderer.invoke(channel, a, b, c)
     // forward them to the handler as an array so handlers can support
@@ -18,7 +24,10 @@ export function wrapWithMiddleware(reg: IpcRegistration, logger: Logger) {
       // Validation would go here (zod) if enabled
       const res = await reg.handler(req);
       const duration = Date.now() - start;
-      logger.info(`IPC ${reg.channel} completed in ${duration}ms`);
+
+      if (!skipLogging) {
+        logger.info(`IPC ${reg.channel} completed in ${duration}ms`);
+      }
 
       // Log response details for debugging specific handlers
       if (reg.channel === "componentDiscovery:getComponentTreeForUI") {

@@ -48,7 +48,6 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
   const [downloadStatus, setDownloadStatus] = useState<{ downloaded: number; failed: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isExtractingSecret, setIsExtractingSecret] = useState(false);
-  const [totalDiskSize, setTotalDiskSize] = useState<number>(0);
   const [gridColumns, setGridColumns] = useState<2 | 3 | 4 | 5>(3);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
 
@@ -61,7 +60,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
   const { openModal } = useModal();
 
   // Use shared image cache context (avoids duplicate backend calls)
-  const { images, imageSrcCache, isLoading, refreshImages } = useImageCache();
+  const { images, imageSrcCache, isLoading, totalDiskSize, refreshImages } = useImageCache();
 
   // Get this prompt's selected images
   const currentPrompt = prompts.find((p) => p.id === promptId);
@@ -75,27 +74,6 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
 
   // Get current Flow profile ID from settings
   const currentProfileId = flowProfileId;
-
-  // Calculate total disk size when images change
-  useEffect(() => {
-    const calculateTotalSize = async () => {
-      let totalSize = 0;
-      for (const image of images) {
-        if (image.localPath) {
-          try {
-            const result = await (window as any).electronAPI.fs.getFileSize(image.localPath);
-            if (result.success && result.data) {
-              totalSize += result.data;
-            }
-          } catch (error) {
-            console.error("Error getting file size:", error);
-          }
-        }
-      }
-      setTotalDiskSize(totalSize);
-    };
-    calculateTotalSize();
-  }, [images]);
 
   /**
    * Ensure FLOW_NEXT_KEY secret is available (extract if needed)
@@ -124,37 +102,11 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
 
   /**
    * Upload local image to Flow server (API call + save to DB)
+   * Opens file dialog instantly, validates afterward
    */
   const handleUploadImage = async () => {
-    if (!currentProfileId) {
-      setError("Please configure a Flow profile in Settings > Flow VEO3 before uploading images");
-      return;
-    }
-
-    if (!veo3ImagesPath) {
-      setError("Please configure VEO3 Images storage path in Settings > File Paths");
-      return;
-    }
-
-    if (!tempVideoPath) {
-      setError("Please configure Temp Video Path in Settings > File Paths before uploading images");
-      alert.show({
-        title: "Configuration Required",
-        message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
-        severity: "warning",
-        duration: 5000,
-      });
-      return;
-    }
-
-    // Ensure secret is extracted before uploading
-    const secretReady = await ensureSecretExtracted();
-    if (!secretReady) {
-      return;
-    }
-
     try {
-      // Open file dialog to select image
+      // Open file dialog FIRST (instant UX)
       const result = await (window as any).electronAPI.dialog.showOpenDialog({
         properties: ["openFile"],
         filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png"] }],
@@ -166,76 +118,117 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
 
       console.log("[ImageSelectionModal] Dialog result:", dialogResult);
 
-      if (dialogResult && !dialogResult.canceled && dialogResult.filePaths && dialogResult.filePaths.length > 0) {
-        const filePath = dialogResult.filePaths[0];
-        console.log("[ImageSelectionModal] Selected file:", filePath);
-
-        // Read the file and create a blob
-        const fileResult = await (window as any).electronAPI.fs.readFile(filePath);
-        if (!fileResult.success || !fileResult.data) {
-          setError("Failed to read selected image");
-          return;
-        }
-
-        const buffer = fileResult.data;
-        const blob = new Blob([buffer]);
-        const file = new File([blob], filePath.split(/[\\/]/).pop() || "image.jpg", { type: "image/jpeg" });
-
-        // Save to temporary location
-        const tempPathResult = await (window as any).electronAPI.fs.writeTempFile(buffer, file.name, tempVideoPath || undefined);
-
-        if (!tempPathResult.success || !tempPathResult.data) {
-          setError("Failed to save temporary file");
-          return;
-        }
-
-        const tempPath = tempPathResult.data;
-        console.log("[ImageSelectionModal] Temp file saved:", tempPath);
-
-        // Show crop modal
-        const previewUrl = URL.createObjectURL(blob);
-        openModal({
-          title: "Crop Image",
-          content: (
-            <div className="min-w-[600px]">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Select aspect ratio and crop area for your image
-              </div>
-              {/* Crop modal content would go here - reuse from ImageGalleryDrawer */}
-            </div>
-          ),
-        });
-
-        // For now, directly upload without crop (implement crop modal later if needed)
-        const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
-          currentProfileId,
-          tempPath,
-          veo3ImagesPath,
-          "IMAGE_ASPECT_RATIO_LANDSCAPE" // Default to landscape
-        );
-
-        if (uploadResult.success) {
-          setError(null);
-          alert.show({
-            title: "Upload Successful",
-            message: `Image uploaded successfully: ${uploadResult.data.name}`,
-            severity: "success",
-            duration: 3000,
-          });
-          // Refresh images
-          await refreshImages();
-        } else {
-          setError(uploadResult.error || "Failed to upload image");
-        }
-
-        URL.revokeObjectURL(previewUrl);
+      // User cancelled - no validation needed
+      if (!dialogResult || dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
+        return;
       }
+
+      // NOW validate configuration (after user selected file)
+      if (!currentProfileId) {
+        setError("Please configure a Flow profile in Settings > Flow VEO3 before uploading images");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please configure a Flow profile in Settings > Flow VEO3",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      if (!veo3ImagesPath) {
+        setError("Please configure VEO3 Images storage path in Settings > File Paths");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please configure VEO3 Images storage path in Settings > File Paths",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      if (!tempVideoPath) {
+        setError("Please configure Temp Video Path in Settings > File Paths before uploading images");
+        alert.show({
+          title: "Configuration Required",
+          message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
+          severity: "warning",
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Ensure secret is extracted before uploading
+      const secretReady = await ensureSecretExtracted();
+      if (!secretReady) {
+        return;
+      }
+
+      // Process the selected file
+      const filePath = dialogResult.filePaths[0];
+      console.log("[ImageSelectionModal] Selected file:", filePath);
+
+      // Read the file and create a blob
+      const fileResult = await (window as any).electronAPI.fs.readFile(filePath);
+      if (!fileResult.success || !fileResult.data) {
+        setError("Failed to read selected image");
+        return;
+      }
+
+      const buffer = fileResult.data;
+      const blob = new Blob([buffer]);
+      const file = new File([blob], filePath.split(/[\\/]/).pop() || "image.jpg", { type: "image/jpeg" });
+
+      // Save to temporary location
+      const tempPathResult = await (window as any).electronAPI.fs.writeTempFile(buffer, file.name, tempVideoPath || undefined);
+
+      if (!tempPathResult.success || !tempPathResult.data) {
+        setError("Failed to save temporary file");
+        return;
+      }
+
+      const tempPath = tempPathResult.data;
+      console.log("[ImageSelectionModal] Temp file saved:", tempPath);
+
+      // Show crop modal
+      const previewUrl = URL.createObjectURL(blob);
+      openModal({
+        title: "Crop Image",
+        content: (
+          <div className="min-w-[600px]">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">Select aspect ratio and crop area for your image</div>
+            {/* Crop modal content would go here - reuse from ImageGalleryDrawer */}
+          </div>
+        ),
+      });
+
+      // For now, directly upload without crop (implement crop modal later if needed)
+      const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
+        currentProfileId,
+        tempPath,
+        veo3ImagesPath,
+        "IMAGE_ASPECT_RATIO_LANDSCAPE" // Default to landscape
+      );
+
+      if (uploadResult.success) {
+        setError(null);
+        alert.show({
+          title: "Upload Successful",
+          message: `Image uploaded successfully: ${uploadResult.data.name}`,
+          severity: "success",
+          duration: 3000,
+        });
+        // Refresh images
+        await refreshImages();
+      } else {
+        setError(uploadResult.error || "Failed to upload image");
+      }
+
+      URL.revokeObjectURL(previewUrl);
     } catch (err) {
       setError(String(err));
       console.error("Failed to select image:", err);
     }
   };
-
   /**
    * Sync images from Flow server (updates/inserts new images, preserves existing)
    */
@@ -411,10 +404,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalContentProps> = ({
     });
   };
 
-  // Load images on mount
-  useEffect(() => {
-    refreshImages();
-  }, [currentProfileId]);
+  // No need to load images on mount - ImageCacheContext handles it
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">

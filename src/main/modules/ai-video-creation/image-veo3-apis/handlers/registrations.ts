@@ -1,4 +1,3 @@
-import * as fs from "fs/promises";
 import { IpcRegistration } from "../../../../../core/ipc/types";
 import { imageVeo3Service } from "../services/image-veo3.service";
 
@@ -72,36 +71,6 @@ export const imageVeo3Registrations: IpcRegistration[] = [
     description: "Delete all image records and local files for a profile",
     handler: async (req: { profileId: string }) => {
       return await imageVeo3Service.forceRefreshImages(req.profileId);
-    },
-  },
-  {
-    channel: "image-veo3:read-image-file",
-    description: "Read image file from disk and return as base64 data URL",
-    handler: async (req: { filePath: string }) => {
-      try {
-        // Security: validate that the path exists and is readable
-        const fileBuffer = await fs.readFile(req.filePath);
-        const base64 = fileBuffer.toString("base64");
-        // Determine mime type from file extension
-        const ext = req.filePath.toLowerCase().split(".").pop() || "jpg";
-        const mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
-        const dataUrl = `data:${mimeType};base64,${base64}`;
-        return { success: true, data: { dataUrl } };
-      } catch (error) {
-        return { success: false, error: `Failed to read image file: ${String(error)}` };
-      }
-    },
-  },
-  {
-    channel: "image-veo3:get-file-size",
-    description: "Get file size in bytes for an image file",
-    handler: async (req: { filePath: string }) => {
-      try {
-        const stats = await fs.stat(req.filePath);
-        return { success: true, data: { size: stats.size } };
-      } catch (error) {
-        return { success: false, error: `Failed to get file size: ${String(error)}` };
-      }
     },
   },
 ];

@@ -225,37 +225,41 @@ export default function ImageCropModalContent({ imagePath, tempFilePath, onCrop 
         onMouseLeave={handleMouseUp}
         style={{ minHeight: "400px" }}
       >
-        {!imageLoaded && (
+        {(!imagePath || !imageLoaded) && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-gray-400">Loading image...</div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
+              <div className="text-gray-400 text-sm">Loading image...</div>
+            </div>
           </div>
         )}
 
-        <div className="relative inline-block max-w-full max-h-full">
-          <img
-            ref={imageRef}
-            src={imagePath}
-            alt="Crop preview"
-            className="max-w-full max-h-full object-contain block"
-            style={{ maxHeight: "calc(100vh - 350px)" }}
-            draggable={false}
-            onError={(e) => {
-              console.error("[ImageCropModal] Failed to load image:", e);
-              console.error("[ImageCropModal] Image path:", imagePath);
-            }}
-          />
+        {imagePath && (
+          <div className="relative inline-block max-w-full max-h-full">
+            <img
+              ref={imageRef}
+              src={imagePath}
+              alt="Crop preview"
+              className="max-w-full max-h-full object-contain block"
+              style={{ maxHeight: "calc(100vh - 350px)" }}
+              draggable={false}
+              onError={(e) => {
+                console.error("[ImageCropModal] Failed to load image:", e);
+                console.error("[ImageCropModal] Image path:", imagePath);
+              }}
+            />
 
-          {/* Crop Overlay - Only show when image is loaded */}
-          {imageLoaded && cropArea.width > 0 && imageDisplaySize.width > 0 && (
-            <>
-              {/* Dark overlay outside crop area */}
-              <div
-                className="absolute top-0 left-0 pointer-events-none"
-                style={{
-                  width: `${imageDisplaySize.width}px`,
-                  height: `${imageDisplaySize.height}px`,
-                  background: "rgba(0, 0, 0, 0.6)",
-                  clipPath: `polygon(
+            {/* Crop Overlay - Only show when image is loaded */}
+            {imageLoaded && cropArea.width > 0 && imageDisplaySize.width > 0 && (
+              <>
+                {/* Dark overlay outside crop area */}
+                <div
+                  className="absolute top-0 left-0 pointer-events-none"
+                  style={{
+                    width: `${imageDisplaySize.width}px`,
+                    height: `${imageDisplaySize.height}px`,
+                    background: "rgba(0, 0, 0, 0.6)",
+                    clipPath: `polygon(
                     0% 0%,
                     100% 0%,
                     100% 100%,
@@ -267,54 +271,55 @@ export default function ImageCropModalContent({ imagePath, tempFilePath, onCrop 
                     ${cropArea.x + cropArea.width}px ${cropArea.y}px,
                     ${cropArea.x}px ${cropArea.y}px
                   )`,
-                }}
-              />
+                  }}
+                />
 
-              {/* Crop area border and handles */}
-              <div
-                className="absolute border-2 border-white shadow-lg cursor-move select-none"
-                style={{
-                  left: `${cropArea.x}px`,
-                  top: `${cropArea.y}px`,
-                  width: `${cropArea.width}px`,
-                  height: `${cropArea.height}px`,
-                  boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0)",
-                }}
-                onMouseDown={handleMouseDown}
-              >
-                {/* Grid lines */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-1/3 left-0 right-0 border-t border-white/30" />
-                  <div className="absolute top-2/3 left-0 right-0 border-t border-white/30" />
-                  <div className="absolute left-1/3 top-0 bottom-0 border-l border-white/30" />
-                  <div className="absolute left-2/3 top-0 bottom-0 border-l border-white/30" />
+                {/* Crop area border and handles */}
+                <div
+                  className="absolute border-2 border-white shadow-lg cursor-move select-none"
+                  style={{
+                    left: `${cropArea.x}px`,
+                    top: `${cropArea.y}px`,
+                    width: `${cropArea.width}px`,
+                    height: `${cropArea.height}px`,
+                    boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0)",
+                  }}
+                  onMouseDown={handleMouseDown}
+                >
+                  {/* Grid lines */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-1/3 left-0 right-0 border-t border-white/30" />
+                    <div className="absolute top-2/3 left-0 right-0 border-t border-white/30" />
+                    <div className="absolute left-1/3 top-0 bottom-0 border-l border-white/30" />
+                    <div className="absolute left-2/3 top-0 bottom-0 border-l border-white/30" />
+                  </div>
+
+                  {/* Corner resize handles */}
+                  <div
+                    className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-nw-resize hover:scale-125 transition-transform shadow-lg"
+                    style={{ left: "-10px", top: "-10px" }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
+                  />
+                  <div
+                    className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-ne-resize hover:scale-125 transition-transform shadow-lg"
+                    style={{ right: "-10px", top: "-10px" }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
+                  />
+                  <div
+                    className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-sw-resize hover:scale-125 transition-transform shadow-lg"
+                    style={{ left: "-10px", bottom: "-10px" }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
+                  />
+                  <div
+                    className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-se-resize hover:scale-125 transition-transform shadow-lg"
+                    style={{ right: "-10px", bottom: "-10px" }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, "se")}
+                  />
                 </div>
-
-                {/* Corner resize handles */}
-                <div
-                  className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-nw-resize hover:scale-125 transition-transform shadow-lg"
-                  style={{ left: "-10px", top: "-10px" }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
-                />
-                <div
-                  className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-ne-resize hover:scale-125 transition-transform shadow-lg"
-                  style={{ right: "-10px", top: "-10px" }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
-                />
-                <div
-                  className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-sw-resize hover:scale-125 transition-transform shadow-lg"
-                  style={{ left: "-10px", bottom: "-10px" }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
-                />
-                <div
-                  className="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-se-resize hover:scale-125 transition-transform shadow-lg"
-                  style={{ right: "-10px", bottom: "-10px" }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, "se")}
-                />
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer Controls */}

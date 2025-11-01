@@ -100,6 +100,22 @@ export default function SingleVideoCreationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Listen for keyboard shortcut to cycle video creation mode
+  useEffect(() => {
+    const handleCycleMode = () => {
+      // Only cycle between text-to-video and ingredients (exclude video-studio)
+      const modes: VideoCreationMode[] = ["text-to-video", "ingredients"];
+      const currentIndex = modes.indexOf(creationMode);
+      const nextIndex = (currentIndex + 1) % modes.length;
+      handleModeChange(modes[nextIndex]);
+    };
+
+    window.addEventListener("cycle-video-creation-mode", handleCycleMode);
+    return () => {
+      window.removeEventListener("cycle-video-creation-mode", handleCycleMode);
+    };
+  }, [creationMode, navigate]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

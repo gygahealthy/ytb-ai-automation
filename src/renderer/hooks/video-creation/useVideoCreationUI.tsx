@@ -48,6 +48,7 @@ export function useVideoCreationUI() {
    * Open the image gallery drawer
    */
   const handleOpenImageGallery = useCallback(() => {
+    console.log("[useVideoCreationUI] handleOpenImageGallery clicked at", Date.now());
     openDrawer({
       title: "Image Gallery",
       icon: <ImageIcon className="w-5 h-5 text-purple-500" />,

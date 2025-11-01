@@ -121,7 +121,11 @@ interface Window {
       getLocalImages: (profileId: string) => Promise<any>;
       deleteImage: (imageId: string, profileId: string) => Promise<any>;
       readImageFile: (filePath: string) => Promise<any>;
+      forceRefresh: (profileId: string) => Promise<any>;
+      /** @deprecated Use fs.getFileSize instead */
       getFileSize: (filePath: string) => Promise<any>;
+      /** @deprecated Use fs.calculateTotalSize instead */
+      calculateTotalSize: (filePaths: string[]) => Promise<any>;
       /** @deprecated Use syncMetadata + downloadBatch for better control */
       syncFromFlow: (profileId: string, localStoragePath: string, maxPages?: number) => Promise<any>;
     };
@@ -145,9 +149,17 @@ interface Window {
       showOpenDialog: (options: any) => Promise<{ canceled: boolean; filePaths: string[] }>;
     };
     fs: {
-      readFile: (filePath: string) => Promise<Buffer>;
-      writeTempFile: (data: ArrayBuffer, filename: string, customTempPath?: string) => Promise<string>;
-      getFileSize: (filePath: string) => Promise<number>;
+      readFile: (filePath: string) => Promise<{ success: boolean; data?: Buffer; error?: string }>;
+      writeTempFile: (
+        data: ArrayBuffer,
+        filename: string,
+        customTempPath?: string
+      ) => Promise<{ success: boolean; data?: string; error?: string }>;
+      getFileSize: (filePath: string) => Promise<{ success: boolean; data?: number; error?: string }>;
+      calculateTotalSize: (
+        filePaths: string[]
+      ) => Promise<{ success: boolean; data?: { totalSize: number; fileCount: number; errors: number }; error?: string }>;
+      readImageFile: (filePath: string) => Promise<{ success: boolean; data?: { dataUrl: string }; error?: string }>;
     };
     masterPrompts: {
       getAll: () => Promise<any>;

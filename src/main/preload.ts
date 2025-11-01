@@ -169,10 +169,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // File System APIs
   fs: {
-    readFile: (filePath: string) => ipcRenderer.invoke("fs:readFile", filePath),
+    readFile: (filePath: string) => ipcRenderer.invoke("fs:readFile", { filePath }),
     writeTempFile: (data: ArrayBuffer, filename: string, customTempPath?: string) =>
       ipcRenderer.invoke("fs:writeTempFile", { data, filename, customTempPath }),
-    getFileSize: (filePath: string) => ipcRenderer.invoke("fs:getFileSize", filePath),
+    getFileSize: (filePath: string) => ipcRenderer.invoke("fs:getFileSize", { filePath }),
+    calculateTotalSize: (filePaths: string[]) => ipcRenderer.invoke("fs:calculateTotalSize", { filePaths }),
+    readImageFile: (filePath: string) => ipcRenderer.invoke("fs:readImageFile", { filePath }),
   },
 
   // DevTools APIs
@@ -410,7 +412,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getLocalImages: (profileId: string) => ipcRenderer.invoke("image-veo3:get-local-images", { profileId }),
     deleteImage: (imageId: string, profileId: string) => ipcRenderer.invoke("image-veo3:delete", { imageId, profileId }),
     readImageFile: (filePath: string) => ipcRenderer.invoke("image-veo3:read-image-file", { filePath }),
-    getFileSize: (filePath: string) => ipcRenderer.invoke("image-veo3:get-file-size", { filePath }),
+    getFileSize: (filePath: string) => ipcRenderer.invoke("fs:getFileSize", { filePath }),
+    calculateTotalSize: (filePaths: string[]) => ipcRenderer.invoke("fs:calculateTotalSize", { filePaths }),
     // Deprecated - use syncMetadata + downloadBatch instead
     syncFromFlow: (profileId: string, localStoragePath: string) =>
       ipcRenderer.invoke("image-veo3:sync-metadata", { profileId }).then(async (metadataResult: any) => {

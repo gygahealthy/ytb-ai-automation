@@ -18,8 +18,11 @@ export type ShortcutAction =
 // Added navigation shortcuts
 export type NavigationShortcutAction = "navigate-back" | "navigate-forward";
 
-// Merge navigation actions into ShortcutAction union
-export type AllShortcutAction = ShortcutAction | NavigationShortcutAction;
+// Page-specific shortcuts (only work on certain pages)
+export type PageSpecificShortcutAction = "cycle-video-creation-mode";
+
+// Merge all actions into AllShortcutAction union
+export type AllShortcutAction = ShortcutAction | NavigationShortcutAction | PageSpecificShortcutAction;
 
 export type KeyboardShortcut = {
   id: AllShortcutAction;
@@ -39,7 +42,7 @@ type KeyboardShortcutsState = {
 };
 
 // Current version - increment when adding new shortcuts
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 export const defaultShortcuts: KeyboardShortcut[] = [
   {
@@ -141,6 +144,14 @@ export const defaultShortcuts: KeyboardShortcut[] = [
     keys: ["Ctrl", "B"],
     icon: "Menu",
   },
+  // Page-specific shortcuts
+  {
+    id: "cycle-video-creation-mode",
+    label: "Cycle Video Creation Mode",
+    description: "Switch between Text to Video and Ingredients tabs",
+    keys: ["Ctrl", "Q"],
+    icon: "LayoutGrid",
+  },
 ];
 
 export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
@@ -200,36 +211,36 @@ export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
 // This ensures new shortcuts are added even if migration doesn't work as expected
 const mergeNewShortcuts = () => {
   const state = useKeyboardShortcutsStore.getState();
-  
+
   // Check if we need to add new shortcuts
-  const existingIds = new Set(state.shortcuts.map(s => s.id));
-  const missingShortcuts = defaultShortcuts.filter(s => !existingIds.has(s.id));
-  
+  const existingIds = new Set(state.shortcuts.map((s) => s.id));
+  const missingShortcuts = defaultShortcuts.filter((s) => !existingIds.has(s.id));
+
   if (missingShortcuts.length > 0 || state.version < CURRENT_VERSION) {
     console.log(`[Keyboard Shortcuts] Merging ${missingShortcuts.length} new shortcuts`);
-    
+
     // Merge: keep existing (possibly customized) shortcuts and add new ones
     const mergedShortcuts = [
-      ...state.shortcuts.map(existing => {
+      ...state.shortcuts.map((existing) => {
         // Update with latest metadata (label, description, icon) but keep custom keys
-        const latest = defaultShortcuts.find(d => d.id === existing.id);
+        const latest = defaultShortcuts.find((d) => d.id === existing.id);
         if (latest && (latest.label !== existing.label || latest.description !== existing.description)) {
           return { ...latest, keys: existing.keys }; // Keep user's custom keys
         }
         return existing;
       }),
-      ...missingShortcuts
+      ...missingShortcuts,
     ];
-    
-    useKeyboardShortcutsStore.setState({ 
+
+    useKeyboardShortcutsStore.setState({
       shortcuts: mergedShortcuts,
-      version: CURRENT_VERSION 
+      version: CURRENT_VERSION,
     });
   }
 };
 
 // Run merge on module load
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   // Use setTimeout to ensure store is fully initialized
   setTimeout(mergeNewShortcuts, 0);
 }

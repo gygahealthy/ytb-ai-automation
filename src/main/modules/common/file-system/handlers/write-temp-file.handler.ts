@@ -1,20 +1,12 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { ApiResponse } from "../../../core/ipc/types";
-
-/**
- * Read a file and return its buffer
- */
-async function handleReadFile(filePath: string): Promise<ApiResponse<Buffer>> {
-  const buffer = await fs.readFile(filePath);
-  return { success: true, data: buffer };
-}
+import { ApiResponse } from "../../../../../core/ipc/types";
 
 /**
  * Write data to a temporary file and return the path
  */
-async function handleWriteTempFile(req: {
+export async function handleWriteTempFile(req: {
   data: ArrayBuffer;
   filename: string;
   customTempPath?: string;
@@ -41,26 +33,3 @@ async function handleWriteTempFile(req: {
 
   return { success: true, data: tempPath };
 }
-
-/**
- * Get file size in bytes
- */
-async function handleGetFileSize(filePath: string): Promise<ApiResponse<number>> {
-  const stats = await fs.stat(filePath);
-  return { success: true, data: stats.size };
-}
-
-export const fileSystemHandlers = [
-  {
-    channel: "fs:readFile",
-    handler: handleReadFile,
-  },
-  {
-    channel: "fs:writeTempFile",
-    handler: handleWriteTempFile,
-  },
-  {
-    channel: "fs:getFileSize",
-    handler: handleGetFileSize,
-  },
-];

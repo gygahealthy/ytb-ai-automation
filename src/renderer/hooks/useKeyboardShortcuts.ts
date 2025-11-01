@@ -196,6 +196,11 @@ const shortcutHandlers: Record<string, ShortcutHandler> = {
       console.error("[Keyboard] Error toggling sidebar:", err);
     }
   },
+  "cycle-video-creation-mode": () => {
+    console.log("[Keyboard] Cycle Video Creation Mode triggered");
+    // Dispatch custom event that SingleVideoCreationPage will listen to
+    window.dispatchEvent(new CustomEvent("cycle-video-creation-mode"));
+  },
 };
 
 /**
