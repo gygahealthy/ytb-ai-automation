@@ -275,8 +275,10 @@ export default function VideoPromptRow({
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {displayJob && <div className="flex-shrink-0 mb-2">{getStatusBadge()}</div>}
+        {/* Show status badge when job exists and preview is hidden (preview has its own status display) */}
+        {displayJob && !showPreview && <div className="flex-shrink-0 mb-2">{getStatusBadge()}</div>}
 
+        {/* Show progress bar only when processing, has generationId, and preview is hidden */}
         {displayJob && displayStatus === "processing" && displayJob.generationId && !showPreview && (
           <div className="flex-shrink-0 mb-2 animate-pulse">
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden shadow-inner">

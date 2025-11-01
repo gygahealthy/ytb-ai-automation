@@ -53,14 +53,20 @@ export const ImageCacheProvider: React.FC<{ children: React.ReactNode }> = ({ ch
    */
   const loadImageDataUrl = async (filePath: string): Promise<string | null> => {
     try {
+      console.log("[ImageCacheContext] Loading image from path:", filePath);
       const result = await (window as any).electronAPI.fs.readImageFile(filePath);
+      console.log("[ImageCacheContext] Load result:", {
+        success: result.success,
+        hasDataUrl: !!result.data?.dataUrl,
+        error: result.error,
+      });
       if (result.success && result.data?.dataUrl) {
         return result.data.dataUrl;
       }
-      console.error("Failed to read image file:", result.error);
+      console.error("[ImageCacheContext] Failed to read image file:", result.error, "path:", filePath);
       return null;
     } catch (error) {
-      console.error("Error loading image data URL:", error);
+      console.error("[ImageCacheContext] Error loading image data URL:", error, "path:", filePath);
       return null;
     }
   };
@@ -188,6 +194,35 @@ export const ImageCacheProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       refreshImages(false);
     }
   }, [flowProfileId, cachedProfileId, refreshImages]);
+
+  /**
+   * Listen for image upload success events from backend
+   * Auto-refresh cache when new image is uploaded
+   */
+  React.useEffect(() => {
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI || !electronAPI.on) {
+      console.warn("[ImageCacheContext] electronAPI.on not available for event listeners");
+      return;
+    }
+
+    const handleUploadSuccess = (data: { profileId: string; imageId: string; imageName: string }) => {
+      console.log("[ImageCacheContext] Upload success event received:", data);
+      // Only refresh if upload was for current profile
+      if (data.profileId === flowProfileId) {
+        console.log("[ImageCacheContext] Refreshing images after upload...");
+        refreshImages(true); // Force refresh with loading indicator
+      }
+    };
+
+    const unsubscribe = electronAPI.on("image-veo3:upload:success", handleUploadSuccess);
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [flowProfileId, refreshImages]);
 
   const value: ImageCacheContextType = {
     images,

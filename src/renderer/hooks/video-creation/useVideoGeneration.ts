@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import veo3IPC from "@/renderer/ipc/veo3";
 import { useVideoCreationStore } from "@store/video-creation.store";
 import { useImageGalleryStore } from "@store/image-gallery.store";
+import { useVEO3ModelsStore } from "@store/veo3-models.store";
 import { useAlert } from "@hooks/useAlert";
 import type { VideoCreationMode } from "@/renderer/components/video-creation/single-video-page/VideoCreationModeTabs";
 
@@ -131,7 +132,12 @@ export function useVideoGeneration() {
 
       // Get the prompt to determine which profile/project/model to use
       const prompts = useVideoCreationStore.getState().prompts;
-      const defaultModel = useVideoCreationStore.getState().defaultModel;
+      // Model selection: use mode-specific default > hardcoded fallback (ignore global defaultModel for ingredients)
+      const modeSpecificDefaultModel =
+        creationMode === "ingredients"
+          ? useVEO3ModelsStore.getState().defaultModelForImageReference || "veo_3_0_r2v_fast_ultra"
+          : useVEO3ModelsStore.getState().defaultModelForTextToVideo || useVideoCreationStore.getState().defaultModel;
+      const defaultModel = modeSpecificDefaultModel;
       const prompt = prompts.find((p) => p.id === promptId);
       if (!prompt) {
         alert.show({
@@ -145,6 +151,10 @@ export function useVideoGeneration() {
       const effectiveProfileId = prompt.profileId || selectedProfileId;
       const effectiveProjectId = prompt.projectId || selectedProjectId;
       const effectiveModel = prompt.model || defaultModel || undefined;
+
+      console.log(
+        `[useVideoGeneration] 🎬 Mode: ${creationMode}, defaultModel: ${defaultModel}, effectiveModel: ${effectiveModel}`
+      );
 
       if (!effectiveProfileId) {
         alert.show({
@@ -311,7 +321,12 @@ export function useVideoGeneration() {
       // Get selected prompts and default model
       const prompts = useVideoCreationStore.getState().prompts;
       const jobs = useVideoCreationStore.getState().jobs;
-      const defaultModel = useVideoCreationStore.getState().defaultModel;
+      // Model selection: use mode-specific default > hardcoded fallback (ignore global defaultModel for ingredients)
+      const modeSpecificDefaultModel =
+        creationMode === "ingredients"
+          ? useVEO3ModelsStore.getState().defaultModelForImageReference || "veo_3_0_r2v_fast_ultra"
+          : useVEO3ModelsStore.getState().defaultModelForTextToVideo || useVideoCreationStore.getState().defaultModel;
+      const defaultModel = modeSpecificDefaultModel;
       const selectedPrompts = prompts.filter((p) => p.selected);
 
       if (selectedPrompts.length === 0) {

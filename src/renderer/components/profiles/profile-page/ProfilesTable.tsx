@@ -57,15 +57,12 @@ export default function ProfilesTable({
   const [modalProfileName, setModalProfileName] = useState<string>("");
   const [modalServiceType, setModalServiceType] = useState<"gemini" | "flow">("gemini");
 
-  const handleGeminiToggle = (profileId: string, profileName: string, checked: boolean) => {
+  const handleGeminiToggle = (profileId: string, _profileName: string, checked: boolean) => {
     if (!checked) {
       setGeminiProfile(null);
     } else {
-      // Open modal to select project
-      setModalProfileId(profileId);
-      setModalProfileName(profileName);
-      setModalServiceType("gemini");
-      setShowProjectModal(true);
+      // Store Gemini profile directly without project selection
+      setGeminiProfile(profileId, null);
     }
   };
 

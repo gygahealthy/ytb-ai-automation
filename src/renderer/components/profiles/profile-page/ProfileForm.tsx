@@ -17,6 +17,7 @@ interface Profile {
 }
 
 export interface ProfileFormData {
+  id?: string;
   name: string;
   browserPath?: string;
   userDataDir: string;
@@ -80,6 +81,7 @@ export default function ProfileForm({ isEditMode, editingProfile, onSave, onCanc
   useEffect(() => {
     if (editingProfile) {
       setFormData({
+        id: editingProfile.id,
         name: editingProfile.name,
         browserPath: editingProfile.browserPath || "",
         userDataDir: editingProfile.userDataDir,

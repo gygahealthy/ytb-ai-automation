@@ -99,7 +99,10 @@ export class ProfileService {
    */
   async updateProfile(id: string, updates: Partial<Profile>): Promise<ApiResponse<Profile>> {
     try {
-      if (!(await profileRepository.exists(id))) {
+      const exists = await profileRepository.exists(id);
+      console.log("DEBUG: updateProfile check", { id, exists });
+      if (!exists) {
+        console.log("DEBUG: Profile not found:", id);
         return { success: false, error: "Profile not found" };
       }
 

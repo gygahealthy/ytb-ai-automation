@@ -35,18 +35,25 @@ export default function UploadSection({
 
   return (
     <button
-      className="w-full h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 rounded-lg transition-all group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 dark:disabled:hover:border-gray-600"
+      className={`relative w-full h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 rounded-lg transition-all group disabled:cursor-not-allowed disabled:hover:border-gray-300 dark:disabled:hover:border-gray-600 ${
+        isLoading || isExtractingSecret ? "bg-purple-100/50 dark:bg-purple-900/30" : ""
+      }`}
       onClick={onUpload}
       disabled={isDisabled}
       title={getTitle()}
     >
-      {isLoading || isExtractingSecret ? (
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-      ) : (
-        <Upload className="w-8 h-8 text-gray-400 group-hover:text-purple-500 transition-colors" />
+      {/* Dim overlay when loading */}
+      {(isLoading || isExtractingSecret) && (
+        <div className="absolute inset-0 bg-purple-200/40 dark:bg-purple-800/40 rounded-lg animate-pulse" />
       )}
-      <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors">
-        {isExtractingSecret ? "Extracting Secret..." : "Upload Image"}
+
+      {isLoading || isExtractingSecret ? (
+        <Loader2 className="w-8 h-8 text-purple-400 animate-spin relative z-10" />
+      ) : (
+        <Upload className="w-8 h-8 text-gray-400 group-hover:text-purple-500 transition-colors relative z-10" />
+      )}
+      <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors relative z-10">
+        {isLoading ? "Uploading..." : isExtractingSecret ? "Extracting Secret..." : "Upload Image"}
       </span>
     </button>
   );

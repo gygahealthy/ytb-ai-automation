@@ -28,6 +28,7 @@ export const profileRegistrations: IpcRegistration[] = [
     description: "Update profile",
     handler: async (req: any) => {
       const { id, updates } = req as any;
+      console.log("DEBUG: profile:update handler received", { id, updates });
       return await profileService.updateProfile(id, updates);
     },
   },

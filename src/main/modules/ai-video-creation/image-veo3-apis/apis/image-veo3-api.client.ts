@@ -78,9 +78,32 @@ export class ImageVEO3ApiClient {
       if (!response.ok) {
         const errorText = await response.text();
         logger.error(`Failed to upload image: ${response.status} - ${errorText}`);
+
+        // Try to parse error details
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error) {
+            // Check for specific error reasons
+            if (errorJson.error.details) {
+              const publicErrorMinor = errorJson.error.details.find((d: any) => d.reason === "PUBLIC_ERROR_MINOR_UPLOAD");
+              if (publicErrorMinor) {
+                errorMessage =
+                  "Image upload failed. The image may be too large, corrupted, or in an unsupported format. Please try a different image.";
+              } else {
+                errorMessage = errorJson.error.message || errorMessage;
+              }
+            } else {
+              errorMessage = errorJson.error.message || errorMessage;
+            }
+          }
+        } catch (e) {
+          // Failed to parse, use original error
+        }
+
         return {
           success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          error: errorMessage,
         };
       }
 

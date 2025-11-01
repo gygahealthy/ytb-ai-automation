@@ -341,17 +341,22 @@ export default function SelectedImagePlaceholders({
         <button
           onClick={onUpload}
           disabled={isUploading}
-          className={`w-full ${
+          className={`relative w-full ${
             compact ? "py-1.5" : "py-1"
-          } border-2 border-dashed border-purple-400 dark:border-purple-500 hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all flex flex-col items-center justify-center ${
+          } border-2 border-dashed border-purple-400 dark:border-purple-500 hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:cursor-not-allowed rounded-lg transition-all flex flex-col items-center justify-center ${
             compact ? "gap-1" : "gap-1.5"
-          }`}
+          } ${isUploading ? "bg-purple-100/50 dark:bg-purple-900/30" : ""}`}
           title="Upload new image"
         >
+          {/* Dim overlay when uploading */}
+          {isUploading && <div className="absolute inset-0 bg-purple-200/40 dark:bg-purple-800/40 rounded-lg animate-pulse" />}
+
           <Upload
-            className={compact ? "w-4 h-4 text-purple-500 dark:text-purple-400" : "w-6 h-6 text-purple-500 dark:text-purple-400"}
+            className={`${compact ? "w-4 h-4" : "w-6 h-6"} text-purple-500 dark:text-purple-400 relative z-10 ${
+              isUploading ? "animate-spin" : ""
+            }`}
           />
-          <span className={`${compact ? "text-xs" : "text-xs"} font-medium text-purple-600 dark:text-purple-400`}>
+          <span className={`${compact ? "text-xs" : "text-xs"} font-medium text-purple-600 dark:text-purple-400 relative z-10`}>
             {isUploading ? "Uploading..." : "Upload Image"}
           </span>
         </button>

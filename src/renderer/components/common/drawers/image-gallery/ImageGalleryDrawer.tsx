@@ -45,6 +45,7 @@ export default function ImageGalleryDrawer() {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ synced: number; skipped: number } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ downloaded: number; failed: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +94,9 @@ export default function ImageGalleryDrawer() {
    * Opens file dialog instantly, validates afterward
    */
   const handleUploadImage = async () => {
+    // Set uploading state IMMEDIATELY to show animation
+    setIsUploading(true);
+
     try {
       // Open file dialog FIRST (instant UX)
       const result = await (window as any).electronAPI.dialog.showOpenDialog({
@@ -148,6 +152,7 @@ export default function ImageGalleryDrawer() {
       // Ensure secret is extracted before uploading
       const secretReady = await ensureSecretExtracted();
       if (!secretReady) {
+        setIsUploading(false);
         return;
       }
 
@@ -161,6 +166,9 @@ export default function ImageGalleryDrawer() {
       if (!imagePath) {
         throw new Error("Image path is undefined");
       }
+
+      // Set uploading state to show loading animation
+      setIsUploading(true);
 
       // OPEN MODAL IMMEDIATELY with loading state
       openModal({
@@ -189,6 +197,7 @@ export default function ImageGalleryDrawer() {
           const fileBufferResult = await (window as any).electronAPI.fs.readFile(imagePath);
           if (!fileBufferResult.success || !fileBufferResult.data) {
             closeModal();
+            setIsUploading(false);
             throw new Error(`Failed to read file: ${fileBufferResult.error || "Unknown error"}`);
           }
           const fileBuffer = fileBufferResult.data;
@@ -208,6 +217,7 @@ export default function ImageGalleryDrawer() {
           );
           if (!tempFileResult.success || !tempFileResult.data) {
             closeModal();
+            setIsUploading(false);
             throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
           }
           const tempFilePath = tempFileResult.data;
@@ -234,11 +244,13 @@ export default function ImageGalleryDrawer() {
           });
         } catch (err) {
           closeModal();
+          setIsUploading(false);
           setError(String(err));
           console.error("Failed to load image:", err);
         }
       })();
     } catch (err) {
+      setIsUploading(false);
       setError(String(err));
       console.error("Failed to select image:", err);
     }
@@ -266,12 +278,14 @@ export default function ImageGalleryDrawer() {
       return;
     }
 
+    // Close modal but keep isUploading=true while API call is in progress
     try {
       closeModal();
     } catch (err) {
       console.error("[ImageGalleryDrawer] Error closing modal:", err);
     }
 
+    // Keep isUploading=true - will be reset after upload completes
     setError(null);
 
     try {
@@ -315,7 +329,8 @@ export default function ImageGalleryDrawer() {
       // Convert aspect ratio to API format
       const apiAspectRatio = aspectRatio === "landscape" ? "IMAGE_ASPECT_RATIO_LANDSCAPE" : "IMAGE_ASPECT_RATIO_PORTRAIT";
 
-      // Upload the cropped image
+      // Upload the cropped image (keep animation running)
+      console.log("[ImageGalleryDrawer] Starting upload API call...");
       const uploadResult = await (window as any).electronAPI.imageVeo3.upload(
         currentProfileId,
         tempPath,
@@ -323,9 +338,13 @@ export default function ImageGalleryDrawer() {
         apiAspectRatio
       );
 
+      // Reset uploading state after API completes
+      setIsUploading(false);
+
       if (uploadResult.success) {
-        // Reload images to show the newly uploaded one
-        await refreshImages();
+        // Force refresh with loading indicator to show newly uploaded image
+        console.log("[ImageGalleryDrawer] Upload successful, force refreshing images...");
+        await refreshImages(true); // true = show loading state for visual feedback
 
         // Show success alert
         try {
@@ -339,15 +358,41 @@ export default function ImageGalleryDrawer() {
           console.warn("Failed to show success alert:", alertError);
         }
       } else {
-        setError(uploadResult.error || "Failed to upload image");
+        // Show error alert to user
+        const errorMessage = uploadResult.error || "Failed to upload image";
+        setError(errorMessage);
+        console.error("[ImageGalleryDrawer] Upload failed:", errorMessage);
+        try {
+          alert.show({
+            title: "Upload Failed",
+            message: errorMessage,
+            severity: "error",
+            duration: 5000,
+          });
+        } catch (alertError) {
+          console.warn("Failed to show error alert:", alertError);
+        }
       }
 
       // Clean up
       URL.revokeObjectURL(imageUrl);
       URL.revokeObjectURL(previewUrl);
     } catch (err) {
-      setError(String(err));
+      setIsUploading(false); // Reset on error
+      const errorMessage = String(err);
+      setError(errorMessage);
       console.error("Failed to crop and upload image:", err);
+      // Show error alert
+      try {
+        alert.show({
+          title: "Upload Error",
+          message: errorMessage,
+          severity: "error",
+          duration: 5000,
+        });
+      } catch (alertError) {
+        console.warn("Failed to show error alert:", alertError);
+      }
     }
   };
 
@@ -522,6 +567,159 @@ export default function ImageGalleryDrawer() {
   // Removed - now handled by ImageGrid component using store
 
   /**
+   * Handle clipboard paste (Ctrl+V) to upload images from clipboard
+   */
+  const handlePaste = async (e: ClipboardEvent) => {
+    console.log("[ImageGalleryDrawer] Paste event detected");
+
+    // Check if clipboard contains image data
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let imageFile: File | null = null;
+
+    // Find image in clipboard items
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        if (blob) {
+          // Convert blob to File with proper name
+          const fileName = `pasted-image-${Date.now()}.png`;
+          imageFile = new File([blob], fileName, { type: blob.type });
+          console.log("[ImageGalleryDrawer] Found image in clipboard:", fileName);
+          break;
+        }
+      }
+    }
+
+    if (!imageFile) {
+      console.log("[ImageGalleryDrawer] No image found in clipboard");
+      return;
+    }
+
+    // Validate configuration
+    if (!currentProfileId) {
+      alert.show({
+        title: "Configuration Required",
+        message: "Please configure a Flow profile in Settings > Flow VEO3",
+        severity: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (!veo3ImagesPath) {
+      alert.show({
+        title: "Configuration Required",
+        message: "Please configure VEO3 Images storage path in Settings > File Paths",
+        severity: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (!tempVideoPath) {
+      alert.show({
+        title: "Configuration Required",
+        message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
+        severity: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Ensure secret is extracted
+    setIsUploading(true);
+    const secretReady = await ensureSecretExtracted();
+    if (!secretReady) {
+      setIsUploading(false);
+      return;
+    }
+
+    try {
+      // Open modal with loading state immediately
+      openModal({
+        title: "Crop your ingredient",
+        icon: <Crop className="w-6 h-6" />,
+        content: (
+          <ImageCropModalContent
+            imagePath="" // Empty initially - will show loading state
+            tempFilePath=""
+            onCrop={async () => {
+              /* Will be replaced when image loads */
+            }}
+          />
+        ),
+        size: "xl",
+        closeOnEscape: true,
+        closeOnOverlay: false,
+      });
+
+      // Process image in background
+      const fileBuffer = await imageFile.arrayBuffer();
+      const fileName = imageFile.name;
+
+      console.log("[ImageGalleryDrawer] Writing pasted image to temp:", fileName);
+
+      // Write to temp folder
+      const tempFileResult = await (window as any).electronAPI.fs.writeTempFile(fileBuffer, fileName, tempVideoPath || undefined);
+
+      if (!tempFileResult.success || !tempFileResult.data) {
+        closeModal();
+        setIsUploading(false);
+        throw new Error(`Failed to write temp file: ${tempFileResult.error || "Unknown error"}`);
+      }
+
+      const tempFilePath = tempFileResult.data;
+      console.log("[ImageGalleryDrawer] Pasted image saved to temp:", tempFilePath);
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(imageFile);
+
+      // Create closure for crop handler
+      const handleCropForThisImage = async (cropArea: CropArea, aspectRatio: AspectRatio) => {
+        await handleCropComplete(cropArea, aspectRatio, imageFile, tempFilePath, previewUrl);
+      };
+
+      // Update modal with loaded image
+      openModal({
+        title: "Crop your ingredient",
+        icon: <Crop className="w-6 h-6" />,
+        content: <ImageCropModalContent imagePath={previewUrl} tempFilePath={tempFilePath} onCrop={handleCropForThisImage} />,
+        size: "xl",
+        closeOnEscape: true,
+        closeOnOverlay: false,
+      });
+    } catch (err) {
+      closeModal();
+      setIsUploading(false);
+      const errorMessage = String(err);
+      setError(errorMessage);
+      console.error("Failed to process pasted image:", err);
+      alert.show({
+        title: "Paste Error",
+        message: errorMessage,
+        severity: "error",
+        duration: 5000,
+      });
+    }
+  };
+
+  /**
+   * Set up clipboard paste listener when component mounts
+   */
+  useEffect(() => {
+    console.log("[ImageGalleryDrawer] Setting up paste event listener");
+    document.addEventListener("paste", handlePaste);
+
+    return () => {
+      console.log("[ImageGalleryDrawer] Cleaning up paste event listener");
+      document.removeEventListener("paste", handlePaste);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProfileId, veo3ImagesPath, tempVideoPath]); // Re-attach when config changes
+
+  /**
    * Load images when drawer first opens (lazy loading)
    * Only refresh if cache is empty or profile changed
    * CRITICAL: Avoid unnecessary refreshes on remount when cache already has data
@@ -589,13 +787,15 @@ export default function ImageGalleryDrawer() {
         {/* Selected Image Placeholders with Upload button and Settings */}
         <SelectedImagePlaceholders
           onUpload={handleUploadImage}
-          isUploading={isLoading || isExtractingSecret}
+          isUploading={isUploading || isLoading || isExtractingSecret}
           onSync={handleSyncFromFlow}
           onDownload={handleDownloadImages}
           onForceRefresh={handleForceRefresh}
           isSyncing={isSyncing}
           isDownloading={isDownloading}
-          isDisabled={isLoading || isSyncing || isDownloading || isExtractingSecret || !veo3ImagesPath || !currentProfileId}
+          isDisabled={
+            isLoading || isSyncing || isDownloading || isExtractingSecret || isUploading || !veo3ImagesPath || !currentProfileId
+          }
           imageCount={images.length}
           pendingDownloadCount={images.filter((img) => !img.localPath).length}
           gridColumns={gridColumns}

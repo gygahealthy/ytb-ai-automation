@@ -131,8 +131,10 @@ export default function ProfilesPage() {
 
   const handleSaveProfile = async (formData: ProfileFormData) => {
     try {
-      if (isEditMode && editingProfile) {
-        const response = (await electronApi.profile.update(editingProfile.id, {
+      // Use formData.id if available (more reliable than relying on state), fallback to editingProfile.id
+      const profileId = formData.id || editingProfile?.id;
+      if (profileId && (isEditMode || formData.id)) {
+        const response = (await electronApi.profile.update(profileId, {
           name: formData.name,
           browserPath: formData.browserPath || undefined,
           userDataDir: formData.userDataDir || undefined,

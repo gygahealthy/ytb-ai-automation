@@ -1,5 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import { BrowserWindow } from "electron";
 import { ApiResponse } from "../../../../../shared/types";
 import { Logger } from "../../../../../shared/utils/logger";
 import { profileRepository } from "../../../profile-management/repository/profile.repository";
@@ -14,6 +15,18 @@ import { getImageFilename } from "../helpers/image-type-detector";
 import type { Veo3ImageGeneration, FlowUserWorkflow } from "../types/image.types";
 
 const logger = new Logger("ImageVeo3Service");
+
+/**
+ * Broadcast an event to all browser windows
+ */
+function broadcastToAllWindows(channel: string, data: any) {
+  const windows = BrowserWindow.getAllWindows();
+  windows.forEach((win) => {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, data);
+    }
+  });
+}
 
 /**
  * VEO3 Image Service
@@ -111,10 +124,19 @@ export class ImageVeo3Service {
         }
       }
 
-      // Now try to download the image
+      // Now try to download the image - this is CRITICAL for user experience
       const downloadResult = await this.downloadSingleImage(profileId, imageName, localStoragePath);
       if (!downloadResult.success) {
-        logger.warn(`Failed to download uploaded image: ${downloadResult.error}. Image metadata saved, download it later.`);
+        const errorMsg = `Failed to download uploaded image: ${downloadResult.error}. The image was uploaded to server but cannot be displayed. Please try syncing images later or check server availability.`;
+        logger.error(errorMsg);
+        // Return error to user since they expect to see the image immediately
+        return {
+          success: false,
+          error:
+            downloadResult.error?.includes("503") || downloadResult.error?.includes("UNAVAILABLE")
+              ? "Server temporarily unavailable (503). Image uploaded but cannot download. Try syncing images later."
+              : errorMsg,
+        };
       }
 
       // Get the saved image from database
@@ -129,6 +151,13 @@ export class ImageVeo3Service {
       };
 
       logger.info(`Successfully uploaded image: ${imageGeneration.id} (downloaded: ${!!savedImage.localPath})`);
+
+      // Broadcast upload success event to all windows for UI refresh
+      broadcastToAllWindows("image-veo3:upload:success", {
+        profileId,
+        imageId: savedImage.id,
+        imageName: savedImage.name,
+      });
 
       return { success: true, data: imageGeneration };
     } catch (error) {

@@ -46,6 +46,15 @@ export default function ImageGrid({
   const selectedImages = customSelectedImages !== undefined ? customSelectedImages : globalSelectedImages;
   const useCustomSelection = customSelectedImages !== undefined && onCustomImageToggle !== undefined;
 
+  // Debug: Log current state
+  console.log("[ImageGrid] Render state:", {
+    imagesCount: images.length,
+    imageSrcCacheKeys: Object.keys(imageSrcCache).length,
+    imageSrcCache: imageSrcCache,
+    firstImage: images[0],
+    isLoading,
+  });
+
   const handleToggleSelection = (image: LocalImage) => {
     if (useCustomSelection && onCustomImageToggle) {
       onCustomImageToggle(image);
