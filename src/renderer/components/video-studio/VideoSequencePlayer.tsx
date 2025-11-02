@@ -21,106 +21,187 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0); // 0 or 1 for dual buffer
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const prevPlaybackRef = useRef({ index: 0, time: 0, dur: 0 });
+  const video1Ref = useRef<HTMLVideoElement>(null);
+  const video2Ref = useRef<HTMLVideoElement>(null);
+  const nextVideoPreloadedRef = useRef(false);
 
   const currentVideo = playlist.videos[currentVideoIndex];
+  const activeVideoRef = activeVideoIndex === 0 ? video1Ref : video2Ref;
+  const nextVideoRef = activeVideoIndex === 0 ? video2Ref : video1Ref;
 
-  const handleVideoEnded = () => {
-    if (currentVideoIndex < playlist.videos.length - 1) {
-      setCurrentVideoIndex(currentVideoIndex + 1);
-      setCurrentTime(0);
-      setDuration(0); // Reset duration for next video
-    } else {
-      setCurrentVideoIndex(0);
-      setCurrentTime(0);
-      setDuration(0); // Reset duration when looping
-      setIsPlaying(false);
+  // Preload next video when current video reaches 80% or within last 2 seconds
+  const preloadNextVideo = () => {
+    if (nextVideoPreloadedRef.current) return;
+    if (currentVideoIndex >= playlist.videos.length - 1) return;
+
+    const nextVideo = playlist.videos[currentVideoIndex + 1];
+    const nextVideoElement = nextVideoRef.current;
+
+    if (nextVideoElement && nextVideo) {
+      nextVideoElement.src = nextVideo.url;
+      nextVideoElement.load();
+      nextVideoElement.muted = isMuted;
+      nextVideoPreloadedRef.current = true;
     }
   };
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  const handleVideoEnded = () => {
+    if (currentVideoIndex < playlist.videos.length - 1) {
+      // Switch to the preloaded video
+      setActiveVideoIndex(activeVideoIndex === 0 ? 1 : 0);
+      setCurrentVideoIndex(currentVideoIndex + 1);
+      setCurrentTime(0);
+      setDuration(0);
+      nextVideoPreloadedRef.current = false;
 
-    // Reset playback state when changing videos
+      // Start playing the next video immediately
+      const nextVideo = nextVideoRef.current;
+      if (nextVideo && isPlaying) {
+        nextVideo.currentTime = 0;
+        nextVideo.play().catch(console.error);
+      }
+    } else {
+      // Loop back to start
+      setCurrentVideoIndex(0);
+      setActiveVideoIndex(0);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsPlaying(false);
+      nextVideoPreloadedRef.current = false;
+    }
+  };
+
+  // Initialize video when switching
+  useEffect(() => {
+    const video = activeVideoRef.current;
+    const inactiveVideo = nextVideoRef.current;
+
+    if (!video || !currentVideo) return;
+
+    // Pause the inactive video
+    if (inactiveVideo && !inactiveVideo.paused) {
+      inactiveVideo.pause();
+    }
+
     setCurrentTime(0);
     setDuration(0);
+    nextVideoPreloadedRef.current = false;
 
-    video.load();
+    // Only set src and load if it's different
+    if (video.src !== currentVideo.url) {
+      video.src = currentVideo.url;
+      video.load();
+    }
 
-    const handleLoadedData = () => {
+    const handleLoadedMetadata = () => {
       const videoDuration = video.duration;
       setDuration(videoDuration);
 
-      // Immediately report the new video's duration
       if (onCurrentVideoChange) {
         onCurrentVideoChange(currentVideoIndex, 0, videoDuration);
       }
-
-      if (isPlaying) {
-        video.play().catch(console.error);
-      }
     };
 
-    video.addEventListener("loadeddata", handleLoadedData);
-    return () => video.removeEventListener("loadeddata", handleLoadedData);
-  }, [currentVideoIndex, isPlaying, onCurrentVideoChange]);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
 
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    };
+    // Only re-run when video index or active buffer changes
+  }, [currentVideoIndex, activeVideoIndex]);
+
+  // Handle play/pause state separately
   useEffect(() => {
-    const video = videoRef.current;
+    const video = activeVideoRef.current;
     if (!video) return;
 
     if (isPlaying) {
-      video.play().catch((err) => {
-        console.error("Play failed:", err);
-        setIsPlaying(false);
-      });
+      // Wait for the video to be ready before playing
+      const tryPlay = () => {
+        if (video.readyState >= 2) {
+          // HAVE_CURRENT_DATA or better
+          video.play().catch((err) => {
+            console.error("Play failed:", err);
+            setIsPlaying(false);
+          });
+        } else {
+          // Wait for loadeddata event
+          const onReady = () => {
+            video.play().catch((err) => {
+              console.error("Play failed:", err);
+              setIsPlaying(false);
+            });
+            video.removeEventListener("loadeddata", onReady);
+          };
+          video.addEventListener("loadeddata", onReady);
+        }
+      };
+      tryPlay();
     } else {
       video.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, activeVideoIndex]);
 
+  // Handle mute state for both videos
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = isMuted;
+    if (video1Ref.current) {
+      video1Ref.current.muted = isMuted;
+    }
+    if (video2Ref.current) {
+      video2Ref.current.muted = isMuted;
     }
   }, [isMuted]);
 
-  useEffect(() => {
-    if (onCurrentVideoChange) {
-      const prev = prevPlaybackRef.current;
-      const timeChanged = Math.abs(prev.time - currentTime) > 0.01;
-      const indexChanged = prev.index !== currentVideoIndex;
-      const durationChanged = Math.abs(prev.dur - duration) > 0.01;
+  // Handle time updates and preloading - only for active video
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>, videoIndex: number) => {
+    // Only process time updates from the active video
+    if (videoIndex !== activeVideoIndex) return;
 
-      if (timeChanged || indexChanged || durationChanged) {
-        prevPlaybackRef.current = { index: currentVideoIndex, time: currentTime, dur: duration };
-        onCurrentVideoChange(currentVideoIndex, currentTime, duration);
-      }
+    const video = e.currentTarget;
+    const time = video.currentTime;
+    const dur = video.duration;
+
+    // Update state immediately
+    setCurrentTime(time);
+
+    // Also call the callback directly for immediate updates
+    if (onCurrentVideoChange && dur > 0) {
+      onCurrentVideoChange(currentVideoIndex, time, dur);
     }
-  }, [currentVideoIndex, currentTime, duration, onCurrentVideoChange]);
+
+    // Preload next video when reaching 80% or within last 2 seconds
+    if (dur > 0 && (time / dur > 0.8 || dur - time < 2)) {
+      preloadNextVideo();
+    }
+  };
 
   const handleReset = () => {
     setCurrentVideoIndex(0);
+    setActiveVideoIndex(0);
     setIsPlaying(false);
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
+    nextVideoPreloadedRef.current = false;
+    if (activeVideoRef.current) {
+      activeVideoRef.current.currentTime = 0;
     }
   };
 
   const handlePrevious = () => {
     if (currentVideoIndex > 0) {
+      // Don't switch buffer for manual navigation - just update index
       setCurrentVideoIndex(currentVideoIndex - 1);
       setCurrentTime(0);
+      nextVideoPreloadedRef.current = false;
     }
   };
 
   const handleNext = () => {
     if (currentVideoIndex < playlist.videos.length - 1) {
+      // Don't switch buffer for manual navigation - just update index
       setCurrentVideoIndex(currentVideoIndex + 1);
       setCurrentTime(0);
+      nextVideoPreloadedRef.current = false;
     }
   };
 
@@ -226,20 +307,44 @@ export default function VideoSequencePlayer({ playlist, onCurrentVideoChange }: 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-black relative group overflow-hidden">
+        {/* Dual video buffers for seamless transitions */}
         <video
-          ref={videoRef}
-          src={currentVideo.url}
+          ref={video1Ref}
           onEnded={handleVideoEnded}
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+          onTimeUpdate={(e) => handleTimeUpdate(e, 0)}
           onLoadedMetadata={(e) => {
             const videoDuration = e.currentTarget.duration;
-            setDuration(videoDuration);
-            // Report duration as soon as metadata is loaded
-            if (onCurrentVideoChange) {
-              onCurrentVideoChange(currentVideoIndex, currentTime, videoDuration);
+            if (activeVideoIndex === 0) {
+              setDuration(videoDuration);
+              if (onCurrentVideoChange) {
+                onCurrentVideoChange(currentVideoIndex, currentTime, videoDuration);
+              }
             }
           }}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-300 ${
+            activeVideoIndex === 0 ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
+          playsInline
+          preload="auto"
+        />
+        <video
+          ref={video2Ref}
+          onEnded={handleVideoEnded}
+          onTimeUpdate={(e) => handleTimeUpdate(e, 1)}
+          onLoadedMetadata={(e) => {
+            const videoDuration = e.currentTarget.duration;
+            if (activeVideoIndex === 1) {
+              setDuration(videoDuration);
+              if (onCurrentVideoChange) {
+                onCurrentVideoChange(currentVideoIndex, currentTime, videoDuration);
+              }
+            }
+          }}
+          className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-300 ${
+            activeVideoIndex === 1 ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
+          playsInline
+          preload="auto"
         />
         <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
           <div className="flex items-center justify-between">
