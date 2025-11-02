@@ -15,6 +15,7 @@ import { useVideoGeneration } from "@hooks/video-creation/useVideoGeneration";
 import { useVideoDownload } from "@hooks/video-creation/useVideoDownload";
 import { useVideoFilters } from "@hooks/video-creation/useVideoFilters";
 import { useVideoCreationUI } from "@hooks/video-creation/useVideoCreationUI";
+import { usePasteHandler } from "@hooks/usePasteHandler";
 import { exportPromptsToJson, copyPromptsToClipboard } from "@/renderer/utils/video-creation/jsonUtils";
 
 export default function SingleVideoCreationPage() {
@@ -75,6 +76,7 @@ export default function SingleVideoCreationPage() {
   const canUndo = useVideoCreationStore((state) => state.canUndo);
   const canRedo = useVideoCreationStore((state) => state.canRedo);
   const clearAllPrompts = useVideoCreationStore((state) => state.clearAllPrompts);
+  const removeSelectedPrompts = useVideoCreationStore((state) => state.removeSelectedPrompts);
   const toggleGlobalPreview = useVideoCreationStore((state) => state.toggleGlobalPreview);
   const setStatusFilter = useVideoCreationStore((state) => state.setStatusFilter);
   const setSortBy = useVideoCreationStore((state) => state.setSortBy);
@@ -132,6 +134,68 @@ export default function SingleVideoCreationPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
+
+  // Handle JSON paste for importing prompts
+  const handleJsonPaste = async (pastedText: string): Promise<boolean> => {
+    // Try to detect if it's JSON
+    const trimmed = pastedText.trim();
+    if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) {
+      return false; // Not JSON-like, allow normal paste
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      let arr: any[] | null = null;
+
+      if (Array.isArray(parsed)) {
+        arr = parsed;
+      } else if (parsed && typeof parsed === "object") {
+        if (Array.isArray((parsed as any).prompts)) {
+          arr = (parsed as any).prompts;
+        } else if (Array.isArray((parsed as any).items)) {
+          arr = (parsed as any).items;
+        } else if (Array.isArray((parsed as any).data)) {
+          arr = (parsed as any).data;
+        }
+      }
+
+      if (!arr) {
+        alert.show({
+          title: "Invalid JSON",
+          message: "JSON must be an array or object with 'prompts', 'items', or 'data' array",
+          severity: "warning",
+        });
+        return true; // Prevent default since it's JSON but invalid format
+      }
+
+      // Convert items to strings
+      const arrayOfStrings = arr.map((item: any) => (typeof item === "string" ? item : JSON.stringify(item)));
+      const payloadToSend = JSON.stringify(arrayOfStrings, null, 2);
+
+      const success = loadFromJson(payloadToSend, "add");
+      if (success) {
+        toast.success(`✓ Added ${arrayOfStrings.length} prompt(s) from pasted JSON`, "Import Successful", 3000);
+      } else {
+        alert.show({
+          title: "Import Failed",
+          message: "Failed to load JSON into prompts. Check format and try again.",
+          severity: "error",
+        });
+      }
+      return true; // Prevent default - JSON was processed
+    } catch (err) {
+      // Not valid JSON, allow normal paste
+      console.log("Paste ignored - not valid JSON:", err);
+      return false;
+    }
+  };
+
+  // Use paste handler hook for JSON import
+  usePasteHandler({
+    onTextPaste: handleJsonPaste,
+    skipInputElements: false, // Allow paste anywhere - handleJsonPaste will filter non-JSON
+    dependencies: [loadFromJson, toast, alert],
+  });
 
   const hasSelection = prompts.some((p) => p.selected);
 
@@ -239,6 +303,7 @@ export default function SingleVideoCreationPage() {
             onRedo={redo}
             onAddJson={() => setShowAddJsonModal(true)}
             onClearAll={clearAllPrompts}
+            onClearSelected={removeSelectedPrompts}
             onExportJson={handleExportJson}
             onCopyJson={handleCopyJson}
             onToggleGlobalPreview={toggleGlobalPreview}

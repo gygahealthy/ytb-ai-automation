@@ -6,6 +6,7 @@ import { useSecretStore, useFlowNextKey } from "../../../../store/secretStore";
 import { useImageGalleryStore } from "../../../../store/image-gallery.store";
 import { useAlert } from "../../../../hooks/useAlert";
 import { useModal } from "../../../../hooks/useModal";
+import { useImageGalleryPaste } from "../../../../hooks/useImageGalleryPaste";
 import { useImageCache } from "../../../../contexts/ImageCacheContext";
 import SelectedImagePlaceholders from "./SelectedImagePlaceholders";
 import ImageGalleryToolbar from "./ImageGalleryToolbar";
@@ -567,66 +568,10 @@ export default function ImageGalleryDrawer() {
   // Removed - now handled by ImageGrid component using store
 
   /**
-   * Handle clipboard paste (Ctrl+V) to upload images from clipboard
+   * Handle pasted image file - processes and opens crop modal
    */
-  const handlePaste = async (e: ClipboardEvent) => {
-    console.log("[ImageGalleryDrawer] Paste event detected");
-
-    // Check if clipboard contains image data
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    let imageFile: File | null = null;
-
-    // Find image in clipboard items
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) {
-          // Convert blob to File with proper name
-          const fileName = `pasted-image-${Date.now()}.png`;
-          imageFile = new File([blob], fileName, { type: blob.type });
-          console.log("[ImageGalleryDrawer] Found image in clipboard:", fileName);
-          break;
-        }
-      }
-    }
-
-    if (!imageFile) {
-      console.log("[ImageGalleryDrawer] No image found in clipboard");
-      return;
-    }
-
-    // Validate configuration
-    if (!currentProfileId) {
-      alert.show({
-        title: "Configuration Required",
-        message: "Please configure a Flow profile in Settings > Flow VEO3",
-        severity: "warning",
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (!veo3ImagesPath) {
-      alert.show({
-        title: "Configuration Required",
-        message: "Please configure VEO3 Images storage path in Settings > File Paths",
-        severity: "warning",
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (!tempVideoPath) {
-      alert.show({
-        title: "Configuration Required",
-        message: "Please set the Temp Video Path in Settings > File Paths to store temporary files.",
-        severity: "warning",
-        duration: 5000,
-      });
-      return;
-    }
+  const handlePastedImage = async (imageFile: File) => {
+    console.log("[ImageGalleryDrawer] Processing pasted image:", imageFile.name);
 
     // Ensure secret is extracted
     setIsUploading(true);
@@ -706,18 +651,14 @@ export default function ImageGalleryDrawer() {
   };
 
   /**
-   * Set up clipboard paste listener when component mounts
+   * Use paste handler hook for image uploads
    */
-  useEffect(() => {
-    console.log("[ImageGalleryDrawer] Setting up paste event listener");
-    document.addEventListener("paste", handlePaste);
-
-    return () => {
-      console.log("[ImageGalleryDrawer] Cleaning up paste event listener");
-      document.removeEventListener("paste", handlePaste);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProfileId, veo3ImagesPath, tempVideoPath]); // Re-attach when config changes
+  useImageGalleryPaste({
+    profileId: currentProfileId,
+    veo3ImagesPath,
+    tempVideoPath,
+    onImagePaste: handlePastedImage,
+  });
 
   /**
    * Load images when drawer first opens (lazy loading)

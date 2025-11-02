@@ -16,6 +16,7 @@ interface JsonToolbarProps {
   onRedo: () => void;
   onAddJson: () => void;
   onClearAll: () => void;
+  onClearSelected?: () => void;
   onExportJson: () => void;
   onCopyJson: () => void;
   onToggleGlobalPreview: () => void;
@@ -40,7 +41,7 @@ export default function JsonToolbar({
   onRedo,
   onAddJson,
   onClearAll,
-
+  onClearSelected,
   onExportJson,
   onCopyJson,
   onToggleGlobalPreview,
@@ -155,14 +156,34 @@ export default function JsonToolbar({
             <span className="sr-only">Download</span>
           </button>
 
-          {/* Clear All next to Create button */}
+          {/* Clear Selected Prompts */}
           <button
-            onClick={onClearAll}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-red-600 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
-            title="Clear all prompts"
+            onClick={async () => {
+              if (!onClearSelected) return;
+              if (!hasSelection) {
+                alert.show({
+                  title: "No Selection",
+                  message: "Please select at least one prompt to delete",
+                  severity: "warning",
+                });
+                return;
+              }
+
+              const confirmed = await confirm({
+                title: "Delete Selected Prompts",
+                message: `Delete ${selectedCount} selected prompt(s)?`,
+              });
+
+              if (confirmed) {
+                onClearSelected();
+              }
+            }}
+            disabled={!hasSelection}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-red-600 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Delete selected prompts"
           >
             <Trash2 className="w-4 h-4" />
-            <span className="sr-only">Clear</span>
+            <span className="sr-only">Delete Selected</span>
           </button>
         </div>
 
@@ -183,6 +204,22 @@ export default function JsonToolbar({
               title="Deselect all prompts"
             >
               <span className="text-xs font-medium">Deselect</span>
+            </button>
+            <button
+              onClick={async () => {
+                const confirmed = await confirm({
+                  title: "Clear All Prompts",
+                  message: `This will delete all ${totalCount} prompt(s). This action cannot be undone.`,
+                });
+
+                if (confirmed) {
+                  onClearAll();
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 border border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700 transition-colors"
+              title="Clear all prompts"
+            >
+              <span className="text-xs font-medium">Clear All</span>
             </button>
             {selectedCount > 0 && (
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
