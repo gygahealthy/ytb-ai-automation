@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, forwardRef, ForwardedRef } from "react";
 import { Send, AlertTriangle } from "lucide-react";
-import { MarkdownRenderer } from "../../utils/markdown-renderer";
+import { MarkdownRenderer } from "@renderer/utils/markdown-renderer";
 
 export type Message = {
   id: number;
@@ -48,10 +48,7 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
       {/* Messages Container */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto px-6 py-6 space-y-4 custom-scrollbar"
-      >
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4 custom-scrollbar">
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center flex-col gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
@@ -60,12 +57,8 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
               </div>
             </div>
             <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400 font-medium">
-                Start a conversation
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                Type your question below to begin
-              </p>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Start a conversation</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Type your question below to begin</p>
             </div>
           </div>
         )}
@@ -74,19 +67,12 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
           const isUser = m.from === "user";
           const isError = m.isError && !isUser;
           return (
-            <div
-              key={m.id}
-              className={`flex items-end gap-3 animate-slideIn ${
-                isUser ? "justify-end" : "justify-start"
-              }`}
-            >
+            <div key={m.id} className={`flex items-end gap-3 animate-slideIn ${isUser ? "justify-end" : "justify-start"}`}>
               {!isUser && (
                 <div className="flex-shrink-0">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md ${
-                      isError
-                        ? "bg-gradient-to-br from-red-500 to-orange-600"
-                        : "bg-gradient-to-br from-blue-500 to-indigo-600"
+                      isError ? "bg-gradient-to-br from-red-500 to-orange-600" : "bg-gradient-to-br from-blue-500 to-indigo-600"
                     }`}
                   >
                     {isError ? <AlertTriangle size={16} /> : "G"}
@@ -104,19 +90,9 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
                 }`}
               >
                 <div className="text-sm leading-relaxed break-words word-break overflow-x-hidden">
-                  {m.from === "bot" ? (
-                    <MarkdownRenderer content={m.text} />
-                  ) : (
-                    m.text
-                  )}
+                  {m.from === "bot" ? <MarkdownRenderer content={m.text} /> : m.text}
                 </div>
-                <div
-                  className={`mt-2 text-xs ${
-                    isUser
-                      ? "text-blue-100"
-                      : "text-gray-500 dark:text-gray-400"
-                  } text-right`}
-                >
+                <div className={`mt-2 text-xs ${isUser ? "text-blue-100" : "text-gray-500 dark:text-gray-400"} text-right`}>
                   {m.ts ?? new Date().toLocaleTimeString()}
                 </div>
               </div>
@@ -189,9 +165,7 @@ const ChatUI = forwardRef<HTMLTextAreaElement, ChatUIProps>(function ChatUI(
             disabled={!input.trim() || !canSend}
             aria-label="Send message"
             className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 shadow-md hover:shadow-lg active:scale-95"
-            title={
-              canSend && input.trim() ? "Send message" : "Enter message to send"
-            }
+            title={canSend && input.trim() ? "Send message" : "Enter message to send"}
           >
             <Send className="w-5 h-5" />
           </button>

@@ -1,5 +1,5 @@
-import { InstanceState } from '../../../shared/types';
-import { MessageSquare, StopCircle } from 'lucide-react';
+import { InstanceState } from "@shared/types";
+import { MessageSquare, StopCircle } from "lucide-react";
 
 interface Props {
   inst: InstanceState;
@@ -26,7 +26,17 @@ export default function InstanceCard({ inst, profileName, onOpenChat, onStop }: 
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full font-medium ${inst.status === 'running' ? 'bg-green-100 text-green-800' : inst.status === 'error' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>{inst.status}</span>
+          <span
+            className={`inline-flex items-center px-2 py-1 text-xs rounded-full font-medium ${
+              inst.status === "running"
+                ? "bg-green-100 text-green-800"
+                : inst.status === "error"
+                ? "bg-red-100 text-red-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {inst.status}
+          </span>
         </div>
       </div>
 

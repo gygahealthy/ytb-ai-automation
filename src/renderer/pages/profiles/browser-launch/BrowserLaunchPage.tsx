@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Play, Settings, Info, X } from "lucide-react";
-import { useAlert } from "../../../hooks/useAlert";
-import { useConfirm } from "../../../hooks/useConfirm";
-import InstanceCard from "../../../components/automation/InstanceCard";
-import InstanceToolbar from "../../../components/automation/InstanceToolbar";
-import { InstanceState, LaunchInstanceRequest } from "../../../../shared/types";
+import { useAlert } from "@hooks/useAlert";
+import { useConfirm } from "@hooks/useConfirm";
+import InstanceCard from "@components/profiles/browser-launch/InstanceCard";
+import InstanceToolbar from "@components/profiles/browser-launch/InstanceToolbar";
+import { InstanceState, LaunchInstanceRequest } from "@/shared/types";
 
 export default function BrowserLaunchPage() {
   const alertApi = useAlert();

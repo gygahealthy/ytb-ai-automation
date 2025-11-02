@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import ChatUI, { Message } from "../automation/ChatUI";
-import { useAlert } from "../../hooks/useAlert";
-import { useSettingsStore } from "../../store/settings.store";
-import { useGeminiChatSession } from "../../hooks/useGeminiChatSession";
-import electronApi from "../../ipc";
+import ChatUI, { Message } from "@components/profiles/browser-launch/ChatUI";
+import { useAlert } from "@hooks/useAlert";
+import { useSettingsStore } from "@store/settings.store";
+import { useGeminiChatSession } from "@hooks/useGeminiChatSession";
+import electronApi from "@/renderer/ipc";
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -12,11 +12,7 @@ interface ChatModalProps {
   onClose: () => void;
 }
 
-export default function ChatModal({
-  isOpen,
-  profileId,
-  onClose,
-}: ChatModalProps) {
+export default function ChatModal({ isOpen, profileId, onClose }: ChatModalProps) {
   const { show: showAlert } = useAlert();
   const [messages, setMessages] = useState<Message[]>([]);
   const [canSend, setCanSend] = useState(true);
@@ -84,8 +80,7 @@ export default function ChatModal({
               ...prev.slice(0, -1),
               {
                 ...lastMsg,
-                text:
-                  lastMsg.text + (chunk.index > 0 ? "\n\n" : "") + chunk.text,
+                text: lastMsg.text + (chunk.index > 0 ? "\n\n" : "") + chunk.text,
               },
             ];
           }
@@ -207,12 +202,8 @@ export default function ChatModal({
               </div>
             </div>
             <div className="flex flex-col">
-              <h2 className="text-lg font-bold text-white">
-                Gemini Chat Assistant
-              </h2>
-              <p className="text-xs text-blue-100">
-                Profile: {profileId.substring(0, 12)}...
-              </p>
+              <h2 className="text-lg font-bold text-white">Gemini Chat Assistant</h2>
+              <p className="text-xs text-blue-100">Profile: {profileId.substring(0, 12)}...</p>
             </div>
           </div>
           <button
