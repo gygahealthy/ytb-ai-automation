@@ -8,6 +8,7 @@ interface VideoPlayerProps {
   onEnded: () => void;
   onTimeUpdate: (time: number, duration: number) => void;
   onLoadedMetadata: (duration: number) => void;
+  onSeeked?: () => void;
 }
 
 export interface VideoPlayerHandle {
@@ -20,7 +21,7 @@ export interface VideoPlayerHandle {
 }
 
 const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
-  ({ src, isActive, isMuted, className = "", onEnded, onTimeUpdate, onLoadedMetadata }, ref) => {
+  ({ src, isActive, isMuted, className = "", onEnded, onTimeUpdate, onLoadedMetadata, onSeeked }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -68,6 +69,9 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         onLoadedMetadata={(e) => {
           const video = e.currentTarget;
           onLoadedMetadata(video.duration);
+        }}
+        onSeeked={() => {
+          onSeeked?.();
         }}
         className={
           className ||

@@ -8,6 +8,10 @@ interface VideoOverlayProps {
   currentTime: number;
   duration: number;
   onPlay: () => void;
+  isSeeking?: boolean;
+  currentFrame?: number;
+  totalFrames?: number;
+  fps?: number;
 }
 
 export default function VideoOverlay({
@@ -18,6 +22,10 @@ export default function VideoOverlay({
   currentTime,
   duration,
   onPlay,
+  isSeeking = false,
+  currentFrame = 0,
+  totalFrames = 0,
+  fps = 30,
 }: VideoOverlayProps) {
   return (
     <>
@@ -38,8 +46,24 @@ export default function VideoOverlay({
         </div>
       </div>
 
+      {/* Frame info overlay during seeking */}
+      {isSeeking && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <div className="bg-black/90 backdrop-blur-sm px-6 py-4 rounded-lg shadow-2xl border border-cyan-500/50">
+            <div className="text-center space-y-1">
+              <div className="text-cyan-400 text-xs font-medium uppercase tracking-wider">Frame</div>
+              <div className="text-white text-3xl font-bold tabular-nums">{currentFrame}</div>
+              <div className="text-gray-400 text-xs tabular-nums">
+                / {totalFrames} frames @ {fps}fps
+              </div>
+              <div className="text-gray-500 text-xs tabular-nums mt-2">{currentTime.toFixed(3)}s</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Play button overlay when paused */}
-      {!isPlaying && (
+      {!isPlaying && !isSeeking && (
         <button
           onClick={onPlay}
           className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"

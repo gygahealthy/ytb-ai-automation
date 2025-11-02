@@ -32,6 +32,8 @@ const VideoSequencePlayer = React.forwardRef<
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const seekPendingRef = useRef<{ videoIndex: 0 | 1; targetIndex: number; timeInVideo: number } | null>(null);
 
   const activeVideoRef = activeVideoIndex === 0 ? video1Ref : video2Ref;
   const nextVideoRef = activeVideoIndex === 0 ? video2Ref : video1Ref;
@@ -58,6 +60,9 @@ const VideoSequencePlayer = React.forwardRef<
     (videoIndex: number, time: number, dur: number) => {
       if (videoIndex !== activeVideoIndex) return;
 
+      // Don't update during seeking to prevent playhead jumping
+      if (isSeeking) return;
+
       setCurrentTime(time);
       setDuration(dur);
 
@@ -74,17 +79,29 @@ const VideoSequencePlayer = React.forwardRef<
         onCurrentVideoChange(currentVideoIndex, time, dur);
       }
     },
-    [activeVideoIndex, currentVideoIndex, playlist.videos, onCurrentVideoChange, nextVideoRef]
+    [activeVideoIndex, currentVideoIndex, playlist.videos, onCurrentVideoChange, nextVideoRef, isSeeking]
   );
 
   const switchToNextVideo = useCallback(() => {
     if (currentVideoIndex + 1 < playlist.videos.length) {
+      const nextIndex = currentVideoIndex + 1;
+      const nextVideoDuration = playlist.videos[nextIndex]?.duration || 0;
+
+      // Immediately reset time to 0 for next video
+      setCurrentTime(0);
+
+      // Immediately notify parent to update playhead to start of next scene
+      if (onCurrentVideoChange) {
+        onCurrentVideoChange(nextIndex, 0, nextVideoDuration);
+      }
+
+      // Switch videos
       setActiveVideoIndex((prev) => (prev === 0 ? 1 : 0));
-      setCurrentVideoIndex((prev) => prev + 1);
+      setCurrentVideoIndex(nextIndex);
     } else {
       setIsPlaying(false);
     }
-  }, [currentVideoIndex, playlist.videos.length]);
+  }, [currentVideoIndex, playlist.videos, onCurrentVideoChange]);
 
   const handleVideoEnd = useCallback(
     (videoIndex: number) => {
@@ -115,8 +132,20 @@ const VideoSequencePlayer = React.forwardRef<
 
   const handlePrevious = () => {
     if (currentVideoIndex > 0) {
+      const prevIndex = currentVideoIndex - 1;
+      const prevVideoDuration = playlist.videos[prevIndex]?.duration || 0;
+
+      // Immediately reset time to 0 for previous video
+      setCurrentTime(0);
+
+      // Immediately notify parent to update playhead to start of previous scene
+      if (onCurrentVideoChange) {
+        onCurrentVideoChange(prevIndex, 0, prevVideoDuration);
+      }
+
+      // Switch videos
       setActiveVideoIndex((prev) => (prev === 0 ? 1 : 0));
-      setCurrentVideoIndex((prev) => prev - 1);
+      setCurrentVideoIndex(prevIndex);
     }
   };
 
@@ -127,33 +156,86 @@ const VideoSequencePlayer = React.forwardRef<
   };
 
   const handleSeek = useCallback(
-    (targetVideoIndex: number, timeInVideo: number) => {
-      // Switch to target video if different
-      if (targetVideoIndex !== currentVideoIndex) {
-        const needsToggle = Math.abs(targetVideoIndex - currentVideoIndex) % 2 === 1;
-        if (needsToggle) {
-          setActiveVideoIndex((prev) => (prev === 0 ? 1 : 0));
-        }
-        setCurrentVideoIndex(targetVideoIndex);
+    (targetVideoIndex: number, timeInVideo: number, _isDragging: boolean = false) => {
+      // Immediately update currentTime to prevent playhead jumping
+      setCurrentTime(timeInVideo);
+
+      // Get target video duration for the callback
+      const targetDuration = playlist.videos[targetVideoIndex]?.duration || 0;
+
+      // Immediately notify parent of the new position to update playhead
+      if (onCurrentVideoChange) {
+        onCurrentVideoChange(targetVideoIndex, timeInVideo, targetDuration);
       }
 
-      // Seek to time in that video
-      setTimeout(() => {
+      // Immediately seek if same video
+      if (targetVideoIndex === currentVideoIndex) {
         const activeVideo = activeVideoRef.current;
         if (activeVideo) {
           activeVideo.seek(timeInVideo);
         }
-      }, 50);
+      } else {
+        // Cross-video seek - hide videos, seek, wait for seeked event
+        const needsToggle = Math.abs(targetVideoIndex - currentVideoIndex) % 2 === 1;
+        const targetVideoRefIndex: 0 | 1 = needsToggle ? (activeVideoIndex === 0 ? 1 : 0) : activeVideoIndex;
+        const targetRef = targetVideoRefIndex === 0 ? video1Ref : video2Ref;
+
+        // Mark that we're seeking and store which video we're waiting for
+        setIsSeeking(true);
+        seekPendingRef.current = {
+          videoIndex: targetVideoRefIndex,
+          targetIndex: targetVideoIndex,
+          timeInVideo: timeInVideo,
+        };
+
+        // Wait a frame for the video source to update in the render, then seek
+        requestAnimationFrame(() => {
+          if (targetRef.current && targetRef.current.getReadyState() >= 1) {
+            // Video has loaded metadata, safe to seek
+            targetRef.current.seek(timeInVideo);
+          } else {
+            // Video not ready yet, will seek when loadedmetadata fires
+            // The seek will happen via the pending ref in handleLoadedMetadata
+          }
+        });
+      }
 
       // Notify parent of seek
       if (onSeek) {
         onSeek(targetVideoIndex, timeInVideo);
       }
     },
-    [currentVideoIndex, activeVideoRef, onSeek]
-  );
+    [currentVideoIndex, activeVideoRef, activeVideoIndex, video1Ref, video2Ref, onSeek, playlist.videos, onCurrentVideoChange]
+  ); // Handle seeked event from video players
+  const handleVideoSeeked = useCallback(
+    (videoIndex: 0 | 1) => {
+      // Check if this is the video we're waiting for
+      if (seekPendingRef.current && seekPendingRef.current.videoIndex === videoIndex) {
+        const { targetIndex } = seekPendingRef.current;
+        const targetRef = videoIndex === 0 ? video1Ref : video2Ref;
 
-  // Expose methods to parent via ref
+        // Switch to the target video
+        setActiveVideoIndex(videoIndex);
+        setCurrentVideoIndex(targetIndex);
+        setIsSeeking(false);
+        seekPendingRef.current = null;
+
+        // Update time and duration from the target video immediately
+        if (targetRef.current) {
+          const time = targetRef.current.getCurrentTime();
+          const dur = targetRef.current.getDuration();
+          setCurrentTime(time);
+          setDuration(dur);
+
+          // Notify parent to update playhead position
+          if (onCurrentVideoChange) {
+            onCurrentVideoChange(targetIndex, time, dur);
+          }
+        }
+      }
+    },
+    [video1Ref, video2Ref, onCurrentVideoChange]
+  ); // Expose methods to parent via ref
   React.useImperativeHandle(ref, () => ({
     play: () => setIsPlaying(true),
     pause: () => setIsPlaying(false),
@@ -261,8 +343,18 @@ const VideoSequencePlayer = React.forwardRef<
   const videoDurations = playlist.videos.map((v) => v.duration || 0);
 
   // Determine which video index each video element should display
-  const video1Index = activeVideoIndex === 0 ? currentVideoIndex : currentVideoIndex + 1;
-  const video2Index = activeVideoIndex === 1 ? currentVideoIndex : currentVideoIndex + 1;
+  // During seeking, use the pending target index for the target video
+  let video1Index = activeVideoIndex === 0 ? currentVideoIndex : currentVideoIndex + 1;
+  let video2Index = activeVideoIndex === 1 ? currentVideoIndex : currentVideoIndex + 1;
+
+  if (seekPendingRef.current) {
+    // If seeking, assign the target index to the correct video element
+    if (seekPendingRef.current.videoIndex === 0) {
+      video1Index = seekPendingRef.current.targetIndex;
+    } else {
+      video2Index = seekPendingRef.current.targetIndex;
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
@@ -271,27 +363,39 @@ const VideoSequencePlayer = React.forwardRef<
           ref={video1Ref}
           src={playlist.videos[video1Index]?.url || ""}
           isActive={activeVideoIndex === 0}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-            activeVideoIndex === 0 ? "opacity-100 z-10" : "opacity-0 z-0"
-          }`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity ${
+            isSeeking ? "opacity-0 duration-0" : activeVideoIndex === 0 ? "opacity-100 duration-300" : "opacity-0 duration-300"
+          } ${activeVideoIndex === 0 ? "z-10" : "z-0"}`}
           isMuted={isMuted}
           onTimeUpdate={(time, dur) => handleTimeUpdate(0, time, dur)}
           onEnded={() => handleVideoEnd(0)}
-          onLoadedMetadata={(dur) => setDuration(dur)}
+          onLoadedMetadata={(dur) => {
+            setDuration(dur);
+            // If there's a pending seek for this video, perform it now
+            if (seekPendingRef.current && seekPendingRef.current.videoIndex === 0 && video1Ref.current) {
+              video1Ref.current.seek(seekPendingRef.current.timeInVideo);
+            }
+          }}
+          onSeeked={() => handleVideoSeeked(0)}
         />
         <VideoPlayer
           ref={video2Ref}
           src={playlist.videos[video2Index]?.url || ""}
           isActive={activeVideoIndex === 1}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-            activeVideoIndex === 1 ? "opacity-100 z-10" : "opacity-0 z-0"
-          }`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity ${
+            isSeeking ? "opacity-0 duration-0" : activeVideoIndex === 1 ? "opacity-100 duration-300" : "opacity-0 duration-300"
+          } ${activeVideoIndex === 1 ? "z-10" : "z-0"}`}
           isMuted={isMuted}
           onTimeUpdate={(time, dur) => handleTimeUpdate(1, time, dur)}
           onEnded={() => handleVideoEnd(1)}
           onLoadedMetadata={(dur) => {
             if (activeVideoIndex === 1) setDuration(dur);
+            // If there's a pending seek for this video, perform it now
+            if (seekPendingRef.current && seekPendingRef.current.videoIndex === 1 && video2Ref.current) {
+              video2Ref.current.seek(seekPendingRef.current.timeInVideo);
+            }
           }}
+          onSeeked={() => handleVideoSeeked(1)}
         />
 
         <VideoOverlay
