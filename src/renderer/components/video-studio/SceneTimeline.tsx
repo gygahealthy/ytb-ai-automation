@@ -10,6 +10,7 @@ interface SceneTimelineProps {
   scenes: Scene[];
   selectedIndex: number;
   onSceneSelect: (index: number) => void;
+  onSeek?: (videoIndex: number, time: number) => void;
   currentVideoIndex?: number;
   currentTime?: number;
   duration?: number;
@@ -19,6 +20,7 @@ export default function SceneTimeline({
   scenes,
   selectedIndex,
   onSceneSelect,
+  onSeek,
   currentVideoIndex = 0,
   currentTime = 0,
   duration = 0,
@@ -94,6 +96,34 @@ export default function SceneTimeline({
   // Account for the padding (pl-2 + pr-2 = 16px total) in the scenes container
   const timelineWidth = scenes.length > 0 ? (cardWidth + gapWidth) * scenes.length : 800;
 
+  // Handle click on timeline to seek
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSeek || scenes.length === 0) return;
+
+    const timeline = e.currentTarget;
+    const rect = timeline.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+
+    // Calculate which video and what time within that video
+    let accumulatedTime = 0;
+    let targetVideoIndex = 0;
+    let targetTime = 0;
+
+    for (let i = 0; i < scenes.length; i++) {
+      const sceneDuration = actualDurations.get(i) ?? scenes[i].duration ?? 6;
+      if (accumulatedTime + sceneDuration >= totalDuration * percentage) {
+        targetVideoIndex = i;
+        targetTime = Math.max(0, totalDuration * percentage - accumulatedTime);
+        break;
+      }
+      accumulatedTime += sceneDuration;
+    }
+
+    // Notify parent of seek
+    onSeek(targetVideoIndex, targetTime);
+  };
+
   return (
     <div className="px-4 py-4 flex items-start gap-4 min-h-[180px]">
       {/* Time display on the left */}
@@ -110,8 +140,10 @@ export default function SceneTimeline({
           <div className="overflow-x-auto overflow-y-visible">
             <div
               ref={containerRef}
-              className="flex gap-2 pb-2 pt-6 relative bg-gray-50 dark:bg-gray-900/30 rounded-b pl-2 pr-2"
+              className="flex gap-2 pb-2 pt-6 relative bg-gray-50 dark:bg-gray-900/30 rounded-b pl-2 pr-2 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-900/50 transition-colors"
               style={{ minWidth: scenes.length > 0 ? "max-content" : "800px" }}
+              onClick={handleTimelineClick}
+              title="Click to seek to time"
             >
               {scenes.length > 0 ? (
                 scenes.map((scene, index) => (

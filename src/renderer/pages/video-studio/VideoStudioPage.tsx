@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Play, Settings2, Download, Share2 } from "lucide-react";
+import { Play, Settings2, Download } from "lucide-react";
 import { useDrawer } from "@hooks/useDrawer";
 import VideoPropertiesDrawer from "@/renderer/components/video-studio/VideoPropertiesDrawer";
 import SceneTimeline from "@/renderer/components/video-studio/SceneTimeline";
@@ -77,6 +77,14 @@ export default function VideoStudioPage() {
     setPlaybackInfo({ currentVideoIndex: index, currentTime: time, duration: dur });
   }, []);
 
+  const handleSeek = useCallback((videoIndex: number, time: number) => {
+    setPlaybackInfo((prev) => ({
+      currentVideoIndex: videoIndex,
+      currentTime: time,
+      duration: prev.duration,
+    }));
+  }, []);
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -97,11 +105,6 @@ export default function VideoStudioPage() {
             >
               <Settings2 className="w-4 h-4" />
               <span className="text-sm font-medium">Properties</span>
-            </button>
-
-            <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors border border-gray-200 dark:border-gray-700">
-              <Share2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Share</span>
             </button>
 
             <button className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500 hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-500 text-white transition-colors font-medium">
@@ -128,6 +131,7 @@ export default function VideoStudioPage() {
                   })),
                 }}
                 onCurrentVideoChange={handleCurrentVideoChange}
+                onSeek={handleSeek}
               />
             </div>
           ) : (
